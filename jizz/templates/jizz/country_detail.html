@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Jizz</title>
+        <link href='//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+    </head>
+    <body>
+        <header class="page-header">
+          <div class="container">
+              <h1>Jizz - {{ country.name }}</h1>
+          </div>
+        </header>
+
+        <main class="container">
+            <div class="row">
+                <div class="col">
+                    {% for img in species.images.all %}
+                        <img alt="bird image" src="{{ img.url }}" width="300px"/>
+                    {% endfor %}
+                </div>
+                {{ species.name }}
+            </div>
+        </main>
+    </body>
+</html>

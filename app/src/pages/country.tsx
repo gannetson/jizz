@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import {Box, Button, Flex, Heading, Image, SimpleGrid} from "@chakra-ui/react";
 import {Select} from "chakra-react-select";
 import {PageProperties} from "./layout";
+import Confetti from "react-dom-confetti"
 
 interface SpeciesImage {
   url: string;
@@ -108,6 +109,7 @@ const Country = ({level}: PageProperties) => {
       <Flex justifyContent={'center'} direction={'column'}>
         <Image src={mystery.images[picNum].url}/>
         <Button variant="ghost" onClick={nextPic}>Another picture</Button>
+        <Confetti active={mystery === answer} config={{angle: 45}}/>
       </Flex>
     )}
 
@@ -119,7 +121,7 @@ const Country = ({level}: PageProperties) => {
       ) : 'Please select an answer'}
     </Box>
     {options && options.length ? (
-      <SimpleGrid columns={2} spacing={4}>
+      <SimpleGrid columns={{base: 1, md:2}} spacing={4}>
         {
           options.map((option, key) => (
             <Button key={key} isDisabled={!!answer}

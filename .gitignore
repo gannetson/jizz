@@ -1,6 +1,7 @@
 **/*.pyc
 jizz/db.sqlite3
 jizz/settings/local.py
+.idea
 
-
+**/__pycache__
 frontend/node_modules

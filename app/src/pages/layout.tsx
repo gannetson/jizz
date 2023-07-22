@@ -2,27 +2,43 @@ import {Outlet} from "react-router-dom";
 import {
   Button,
   Container,
-  Drawer, DrawerBody,
+  Drawer,
+  DrawerBody,
   DrawerCloseButton,
-  DrawerContent, DrawerFooter,
+  DrawerContent,
+  DrawerFooter,
   DrawerHeader,
-  DrawerOverlay, Flex, Heading, HStack, Link, Radio, RadioGroup, Text, useDisclosure, VStack
+  DrawerOverlay,
+  Flex,
+  Heading,
+  Radio,
+  RadioGroup,
+  Text,
+  useDisclosure
 } from "@chakra-ui/react";
 import {GiHamburgerMenu} from "react-icons/all";
+import SelectCountry from "../components/select-country";
 
+
+export interface Country {
+  code: string
+  name: string
+}
 
 export interface PageProperties {
   level?: string
   setLevel?: (level: string) => void
+  country?: Country
+  setCountry?: (country:Country) => void
 }
 
 
-const Layout = ({level, setLevel}: PageProperties) => {
+const Layout = ({level, setLevel, country, setCountry}: PageProperties) => {
   const {isOpen, onOpen, onClose} = useDisclosure()
 
   return (
     <>
-      <Button variant="ghost" onClick={onOpen}>
+      <Button variant="ghost" position="absolute" p={6} onClick={onOpen}>
         <GiHamburgerMenu/>
       </Button>
       <Drawer
@@ -36,14 +52,7 @@ const Layout = ({level, setLevel}: PageProperties) => {
           <DrawerHeader>Menu</DrawerHeader>
 
           <DrawerBody>
-            <Heading py={6} size={'md'}>Country</Heading>
-            <Flex direction={'column'}  gap={4}>
-              <Link href={'/countries/TH'}>Thailand</Link>
-              <Link href={'/countries/LA'}>Laos</Link>
-              <Link href={'/countries/VN'}>Vietnam</Link>
-              <Link href={'/countries/KH'}>Cambodia</Link>
-              <Link href={'/countries/QA'}>Qatar</Link>
-            </Flex>
+            <SelectCountry country={country} setCountry={setCountry} />
             <Heading py={6} size={'md'}>Level</Heading>
             <RadioGroup onChange={setLevel} value={level}>
               <Flex direction={'column'} gap={4}>

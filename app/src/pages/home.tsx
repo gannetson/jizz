@@ -1,5 +1,11 @@
-const Home = () => {
-  return <h1>Welcome</h1>;
+import {Link} from "@chakra-ui/react";
+
+const HomePage = () => {
+  return <>
+    <h1>Welcome</h1>
+    <Link href={'/countries'}>Country list</Link>
+  </>
+
 };
 
-export default Home;
+export default HomePage;

@@ -19,7 +19,7 @@ class CountryDetailView(DetailView):
 
 class CountryViewSet(viewsets.ModelViewSet):
     serializer_class = CountrySerializer
-    queryset = Country.objects.all()
+    queryset = Country.objects.exclude(species__isnull=True).all()
 
 
 class SpeciesViewSet(viewsets.ModelViewSet):

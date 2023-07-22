@@ -5,7 +5,7 @@ import {PageProperties} from "./layout";
 import Confetti from "react-dom-confetti"
 import SelectCountry from "../components/select-country";
 import {ViewSpecies} from "../components/view-species";
-import {FiRefreshCw, RiRefreshFill} from "react-icons/all";
+import {FiRefreshCw} from "react-icons/all";
 
 export interface SpeciesImage {
   url: string;
@@ -73,7 +73,7 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
 
   useEffect(() => {
     mystery && getOptions(mystery)
-  }, [level])
+  }, [level, mystery])
 
   useEffect(() => {
     if (species.length > 0 && !mystery) {

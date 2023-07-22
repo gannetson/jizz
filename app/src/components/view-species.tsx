@@ -1,14 +1,15 @@
 import {
   Button,
-  Heading,
   Image,
-  Link,
-  Modal, ModalBody,
+  Modal,
+  ModalBody,
   ModalCloseButton,
-  ModalContent, ModalFooter,
+  ModalContent,
+  ModalFooter,
   ModalHeader,
   ModalOverlay,
-  SimpleGrid, useDisclosure
+  SimpleGrid,
+  useDisclosure
 } from "@chakra-ui/react";
 import {Species} from "../pages/country";
 

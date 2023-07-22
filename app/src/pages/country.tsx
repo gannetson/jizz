@@ -105,7 +105,7 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
 
   return <Flex direction={'column'} gap={4}>
     <Flex direction={'row'} ml={8} mt={2}>
-      <Heading>{country && country['name']}</Heading>
+      <Heading size={'lg'} noOfLines={1}>{country && country['name']}</Heading>
       <Spacer/>
       <Box justifyItems={"right"}>
         <Box>{species ? species.length : '?'} species</Box>
@@ -155,7 +155,7 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
     </Box>
     {answer ?
       <Button onClick={newMystery} colorScheme={'blue'}>Next</Button> :
-      <Button onClick={() => setAnswer('dunno')} colorScheme={'orange'}>No clue</Button>
+      <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>No clue</Button>
     }
     {!answer && (options && options.length ? (
         <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>

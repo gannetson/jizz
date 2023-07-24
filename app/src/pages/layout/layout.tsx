@@ -17,7 +17,7 @@ import {
   useDisclosure
 } from "@chakra-ui/react";
 import {GiHamburgerMenu} from "react-icons/all";
-import SelectCountry from "../components/select-country";
+import SelectCountry from "../../components/select-country";
 
 
 export interface Country {
@@ -29,7 +29,7 @@ export interface PageProperties {
   level?: string
   setLevel?: (level: string) => void
   country?: Country
-  setCountry?: (country:Country) => void
+  setCountry?: (country: Country) => void
 }
 
 
@@ -38,7 +38,8 @@ const Layout = ({level, setLevel, country, setCountry}: PageProperties) => {
 
   return (
     <>
-      <Button variant="ghost" position="absolute" p={6} onClick={onOpen}>
+      <Outlet/>
+      <Button variant="ghost" p={2} onClick={onOpen} position={'fixed'} top={2} left={2}>
         <GiHamburgerMenu/>
       </Button>
       <Drawer
@@ -52,7 +53,7 @@ const Layout = ({level, setLevel, country, setCountry}: PageProperties) => {
           <DrawerHeader>Menu</DrawerHeader>
 
           <DrawerBody>
-            <SelectCountry country={country} setCountry={setCountry} />
+            <SelectCountry country={country} setCountry={setCountry}/>
             <Heading py={6} size={'md'}>Level</Heading>
             <RadioGroup onChange={setLevel} value={level}>
               <Flex direction={'column'} gap={4}>
@@ -78,9 +79,6 @@ const Layout = ({level, setLevel, country, setCountry}: PageProperties) => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-      <Container>
-        <Outlet/>
-      </Container>
     </>
   )
 };

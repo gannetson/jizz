@@ -1,11 +1,12 @@
 import {useEffect, useState} from "react";
-import {Box, Button, Flex, Heading, IconButton, Image, SimpleGrid, Spacer, Text} from "@chakra-ui/react";
+import {Box, Button, Heading, IconButton, Image, SimpleGrid, Text} from "@chakra-ui/react";
 import {Select} from "chakra-react-select";
-import {PageProperties} from "./layout";
+import {PageProperties} from "./layout/layout";
 import Confetti from "react-dom-confetti"
 import SelectCountry from "../components/select-country";
 import {ViewSpecies} from "../components/view-species";
 import {FiRefreshCw} from "react-icons/all";
+import Page from "./layout/page";
 
 export interface SpeciesImage {
   url: string;
@@ -94,88 +95,93 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
   if (!country) {
 
     return (
-      <Flex direction={'column'} gap={4}>
-        <Flex ml={8} mt={2}>
-          <Heading>Birds by country</Heading>
-        </Flex>
-        <SelectCountry country={country} setCountry={setCountry}/>
-      </Flex>
+      <Page>
+        <Page.Header>
+          <Heading size={'lg'} m={0} noOfLines={1}>Species by country</Heading>
+        </Page.Header>
+        <Page.Body>
+          <SelectCountry country={country} setCountry={setCountry}/>
+        </Page.Body>
+      </Page>
     )
   }
 
-  return <Flex direction={'column'} gap={4}>
-    <Flex direction={'row'} ml={8} mt={2}>
-      <Heading size={'lg'} noOfLines={1}>{country && country['name']}</Heading>
-      <Spacer/>
-      <Box justifyItems={"right"}>
-        <Box>{species ? species.length : '?'} species</Box>
-        <Box fontWeight={'bold'} textTransform={'capitalize'}>Level: {level}</Box>
-      </Box>
-    </Flex>
-    {mystery && (
-      <Box position={'relative'}>
-        <Image
-          src={mystery.images[picNum].url.replace('/1800', '/900')}
-          fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
-        />
-        <IconButton
-          icon={<FiRefreshCw />}
-          onClick={nextPic}
-          colorScheme="blue"
-          aria-label="Next picture"
-          size={'md'}
-          isRound={true}
-          variant='solid'
-          position={'absolute'} top={2} right={2}>
-        </IconButton>
-        <Confetti active={mystery === answer} config={{angle: 45}}/>
-      </Box>
-    )}
+  return (
+    <Page>
+      <Page.Header>
+        <Heading size={'lg'} noOfLines={1}>{country && country['name']}</Heading>
+        <Box>
+          <Box textAlign={'right'}>Species: {species ? species.length : '?'}</Box>
+          <Box textAlign={'right'} fontWeight={'bold'} textTransform={'capitalize'}>Level: {level}</Box>
+        </Box>
+      </Page.Header>
+      <Page.Body>
+        {mystery && (
+          <Box position={'relative'}>
+            <Image
+              src={mystery.images[picNum].url.replace('/1800', '/900')}
+              fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
+            />
+            <IconButton
+              icon={<FiRefreshCw/>}
+              onClick={nextPic}
+              colorScheme="blue"
+              aria-label="Next picture"
+              size={'md'}
+              isRound={true}
+              variant='solid'
+              position={'absolute'} top={2} right={2}>
+            </IconButton>
+            <Confetti active={mystery === answer} config={{angle: 45}}/>
+          </Box>
+        )}
 
-    <Box fontWeight={'bold'}>
-      {answer && mystery && (
-        answer === 'dunno' ? (
-          <Text>
-            It was <ViewSpecies species={mystery}/>
-          </Text>
-        ) : (
-          answer === mystery ?
-            'Correct!' : (
-              <>
-                <Text>
-                  Incorrect! It was <ViewSpecies species={mystery}/>
-                </Text>
-                <Text>
-                  Your answer: <ViewSpecies species={answer}/>
-                </Text>
-              </>
+        <Box fontWeight={'bold'}>
+          {answer && mystery && (
+            answer === 'dunno' ? (
+              <Text>
+                It was <ViewSpecies species={mystery}/>
+              </Text>
+            ) : (
+              answer === mystery ?
+                'Correct!' : (
+                  <>
+                    <Text>
+                      Incorrect! It was <ViewSpecies species={mystery}/>
+                    </Text>
+                    <Text>
+                      Your answer: <ViewSpecies species={answer}/>
+                    </Text>
+                  </>
+                )
             )
-        )
-      )}
-    </Box>
-    {answer ?
-      <Button onClick={newMystery} colorScheme={'blue'}>Next</Button> :
-      <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>No clue</Button>
-    }
-    {!answer && (options && options.length ? (
-        <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
-          {
-            options.map((option, key) => (
-              <Button key={key} colorScheme={'blue'} onClick={() => setAnswer(option)}>
-                {option.name}
-              </Button>
-            ))
-          }
-        </SimpleGrid>
+          )}
+        </Box>
+        {answer ?
+          <Button onClick={newMystery} colorScheme={'blue'}>Next</Button> :
+          <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>No clue</Button>
+        }
+        {!answer && (options && options.length ? (
+            <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
+              {
+                options.map((option, key) => (
+                  <Button key={key} colorScheme={'blue'} onClick={() => setAnswer(option)}>
+                    {option.name}
+                  </Button>
+                ))
+              }
+            </SimpleGrid>
 
-      ) : (
-        <Select
-          options={species.map((s) => ({label: s.name, value: s}))}
-          onChange={(answer) => answer && setAnswer(answer.value)}
-        />
-      )
-    )}
-  </Flex>
-};
+          ) : (
+            <Select
+              options={species.map((s) => ({label: s.name, value: s}))}
+              onChange={(answer) => answer && setAnswer(answer.value)}
+            />
+          )
+        )}
+      </Page.Body>
+    </Page>
+  )
+}
 
 export default CountryPage;

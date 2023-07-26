@@ -4,13 +4,7 @@ import {Select} from "chakra-react-select";
 import Confetti from "react-dom-confetti"
 import SelectCountry from "../components/select-country";
 import {ViewSpecies} from "../components/view-species";
-import {
-  AiFillQuestionCircle,
-  BsFillQuestionCircleFill,
-  BsFillQuestionDiamondFill,
-  FaInfo,
-  FiRefreshCw
-} from "react-icons/all";
+import {BsFillQuestionCircleFill, FiRefreshCw} from "react-icons/all";
 import Page from "./layout/page";
 import SelectLevel from "../components/select-level";
 import AppContext from "../core/app-context";
@@ -38,7 +32,6 @@ const CountryPage = () => {
 
   const checkAnswer = (spec: Species) => {
     setAnswer(spec)
-    setAnswer(mystery)
     if (spec === mystery) {
       setCorrect && setCorrect(spec)
     }

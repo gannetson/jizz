@@ -45,7 +45,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const getOptions = (mystery: Species) => {
 
     if (level === 'beginner') {
-      return [mystery, randomSpecies(), randomSpecies(), randomSpecies()]
+      const options = [mystery, randomSpecies(), randomSpecies(), randomSpecies()]
+      return options.sort(() => Math.random() - 0.5)
     } else if (level === 'advanced') {
       let index = species.indexOf(mystery)
       index -= 2

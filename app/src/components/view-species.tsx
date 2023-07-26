@@ -12,6 +12,7 @@ import {
   useDisclosure
 } from "@chakra-ui/react";
 import {Species} from "../pages/country";
+import {BsImages} from "react-icons/all";
 
 
 export function ViewSpecies({species}: {species:Species}) {
@@ -19,7 +20,7 @@ export function ViewSpecies({species}: {species:Species}) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   return (
     <>
-      <Button variant={"link"} onClick={onOpen}>
+      <Button variant={"link"} onClick={onOpen} rightIcon={<BsImages />}>
         {species.name}
       </Button>
 

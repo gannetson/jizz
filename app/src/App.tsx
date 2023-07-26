@@ -5,8 +5,12 @@ import Layout from "./pages/layout/layout";
 import HomePage from "./pages/home";
 import CountryPage from "./pages/country";
 import {AppContextProvider} from "./core/app-context-provider";
+import {useEffect} from "react";
 
 export const App = () => {
+  useEffect(() => {
+     document.title = "Jizz"
+  }, []);
 
   return (
     <AppContextProvider>

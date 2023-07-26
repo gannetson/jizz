@@ -13,6 +13,7 @@ const PageHeader = ({children}: {children: ReactElement | ReactNode[]} ) => {
       backgroundColor={'gray.100'}
       position={'fixed'}
       width={'full'}
+      zIndex={10}
       shadow={'md'}
     >
       {children}

@@ -1,12 +1,19 @@
-import {useEffect, useState} from "react";
-import {Box, Button, Heading, IconButton, Image, SimpleGrid, Text} from "@chakra-ui/react";
+import {useContext, useEffect, useState} from "react";
+import {Box, Button, Flex, Heading, IconButton, Image, SimpleGrid, Text, Tooltip} from "@chakra-ui/react";
 import {Select} from "chakra-react-select";
-import {PageProperties} from "./layout/layout";
 import Confetti from "react-dom-confetti"
 import SelectCountry from "../components/select-country";
 import {ViewSpecies} from "../components/view-species";
-import {FiRefreshCw} from "react-icons/all";
+import {
+  AiFillQuestionCircle,
+  BsFillQuestionCircleFill,
+  BsFillQuestionDiamondFill,
+  FaInfo,
+  FiRefreshCw
+} from "react-icons/all";
 import Page from "./layout/page";
+import SelectLevel from "../components/select-level";
+import AppContext from "../core/app-context";
 
 export interface SpeciesImage {
   url: string;
@@ -18,100 +25,73 @@ export interface Species {
   images: SpeciesImage[]
 }
 
-const CountryPage = ({level, country, setCountry}: PageProperties) => {
-  const [species, setSpecies] = useState<Species[]>([]);
+const CountryPage = () => {
   const [mystery, setMystery] = useState<Species | null>();
   const [answer, setAnswer] = useState<Species | null | 'dunno'>();
   const [picNum, setPicNum] = useState<number>(0);
   const [options, setOptions] = useState<Species[] | null>([])
-
-  const randomBird = () => {
-    return species[Math.floor(Math.random() * species.length)];
-  }
-
-  const shuffleSet = (array: Species[]) => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  }
-
-  const getOptions = (mystery: Species) => {
-    setOptions(null)
-    if (level === 'beginner') {
-      const options: Species[] = [mystery, randomBird(), randomBird(), randomBird()]
-      setOptions(shuffleSet(options))
-    } else if (level === 'advanced') {
-      let index = species.indexOf(mystery)
-      index -= 2
-      if (index < 0) index = 0
-      const options: Species[] = [
-        species[index],
-        species[index + 1],
-        species[index + 2],
-        species[index + 3],
-        species[index + 4],
-        species[index + 5],
-      ]
-      setOptions(options.sort(() => Math.random() - 0.5))
-    }
-  }
-
-  const newMystery = () => {
-    if (species.length === 0) return;
-    setAnswer(null)
-    setMystery(null)
-    const newBird = randomBird()
-    setPicNum(Math.floor(Math.random() * newBird.images.length))
-    setMystery(newBird);
-    getOptions(newBird)
-  }
+  const {level, species, setCorrect, country, getNextQuestion} = useContext(AppContext);
 
   const nextPic = () => {
     setPicNum((picNum + 1) % mystery!.images.length)
   }
 
-  useEffect(() => {
-    mystery && getOptions(mystery)
-  }, [level, mystery])
-
-  useEffect(() => {
-    if (species.length > 0 && !mystery) {
-      newMystery()
+  const checkAnswer = (spec: Species) => {
+    setAnswer(spec)
+    setAnswer(mystery)
+    if (spec === mystery) {
+      setCorrect && setCorrect(spec)
     }
-  }, [species])
+  }
+
+  const newMystery = () => {
+    if (species && species.length && getNextQuestion) {
+      setAnswer(null)
+      const question = getNextQuestion()
+      if (question) {
+        setMystery(question.species)
+        setOptions(question.options || null)
+      } else {
+        alert('All done!!')
+      }
+    }
+  }
 
   useEffect(() => {
-    if (!country) return
-    fetch(`/api/species/?countries__country=${country.code}&format=json`)
-      .then((res) => res.json())
-      .then((data) => {
-        setSpecies(data)
-        newMystery()
-      });
-  }, [country])
+    newMystery()
+  }, [country, species])
 
   if (!country) {
-
     return (
       <Page>
         <Page.Header>
           <Heading size={'lg'} m={0} noOfLines={1}>Species by country</Heading>
         </Page.Header>
         <Page.Body>
-          <SelectCountry country={country} setCountry={setCountry}/>
+          <SelectLevel/>
+          <SelectCountry/>
         </Page.Body>
       </Page>
     )
   }
+  const correctCount = species ? species.filter((sp) => sp.correct).length : '?'
+  const totalCount = species ? species.length : '?'
 
   return (
     <Page>
       <Page.Header>
-        <Heading size={'lg'} noOfLines={1}>{country && country['name']}</Heading>
+        <Heading size={'lg'} noOfLines={1}>{country && country.name}</Heading>
         <Box>
-          <Box textAlign={'right'}>Species: {species ? species.length : '?'}</Box>
+          <Box textAlign={'right'}>
+            <Tooltip
+              hasArrow
+              label={`You have identified ${correctCount} birds correctly out of ${totalCount}. These won't be shown again.`}>
+              <Flex direction={'row'} alignItems={'center'}>
+                Species {correctCount} / {totalCount} <Box ml={1}><BsFillQuestionCircleFill fill={'#999'}
+                                                                                            size={16}/></Box>
+              </Flex>
+            </Tooltip>
+          </Box>
           <Box textAlign={'right'} fontWeight={'bold'} textTransform={'capitalize'}>Level: {level}</Box>
         </Box>
       </Page.Header>
@@ -122,16 +102,18 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
               src={mystery.images[picNum].url.replace('/1800', '/900')}
               fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
             />
-            <IconButton
-              icon={<FiRefreshCw/>}
-              onClick={nextPic}
-              colorScheme="blue"
-              aria-label="Next picture"
-              size={'md'}
-              isRound={true}
-              variant='solid'
-              position={'absolute'} top={2} right={2}>
-            </IconButton>
+            <Tooltip hasArrow label={'Click this to show another picture of the same species'}>
+              <IconButton
+                icon={<FiRefreshCw/>}
+                onClick={nextPic}
+                colorScheme="blue"
+                aria-label="Next picture"
+                size={'md'}
+                isRound={true}
+                variant='solid'
+                position={'absolute'} top={2} right={2}>
+              </IconButton>
+            </Tooltip>
             <Confetti active={mystery === answer} config={{angle: 45}}/>
           </Box>
         )}
@@ -161,11 +143,11 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
           <Button onClick={newMystery} colorScheme={'blue'}>Next</Button> :
           <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>No clue</Button>
         }
-        {!answer && (options && options.length ? (
+        {species && !answer && (options && options.length ? (
             <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
               {
                 options.map((option, key) => (
-                  <Button key={key} colorScheme={'blue'} onClick={() => setAnswer(option)}>
+                  <Button key={key} colorScheme={'blue'} onClick={() => checkAnswer(option)}>
                     {option.name}
                   </Button>
                 ))
@@ -175,7 +157,7 @@ const CountryPage = ({level, country, setCountry}: PageProperties) => {
           ) : (
             <Select
               options={species.map((s) => ({label: s.name, value: s}))}
-              onChange={(answer) => answer && setAnswer(answer.value)}
+              onChange={(answer) => answer && checkAnswer(answer.value)}
             />
           )
         )}

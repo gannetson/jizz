@@ -1,47 +1,29 @@
-import {Flex, Heading, Link} from "@chakra-ui/react";
-import {useEffect, useState} from "react";
+import {Heading} from "@chakra-ui/react";
+import {UseCountries} from "../user/use-countries";
+import {Select} from "chakra-react-select";
+import {useContext} from "react";
+import AppContext from "../core/app-context";
 
 
-export interface Country {
-  code: string
-  name: string
-}
+const SelectCountry = () => {
+  const {countries} = UseCountries()
+  const { country, setCountry} = useContext(AppContext);
 
-export interface SelectCountryProperties {
-  country?: Country
-  setCountry?: (country: Country) => void
-}
-
-
-const SelectCountry = ({country, setCountry}: SelectCountryProperties) => {
-  const [countries, setCountries] = useState<Country[]>([])
-
-  useEffect(() => {
-    if (!countries || countries.length === 0) {
-      fetch(`/api/countries/`)
-        .then((res) => res.json())
-        .then((data) => {
-          setCountries(data)
-        });
-
-    }
-  }, [countries])
+  const onChange = (value:string) => {
+    const country = countries.find((c)=> c.name === value)
+    setCountry && setCountry(country)
+  }
 
   return (
     <>
       <Heading py={6} size={'md'}>Country</Heading>
-      <Flex direction={'column'} gap={4}>
-        {countries && countries.map((c, key) => (
-            <Link
-              key={key} color={country === c ? 'blue' : 'black'}
-              onClick={() => setCountry && setCountry(c)}
-            >
-              {c.name}
-            </Link>
-          )
-        )}
-      </Flex>
-
+      <Select
+        options={countries}
+        getOptionLabel={(c) => c ? c.name : '?'}
+        getOptionValue={(c)=> c ? c.name : '?'}
+        value={country}
+        onChange={(val)=> val && onChange(val.name)}
+      />
     </>
   )
 };

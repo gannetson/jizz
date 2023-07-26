@@ -18,28 +18,18 @@ import {
 } from "@chakra-ui/react";
 import {GiHamburgerMenu} from "react-icons/all";
 import SelectCountry from "../../components/select-country";
+import SelectLevel from "../../components/select-level";
+import {useContext} from "react";
+import AppContext from "../../core/app-context";
 
-
-export interface Country {
-  code: string
-  name: string
-}
-
-export interface PageProperties {
-  level?: string
-  setLevel?: (level: string) => void
-  country?: Country
-  setCountry?: (country: Country) => void
-}
-
-
-const Layout = ({level, setLevel, country, setCountry}: PageProperties) => {
+const Layout = () => {
   const {isOpen, onOpen, onClose} = useDisclosure()
+  const {level, setLevel} = useContext(AppContext);
 
   return (
     <>
       <Outlet/>
-      <Button variant="ghost" p={2} onClick={onOpen} position={'fixed'} top={2} left={2}>
+      <Button variant="ghost" p={2} onClick={onOpen} position={'fixed'} zIndex={20} top={2} left={2}>
         <GiHamburgerMenu/>
       </Button>
       <Drawer
@@ -53,25 +43,8 @@ const Layout = ({level, setLevel, country, setCountry}: PageProperties) => {
           <DrawerHeader>Menu</DrawerHeader>
 
           <DrawerBody>
-            <SelectCountry country={country} setCountry={setCountry}/>
-            <Heading py={6} size={'md'}>Level</Heading>
-            <RadioGroup onChange={setLevel} value={level}>
-              <Flex direction={'column'} gap={4}>
-                <Radio value='beginner'>
-                  <Text>Beginner</Text>
-                  <Text fontSize={'xs'}>Easy multiple choice</Text>
-                </Radio>
-                <Radio value='advanced'>
-                  <Text>Advanced</Text>
-                  <Text fontSize={'xs'}>Hard multiple choice</Text>
-                </Radio>
-                <Radio value='expert'>
-                  <Text>Expert</Text>
-                  <Text fontSize={'xs'}>Text input</Text>
-                </Radio>
-              </Flex>
-            </RadioGroup>
-
+            <SelectCountry />
+            <SelectLevel />
           </DrawerBody>
 
           <DrawerFooter>

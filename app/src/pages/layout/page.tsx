@@ -18,11 +18,11 @@ export default function Page({ children }: Properties) {
       gridRowGap="8"
       gridTemplateAreas={{
         base: `
-                  "body"
-                  "header"`,
+                  "header"
+                  "body"`,
         md: `
-                  "body"
-                  "header"`,
+                  "header"
+                  "body"`,
       }}
     >
       {children}

@@ -1,12 +1,14 @@
 import {ReactElement, ReactNode} from "react";
-import {Container} from "@chakra-ui/react";
+import {Container, Flex} from "@chakra-ui/react";
 
 
 const PageBody = ({children}: {children: ReactElement | ReactNode[]} ) => {
 
   return (
     <Container mt={20}>
-      {children}
+      <Flex direction={'column'} gap={4}>
+        {children}
+      </Flex>
     </Container>
   )
 };

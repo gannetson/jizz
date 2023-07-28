@@ -16,12 +16,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
     try {
       const response = await fetch(`/api/species/?countries__country=${country.code}&format=json`)
       const data = await response.json();
-      console.log('Data received')
       setSpecies(data);
-      console.log('Species set')
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching questions:', error);
       setLoading(false);
     }
   }, []);
@@ -78,7 +75,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
     const index = species.indexOf(spec)
     species[index].correct = true
     setSpecies(species)
-    console.log(species.filter((sp)=>sp.correct))
   }
 
   return (

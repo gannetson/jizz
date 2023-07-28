@@ -91,10 +91,14 @@ const CountryPage = () => {
       <Page.Body>
         {mystery && (
           <Box position={'relative'}>
-            <Image
-              src={mystery.images[picNum].url.replace('/1800', '/900')}
-              fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
-            />
+            {mystery.images.length ? (
+              <Image
+                src={mystery.images[picNum].url.replace('/1800', '/900')}
+                fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
+              />
+            ) : <Text>No images for this species, you'll get it for free it's {mystery.name}</Text>
+            }
+
             <Tooltip hasArrow label={'Click this to show another picture of the same species'}>
               <IconButton
                 icon={<FiRefreshCw/>}
@@ -141,7 +145,7 @@ const CountryPage = () => {
               {
                 options.map((option, key) => (
                   <Button key={key} colorScheme={'blue'} onClick={() => checkAnswer(option)}>
-                    {option.name}
+                    {option && option.name}
                   </Button>
                 ))
               }

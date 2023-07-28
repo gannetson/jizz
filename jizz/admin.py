@@ -22,8 +22,12 @@ class CountrySpeciesInline(admin.TabularInline):
 
 @register(Country)
 class CountryAdmin(admin.ModelAdmin):
-    inlines = [CountrySpeciesInline]
 
+    readonly_fields = ['species_list']
+    fields = ['name', 'code'] + readonly_fields
+
+    def species_list(self, obj):
+        return f'{obj.species.count()} species'
 
 class SpeciesImageInline(admin.TabularInline):
     model = SpeciesImage

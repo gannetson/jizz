@@ -1,9 +1,11 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin import register
-from django.urls import reverse
+from django.http import HttpResponseRedirect
+from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage
+from jizz.utils import sync_country, get_country_images
 
 
 class CountrySpeciesInline(admin.TabularInline):
@@ -23,11 +25,42 @@ class CountrySpeciesInline(admin.TabularInline):
 @register(Country)
 class CountryAdmin(admin.ModelAdmin):
 
-    readonly_fields = ['species_list']
-    fields = ['name', 'code'] + readonly_fields
+    readonly_fields = ['species_list', 'sync_link']
+    fields = ['name', 'code', 'codes'] + readonly_fields
 
     def species_list(self, obj):
         return f'{obj.species.count()} species'
+
+    def sync_link(self, obj):
+        sync_url = reverse('admin:sync-species', args=(obj.pk,))
+        return format_html('<a href="{}">Synchronise species</a>', sync_url)
+
+    def get_urls(self):
+        urls = super().get_urls()
+
+        custom_urls = [
+            re_path(
+                r"^country/(?P<pk>.+)/sync/$",
+                self.admin_site.admin_view(self.sync_species),
+                name="sync-species"
+            ),
+        ]
+        return custom_urls + urls
+
+    def sync_species(self, request, pk=None):
+        country = Country.objects.get(pk=pk)
+        if not country.codes:
+            country.codes = country.code
+            country.save()
+        sync_country(country.code)
+        get_country_images(country.code)
+        messages.add_message(request, messages.INFO, f'Found {country.species.count()} species.')
+        country_url = reverse('admin:jizz_country_change', args=(country.pk,))
+        response = HttpResponseRedirect(country_url)
+        return response
+
+
+
 
 class SpeciesImageInline(admin.TabularInline):
     model = SpeciesImage

@@ -29,10 +29,9 @@ def sync_species():
             )
 
 
-def sync_country(code='TZ-15'):
-    country = Country.objects.get(code=code)
+def sync_regions(country, code):
     data = requests.get(
-        f'https://{SERVER_NAME}/{API_VERSION}/product/spplist/{country.code}',
+        f'https://{SERVER_NAME}/{API_VERSION}/product/spplist/{code}',
         headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
     )
     for species in data.json():
@@ -42,7 +41,13 @@ def sync_country(code='TZ-15'):
                 species=Species.objects.get(code=species)
             )
         except Species.DoesNotExist:
-            print(f'Species {species} does not exist')
+            print(f'{species} does not exist')
+
+
+def sync_country(code='ZNZ'):
+    country = Country.objects.get(code=code)
+    for code in country.codes.split(','):
+        sync_regions(country, code)
 
 
 def get_images(id=1):

@@ -5,7 +5,7 @@ from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage
-from jizz.utils import sync_country, get_country_images
+from jizz.utils import sync_country, get_country_images, get_images
 
 
 class CountrySpeciesInline(admin.TabularInline):
@@ -80,4 +80,35 @@ class SpeciesImageInline(admin.TabularInline):
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesImageInline]
+    readonly_fields = ['sync_link', 'pic_count']
     search_fields  = ['name']
+
+    def pic_count(self, obj):
+        return obj.images.count()
+
+    def sync_link(self, obj):
+        if not obj or not obj.pk:
+            return '-'
+        sync_url = reverse('admin:get-pics', args=(obj.pk,))
+        return format_html('<a href="{}">Get pics</a>', sync_url)
+
+    def get_urls(self):
+        urls = super().get_urls()
+
+        custom_urls = [
+            re_path(
+                r"^species/(?P<pk>.+)/get-pics/$",
+                self.admin_site.admin_view(self.get_pics),
+                name="get-pics"
+            ),
+        ]
+        return custom_urls + urls
+
+    def get_pics(self, request, pk=None):
+        species = Species.objects.get(pk=pk)
+        get_images(species.id)
+        messages.add_message(request, messages.INFO, f'Found {species.images.count()} images.')
+        species_url = reverse('admin:jizz_species_change', args=(species.pk,))
+        response = HttpResponseRedirect(species_url)
+        return response
+

@@ -32,6 +32,8 @@ class CountryAdmin(admin.ModelAdmin):
         return f'{obj.species.count()} species'
 
     def sync_link(self, obj):
+        if not obj:
+            return '-'
         sync_url = reverse('admin:sync-species', args=(obj.pk,))
         return format_html('<a href="{}">Synchronise species</a>', sync_url)
 

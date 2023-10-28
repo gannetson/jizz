@@ -91,7 +91,7 @@ const CountryPage = () => {
       <Page.Body>
         {mystery && (
           <Box position={'relative'}>
-            {mystery.images.length ? (
+            {mystery.images.length && mystery.images[picNum] ? (
               <Image
                 src={mystery.images[picNum].url.replace('/1800', '/900')}
                 fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}

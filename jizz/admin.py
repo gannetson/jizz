@@ -80,3 +80,4 @@ class SpeciesImageInline(admin.TabularInline):
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesImageInline]
+    search_fields  = ['name']

@@ -29,7 +29,7 @@ def sync_species():
             )
 
 
-def sync_country(code='TH'):
+def sync_country(code='TZ-15'):
     country = Country.objects.get(code=code)
     data = requests.get(
         f'https://{SERVER_NAME}/{API_VERSION}/product/spplist/{country.code}',
@@ -59,7 +59,7 @@ def get_images(id=1):
         )
 
 
-def get_country_images(code='TH'):
+def get_country_images(code='TZ-15'):
     country = Country.objects.get(code=code)
     nr = 0
     count = CountrySpecies.objects.filter(country=country).count()

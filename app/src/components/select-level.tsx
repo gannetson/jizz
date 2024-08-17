@@ -21,7 +21,7 @@ const SelectLevel = () => {
           </Radio>
           <Radio value='expert'>
             <Text>Expert</Text>
-            <Text fontSize={'xs'}>Text input</Text>
+            <Text fontSize={'xs'}>Text input (auto complete)</Text>
           </Radio>
         </Flex>
       </RadioGroup>

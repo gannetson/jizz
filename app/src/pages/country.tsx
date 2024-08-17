@@ -61,8 +61,8 @@ const CountryPage = () => {
           <Heading size={'lg'} m={0} noOfLines={1}>Species by country</Heading>
         </Page.Header>
         <Page.Body>
-          <SelectLevel/>
           <SelectCountry/>
+          <SelectLevel/>
         </Page.Body>
       </Page>
     )
@@ -103,7 +103,7 @@ const CountryPage = () => {
               <IconButton
                 icon={<FiRefreshCw/>}
                 onClick={nextPic}
-                colorScheme="blue"
+                colorScheme="orange"
                 aria-label="Next picture"
                 size={'md'}
                 isRound={true}
@@ -144,7 +144,7 @@ const CountryPage = () => {
             <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
               {
                 options.map((option, key) => (
-                  <Button key={key} colorScheme={'blue'} onClick={() => checkAnswer(option)}>
+                  <Button key={key} colorScheme='orange' onClick={() => checkAnswer(option)}>
                     {option && option.name}
                   </Button>
                 ))

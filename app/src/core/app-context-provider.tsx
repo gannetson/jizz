@@ -38,6 +38,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   useEffect(() => {
     if (token) {
       fetch(`/api/games/${token}/`, {
+        cache: 'no-cache',
         method: 'GET',
         headers: {
           'Accept': 'application/json',

@@ -17,15 +17,25 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path, include
 from rest_framework import routers
+from rest_framework_simplejwt import views as jwt_views
 
-from jizz.views import CountryDetailView, CountryViewSet, SpeciesViewSet
+from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
+    GameDetailView, QuestionDetailView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
-router.register(r'species', SpeciesViewSet, 'species')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
-    path('api/', include(router.urls))
+    path('token/', jwt_views.TokenObtainPairView.as_view(), name ='token-obtain-pair'),
+    path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name ='token-refresh'),
+
+    path('api/', include(router.urls)),
+    re_path(r"^api/species/$", SpeciesListView.as_view(), name="species-list"),
+    re_path(r"^api/species/(?P<pk>\w+)/$", SpeciesDetailView.as_view(), name="species-detail"),
+    re_path(r"^api/games/$", GameListView.as_view(), name="game-list"),
+    re_path(r"^api/games/(?P<token>[\w-]+)/$", GameDetailView.as_view(), name="game-detail"),
+    re_path(r"^api/questions/(?P<pk>\w+)/$", QuestionDetailView.as_view(), name="question-detail"),
+
 ]

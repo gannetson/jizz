@@ -14,7 +14,7 @@ def sync_species():
 
     data = requests.get(
         f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird',
-        # headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
+        headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
     )
 
     for row in data.content.splitlines():

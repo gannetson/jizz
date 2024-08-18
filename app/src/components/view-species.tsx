@@ -11,8 +11,8 @@ import {
   SimpleGrid,
   useDisclosure
 } from "@chakra-ui/react";
-import {Species} from "../pages/country";
 import {BsImages} from "react-icons/all";
+import {Species} from "../core/app-context";
 
 
 export function ViewSpecies({species}: {species:Species}) {

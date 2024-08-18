@@ -7,11 +7,21 @@ export type Country = {
 }
 
 
+export type Game = {
+  token: string
+  level: string
+  created: string
+  country: Country
+  questions: Question[]
+  correct: number
+}
+
 export type SpeciesImage = {
   url: string;
 }
 
 export type Species = {
+  id: number;
   name: string;
   name_latin: string;
   images: SpeciesImage[],
@@ -20,8 +30,11 @@ export type Species = {
 
 
 export type Question = {
+  id: number
   species: Species,
   options?: Species[]
+  errors?: number
+  correct?: boolean
   picNum?: number
   answer?: Species | null
 }
@@ -32,8 +45,12 @@ type SharedState = {
   setLevel?: Dispatch<SetStateAction<string>>
   country?: Country | undefined
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
+  game?: Game | undefined
+  setGame?: Dispatch<SetStateAction<Game | undefined>>
+  progress?: string
   species?: Species[]
-  setCorrect?: (species:Species) => void,
+  setCorrect?: (question:Question) => void,
+  setWrong?: (question:Question) => void,
   getNextQuestion?: () => Question | undefined,
   loading?: boolean
 };

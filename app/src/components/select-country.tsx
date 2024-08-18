@@ -16,7 +16,6 @@ const SelectCountry = () => {
 
   return (
     <>
-      <Heading py={6} size={'md'}>Country</Heading>
       <Select
         options={countries}
         getOptionLabel={(c) => c ? c.name : '?'}

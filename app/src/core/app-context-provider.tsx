@@ -1,5 +1,5 @@
 import React, {FC, ReactNode, useCallback, useEffect, useState} from 'react';
-import AppContext, {Country, Question, Species} from "./app-context";
+import AppContext, {Game, Country, Question, Species} from "./app-context";
 
 type Props = {
   children: ReactNode;
@@ -8,73 +8,120 @@ type Props = {
 
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('beginner');
+  const [game, setGame] = useState<Game | undefined>();
   const [country, setCountry] = useState<Country | undefined>();
-  const [species, setSpecies] = useState<Species[]>([]);
   const [loading, setLoading] = useState(false)
+  const [species, setSpecies] = useState<Species | undefined>();
 
-  const fetchSpecies = useCallback(async (country:Country) => {
+
+  const fetchSpecies = useCallback(async (species:Species) => {
     try {
-      const response = await fetch(`/api/species/?countries__country=${country.code}&format=json`)
+      const response = await fetch(`/api/species/${species.id}&format=json`)
       const data = await response.json();
       setSpecies(data);
       setLoading(false);
     } catch (error) {
       setLoading(false);
     }
+  }, [])
+
+  const token = localStorage.getItem('game-token')
+
+  if (!game && !token && document.location.pathname === '/game') {
+    document.location.href = '/'
+  }
+
+  if (game) {
+    game.correct = game?.questions.filter((q)=> q.correct).length
+  }
+
+  useEffect(() => {
+    if (token) {
+      fetch(`/api/games/${token}/`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+        .then(response => response.json())
+        .then(data => {
+          setGame(data)
+        })
+    }
   }, []);
 
 
-  useEffect(() => {
-    if (!country) return
-    if (species.length === 0 && !loading) {
-      fetchSpecies(country)
-    }
-  }, [country, species])
 
-  const randomSpecies  = (onlyRemaining=false)=>{
+  const randomQuestion = (onlyRemaining=false)=>{
+    if (!game) return
     if (onlyRemaining) {
-      const remainingSpecies = species.filter((sp) => !sp.correct);
+      const remainingSpecies = game.questions.filter((sp) => !sp.correct);
       return remainingSpecies[Math.floor(Math.random() * remainingSpecies.length)];
     }
-    return species[Math.floor(Math.random() * species.length)];
+    return game.questions[Math.floor(Math.random() * game.questions.length)];
   }
 
-  const getOptions = (mystery: Species) => {
+  const getOptions = (question: Question) => {
+    if (!game) return []
 
-    if (level === 'beginner') {
-      const options = [mystery, randomSpecies(), randomSpecies(), randomSpecies()]
+    if (game.level === 'beginner') {
+      const options = [question.species, randomQuestion()?.species, randomQuestion()?.species, randomQuestion()?.species]
       return options.sort(() => Math.random() - 0.5)
-    } else if (level === 'advanced') {
-      let index = species.indexOf(mystery)
+    } else if (game.level === 'advanced') {
+      let index = game?.questions.indexOf(question) || 0
       index -= 2
       if (index < 0) index = 0
       const options: Species[] = [
-        species[index],
-        species[index + 1],
-        species[index + 2],
-        species[index + 3],
-        species[index + 4],
-        species[index + 5],
+        game.questions[index].species,
+        game.questions[index + 1].species,
+        game.questions[index + 2].species,
+        game.questions[index + 3].species,
+        game.questions[index + 4].species,
+        game.questions[index + 5].species,
       ]
       return options.sort(() => Math.random() - 0.5)
     }
+    return []
   }
 
   const getNextQuestion = () => {
-    const nextSpecies = randomSpecies(true)
-    if (nextSpecies) {
-      const nextQuestion:Question = {
-        species: nextSpecies,
-        options: getOptions(nextSpecies)
-      }
+    const nextQuestion = randomQuestion(true)
+    if (nextQuestion) {
+      nextQuestion.options = getOptions(nextQuestion) as Species[]
       return nextQuestion
     }
   };
 
-  const setCorrect = (spec: Species) => {
-    const index = species.indexOf(spec)
-    species[index].correct = true
-    setSpecies(species)
+  const saveQuestion = async (question: Question) => {
+    await fetch(`/api/questions/${question.id}/`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(question)
+    })
+  }
+
+  const setCorrect = (question: Question) => {
+    if (game) {
+      question.correct = true
+      const index = game.questions.indexOf(question)
+      game.questions[index] = question
+      saveQuestion(question)
+      setGame(game)
+    }
+  }
+
+  const setWrong = (question: Question) => {
+    if (game) {
+      question.errors = (question.errors || 0) + 1
+      const index = game.questions.indexOf(question)
+      game.questions[index] = question
+      saveQuestion(question)
+      setGame(game)
+    }
   }
 
   return (
@@ -83,9 +130,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setLevel,
       country,
       setCountry,
+      game,
+      setGame,
       getNextQuestion,
       setCorrect,
-      species,
+      setWrong,
       loading
     }}>
       {children}

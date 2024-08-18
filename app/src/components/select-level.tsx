@@ -8,7 +8,6 @@ const SelectLevel = () => {
 
   return (
     <>
-      <Heading py={6} size={'md'}>Level</Heading>
       <RadioGroup onChange={setLevel} value={level}>
         <Flex direction={'column'} gap={4}>
           <Radio value='beginner'>

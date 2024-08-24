@@ -101,9 +101,5 @@ def get_all_images():
     print (f'{count} still need to retrieve images')
     for species in Species.objects.filter(images=None):
         nr += 1
-        if species.species.images.count() == 0:
-            print(f'🔎 [{nr}/{count}] {species.species.name}' , end='\r')
-            get_images(species.species.id)
-            print(f'☑️ [{nr}/{count}] {species.species.name}')
-        else:
-            print(f'☑️ [{nr}/{count}] {species.species.name}')
+        print(f'☑️ [{nr}/{count}] {species.name}')
+        get_images(species.id)

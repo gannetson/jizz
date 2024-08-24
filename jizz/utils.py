@@ -46,8 +46,11 @@ def sync_regions(country, code):
 
 def sync_country(code='ZNZ'):
     country = Country.objects.get(code=code)
-    for code in country.codes.split(','):
-        sync_regions(country, code)
+    if country.codes:
+        for code in country.codes.split(','):
+            sync_regions(country, code)
+    else:
+        sync_regions(country, country.code)
 
 
 def get_images(id=1):
@@ -88,12 +91,8 @@ def get_all_countries():
     print (f'{count} still need to retrieve species')
     for country in countries:
         nr += 1
-        if country.species.count() == 0:
-            print(f'🔎 [{nr}/{count}] {country.name}' , end='\r')
-            sync_country(country.code)
-            print(f'☑️ [{nr}/{count}] {country.name}')
-        else:
-            print(f'☑️ [{nr}/{count}] {country.name}')
+        print(f'☑️ [{nr}/{count}] {country.name}')
+        sync_country(country.code)
 
 
 def get_all_images():

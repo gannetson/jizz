@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
@@ -42,11 +43,16 @@ class GameListView(ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['country']
 
+    @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous else None
         model = serializer.save(user=user)
-        for species in model.country.species.all():
-            model.questions.create(species=species.species)
+
+        species = model.country.species.all()
+        questions = [model.questions.model(species=species_instance.species, game=model) for species_instance in species]
+
+        if questions:
+            model.questions.bulk_create(questions)
 
 
 class GameDetailView(RetrieveAPIView):

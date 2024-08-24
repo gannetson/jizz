@@ -81,6 +81,21 @@ def get_country_images(code='TZ-15'):
             print(f'☑️ [{nr}/{count}] {species.species.name}')
 
 
+def get_all_countries():
+    countries = Country.objects.filter(species=None).all()
+    count = countries.count()
+    nr = 0
+    print (f'{count} still need to retrieve species')
+    for country in countries:
+        nr += 1
+        if country.species.count() == 0:
+            print(f'🔎 [{nr}/{count}] {country.name}' , end='\r')
+            sync_country(country.code)
+            print(f'☑️ [{nr}/{count}] {country.name}')
+        else:
+            print(f'☑️ [{nr}/{count}] {country.name}')
+
+
 def get_all_images():
     count = Species.objects.filter(images=None).count()
     nr = 0

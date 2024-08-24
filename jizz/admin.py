@@ -132,7 +132,8 @@ class SpeciesAdmin(admin.ModelAdmin):
 
 
 class QuestionInline(admin.TabularInline):
-    readonly_fields = ['species']
+    # readonly_fields = ['species']
+    raw_id_fields = ['species']
     model = Question
 
 

@@ -8,6 +8,7 @@ import Page from "./layout/page";
 import AppContext, {Question, Species} from "../core/app-context";
 
 const GamePage = () => {
+  const [success, setSuccess] = useState<boolean>(false);
   const [question, setQuestion] = useState<Question | null>();
   const [answer, setAnswer] = useState<Species | null | 'dunno'>();
   const [picNum, setPicNum] = useState<number>(0);
@@ -37,7 +38,7 @@ const GamePage = () => {
         setQuestion(question)
         setOptions(question?.options || null)
       } else {
-        alert('All done!!')
+        setSuccess(true)
       }
     }
   }
@@ -50,6 +51,9 @@ const GamePage = () => {
   const correctCount = questions ? questions.filter((sp) => sp.correct).length : '?'
   const totalCount = questions ? questions.length : '?'
 
+  const firstTry = game?.questions.filter((q) => q.errors === 0).length
+  const hardest = game?.questions.sort((a, b) => (b.errors || 0) - (a.errors || 0))[0]
+
   return (
     <Page>
       <Page.Header>
@@ -60,8 +64,8 @@ const GamePage = () => {
               hasArrow
               label={`You have identified ${correctCount} birds correctly out of ${totalCount}. These won't be shown again.`}>
               <Flex direction={'row'} alignItems={'center'}>
-                Species {correctCount} / {totalCount} <Box ml={1}><BsFillQuestionCircleFill fill={'#999'}
-                                                                                            size={16}/></Box>
+                Species {correctCount} / {totalCount}
+                <Box ml={1}><BsFillQuestionCircleFill fill={'#999'} size={16}/></Box>
               </Flex>
             </Tooltip>
           </Box>
@@ -69,75 +73,89 @@ const GamePage = () => {
         </Box>
       </Page.Header>
       <Page.Body>
-        {question && (
-          <Box position={'relative'}>
-            {question.species.images.length && question.species.images[picNum] ? (
-              <Image
-                src={question.species.images[picNum].url.replace('/1800', '/900')}
-                fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
-              />
-            ) : (
-                <Text>No images for this species, you'll get it for free it's {question.species.name}</Text>
-            )}
+        {success ? (
+            <>
+              <Heading size={'lg'}>Congratulations!</Heading>
+              <Heading size={'md'}> You've identified all {game?.questions.length} the species from {game?.country.name}</Heading>
+              <Text>You got <b>{firstTry} species</b> the first time right</Text>
+              {hardest && (hardest.errors || 0) > 0  && (
+                  <Text>You some problems with <b>{hardest.species.name}</b>, which guessed wrong <b>{hardest.errors} times</b>, before you got it right</Text>
+              )}
+            </>
+        ): (
+            <>
+              {question && (
+                  <Box position={'relative'}>
+                    {question.species.images.length && question.species.images[picNum] ? (
+                        <Image
+                            src={question.species.images[picNum].url.replace('/1800', '/900')}
+                            fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
+                        />
+                    ) : (
+                        <Text>No images for this species, you'll get it for free it's {question.species.name}</Text>
+                    )}
 
-            <Tooltip hasArrow label={'Click this to show another picture of the same species'}>
-              <IconButton
-                icon={<FiRefreshCw/>}
-                onClick={nextPic}
-                colorScheme="orange"
-                aria-label="Next picture"
-                size={'md'}
-                isRound={true}
-                variant='solid'
-                position={'absolute'} top={2} right={2}>
-              </IconButton>
-            </Tooltip>
-            <Confetti active={question.species === answer} config={{angle: 45}}/>
-          </Box>
-        )}
+                    <Tooltip hasArrow label={'Click this to show another picture of the same species'}>
+                      <IconButton
+                          icon={<FiRefreshCw/>}
+                          onClick={nextPic}
+                          colorScheme="orange"
+                          aria-label="Next picture"
+                          size={'md'}
+                          isRound={true}
+                          variant='solid'
+                          position={'absolute'} top={2} right={2}>
+                      </IconButton>
+                    </Tooltip>
+                    <Confetti active={question.species === answer} config={{angle: 45}}/>
+                  </Box>
+              )}
 
-        <Box fontWeight={'bold'}>
-          {answer && question?.species && (
-            answer === 'dunno' ? (
-              <Text>
-                It was <ViewSpecies species={question.species}/>
-              </Text>
-            ) : (
-              answer === question.species ?
-                'Correct!' : (
-                  <>
-                    <Text>
-                      Incorrect! It was <ViewSpecies species={question.species}/>
-                    </Text>
-                    <Text>
-                      Your answer: <ViewSpecies species={answer}/>
-                    </Text>
-                  </>
-                )
-            )
-          )}
-        </Box>
-        {answer ?
-          <Button onClick={newQuestion} colorScheme={'blue'}>Next</Button> :
-          <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>No clue</Button>
-        }
-        {questions && !answer && (options && options.length ? (
-            <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
-              {
-                options.map((option, key) => (
-                  <Button key={key} colorScheme='orange' onClick={() => checkAnswer(option)}>
-                    {option && option.name}
-                  </Button>
-                ))
+              <Box fontWeight={'bold'}>
+                {answer && question?.species && (
+                    answer === 'dunno' ? (
+                        <Text>
+                          It was <ViewSpecies species={question.species}/>
+                        </Text>
+                    ) : (
+                        answer === question.species ?
+                            'Correct!' : (
+                                <>
+                                  <Text>
+                                    Incorrect! It was <ViewSpecies species={question.species}/>
+                                  </Text>
+                                  <Text>
+                                    Your answer: <ViewSpecies species={answer}/>
+                                  </Text>
+                                </>
+                            )
+                    )
+                )}
+              </Box>
+              {answer ?
+                  <Button onClick={newQuestion} colorScheme={'blue'}>Next</Button> :
+                  <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>No clue</Button>
               }
-            </SimpleGrid>
+              {questions && !answer && (options && options.length ? (
+                      <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
+                        {
+                          options.map((option, key) => (
+                              <Button key={key} colorScheme='orange' onClick={() => checkAnswer(option)}>
+                                {option && option.name}
+                              </Button>
+                          ))
+                        }
+                      </SimpleGrid>
 
-          ) : (
-            <Select
-              options={questions.map((q) => ({label: q.species.name, value: q.species}))}
-              onChange={(answer) => answer && checkAnswer(answer.value)}
-            />
-          )
+                  ) : (
+                      <Select
+                          options={questions.map((q) => ({label: q.species.name, value: q.species}))}
+                          onChange={(answer) => answer && checkAnswer(answer.value)}
+                      />
+                  )
+              )}
+
+            </>
         )}
       </Page.Body>
     </Page>

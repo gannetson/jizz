@@ -73,6 +73,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       let index = game?.questions.indexOf(question) || 0
       index -= 2
       if (index < 0) index = 0
+      if ((index + 5) >= game.questions.length) index = game.questions.length - 6
       const options: Species[] = [
         game.questions[index].species,
         game.questions[index + 1].species,

@@ -57,20 +57,22 @@ const GamePage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading size={'lg'} noOfLines={1}>{game?.country.name}</Heading>
-        <Box>
-          <Box textAlign={'right'}>
-            <Tooltip
-              hasArrow
-              label={`You have identified ${correctCount} birds correctly out of ${totalCount}. These won't be shown again.`}>
-              <Flex direction={'row'} alignItems={'center'}>
-                Species {correctCount} / {totalCount}
-                <Box ml={1}><BsFillQuestionCircleFill fill={'#999'} size={16}/></Box>
-              </Flex>
-            </Tooltip>
+        <Flex textColor={'gray.800'} width='full' justifyContent={'space-between'}>
+          <Heading size={'lg'} noOfLines={1}>{game?.country.name}</Heading>
+          <Box>
+            <Box textAlign={'right'}>
+              <Tooltip
+                hasArrow
+                label={`You have identified ${correctCount} birds correctly out of ${totalCount}. These won't be shown again.`}>
+                <Flex direction={'row'} alignItems={'center'}>
+                  Species {correctCount} / {totalCount}
+                  <Box ml={1}><BsFillQuestionCircleFill size={16}/></Box>
+                </Flex>
+              </Tooltip>
+            </Box>
+            <Box textAlign={'right'} fontWeight={'bold'} textTransform={'capitalize'}>Level: {game?.level}</Box>
           </Box>
-          <Box textAlign={'right'} fontWeight={'bold'} textTransform={'capitalize'}>Level: {game?.level}</Box>
-        </Box>
+        </Flex>
       </Page.Header>
       <Page.Body>
         {success ? (

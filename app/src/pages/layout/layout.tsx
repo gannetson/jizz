@@ -30,7 +30,7 @@ const Layout = () => {
   return (
     <>
       <Outlet/>
-      <Button variant="ghost" colorScheme={'orange'} p={2} onClick={onOpen} position={'fixed'} zIndex={20} top={2} left={2}>
+      <Button variant="ghost" color={'gray.800'} p={2} onClick={onOpen} position={'fixed'} zIndex={20} top={2} left={2}>
         <GiHamburgerMenu/>
       </Button>
       <Drawer

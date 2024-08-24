@@ -1,15 +1,20 @@
-import {Box, Flex, Heading, Link} from "@chakra-ui/react";
+import {Box, Button, ColorModeScript, Flex, Heading, Link, useColorMode} from "@chakra-ui/react";
 import AppContext from "../../core/app-context";
 import {useContext} from "react";
+import { IoIosMoon, IoIosSunny } from "react-icons/io";
 
 export const JizzMenu = () => {
     const {game} = useContext(AppContext);
-
+    const { colorMode, toggleColorMode } = useColorMode()
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'}>Home</Link>
             {game && <Link href={'/game'}>Continue game</Link>}
-
+            <Box>
+            <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>
+                {colorMode === 'light' ? 'Dark' : 'Light'}
+            </Button>
+            </Box>
         </Flex>
     );
 }

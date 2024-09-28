@@ -1,5 +1,5 @@
 import React, {FC, ReactNode, useCallback, useEffect, useState} from 'react';
-import AppContext, {Game, Country, Question, Species} from "./app-context";
+import AppContext, {Game, Country, Question, Species, Language} from "./app-context";
 
 type Props = {
   children: ReactNode;
@@ -10,6 +10,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('beginner');
   const [game, setGame] = useState<Game | undefined>();
   const [country, setCountry] = useState<Country | undefined>();
+  const [language, setLanguage] = useState<string | undefined>('en');
   const [loading, setLoading] = useState(false)
   const [species, setSpecies] = useState<Species | undefined>();
 
@@ -132,6 +133,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setLevel,
       country,
       setCountry,
+      language,
+      setLanguage,
       game,
       setGame,
       getNextQuestion,

@@ -27,7 +27,7 @@ class SpeciesListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Species
-        fields = ('name', 'name_latin', 'id', 'images')
+        fields = ('name', 'name_latin', 'name_nl', 'id', 'images')
 
 
 class SpeciesDetailSerializer(serializers.ModelSerializer):
@@ -36,7 +36,7 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Species
-        fields = ('name', 'name_latin', 'id', 'images')
+        fields = ('name', 'name_latin', 'name_nl', 'id', 'images')
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -50,8 +50,8 @@ class QuestionSerializer(serializers.ModelSerializer):
 class GameSerializer(serializers.ModelSerializer):
 
     questions = QuestionSerializer(many=True, read_only=True)
-    country= CountrySerializer()
+    country = CountrySerializer()
 
     class Meta:
         model = Game
-        fields = ('token', 'country', 'level', 'questions', 'created')
+        fields = ('token', 'country', 'level', 'language', 'questions', 'created')

@@ -6,9 +6,10 @@ import AppContext, {Country, Game} from "../core/app-context";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {GiHummingbird} from "react-icons/all";
 import {formatDate, formatDistanceToNow} from "date-fns";
+import SelectLanguage from "../components/select-language"
 
 const HomePage = () => {
-    const {country, level, setGame, game} = useContext(AppContext);
+    const {country, level, setGame, game, language} = useContext(AppContext);
     const [loading, setLoading] = useState(false)
 
 
@@ -23,6 +24,7 @@ const HomePage = () => {
                 },
                 body: JSON.stringify({
                     country: country.code,
+                    language: language,
                     level: level,
                 })
             })
@@ -57,7 +59,7 @@ const HomePage = () => {
                     <Flex direction={'column'} gap={20}>
                         {game && (
                             <Flex direction={'column'} gap={10}>
-                                <Heading size={'md'}>
+                                <Heading size={'lg'}>
                                     You have an old game in progress
                                 </Heading>
                                 <Text>
@@ -71,8 +73,9 @@ const HomePage = () => {
                             </Flex>
                         )}
                         <Flex direction={'column'} gap={10}>
-                            <Heading size={'md'}>Start new game</Heading>
+                            <Heading size={'lg'}>Start new game</Heading>
                             <SelectCountry/>
+                            <SelectLanguage />
                             <SelectLevel/>
                             <Button colorScheme='orange' size='lg' rightIcon={<GiHummingbird/>} onClick={startGame}>
                                 Start new game

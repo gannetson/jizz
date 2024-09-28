@@ -1,4 +1,4 @@
-import {Flex, Heading, Radio, RadioGroup, Text} from "@chakra-ui/react";
+import {Box, Flex, Heading, Radio, RadioGroup, Text} from "@chakra-ui/react";
 import {useContext} from "react";
 import AppContext from "../core/app-context";
 
@@ -7,7 +7,8 @@ const SelectLevel = () => {
   const {level, setLevel} = useContext(AppContext);
 
   return (
-    <>
+    <Box>
+      <Heading size={'md'} mb={4}>Level</Heading>
       <RadioGroup onChange={setLevel} value={level}>
         <Flex direction={'column'} gap={4}>
           <Radio value='beginner'>
@@ -24,7 +25,7 @@ const SelectLevel = () => {
           </Radio>
         </Flex>
       </RadioGroup>
-    </>
+    </Box>
   )
 };
 

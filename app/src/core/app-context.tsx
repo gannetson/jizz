@@ -6,12 +6,19 @@ export type Country = {
   name: string
 }
 
+export type Language = {
+  code: string
+  name: string
+}
+
+
 
 export type Game = {
   token: string
   level: string
   created: string
   country: Country
+  language: string
   questions: Question[]
   correct: number
 }
@@ -23,6 +30,7 @@ export type SpeciesImage = {
 export type Species = {
   id: number;
   name: string;
+  name_nl: string;
   name_latin: string;
   images: SpeciesImage[],
   correct?: boolean
@@ -45,6 +53,9 @@ type SharedState = {
   setLevel?: Dispatch<SetStateAction<string>>
   country?: Country | undefined
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
+  language?: string | undefined
+  setLanguage?: Dispatch<SetStateAction<string | undefined>>
+
   game?: Game | undefined
   setGame?: Dispatch<SetStateAction<Game | undefined>>
   progress?: string

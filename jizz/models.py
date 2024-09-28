@@ -24,7 +24,9 @@ class Country(models.Model):
 class Game(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True)
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True)
+    language = models.CharField(max_length=100, default='en')
     token = models.UUIDField(default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=100, blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
     level = models.CharField(max_length=100)
 
@@ -41,9 +43,18 @@ class Question(models.Model):
     def __str__(self):
         return f'{self.game} - {self.species}'
 
+
+class Player(models.Model):
+    game = models.ForeignKey(Game, related_name='players', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    score = models.IntegerField(default=0)
+    answered = models.BooleanField(default=False)
+
+
 class Species(models.Model):
     name = models.CharField(max_length=200)
     name_latin = models.CharField(max_length=200)
+    name_nl = models.CharField(max_length=200, null=True, blank=True)
     code = models.CharField(max_length=10)
 
     def __str__(self):
@@ -62,6 +73,16 @@ class SpeciesImage(models.Model):
         on_delete=models.CASCADE,
         related_name='images'
     )
+
+
+class SpeciesSound(models.Model):
+    url = models.URLField()
+    species = models.ForeignKey(
+        Species,
+        on_delete=models.CASCADE,
+        related_name='sounds'
+    )
+
 
 class CountrySpecies(models.Model):
     country = models.ForeignKey(

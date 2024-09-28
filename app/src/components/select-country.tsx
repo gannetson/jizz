@@ -1,4 +1,4 @@
-import {Heading} from "@chakra-ui/react";
+import {Box, Heading} from "@chakra-ui/react";
 import {UseCountries} from "../user/use-countries";
 import {Select} from "chakra-react-select";
 import {useContext} from "react";
@@ -15,7 +15,8 @@ const SelectCountry = () => {
   }
 
   return (
-    <>
+    <Box>
+      <Heading size={'md'} mb={4}>Country</Heading>
       <Select
         options={countries}
         getOptionLabel={(c) => c ? c.name : '?'}
@@ -23,7 +24,7 @@ const SelectCountry = () => {
         value={country}
         onChange={(val)=> val && onChange(val.name)}
       />
-    </>
+    </Box>
   )
 };
 

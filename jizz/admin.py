@@ -1,10 +1,11 @@
 from django.contrib import admin, messages
 from django.contrib.admin import register
+from django.db.models import Sum
 from django.http import HttpResponseRedirect
 from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
-from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question
+from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound
 from jizz.utils import sync_country, get_country_images, get_images, sync_species
 
 
@@ -82,6 +83,19 @@ class CountryAdmin(admin.ModelAdmin):
 
 
 
+class SpeciesSoundsInline(admin.TabularInline):
+    model = SpeciesSound
+
+    readonly_fields = ['snd']
+    fields = ['snd']
+
+    def snd(self, obj):
+        return format_html('<audio controls> <source src="{url}" type="audio/mp3" /></audio>', url=obj.url)
+
+    def has_add_permission(self, request, obj):
+        return False
+
+
 class SpeciesImageInline(admin.TabularInline):
     model = SpeciesImage
 
@@ -97,7 +111,7 @@ class SpeciesImageInline(admin.TabularInline):
 
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
-    inlines = [SpeciesImageInline]
+    inlines = [SpeciesSoundsInline, SpeciesImageInline]
     readonly_fields = ['sync_link', 'pic_count']
     search_fields  = ['name']
 
@@ -132,14 +146,28 @@ class SpeciesAdmin(admin.ModelAdmin):
 
 
 class QuestionInline(admin.TabularInline):
-    # readonly_fields = ['species']
-    raw_id_fields = ['species']
     model = Question
+    can_delete = False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request, obj):
+        return False
 
 
 @register(Game)
 class GameAdmin(admin.ModelAdmin):
-    inlines = [QuestionInline]
     raw_id_fields = ['country']
-    readonly_fields = ['token', 'created']
-    fields = ['country', 'created', 'token']
+    readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
+    fields = ['country', 'language', 'created', 'token', 'correct', 'total', 'errors']
+    list_display = ['country', 'created', 'level', 'correct', 'total', 'errors']
+
+    def correct(self, obj):
+        return obj.questions.filter(correct=True).count()
+
+    def total(self, obj):
+        return obj.questions.count()
+
+    def errors(self, obj):
+        return obj.questions.aggregate(errors=Sum('errors'))['errors']

@@ -5,7 +5,7 @@ import {Container, Flex} from "@chakra-ui/react";
 const PageBody = ({children}: {children: ReactElement | ReactNode[]} ) => {
 
   return (
-    <Container mt={20}>
+    <Container maxW={['full', '800px']} mt={20}>
       <Flex direction={'column'} gap={4}>
         {children}
       </Flex>

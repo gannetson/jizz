@@ -46,10 +46,14 @@ const AppContextProvider: FC<Props> = ({children}) => {
           'Content-Type': 'application/json',
         },
       })
-        .then(response => response.json())
-        .then(data => {
-          setGame(data)
+        .then(response => {
+          if (response.status === 200) {
+            response.json().then(data => { setGame(data)})
+          } else {
+            console.log('Could not load old game.')
+          }
         })
+
     }
   }, []);
 

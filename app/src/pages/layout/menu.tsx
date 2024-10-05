@@ -1,7 +1,7 @@
-import {Box, Button, ColorModeScript, Flex, Heading, Link, useColorMode} from "@chakra-ui/react";
+import {Box, Button, Flex, Link, useColorMode} from "@chakra-ui/react";
 import AppContext from "../../core/app-context";
 import {useContext} from "react";
-import { IoIosMoon, IoIosSunny } from "react-icons/io";
+import {IoIosMoon, IoIosSunny} from "react-icons/io";
 
 export const JizzMenu = () => {
     const {game} = useContext(AppContext);

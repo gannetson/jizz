@@ -1,5 +1,6 @@
 import {Outlet} from "react-router-dom";
 import {
+  Box,
   Button,
   Container,
   Drawer,
@@ -10,7 +11,7 @@ import {
   DrawerHeader,
   DrawerOverlay,
   Flex,
-  Heading, Menu,
+  Heading, Image, Link, Menu,
   Radio,
   RadioGroup,
   Text,
@@ -44,11 +45,24 @@ const Layout = () => {
           <DrawerHeader>Menu</DrawerHeader>
 
           <DrawerBody>
-            <JizzMenu />
+            <JizzMenu/>
           </DrawerBody>
 
           <DrawerFooter>
-            Developed by GoedLoek
+            <Flex direction={'column'} gap={4}>
+              <Box mb={10}>
+                All data & images
+                <Link href='https://ebird.org'>
+                  <Image _dark={{filter: 'invert(100%)'}} width='80px' src={'/images/ebird.svg'}/>
+                </Link>
+              </Box>
+              <Box>
+                Developed by <b>GoedLoek</b>
+              </Box>
+              <Box>
+                Contact <Link color='orange.500' href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>
+              </Box>
+            </Flex>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

@@ -1,11 +1,11 @@
-import {Button, Flex, Heading, Link, Spinner, Text} from "@chakra-ui/react";
+import {Button, Flex, Heading, Spinner, Text} from "@chakra-ui/react";
 import Page from "./layout/page";
 import SelectCountry from "../components/select-country";
 import SelectLevel from "../components/select-level";
-import AppContext, {Country, Game} from "../core/app-context";
-import {useCallback, useContext, useEffect, useState} from "react";
+import AppContext from "../core/app-context";
+import {useContext, useState} from "react";
+import {formatDistanceToNow} from "date-fns";
 import {GiHummingbird} from "react-icons/all";
-import {formatDate, formatDistanceToNow} from "date-fns";
 import SelectLanguage from "../components/select-language"
 
 const HomePage = () => {
@@ -48,7 +48,7 @@ const HomePage = () => {
     return (
         <Page>
             <Page.Header>
-                <Heading size={'lg'} m={0} noOfLines={1}>
+                <Heading  textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
                     Welcome!
                 </Heading>
             </Page.Header>

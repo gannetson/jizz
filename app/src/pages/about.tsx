@@ -31,6 +31,15 @@ export const AboutPage = () => {
                     With my background in programming, I started to put this app together. Back-end / API is in
                     Django and front-end in React. All code is open source and available on <Link color={'orange.500'} target={'_blank'} href={'https://github.com/gannetson/jizz'}>GitHub</Link>.
                 </Text>
+              <Heading size={'sm'}>Jizz?</Heading>
+              <Text>
+               In birdwatching, "jizz" refers to the overall impression or general appearance of a bird,
+                which includes its shape, behavior, movement, posture, flight pattern, and habitat.
+                Birders use "jizz" as a quick way to identify birds, often before getting a detailed
+                look at specific features like plumage or markings. It’s a holistic sense developed
+                over time by experienced birdwatchers, enabling them to recognize species even from
+                a brief glance or in less-than-ideal viewing conditions.
+                </Text>
               <Heading size={'sm'}>Contact & feedback</Heading>
               <Text>
                 Please feel free to contact me with any questions, suggestions, bugs or whatever!

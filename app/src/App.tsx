@@ -10,6 +10,7 @@ import MultiPlayerGame from "./pages/mpg/mpg"
 import CreateGame from "./pages/mpg/create"
 import JoinGame from "./pages/mpg/join"
 import Lobby from "./pages/mpg/lobby"
+import {AboutPage} from "./pages/about";
 
 export const App = () => {
   useEffect(() => {
@@ -24,6 +25,7 @@ export const App = () => {
               <Route path="/" element={<Layout/>}>
                 <Route index element={<HomePage/>}/>
                 <Route path='/game/' element={<GamePage/>}/>
+                <Route path='/about/' element={<AboutPage/>}/>
 
                 <Route path="/mpg/create" element={<CreateGame />}/>
                 <Route path="/mpg/join" element={<JoinGame />}/>

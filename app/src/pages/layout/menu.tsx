@@ -10,6 +10,7 @@ export const JizzMenu = () => {
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'}>Home</Link>
             {game && <Link href={'/game'}>Continue game</Link>}
+            <Link href={'/about'}>About</Link>
             <Box>
             <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>
                 {colorMode === 'light' ? 'Dark' : 'Light'}

@@ -47,15 +47,22 @@ export type Question = {
   answer?: Species | null
 }
 
+export type Player = {
+  code: string
+  name: string
+}
+
+
 
 type SharedState = {
+  player?: Player
+  setPlayer?: Dispatch<SetStateAction<Player | undefined>>
   level?: string
   setLevel?: Dispatch<SetStateAction<string>>
   country?: Country | undefined
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
   language?: string | undefined
   setLanguage?: Dispatch<SetStateAction<string | undefined>>
-
   game?: Game | undefined
   setGame?: Dispatch<SetStateAction<Game | undefined>>
   progress?: string
@@ -66,6 +73,8 @@ type SharedState = {
   loading?: boolean
 };
 
-const AppContext = createContext<SharedState>({});
+const AppContext = createContext<SharedState>({
+
+});
 
 export default AppContext;

@@ -22,7 +22,6 @@ class Country(models.Model):
 
 
 class Game(models.Model):
-    host = models.ForeignKey('jizz.Player', on_delete=models.SET_NULL, null=True)
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True)
     language = models.CharField(max_length=100, default='en')
     token = models.UUIDField(default=uuid.uuid4, editable=False)
@@ -51,6 +50,8 @@ class QuestionOption(models.Model):
 class Player(models.Model):
     game = models.ForeignKey(Game, related_name='players', on_delete=models.CASCADE)
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    is_host = models.BooleanField(default=False)
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=100, blank=True, null=True)
     score = models.IntegerField(default=0)

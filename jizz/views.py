@@ -7,7 +7,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIV
 
 from jizz.models import Country, Species, Game, Question, Answer
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
-    QuestionSerializer
+    QuestionSerializer, AnswerSerializer
 
 
 class CountryDetailView(DetailView):

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from jizz.models import Country, Species, SpeciesImage, Game, Question
+from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -47,12 +47,25 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ('id', 'species', 'errors', 'correct',)
 
 
+class AnswerSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Answer
+        fields = ('id', 'question', 'player', 'answer')
+
+
+class PlayerSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Player
+        fields = ('name', )
+
+
 class GameSerializer(serializers.ModelSerializer):
 
-    questions = QuestionSerializer(many=True, read_only=True)
     country = CountrySerializer()
     question = QuestionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Game
-        fields = ('token', 'country', 'level', 'language', 'questions', 'created')
+        fields = ('token', 'country', 'host', 'level', 'language', 'question', 'created')

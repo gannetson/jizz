@@ -36,6 +36,8 @@ urlpatterns = [
     re_path(r"^api/species/(?P<pk>\w+)/$", SpeciesDetailView.as_view(), name="species-detail"),
     re_path(r"^api/games/$", GameListView.as_view(), name="game-list"),
     re_path(r"^api/games/(?P<token>[\w-]+)/$", GameDetailView.as_view(), name="game-detail"),
+    re_path(r"^api/games/(?P<token>[\w-]+)/question$", GameDetailView.as_view(), name="game-detail"),
+
     re_path(r"^api/questions/(?P<pk>\w+)/$", QuestionDetailView.as_view(), name="question-detail"),
 
 ]

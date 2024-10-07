@@ -2,9 +2,10 @@ from django.db import transaction
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
-from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView, \
+    CreateAPIView
 
-from jizz.models import Country, Species, Game, Question
+from jizz.models import Country, Species, Game, Question, Answer
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
     QuestionSerializer
 
@@ -59,6 +60,20 @@ class GameDetailView(RetrieveAPIView):
     serializer_class = GameSerializer
     queryset = Game.objects.all()
     lookup_field = 'token'
+
+
+class QuestionView(RetrieveAPIView):
+    serializer_class = QuestionSerializer
+    queryset = Question.objects.all()
+
+    def get_object(self):
+        return self.queryset.filter(
+            game__token=self.kwargs['token']
+        ).first()
+
+class AnswerView(CreateAPIView):
+    serializer_class = AnswerSerializer
+    queryset = Answer.objects.all()
 
 
 class QuestionDetailView(RetrieveUpdateAPIView):

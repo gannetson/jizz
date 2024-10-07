@@ -51,6 +51,7 @@ class GameSerializer(serializers.ModelSerializer):
 
     questions = QuestionSerializer(many=True, read_only=True)
     country = CountrySerializer()
+    question = QuestionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Game

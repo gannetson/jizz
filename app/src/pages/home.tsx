@@ -7,6 +7,7 @@ import {useContext, useState} from "react";
 import {formatDistanceToNow} from "date-fns";
 import {GiHummingbird} from "react-icons/all";
 import SelectLanguage from "../components/select-language"
+import {FormattedMessage} from "react-intl";
 
 const HomePage = () => {
     const {country, level, setGame, game, language} = useContext(AppContext);
@@ -49,7 +50,7 @@ const HomePage = () => {
         <Page>
             <Page.Header>
                 <Heading  textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
-                    Welcome!
+                    <FormattedMessage id='welcome' defaultMessage={'Welcome!'} />
                 </Heading>
             </Page.Header>
             <Page.Body>
@@ -60,7 +61,7 @@ const HomePage = () => {
                         {game && (
                             <Flex direction={'column'} gap={10}>
                                 <Heading size={'lg'}>
-                                    You have an old game in progress
+                                    <FormattedMessage id='old game' defaultMessage={'You have an old game in progress!'} />
                                 </Heading>
                                 <Text>
                                     Country: {game.country.name}<br/>
@@ -73,7 +74,7 @@ const HomePage = () => {
                             </Flex>
                         )}
                         <Flex direction={'column'} gap={10}>
-                            <Heading size={'lg'}>Start new game</Heading>
+                            <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start new game'} /></Heading>
                             <SelectCountry/>
                             <SelectLanguage />
                             <SelectLevel/>

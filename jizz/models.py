@@ -22,7 +22,7 @@ class Country(models.Model):
 
 
 class Game(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True)
+    host = models.ForeignKey('jizz.Player', on_delete=models.SET_NULL, null=True)
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True)
     language = models.CharField(max_length=100, default='en')
     token = models.UUIDField(default=uuid.uuid4, editable=False)
@@ -43,12 +43,23 @@ class Question(models.Model):
     def __str__(self):
         return f'{self.game} - {self.species}'
 
+class QuestionOption(models.Model):
+    question = models.ForeignKey('jizz.Question', related_name='questions', on_delete=models.CASCADE)
+    species = models.ForeignKey('jizz.Species', on_delete=models.CASCADE)
+
 
 class Player(models.Model):
     game = models.ForeignKey(Game, related_name='players', on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
+    code = models.CharField(max_length=100, blank=True, null=True)
     score = models.IntegerField(default=0)
-    answered = models.BooleanField(default=False)
+
+
+class Answer(models.Model):
+    question = models.ForeignKey('jizz.Question', related_name='answer', on_delete=models.CASCADE)
+    player = models.ForeignKey('jizz.Player', related_name='answer', on_delete=models.CASCADE)
+    answer = models.ForeignKey('jizz.Species', related_name='answer', on_delete=models.CASCADE)
 
 
 class Species(models.Model):

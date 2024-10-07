@@ -4,7 +4,7 @@ import re
 import requests
 from django.conf import settings
 
-from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesSound
+from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesSound, SpeciesVideo
 
 SERVER_NAME = 'api.ebird.org'
 API_VERSION = 'v2'
@@ -97,6 +97,20 @@ def get_sounds(id=1):
         )
 
 
+def get_videos(id=1):
+    species = Species.objects.get(id=id)
+    data = requests.get(
+        f'https://media.ebird.org/catalog?taxonCode={species.code}&mediaType=video&sort=rating_rank_desc'
+    )
+    pattern = r'assetId:(\d+)'
+    matches = re.findall(pattern, data.text)
+    for match in matches[0:5]:
+        SpeciesVideo.objects.get_or_create(
+            url=f'https://cdn.download.ams.birds.cornell.edu/api/v2/asset/{match}/mp4/1280',
+            species=species
+        )
+
+
 def get_country_images(code='TZ-15'):
     country = Country.objects.get(code=code)
     nr = 0
@@ -112,6 +126,7 @@ def get_country_images(code='TZ-15'):
             print(f'☑️ [{nr}/{count}] images {species.species.name}')
         else:
             print(f'☑️ [{nr}/{count}] images {species.species.name}')
+
     nr = 0
     count = CountrySpecies.objects.filter(country=country, species__sounds=None).count()
     print (f'{count} still need to retrieve sounds')
@@ -120,6 +135,18 @@ def get_country_images(code='TZ-15'):
         if species.species.sounds.count() == 0:
             print(f'🔎 [{nr}/{count}] {species.species.name}' , end='\r')
             get_sounds(species.species.id)
+            print(f'☑️ [{nr}/{count}] sounds {species.species.name}')
+        else:
+            print(f'☑️ [{nr}/{count}] sounds {species.species.name}')
+
+    nr = 0
+    count = CountrySpecies.objects.filter(country=country, species__videos=None).count()
+    print (f'{count} still need to retrieve videos')
+    for species in CountrySpecies.objects.filter(country=country, species__videos=None):
+        nr += 1
+        if species.species.videos.count() == 0:
+            print(f'🔎 [{nr}/{count}] {species.species.name}' , end='\r')
+            get_videos(species.species.id)
             print(f'☑️ [{nr}/{count}] sounds {species.species.name}')
         else:
             print(f'☑️ [{nr}/{count}] sounds {species.species.name}')

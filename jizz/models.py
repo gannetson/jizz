@@ -84,6 +84,15 @@ class SpeciesSound(models.Model):
     )
 
 
+class SpeciesVideo(models.Model):
+    url = models.URLField()
+    species = models.ForeignKey(
+        Species,
+        on_delete=models.CASCADE,
+        related_name='videos'
+    )
+
+
 class CountrySpecies(models.Model):
     country = models.ForeignKey(
         Country,

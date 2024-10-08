@@ -1,5 +1,5 @@
 import {useContext, useState} from "react"
-import AppContext from "../../core/app-context"
+import AppContext from "../core/app-context"
 import {Button, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import {formatDistanceToNow} from "date-fns"
@@ -8,8 +8,7 @@ import {formatDistanceToNow} from "date-fns"
 export const LoadGame = () => {
 
 
-  const { game } = useContext(AppContext);
-  const [loading, setLoading] = useState(false)
+  const {game} = useContext(AppContext);
 
 
   const loadGame = async () => {
@@ -20,24 +19,22 @@ export const LoadGame = () => {
 
 
   return (
-    loading ? (
-      <Spinner size={'50px'}/>
-    ) : (
-      game && (
+    <>
+      {game && (
         <Flex direction={'column'} gap={10}>
           <Heading size={'lg'}>
-            <FormattedMessage id='old game' defaultMessage={'You have an old game in progress!'}/>
+            <FormattedMessage id='load game' defaultMessage={'Load game'}/>
           </Heading>
           <Text>
             Country: {game.country.name}<br/>
             Started: {formatDistanceToNow(game.created)} ago<br/>
-            Progress: {game.correct} / {game.questions.length}
+            Progress: {game.progress} / {game.length}
           </Text>
           <Button size='lg' onClick={loadGame} colorScheme={'orange'}>
-            Continue game
+            <FormattedMessage id='load game' defaultMessage={'Load game'}/>
           </Button>
         </Flex>
-      )
-    )
+      )}
+    </>
   )
 }

@@ -9,7 +9,7 @@ const SelectLevel = () => {
   return (
     <Box>
       <Heading size={'md'} mb={4}>Level</Heading>
-      <RadioGroup onChange={setLevel} value={level}>
+      <RadioGroup onChange={setLevel} value={level} colorScheme={'orange'}>
         <Flex direction={'column'} gap={4}>
           <Radio value='beginner'>
             <Text>Beginner</Text>

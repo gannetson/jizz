@@ -58,7 +58,7 @@ class PlayerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Player
-        fields = ('name', )
+        fields = ('name', 'token')
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -68,4 +68,4 @@ class GameSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Game
-        fields = ('token', 'country', 'host', 'level', 'language', 'question', 'created')
+        fields = ('token', 'country', 'level', 'language', 'question', 'created', 'multiplayer', 'length')

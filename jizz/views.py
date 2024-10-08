@@ -5,9 +5,9 @@ from rest_framework import viewsets
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView, \
     CreateAPIView
 
-from jizz.models import Country, Species, Game, Question, Answer
+from jizz.models import Country, Species, Game, Question, Answer, Player
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
-    QuestionSerializer, AnswerSerializer
+    QuestionSerializer, AnswerSerializer, PlayerSerializer
 
 
 class CountryDetailView(DetailView):
@@ -38,6 +38,33 @@ class SpeciesDetailView(RetrieveAPIView):
     queryset = Species.objects.all()
 
 
+class PlayerCreateView(CreateAPIView):
+    serializer_class = PlayerSerializer
+    queryset = Player.objects.all()
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+    def perform_create(self, serializer):
+        ip = self.get_client_ip(self.request)
+        return serializer.save(ip=ip)
+
+
+class PlayerView(RetrieveAPIView):
+    serializer_class = PlayerSerializer
+    queryset = Player.objects.all()
+
+    def get_object(self):
+        return self.queryset.filter(
+            token=self.kwargs['token']
+        ).first()
+
+
 class GameListView(ListCreateAPIView):
     serializer_class = GameSerializer
     queryset = Game.objects.all()
@@ -46,8 +73,7 @@ class GameListView(ListCreateAPIView):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        user = self.request.user if not self.request.user.is_anonymous else None
-        model = serializer.save(user=user)
+        model = serializer.save()
 
         species = model.country.species.all()
         questions = [model.questions.model(species=species_instance.species, game=model) for species_instance in species]

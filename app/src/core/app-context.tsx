@@ -11,40 +11,45 @@ export type Language = {
   name: string
 }
 
-
-
 export type Game = {
   token: string
   level: string
   created: string
   country: Country
   language: string
-  questions: Question[]
-  correct: number
+  question: Question
+  length: number
+  progress: number
 }
 
 export type SpeciesImage = {
   url: string;
 }
 
+export type SpeciesVideo = {
+  url: string;
+}
+
+export type SpeciesSound = {
+  url: string;
+}
+
 export type Species = {
-  id: number;
-  name: string;
-  name_nl: string;
-  name_latin: string;
-  images: SpeciesImage[],
+  id: number
+  name: string
+  name_nl: string
+  name_latin: string
+  images: SpeciesImage[]
+  sounds: SpeciesSound[]
+  videos: SpeciesVideo[]
   correct?: boolean
 }
 
 
 export type Question = {
   id: number
-  species: Species,
+  game: Game
   options?: Species[]
-  errors?: number
-  correct?: boolean
-  picNum?: number
-  answer?: Species | null
 }
 
 export type Player = {
@@ -52,6 +57,14 @@ export type Player = {
   name: string
 }
 
+
+export type Answer = {
+  question: Question
+  species: Species
+  player: Player
+  error?: number
+  correct?: boolean
+}
 
 
 type SharedState = {
@@ -63,6 +76,8 @@ type SharedState = {
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
   language?: string | undefined
   setLanguage?: Dispatch<SetStateAction<string | undefined>>
+  multiplayer?: string
+  setMultiplayer?: Dispatch<SetStateAction<string>>
   game?: Game | undefined
   setGame?: Dispatch<SetStateAction<Game | undefined>>
   progress?: string

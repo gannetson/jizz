@@ -1,8 +1,9 @@
 import {useContext, useState} from "react"
-import AppContext from "../../core/app-context"
+import AppContext from "../core/app-context"
 import {Box, Button, Flex, Input, Spinner} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import {Loading} from "./loading"
+import SelectLanguage from "./select-language"
 
 
 export const CreatePlayer = () => {
@@ -44,6 +45,7 @@ export const CreatePlayer = () => {
           <FormattedMessage id={'create game'} defaultMessage={"What's your name"}/>
           <Input name={'name'} onChange={(event) => setPlayerName(event.target.value)}/>
         </Box>
+        <SelectLanguage />
         <Button isDisabled={!playerName} colorScheme='orange' size='lg' onClick={createPlayer}>
           <FormattedMessage id={'create game'} defaultMessage={"Continue"}/>
         </Button>

@@ -28,6 +28,8 @@ class Game(models.Model):
     code = models.CharField(max_length=100, blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
     level = models.CharField(max_length=100)
+    multiplayer = models.BooleanField(default=False)
+    length = models.IntegerField(default=0)
 
     def __str__(self):
         return f'{self.country} - {self.level} - {self.created.strftime("%X %x")}'
@@ -48,12 +50,12 @@ class QuestionOption(models.Model):
 
 
 class Player(models.Model):
-    game = models.ForeignKey(Game, related_name='players', on_delete=models.CASCADE)
+    game = models.ForeignKey(Game, related_name='players', blank=True, null=True, on_delete=models.CASCADE)
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True, blank=True)
     is_host = models.BooleanField(default=False)
     name = models.CharField(max_length=255)
-    code = models.CharField(max_length=100, blank=True, null=True)
+    token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
     score = models.IntegerField(default=0)
 
 

@@ -13,10 +13,11 @@ const SelectLanguage = () => {
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Language (names)</Heading>
+      <Heading size={'md'} mb={4}>Language</Heading>
       <RadioGroup
         value={language}
         onChange={(val) => val && onChange(val)}
+        colorScheme={'orange'}
       >
         <Flex direction={'column'} gap={4}>
         <Radio value={'en'}>English</Radio>

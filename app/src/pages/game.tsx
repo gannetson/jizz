@@ -17,23 +17,9 @@ const GamePage = () => {
   const [options, setOptions] = useState<Species[] | null>([])
   const {setCorrect, setWrong, country, getNextQuestion, game} = useContext(AppContext);
 
-  const nextPic = () => {
-    setPicNum((picNum + 1) % question!.species.images.length)
-  }
 
   const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
-
-  const checkAnswer = (answer: Species) => {
-    setAnswer(answer)
-    if (answer === question?.species) {
-      setCorrect && question && setCorrect(question)
-    } else {
-      setWrong && question && setWrong(question)
-    }
-  }
-
-  const questions = game?.questions
-
+  /*
   const newQuestion = () => {
     if (questions && questions.length && getNextQuestion) {
       setAnswer(null)
@@ -81,7 +67,6 @@ const GamePage = () => {
 
   const firstTry = game?.questions.filter((q) => q.errors === 0).length
   const hardest = game?.questions.sort((a, b) => (b.errors || 0) - (a.errors || 0))[0]
-
   return (
     <Page>
       <Page.Header>
@@ -215,4 +200,9 @@ const GamePage = () => {
   )
 }
 
-export default GamePage;
+   */
+
+  return <Heading>...TBA</Heading>
+}
+
+export default GamePage

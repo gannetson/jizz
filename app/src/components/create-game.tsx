@@ -1,10 +1,11 @@
 import {useContext, useState} from "react"
-import AppContext from "../../core/app-context"
+import AppContext from "../core/app-context"
 import {Button, Flex, Heading, Spinner} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import SelectCountry from "../../components/select-country"
-import SelectLanguage from "../../components/select-language"
-import SelectLevel from "../../components/select-level"
+import SelectCountry from "./select-country"
+import SelectLanguage from "./select-language"
+import SelectLevel from "./select-level"
+import {SelectGameType} from "./select-game-type"
 
 
 export const CreateGame = () => {
@@ -46,7 +47,7 @@ export const CreateGame = () => {
       <Flex direction={'column'} gap={10}>
         <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start new game'}/></Heading>
         <SelectCountry/>
-        <SelectLanguage/>
+        <SelectGameType />
         <SelectLevel/>
         <Button colorScheme='orange' size='lg' onClick={startGame}>
           < FormattedMessage id={'start game'} defaultMessage={"Start new game"}/>

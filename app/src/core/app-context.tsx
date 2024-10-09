@@ -4,6 +4,7 @@ import {createContext, Dispatch, SetStateAction} from 'react';
 export type Country = {
   code: string
   name: string
+  count?: number
 }
 
 export type Language = {
@@ -72,6 +73,8 @@ type SharedState = {
   setPlayer?: Dispatch<SetStateAction<Player | undefined>>
   level?: string
   setLevel?: Dispatch<SetStateAction<string>>
+  length?: string
+  setLength?: Dispatch<SetStateAction<string>>
   country?: Country | undefined
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
   language?: string | undefined

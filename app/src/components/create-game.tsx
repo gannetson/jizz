@@ -6,6 +6,8 @@ import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
 import SelectLevel from "./select-level"
 import {SelectGameType} from "./select-game-type"
+import {Loading} from "./loading"
+import {SelectLength} from "./select-length"
 
 
 export const CreateGame = () => {
@@ -43,12 +45,13 @@ export const CreateGame = () => {
 
   return (
     loading ? (
-      <Spinner size={'50px'}/>
+      <Loading />
     ) : (
       <Flex direction={'column'} gap={10}>
         <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start new game'}/></Heading>
         <SelectCountry/>
         <SelectGameType />
+        <SelectLength />
         <SelectLevel/>
         <Button isDisabled={!country} colorScheme='orange' size='lg' onClick={startGame}>
           <FormattedMessage id={'start game'} defaultMessage={"Start new game"}/>

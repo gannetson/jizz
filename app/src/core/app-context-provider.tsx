@@ -12,7 +12,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [country, setCountry] = useState<Country | undefined>();
   const [language, setLanguage] = useState<string | undefined>('en');
   const [loading, setLoading] = useState(false)
-  const [species, setSpecies] = useState<Species | undefined>();
+  const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
   const [multiplayer, setMultiplayer] = useState<string>('0')
 
@@ -108,6 +108,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
     <AppContext.Provider value={{
       level,
       setLevel,
+      length,
+      setLength,
       country,
       setCountry,
       language,

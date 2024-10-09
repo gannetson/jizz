@@ -9,6 +9,10 @@ class Country(models.Model):
     code = models.CharField(max_length=10, primary_key=True)
     codes = models.CharField(max_length=400, null=True, blank=True)
 
+    @property
+    def count(self):
+        return self.species.count()
+
     def __str__(self):
         return self.name
 

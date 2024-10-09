@@ -23,7 +23,7 @@ class CountryDetailView(DetailView):
 
 class CountryViewSet(viewsets.ModelViewSet):
     serializer_class = CountrySerializer
-    queryset = Country.objects.exclude(species__isnull=True).all()
+    queryset = Country.objects.exclude(countryspecies__isnull=True).all()
 
 
 class SpeciesListView(ListAPIView):
@@ -74,12 +74,7 @@ class GameListView(ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         model = serializer.save()
-
-        species = model.country.species.all()
-        questions = [model.questions.model(species=species_instance.species, game=model) for species_instance in species]
-
-        if questions:
-            model.questions.bulk_create(questions)
+        model.add_question()
 
 
 class GameDetailView(RetrieveAPIView):

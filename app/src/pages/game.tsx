@@ -8,6 +8,7 @@ import Page from "./layout/page";
 import AppContext, {Question, Species} from "../core/app-context";
 import {Kbd} from '@chakra-ui/react'
 import {FormattedMessage} from "react-intl";
+import {Loading} from "../components/loading";
 
 const GamePage = () => {
   const [success, setSuccess] = useState<boolean>(false);
@@ -15,7 +16,7 @@ const GamePage = () => {
   const [answer, setAnswer] = useState<Species | null | 'dunno'>();
   const [picNum, setPicNum] = useState<number>(0);
   const [options, setOptions] = useState<Species[] | null>([])
-  const {setCorrect, setWrong, country, getNextQuestion, game} = useContext(AppContext);
+  const {game} = useContext(AppContext);
 
 
   const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
@@ -202,7 +203,32 @@ const GamePage = () => {
 
    */
 
-  return <Heading>...TBA</Heading>
+  return (
+    game ? (
+      <Page>
+        <Page.Header>
+          <Flex textColor={'gray.800'} width='full' justifyContent={'space-between'}>
+            <Heading size={'lg'} noOfLines={1}>{game?.country.name}</Heading>
+            <Box>
+              <Box textAlign={'right'}>
+                <Flex direction={'row'} alignItems={'center'}>
+                  <FormattedMessage id="questions" defaultMessage={'Questions'}/> {game.progress} / {game.length}
+                  <Box ml={1}><BsFillQuestionCircleFill size={16}/></Box>
+                </Flex>
+              </Box>
+              <Box textAlign={'right'} fontWeight={'bold'} textTransform={'capitalize'}>Level: {game?.level}</Box>
+            </Box>
+          </Flex>
+        </Page.Header>
+        <Page.Body>
+          <Heading>TBA</Heading>
+        </Page.Body>
+      </Page>
+
+    ) : (
+      <Loading/>
+    )
+  )
 }
 
 export default GamePage

@@ -40,11 +40,12 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    species = SpeciesListSerializer(read_only=True)
+    options = SpeciesDetailSerializer(many=True, read_only=True)
+    images = ImageSerializer(source='species.images', many=True)
 
     class Meta:
         model = Question
-        fields = ('id', 'species', 'errors', 'correct',)
+        fields = ('id', 'done', 'options', 'images')
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -64,7 +65,7 @@ class PlayerSerializer(serializers.ModelSerializer):
 class GameSerializer(serializers.ModelSerializer):
 
     country = CountrySerializer()
-    question = QuestionSerializer(many=True, read_only=True)
+    question = QuestionSerializer(read_only=True)
 
     class Meta:
         model = Game

@@ -173,6 +173,7 @@ class QuestionInline(admin.TabularInline):
 
 @register(Game)
 class GameAdmin(admin.ModelAdmin):
+    inlines = [QuestionInline]
     raw_id_fields = ['country']
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
     fields = ['country', 'language', 'created', 'token', 'length', 'multiplayer']

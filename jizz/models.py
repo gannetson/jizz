@@ -1,4 +1,5 @@
 import uuid
+from random import randint, shuffle
 
 from django.db import models
 from django.urls import reverse
@@ -35,6 +36,39 @@ class Game(models.Model):
     multiplayer = models.BooleanField(default=False)
     length = models.IntegerField(default=0)
 
+    def add_question(self):
+        all_species = Species.objects.filter(countryspecies__country=self.country)
+        left_species = all_species.exclude(id__in=self.questions.values_list('species_id', flat=True))
+        species = left_species.order_by('?').first()
+
+        if self.level == 'advanced':
+            options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
+            next = 4 - options1.count()
+            options2 = all_species.filter(id__gt=species.id).order_by('id')[:next]
+            if options2.count() < 2:
+                prev = 4 - options2.count()
+                options1 = all_species.filter(id__lt=species.id).order_by('-id')[:prev]
+
+            option_ids = list(options1.values_list('id', flat=True)) + list(options2.values_list('id', flat=True)) + [species.id]
+            options = all_species.filter(id__in=option_ids).order_by('?')
+            question = self.questions.create(species=species)
+            question.options.add(*options)
+
+        elif self.level == 'beginner':
+            options = all_species.order_by('?')[:4]
+            self.questions.create(
+                species=species,
+                options=options
+            )
+        else:
+            self.questions.create(
+                species_id=species.id,
+            )
+
+    @property
+    def question(self):
+        return self.questions.filter(done=False).first()
+
     @property
     def progress(self):
         return self.questions.filter(done=True).count()
@@ -46,15 +80,12 @@ class Game(models.Model):
 class Question(models.Model):
     game = models.ForeignKey('jizz.Game', related_name='questions', on_delete=models.CASCADE)
     species = models.ForeignKey('jizz.Species', related_name='questions', on_delete=models.CASCADE)
+    options = models.ManyToManyField('jizz.Species')
     errors = models.IntegerField(default=0)
     done = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.game} - {self.species}'
-
-class QuestionOption(models.Model):
-    question = models.ForeignKey('jizz.Question', related_name='questions', on_delete=models.CASCADE)
-    species = models.ForeignKey('jizz.Species', on_delete=models.CASCADE)
 
 
 class Player(models.Model):
@@ -78,9 +109,6 @@ class Species(models.Model):
     name_latin = models.CharField(max_length=200)
     name_nl = models.CharField(max_length=200, null=True, blank=True)
     code = models.CharField(max_length=10)
-
-    def __str__(self):
-        return self.name
 
     class Meta:
         verbose_name = 'species'
@@ -118,12 +146,12 @@ class SpeciesVideo(models.Model):
 class CountrySpecies(models.Model):
     country = models.ForeignKey(
         Country,
-        related_name='species',
+        related_name='countryspecies',
         on_delete=models.CASCADE
     )
     species = models.ForeignKey(
         Species,
-        related_name='countries',
+        related_name='countryspecies',
         on_delete=models.CASCADE
     )
 

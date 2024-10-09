@@ -7,7 +7,7 @@ type Props = {
 
 
 const AppContextProvider: FC<Props> = ({children}) => {
-  const [level, setLevel] = useState<string>('beginner');
+  const [level, setLevel] = useState<string>('advanced');
   const [game, setGame] = useState<Game | undefined>();
   const [country, setCountry] = useState<Country | undefined>();
   const [language, setLanguage] = useState<string | undefined>('en');

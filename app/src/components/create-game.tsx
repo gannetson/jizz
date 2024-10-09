@@ -10,7 +10,7 @@ import {SelectGameType} from "./select-game-type"
 
 export const CreateGame = () => {
 
-  const {country, level, setGame, language} = useContext(AppContext);
+  const {country, level, setGame, language, multiplayer} = useContext(AppContext);
   const [loading, setLoading] = useState(false)
 
 
@@ -24,6 +24,7 @@ export const CreateGame = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          multiplayer: multiplayer === '1',
           country: country.code,
           language: language,
           level: level,
@@ -49,8 +50,8 @@ export const CreateGame = () => {
         <SelectCountry/>
         <SelectGameType />
         <SelectLevel/>
-        <Button colorScheme='orange' size='lg' onClick={startGame}>
-          < FormattedMessage id={'start game'} defaultMessage={"Start new game"}/>
+        <Button isDisabled={!country} colorScheme='orange' size='lg' onClick={startGame}>
+          <FormattedMessage id={'start game'} defaultMessage={"Start new game"}/>
         </Button>
       </Flex>
 

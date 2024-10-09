@@ -68,4 +68,4 @@ class GameSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Game
-        fields = ('token', 'country', 'level', 'language', 'question', 'created', 'multiplayer', 'length')
+        fields = ('token', 'country', 'level', 'language', 'question', 'created', 'multiplayer', 'length', 'progress')

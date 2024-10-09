@@ -31,6 +31,10 @@ class Game(models.Model):
     multiplayer = models.BooleanField(default=False)
     length = models.IntegerField(default=0)
 
+    @property
+    def progress(self):
+        return self.questions.filter(done=True).count()
+
     def __str__(self):
         return f'{self.country} - {self.level} - {self.created.strftime("%X %x")}'
 
@@ -39,7 +43,7 @@ class Question(models.Model):
     game = models.ForeignKey('jizz.Game', related_name='questions', on_delete=models.CASCADE)
     species = models.ForeignKey('jizz.Species', related_name='questions', on_delete=models.CASCADE)
     errors = models.IntegerField(default=0)
-    correct = models.BooleanField(default=False)
+    done = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.game} - {self.species}'

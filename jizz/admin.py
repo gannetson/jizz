@@ -175,8 +175,8 @@ class QuestionInline(admin.TabularInline):
 class GameAdmin(admin.ModelAdmin):
     raw_id_fields = ['country']
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
-    fields = ['country', 'language', 'created', 'token']
-    list_display = ['country', 'created', 'level']
+    fields = ['country', 'language', 'created', 'token', 'length', 'multiplayer']
+    list_display = ['country', 'created', 'level', 'length', 'multiplayer']
 
     def correct(self, obj):
         return obj.questions.filter(correct=True).count()

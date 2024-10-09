@@ -12,7 +12,7 @@ import {SelectLength} from "./select-length"
 
 export const CreateGame = () => {
 
-  const {country, level, setGame, language, multiplayer} = useContext(AppContext);
+  const {country, level, setGame, language, multiplayer, length} = useContext(AppContext);
   const [loading, setLoading] = useState(false)
 
 
@@ -30,6 +30,7 @@ export const CreateGame = () => {
           country: country.code,
           language: language,
           level: level,
+          length: length
         })
       })
       const data = await response.json();

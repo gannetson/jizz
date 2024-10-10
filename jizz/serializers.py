@@ -50,16 +50,32 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class AnswerSerializer(serializers.ModelSerializer):
 
+    player_token = serializers.CharField(write_only=True)
+    correct = serializers.BooleanField(read_only=True)
+    species = SpeciesDetailSerializer(source='question.species', read_only=True)
+    answer = SpeciesDetailSerializer(read_only=True)
+    answer_id = serializers.IntegerField(write_only=True)
+    question_id = serializers.IntegerField(write_only=True)
+
+    def create(self, validated_data):
+        print(validated_data)
+        player = Player.objects.get(token=validated_data.pop('player_token'))
+        question = Question.objects.get(id=validated_data.pop('question_id'))
+        answer = Species.objects.get(id=validated_data.pop('answer_id'))
+        correct = answer == question.species
+        return Answer.objects.create(player=player, question=question, answer=answer, correct=correct)
+
     class Meta:
         model = Answer
-        fields = ('id', 'question', 'player', 'answer')
+        fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id')
+        unique_together = ('question', 'player')
 
 
 class PlayerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Player
-        fields = ('name', 'token')
+        fields = ('name', 'token', 'language')
 
 
 class GameSerializer(serializers.ModelSerializer):

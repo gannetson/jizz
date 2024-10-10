@@ -9,10 +9,10 @@ import AppContext, {Question, Species} from "../core/app-context";
 import {Kbd} from '@chakra-ui/react'
 import {FormattedMessage} from "react-intl";
 import {Loading} from "../components/loading";
+import {QuestionComponent} from "../components/play/question";
 
 const GamePage = () => {
   const [success, setSuccess] = useState<boolean>(false);
-  const [question, setQuestion] = useState<Question | null>();
   const [answer, setAnswer] = useState<Species | null | 'dunno'>();
   const [picNum, setPicNum] = useState<number>(0);
   const [options, setOptions] = useState<Species[] | null>([])
@@ -201,8 +201,15 @@ const GamePage = () => {
   )
 }
 
+
    */
 
+  const checkAnswer = (species: Species) => {
+    debugger
+  }
+
+  const question = game?.question
+  const species: Species[] = []
   return (
     game ? (
       <Page>
@@ -221,7 +228,9 @@ const GamePage = () => {
           </Flex>
         </Page.Header>
         <Page.Body>
-          <Heading>TBA</Heading>
+          <>
+            {question && <QuestionComponent/>}
+          </>
         </Page.Body>
       </Page>
 

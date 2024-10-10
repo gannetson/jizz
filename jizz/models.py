@@ -49,17 +49,20 @@ class Game(models.Model):
                 prev = 4 - options2.count()
                 options1 = all_species.filter(id__lt=species.id).order_by('-id')[:prev]
 
-            option_ids = list(options1.values_list('id', flat=True)) + list(options2.values_list('id', flat=True)) + [species.id]
-            options = all_species.filter(id__in=option_ids).order_by('?')
+            options = list(options1) + list(options2) + [species]
+            shuffle(options)
             question = self.questions.create(species=species)
             question.options.add(*options)
 
         elif self.level == 'beginner':
-            options = all_species.order_by('?')[:4]
-            self.questions.create(
+            options = all_species.order_by('?')[:3]
+
+            question = self.questions.create(
                 species=species,
-                options=options
             )
+            options = list(options) + [species]
+            shuffle(options)
+            question.options.add(*options)
         else:
             self.questions.create(
                 species_id=species.id,
@@ -94,6 +97,7 @@ class Player(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True)
     is_host = models.BooleanField(default=False)
     name = models.CharField(max_length=255)
+    language = models.CharField(max_length=2, default='en')
     token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
     score = models.IntegerField(default=0)
 
@@ -102,7 +106,10 @@ class Answer(models.Model):
     question = models.ForeignKey('jizz.Question', related_name='answer', on_delete=models.CASCADE)
     player = models.ForeignKey('jizz.Player', related_name='answer', on_delete=models.CASCADE)
     answer = models.ForeignKey('jizz.Species', related_name='answer', on_delete=models.CASCADE)
+    correct = models.BooleanField(default=False)
 
+    class Meta:
+        unique_together = ('player', 'question')
 
 class Species(models.Model):
     name = models.CharField(max_length=200)

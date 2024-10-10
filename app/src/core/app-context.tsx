@@ -51,17 +51,23 @@ export type Question = {
   id: number
   game: Game
   options?: Species[]
+  images: SpeciesImage[]
+  sounds: SpeciesSound[]
+  videos: SpeciesVideo[]
+
 }
 
 export type Player = {
-  code: string
+  token: string
   name: string
+  language: string
 }
 
 
 export type Answer = {
   question: Question
-  species: Species
+  answer: Species
+  species?: Species
   player: Player
   error?: number
   correct?: boolean
@@ -89,6 +95,7 @@ type SharedState = {
   setWrong?: (question:Question) => void,
   getNextQuestion?: () => Question | undefined,
   loading?: boolean
+  commitAnswer?: (answer: Answer) => void
 };
 
 const AppContext = createContext<SharedState>({

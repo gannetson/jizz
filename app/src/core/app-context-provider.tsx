@@ -1,5 +1,5 @@
 import React, {FC, ReactNode, useCallback, useEffect, useState} from 'react';
-import AppContext, {Game, Country, Question, Species, Language, Player} from "./app-context";
+import AppContext, {Game, Country, Question, Species, Language, Player, Answer} from "./app-context";
 
 type Props = {
   children: ReactNode;
@@ -17,45 +17,45 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [multiplayer, setMultiplayer] = useState<string>('0')
 
 
-/*
-  const fetchSpecies = useCallback(async (species:Species) => {
-    try {
-      const response = await fetch(`/api/species/${species.id}&format=json`)
-      const data = await response.json();
-      setSpecies(data);
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
+  /*
+    const fetchSpecies = useCallback(async (species:Species) => {
+      try {
+        const response = await fetch(`/api/species/${species.id}&format=json`)
+        const data = await response.json();
+        setSpecies(data);
+        setLoading(false);
+      } catch (error) {
+        setLoading(false);
+      }
+    }, [])
+
+
+    if (!game && !gameToken && document.location.pathname === '/game') {
+      document.location.href = '/'
     }
-  }, [])
 
+    if (game) {
+      game.correct = game?.questions.filter((q)=> q.correct).length
+    }
+    */
 
-  if (!game && !gameToken && document.location.pathname === '/game') {
-    document.location.href = '/'
-  }
-
-  if (game) {
-    game.correct = game?.questions.filter((q)=> q.correct).length
-  }
-
+  const gameToken = localStorage.getItem('game-token')
+  const playerToken = localStorage.getItem('player-token')
 
   const commitAnswer = async (answer: Answer) => {
-    await fetch(`/api/answer/${question.id}/`, {
-      method: 'PUT',
+    await fetch(`/api/answer/`, {
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(answer)
+      body: JSON.stringify({
+        question_id: answer.question.id,
+        answer_id: answer.answer.id,
+        player_token: playerToken
+      })
     })
   }
-
-
-
-  */
-
-  const gameToken = localStorage.getItem('game-token')
-  const playerToken = localStorage.getItem('player-token')
 
   useEffect(() => {
     if (gameToken) {
@@ -70,7 +70,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
       })
         .then(response => {
           if (response.status === 200) {
-            response.json().then(data => { setGame(data)})
+            response.json().then(data => {
+              setGame(data)
+            })
           } else {
             console.log('Could not load game.')
           }
@@ -93,11 +95,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
       })
         .then(response => {
           if (response.status === 200) {
-            response.json().then(data => { setPlayer(data)})
+            response.json().then(data => {
+              setPlayer(data)
+            })
           } else {
             console.log('Could not load player.')
           }
-        setLoading(false)
+          setLoading(false)
         })
 
     }
@@ -120,7 +124,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setPlayer,
       game,
       setGame,
-      loading
+      loading,
+      commitAnswer
     }}>
       {children}
     </AppContext.Provider>

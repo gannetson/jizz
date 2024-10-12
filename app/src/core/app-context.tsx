@@ -21,6 +21,8 @@ export type Game = {
   question: Question
   length: number
   progress: number
+  media: string
+  repeat: boolean
 }
 
 export type SpeciesImage = {

@@ -4,6 +4,7 @@ import AppContext, {Answer, Species} from "../../core/app-context"
 import {useCallback, useContext, useEffect} from "react"
 import {keyframes} from '@chakra-ui/react'
 import Confetti from "react-dom-confetti"
+import ReactPlayer from "react-player"
 
 
 export const QuestionComponent = () => {
@@ -56,18 +57,32 @@ export const QuestionComponent = () => {
   return (
     <>
       <Box position={'relative'}>
-        <Image
-          src={question.images[question.number].url.replace('/1800', '/900')}
-          fallback={
-            <Image
-              src='/images/jizz-logo.png'
-              animation={`${rotate} infinite 2s linear`}
-              width={'200px'}
-              marginX={'auto'}
-              marginY={['20px', '150px']}
+        {game.media === 'video' && (
+          <>
+            <ReactPlayer
+              width={'100%'}
+              height={'480px'}
+              url={question.videos[question.number].url}
+              controls={true}
+              playing={true}
             />
-          }
-        />
+          </>
+        )}
+        {game.media === 'images' && (
+          <Image
+            src={question.images[question.number].url.replace('/1800', '/900')}
+            fallback={
+              <Image
+                src='/images/jizz-logo.png'
+                animation={`${rotate} infinite 2s linear`}
+                width={'200px'}
+                marginX={'auto'}
+                marginY={['20px', '150px']}
+              />
+            }
+          />
+
+        )}
       </Box>
       {question.options && question.options.length ? (
         <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>

@@ -1,18 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useNavigate, useParams, useLocation} from 'react-router-dom';
+import Page from "../layout/page"
+import {Badge, Box, Button, Flex, Heading, Input, List, ListItem, TagLabel} from "@chakra-ui/react"
+import {FormattedMessage} from "react-intl"
+import copy from "copy-to-clipboard"
 
 interface Player {
   name: string;
 }
 
 const Lobby: React.FC = () => {
-  const { gameCode } = useParams<{ gameCode: string }>();
+  const {gameCode} = useParams<{ gameCode: string }>();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const playerName = new URLSearchParams(location.search).get('playerName');
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const socketInstance = new WebSocket(`ws://localhost:8050/ws/quiz/${gameCode}/`);
@@ -53,20 +58,44 @@ const Lobby: React.FC = () => {
     }
   };
 
+  const copyCode = () => {
+    if (gameCode) {
+      copy(gameCode)
+      setCopied(true)
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+
+    }
+  }
+
   return (
-    <div>
-      <h2>Lobby - Game Code: {gameCode}</h2>
-      <p>Share this game code with your friends!</p>
-      <h3>Players Joined:</h3>
-      <ul>
-        {players.map((player, index) => (
-          <li key={index}>{player.name}</li>
-        ))}
-      </ul>
-      <button onClick={startGame} disabled={players.length < 2}>
-        Start Game
-      </button>
-    </div>
+    <Page>
+      <Page.Header>
+        <Heading size={'lg'} noOfLines={1}>
+          <FormattedMessage id={'Multi player game'} defaultMessage={'Multi player game'}/>
+        </Heading>
+      </Page.Header>
+      <Page.Body>
+        <Heading variant={'h3'}>Game Lobby</Heading>
+        <Flex gap={4}>
+          Game Code:
+          <Box><Badge onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameCode}</Badge></Box>
+          {copied ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
+            <Button colorScheme='orange' variant='link' onClick={copyCode}>Copy code</Button>
+          )}
+        </Flex>
+        <Box>Players joined</Box>
+        <List>
+          {players.map((player, index) => (
+            <ListItem key={index}>{player.name}</ListItem>
+          ))}
+        </List>
+        <Button colorScheme='orange' onClick={startGame} disabled={players.length < 2}>
+          Start game
+        </Button>
+      </Page.Body>
+    </Page>
   );
 };
 

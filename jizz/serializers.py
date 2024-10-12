@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player
+from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -21,13 +21,25 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = ('url',)
 
 
-class SpeciesListSerializer(serializers.ModelSerializer):
+class VideoSerializer(serializers.ModelSerializer):
 
-    images = ImageSerializer(many=True)
+    class Meta:
+        model = SpeciesVideo
+        fields = ('url',)
+
+
+class SoundSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SpeciesSound
+        fields = ('url',)
+
+
+class SpeciesListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Species
-        fields = ('name', 'name_latin', 'name_nl', 'id', 'images')
+        fields = ('name', 'name_latin', 'name_nl', 'id')
 
 
 class SpeciesDetailSerializer(serializers.ModelSerializer):
@@ -42,10 +54,12 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     options = SpeciesDetailSerializer(many=True, read_only=True)
     images = ImageSerializer(source='species.images', many=True)
+    videos = VideoSerializer(source='species.videos', many=True)
+    sounds = SoundSerializer(source='species.sounds', many=True)
 
     class Meta:
         model = Question
-        fields = ('id', 'done', 'options', 'images')
+        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number')
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -56,9 +70,9 @@ class AnswerSerializer(serializers.ModelSerializer):
     answer = SpeciesDetailSerializer(read_only=True)
     answer_id = serializers.IntegerField(write_only=True)
     question_id = serializers.IntegerField(write_only=True)
+    number = serializers.IntegerField(read_only=True, source='question.number')
 
     def create(self, validated_data):
-        print(validated_data)
         player = Player.objects.get(token=validated_data.pop('player_token'))
         question = Question.objects.get(id=validated_data.pop('question_id'))
         answer = Species.objects.get(id=validated_data.pop('answer_id'))
@@ -67,7 +81,7 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Answer
-        fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id')
+        fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id', 'number')
         unique_together = ('question', 'player')
 
 

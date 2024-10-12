@@ -49,6 +49,7 @@ export type Species = {
 
 export type Question = {
   id: number
+  number: number
   game: Game
   options?: Species[]
   images: SpeciesImage[]
@@ -65,11 +66,12 @@ export type Player = {
 
 
 export type Answer = {
-  question: Question
-  answer: Species
+  question?: Question
+  answer?: Species
   species?: Species
   player: Player
   error?: number
+  number?: number
   correct?: boolean
 }
 
@@ -91,11 +93,10 @@ type SharedState = {
   setGame?: Dispatch<SetStateAction<Game | undefined>>
   progress?: string
   species?: Species[]
-  setCorrect?: (question:Question) => void,
-  setWrong?: (question:Question) => void,
-  getNextQuestion?: () => Question | undefined,
+  getNextQuestion?: () => void,
   loading?: boolean
   commitAnswer?: (answer: Answer) => void
+  answer?: Answer
 };
 
 const AppContext = createContext<SharedState>({

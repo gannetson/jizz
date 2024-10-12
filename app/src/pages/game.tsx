@@ -1,25 +1,17 @@
-import {useCallback, useContext, useEffect, useState} from "react";
-import {Box, Button, Flex, Heading, IconButton, Image, Show, SimpleGrid, Text, Tooltip} from "@chakra-ui/react";
-import {Select} from "chakra-react-select";
-import Confetti from "react-dom-confetti"
-import {ViewSpecies} from "../components/view-species";
-import {BsFillQuestionCircleFill, FiRefreshCw} from "react-icons/all";
+import {useContext} from "react";
+import {Box, Flex, Heading} from "@chakra-ui/react";
+import {BsFillQuestionCircleFill} from "react-icons/all";
 import Page from "./layout/page";
-import AppContext, {Question, Species} from "../core/app-context";
-import {Kbd} from '@chakra-ui/react'
+import AppContext, {Species} from "../core/app-context";
 import {FormattedMessage} from "react-intl";
 import {Loading} from "../components/loading";
 import {QuestionComponent} from "../components/play/question";
+import {AnswerComponent} from "../components/play/answer"
 
 const GamePage = () => {
-  const [success, setSuccess] = useState<boolean>(false);
-  const [answer, setAnswer] = useState<Species | null | 'dunno'>();
-  const [picNum, setPicNum] = useState<number>(0);
-  const [options, setOptions] = useState<Species[] | null>([])
-  const {game} = useContext(AppContext);
+  const {game, answer} = useContext(AppContext);
 
 
-  const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
   /*
   const newQuestion = () => {
     if (questions && questions.length && getNextQuestion) {
@@ -229,7 +221,7 @@ const GamePage = () => {
         </Page.Header>
         <Page.Body>
           <>
-            {question && <QuestionComponent/>}
+            {answer ?  <AnswerComponent /> : question && <QuestionComponent/>}
           </>
         </Page.Body>
       </Page>

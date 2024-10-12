@@ -9,7 +9,7 @@ const CreateGame: React.FC = () => {
 
   const createGame = async () => {
     // Generate a random game code
-    const gameCode = Math.random().toString(36).substr(2, 12).toUpperCase();
+    const gameCode = Math.random().toString(36).replace(/[^a-z]+/g, '').substring(0, 8)
 
     // Open a WebSocket connection and send create_game action
     const socket = new WebSocket(`ws://localhost:8050/ws/quiz/${gameCode}/`);
@@ -19,9 +19,9 @@ const CreateGame: React.FC = () => {
         action: 'create_game',
         player_name: playerName
       }));
-      // Redirect to the lobby page with the gameCode
       navigate(`/mpg/lobby/${gameCode}?playerName=${playerName}`);
     };
+
 
     socket.onerror = (error) => {
       console.error('WebSocket Error:', error);

@@ -9,40 +9,41 @@ type Props = {
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
   const [game, setGame] = useState<Game | undefined>();
+  const [answer, setAnswer] = useState<Answer | undefined>();
   const [country, setCountry] = useState<Country | undefined>();
   const [language, setLanguage] = useState<string | undefined>('en');
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
   const [multiplayer, setMultiplayer] = useState<string>('0')
+  const [species, setSpecies] = useState<Species[]>([])
 
-
-  /*
-    const fetchSpecies = useCallback(async (species:Species) => {
-      try {
-        const response = await fetch(`/api/species/${species.id}&format=json`)
-        const data = await response.json();
-        setSpecies(data);
-        setLoading(false);
-      } catch (error) {
-        setLoading(false);
-      }
-    }, [])
-
-
-    if (!game && !gameToken && document.location.pathname === '/game') {
-      document.location.href = '/'
-    }
-
-    if (game) {
-      game.correct = game?.questions.filter((q)=> q.correct).length
-    }
-    */
 
   const gameToken = localStorage.getItem('game-token')
   const playerToken = localStorage.getItem('player-token')
 
-  const commitAnswer = async (answer: Answer) => {
+
+  const reloadAnswer = async (givenAnswer: Answer) => {
+    await fetch(`/api/answer/${givenAnswer.question?.id}/${playerToken}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      }
+    }).then(response => {
+          if (response.status === 200) {
+            response.json().then(data => {
+              setAnswer(data)
+            })
+          } else {
+            console.log('Could not load answer.')
+          }
+          setLoading(false)
+        })
+  }
+
+
+  const commitAnswer = async (givenAnswer: Answer) => {
     await fetch(`/api/answer/`, {
       method: 'POST',
       headers: {
@@ -50,12 +51,49 @@ const AppContextProvider: FC<Props> = ({children}) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        question_id: answer.question.id,
-        answer_id: answer.answer.id,
+        question_id: givenAnswer.question?.id,
+        answer_id: givenAnswer.answer?.id,
         player_token: playerToken
       })
-    })
+    }).then(response => {
+          if (response.status === 201) {
+            response.json().then(data => {
+              setAnswer(data)
+            })
+          } else if (response.status === 500) {
+            // Already answered, reload first answer
+            reloadAnswer(givenAnswer)
+          } else {
+            console.log('Could not save answer.')
+          }
+          setLoading(false)
+        })
   }
+
+  useEffect(() => {
+    if (country?.code) {
+      setLoading(true)
+      fetch(`/api/species/?countryspecies__country=${country.code}`, {
+        cache: 'no-cache',
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+        .then(response => {
+          if (response.status === 200) {
+            response.json().then(data => {
+              setSpecies(data)
+            })
+          } else {
+            console.log('Could not load country species.')
+          }
+          setLoading(false)
+        })
+
+    }
+  }, [country?.code]);
 
   useEffect(() => {
     if (gameToken) {
@@ -81,6 +119,26 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
     }
   }, [gameToken]);
+
+
+  const reloadGame = async () => {
+    await fetch(`/api/games/${game?.token}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      }
+    }).then(response => {
+          if (response.status === 200) {
+            response.json().then(data => {
+              setGame(data)
+            })
+          } else {
+            console.log('Could not load game.')
+          }
+          setLoading(false)
+        })
+  }
 
   useEffect(() => {
     if (playerToken) {
@@ -108,6 +166,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
   }, [playerToken]);
 
 
+  const getNextQuestion = async () => {
+    setLoading(true)
+    setAnswer(undefined)
+    await reloadGame()
+    setLoading(false)
+  }
+
   return (
     <AppContext.Provider value={{
       level,
@@ -124,8 +189,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setPlayer,
       game,
       setGame,
+      getNextQuestion,
+      species,
       loading,
-      commitAnswer
+      commitAnswer,
+      answer
+
     }}>
       {children}
     </AppContext.Provider>

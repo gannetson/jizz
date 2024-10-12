@@ -4,7 +4,7 @@ from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
-    GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView
+    GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView, AnswerDetail
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -12,6 +12,8 @@ router.register(r'countries', CountryViewSet, 'countries')
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
+    re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),
+
     path('token/', jwt_views.TokenObtainPairView.as_view(), name ='token-obtain-pair'),
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name ='token-refresh'),
 
@@ -28,6 +30,7 @@ urlpatterns = [
     re_path(r"^api/games/(?P<token>[\w-]+)/question$", GameDetailView.as_view(), name="game-detail"),
 
     re_path(r"^api/answer/$", AnswerView.as_view(), name="answer-create"),
+    re_path(r"^api/answer/(?P<question>[\w-]+)/(?P<token>[\w-]+)$", AnswerDetail.as_view(), name="answer-detail"),
 
     re_path(r"^api/questions/(?P<pk>\w+)/$", QuestionDetailView.as_view(), name="question-detail"),
 

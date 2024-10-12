@@ -16,10 +16,13 @@ import AppContext, {Species} from "../core/app-context";
 import {useContext} from "react"
 
 
-export function ViewSpecies({species}: {species:Species}) {
+export function ViewSpecies({species}: {species?:Species}) {
 
   const {game} = useContext(AppContext)
   const { isOpen, onOpen, onClose } = useDisclosure()
+
+  if (!species) return <></>
+
   return (
     <>
       <Button variant={"link"} onClick={onOpen} rightIcon={<BsImages />}>

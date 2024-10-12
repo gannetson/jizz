@@ -5,7 +5,8 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
-from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo
+from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
+    Answer
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
 
 
@@ -30,7 +31,7 @@ class CountryAdmin(admin.ModelAdmin):
     fields = ['name', 'code', 'codes'] + readonly_fields
 
     def species_list(self, obj):
-        return f'{obj.species.count()} species'
+        return f'{obj.countryspecies.count()} species'
 
     def sync_link(self, obj):
         if not obj or not obj.pk:
@@ -127,6 +128,7 @@ class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesSoundInline, SpeciesImageInline, SpeciesVideoInline]
     readonly_fields = ['sync_media', 'pic_count']
     search_fields  = ['name']
+    list_display = ['name', 'name_nl', 'pic_count']
 
     def pic_count(self, obj):
         return obj.images.count()
@@ -187,3 +189,13 @@ class GameAdmin(admin.ModelAdmin):
 
     def errors(self, obj):
         return obj.questions.aggregate(errors=Sum('errors'))['errors']
+
+
+@register(Answer)
+class AnswerAdmin(admin.ModelAdmin):
+    raw_id_fields = ['answer']
+
+
+@register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    raw_id_fields = ['species']

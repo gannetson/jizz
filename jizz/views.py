@@ -30,7 +30,7 @@ class SpeciesListView(ListAPIView):
     serializer_class = SpeciesListSerializer
     queryset = Species.objects.all()
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['countries__country']
+    filterset_fields = ['countryspecies__country']
 
 
 class SpeciesDetailView(RetrieveAPIView):
@@ -92,9 +92,27 @@ class QuestionView(RetrieveAPIView):
             game__token=self.kwargs['token']
         ).first()
 
+
 class AnswerView(CreateAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
+
+    def perform_create(self, serializer):
+        answer = serializer.save()
+        answer.question.done = True
+        answer.question.save()
+        game = answer.question.game
+        game.add_question()
+
+class AnswerDetail(RetrieveAPIView):
+    serializer_class = AnswerSerializer
+    queryset = Answer.objects.all()
+
+    def get_object(self):
+        return self.queryset.filter(
+            player__token=self.kwargs['token'],
+            question=self.kwargs['question']
+        ).first()
 
 
 class QuestionDetailView(RetrieveUpdateAPIView):

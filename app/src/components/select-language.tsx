@@ -1,27 +1,32 @@
-import {Select} from "chakra-react-select";
 import {useContext} from "react";
 import AppContext from "../core/app-context";
 import {Box, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {FormattedMessage} from "react-intl"
 
 
 const SelectLanguage = () => {
   const {language, setLanguage} = useContext(AppContext);
 
-  const onChange = (value: string) => {
+  const onChange = (value: 'en' | 'nl') => {
     setLanguage && setLanguage(value)
   }
 
   return (
     <Box>
       <Heading size={'md'} mb={4}>Language</Heading>
+      <Box mb={4}>
+        <FormattedMessage
+          id={'set language description'}
+          defaultMessage={'This changes the language of the bird species.'}/>
+      </Box>
       <RadioGroup
         value={language}
-        onChange={(val) => val && onChange(val)}
+        onChange={(val: 'en' | 'nl') => val && onChange(val)}
         colorScheme={'orange'}
       >
         <Flex direction={'column'} gap={4}>
-        <Radio value={'en'}>English</Radio>
-        <Radio value={'nl'}>Nederlands</Radio>
+          <Radio value={'en'}>English</Radio>
+          <Radio value={'nl'}>Nederlands</Radio>
         </Flex>
       </RadioGroup>
     </Box>

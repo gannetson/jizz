@@ -10,11 +10,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [game, setGame] = useState<Game | undefined>();
   const [answer, setAnswer] = useState<Answer | undefined>();
   const [country, setCountry] = useState<Country | undefined>();
-  const [language, setLanguage] = useState<string | undefined>('en');
+  const [language, setLanguage] = useState<'en' | 'nl'>('en');
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
   const [multiplayer, setMultiplayer] = useState<string>('0')
+  const [mediaType, setMediaType] = useState<string>('images')
   const [species, setSpecies] = useState<Species[]>([])
 
 
@@ -185,6 +186,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setLanguage,
       multiplayer,
       setMultiplayer,
+      mediaType,
+      setMediaType,
       player,
       setPlayer,
       game,

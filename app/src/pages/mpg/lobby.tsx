@@ -34,11 +34,11 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
     if (question) {
-      navigate('/mpg/game')
+      debugger
+      // navigate('/mpg/game')
     }
   }, [question]);
 
-  console.log('Q', question)
 
   return (
     <Page>

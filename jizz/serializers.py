@@ -13,37 +13,31 @@ class CountrySerializer(serializers.ModelSerializer):
         fields = ('code', 'name', 'count')
 
 
-
 class ImageSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = SpeciesImage
         fields = ('url',)
 
 
 class VideoSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = SpeciesVideo
         fields = ('url',)
 
 
 class SoundSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = SpeciesSound
         fields = ('url',)
 
 
 class SpeciesListSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Species
         fields = ('name', 'name_latin', 'name_nl', 'id')
 
 
 class SpeciesDetailSerializer(serializers.ModelSerializer):
-
     images = ImageSerializer(many=True)
 
     class Meta:
@@ -63,7 +57,6 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 
 class AnswerSerializer(serializers.ModelSerializer):
-
     player_token = serializers.CharField(write_only=True)
     correct = serializers.BooleanField(read_only=True)
     species = SpeciesDetailSerializer(source='question.species', read_only=True)
@@ -86,24 +79,26 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 
 class PlayerSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Player
         fields = ('name', 'is_host', 'token', 'language')
 
 
 class MultiPlayerSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Player
         fields = ('name', 'is_host', 'language')
 
 
 class GameSerializer(serializers.ModelSerializer):
-
     country = CountrySerializer()
     question = QuestionSerializer(read_only=True)
 
     class Meta:
         model = Game
-        fields = ('token', 'country', 'level', 'language', 'question', 'created', 'multiplayer', 'length', 'progress', 'media', 'repeat')
+        fields = (
+            'token', 'country', 'level', 'language',
+            'question', 'created', 'multiplayer',
+            'length', 'progress',
+            'media', 'repeat'
+        )

@@ -10,11 +10,12 @@ import {Loading} from "./loading"
 import {SelectLength} from "./select-length"
 import WebsocketContext from "../core/websocket-context"
 import {useNavigate} from "react-router-dom"
+import {SelectMediaType} from "./select-media-type"
 
 
 export const CreateGame = () => {
 
-  const {country, level, setGame, language, multiplayer, length} = useContext(AppContext);
+  const {country, level, setGame, language, multiplayer, length, mediaType} = useContext(AppContext);
   const {setGameToken, joinGame} = useContext(WebsocketContext);
   const [loading, setLoading] = useState(false)
   const {player} = useContext(AppContext);
@@ -35,16 +36,14 @@ export const CreateGame = () => {
           country: country.code,
           language: language,
           level: level,
-          length: length
+          length: length,
+          media: mediaType
         })
       })
       const data = await response.json();
       if (data) {
         localStorage.setItem('game-token', data.token)
         if (data.multiplayer) {
-          console.log('Preparing multi player game')
-          console.log('player token', player?.token)
-          console.log('game token', data.token)
 
           setGameToken && setGameToken(data.token)
           if (player?.token && joinGame) {
@@ -75,6 +74,7 @@ export const CreateGame = () => {
         <SelectGameType/>
         <SelectLength/>
         <SelectLevel/>
+        <SelectMediaType/>
         <Button isDisabled={!country} colorScheme='orange' size='lg' onClick={startGame}>
           <FormattedMessage id={'start game'} defaultMessage={"Start new game"}/>
         </Button>

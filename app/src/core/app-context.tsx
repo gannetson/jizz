@@ -90,8 +90,8 @@ type SharedState = {
   setLength?: Dispatch<SetStateAction<string>>
   country?: Country | undefined
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
-  language?: string | undefined
-  setLanguage?: Dispatch<SetStateAction<string | undefined>>
+  language?: 'en' | 'nl'
+  setLanguage?: Dispatch<SetStateAction<'en' | 'nl'>>
   multiplayer?: string
   setMultiplayer?: Dispatch<SetStateAction<string>>
   mediaType?: string

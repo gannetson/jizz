@@ -74,7 +74,8 @@ class GameListView(ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         model = serializer.save()
-        model.add_question()
+        if not model.multiplayer:
+            model.add_question()
 
 
 class GameDetailView(RetrieveAPIView):

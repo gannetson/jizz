@@ -1,4 +1,3 @@
-import {Select} from "chakra-react-select";
 import {useContext} from "react";
 import AppContext from "../core/app-context";
 import {Box, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
@@ -6,17 +5,17 @@ import {FormattedMessage} from "react-intl"
 
 
 export const SelectMediaType = () => {
-  const {multiplayer, setMultiplayer} = useContext(AppContext);
+  const {mediaType, setMediaType} = useContext(AppContext);
 
   const onChange = (value: string) => {
-    setMultiplayer && setMultiplayer(value)
+    setMediaType && setMediaType(value)
   }
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Players</Heading>
+      <Heading size={'md'} mb={4}>Media type</Heading>
       <RadioGroup
-        value={multiplayer}
+        value={mediaType}
         onChange={(val) => val && onChange(val)}
         colorScheme={'orange'}
       >
@@ -24,10 +23,10 @@ export const SelectMediaType = () => {
         <Radio value={'images'}>
           <FormattedMessage id={'pictures'} defaultMessage={'Pictures'} />
         </Radio>
-        <Radio value={'sounds'}>
+        <Radio value={'audio'}>
             <FormattedMessage id={'sounds'} defaultMessage={'Sounds'} />
         </Radio>
-        <Radio value={'videos'}>
+        <Radio value={'video'}>
             <FormattedMessage id={'videos'} defaultMessage={'Videos'} />
         </Radio>
         </Flex>

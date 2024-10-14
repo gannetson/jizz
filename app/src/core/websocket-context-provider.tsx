@@ -1,5 +1,5 @@
 import React, {FC, ReactNode, useEffect, useState} from 'react';
-import {Answer, Country, Game, Player, Species} from "./app-context";
+import {Answer, Country, Game, Player, Question, Species} from "./app-context";
 import WebsocketContext, {MultiPlayer} from "./websocket-context"
 import {useToast} from "@chakra-ui/react"
 
@@ -13,10 +13,37 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const [players, setPlayers] = useState<MultiPlayer[]>([])
   const [player, setPlayer] = useState<Player | undefined>(undefined)
   const [loading, setLoading] = useState<boolean>(false)
+  const [question, setQuestion] = useState<Question | undefined>(undefined)
+  const [species, setSpecies] = useState<Species[]>([])
 
   const toast = useToast()
 
-  const notify = (title: string, description: string ) => {
+    useEffect(() => {
+    if (mpg?.country?.code) {
+      setLoading(true)
+      fetch(`/api/species/?countryspecies__country=${mpg.country.code}`, {
+        cache: 'no-cache',
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => {
+        if (response.status === 200) {
+          response.json().then(data => {
+            setSpecies(data)
+          })
+        } else {
+          console.log('Could not load country species.')
+        }
+        setLoading(false)
+      })
+
+    }
+  }, [mpg?.country?.code]);
+
+  const notify = (title: string, description?: string ) => {
      toast({
           title,
           description,
@@ -45,6 +72,14 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
             break
           case 'player_joined':
             notify('New player', `${message.player_name} joined the game`)
+            break
+          case 'new_question':
+            notify('New question')
+            const question: Question = message.question
+            setQuestion(question)
+            break
+          case 'game_started':
+            notify('Game started')
             break
         }
       };
@@ -120,6 +155,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       players,
       setMpg,
       startGame,
+      species,
+      question,
       player,
       setPlayer,
       joinGame

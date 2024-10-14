@@ -61,6 +61,7 @@ class Game(models.Model):
             number = randint(1, species.images.count()) -1
             question = self.questions.create(species=species, number=number)
             question.options.add(*options)
+            return question
 
         elif self.level == 'beginner':
             options = all_species.order_by('?')[:3]
@@ -71,10 +72,12 @@ class Game(models.Model):
             options = list(options) + [species]
             shuffle(options)
             question.options.add(*options)
+            return question
         else:
-            self.questions.create(
+            question = self.questions.create(
                 species_id=species.id,
             )
+            return question
 
     @property
     def question(self):

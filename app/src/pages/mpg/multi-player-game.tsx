@@ -1,23 +1,20 @@
 import React, {useContext, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
-import {Badge, Box, Button, Flex, Heading, List, ListItem} from "@chakra-ui/react"
+import {Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
-import {PlayerItem} from "../../components/play/player-item"
 import AppContext from "../../core/app-context"
+import {QuestionComponent} from "./play/question"
 
-interface Player {
-  name: string;
-}
 
 const MultiPlayerGame: React.FC = () => {
 
 
   const [copied, setCopied] = useState(false)
-  const {players, startGame} = useContext(WebsocketContext)
+  const {players, startGame, question} = useContext(WebsocketContext)
   const {player} = useContext(AppContext)
+
+  console.log('Yeah')
 
   return (
     <Page>
@@ -28,6 +25,7 @@ const MultiPlayerGame: React.FC = () => {
       </Page.Header>
       <Page.Body>
         <Heading variant={'h3'}>Question</Heading>
+        <QuestionComponent />
       </Page.Body>
     </Page>
   );

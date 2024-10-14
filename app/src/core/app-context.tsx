@@ -72,7 +72,7 @@ export type Answer = {
   question?: Question
   answer?: Species
   species?: Species
-  player: Player
+  player?: Player
   error?: number
   number?: number
   correct?: boolean

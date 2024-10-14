@@ -91,6 +91,8 @@ type SharedState = {
   mpg?: Game | undefined
   gameToken?: string | null
   setGameToken?: Dispatch<SetStateAction<string | null>>
+  question?: Question
+  species?: Species[]
   players?: MultiPlayer[]
   setMpg?: Dispatch<SetStateAction<Game | undefined>>
   startGame?: ()=>void

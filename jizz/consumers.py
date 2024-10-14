@@ -5,25 +5,40 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import Game, Player, Question
 import random
 
-from .serializers import PlayerSerializer, MultiPlayerSerializer
+from .serializers import PlayerSerializer, MultiPlayerSerializer, QuestionSerializer
 
 
 class QuizConsumer(AsyncWebsocketConsumer):
     game_token = ''
     game_group_name = ''
+    game = None
 
     async def get_players(self):
-        # Fetch the game object asynchronously
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
-
-        # Fetch the players related to the game asynchronously
         players = await sync_to_async(lambda: list(game.players.all()))()
-
-        # Serialize the players (no need to use sync_to_async here)
         serializer = MultiPlayerSerializer(players, many=True)
         players_data = serializer.data
 
         return players_data
+
+    async def current_question(self):
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        question = await sync_to_async(game.questions.last)()
+        serializer = QuestionSerializer(question)
+        question_data = await sync_to_async(lambda: serializer.data)()
+        await sync_to_async(game.save)()
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {
+                'type': 'new_question',
+                'question': question_data
+            }
+        )
+
+    async def next_question(self):
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        await sync_to_async(game.add_question)()
+        await self.current_question()
 
     async def connect(self):
         self.game_token = self.scope['url_route']['kwargs']['game_token']
@@ -37,6 +52,8 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 'players': players,
             })
         )
+        await self.current_question()
+
 
     async def disconnect(self, close_code):
         # Leave the room group
@@ -52,9 +69,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 {'message': 'Game created', 'game_code': game.token, 'player_token': str(player.token)}))
 
         elif data['action'] == 'join_game':
-            # Another player joins the game
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
-            players = await sync_to_async(game.players.values_list)('name', flat=True)
             player = await sync_to_async(Player.objects.get)(token=data['player_token'])
             player.game = game
             await sync_to_async(player.save)()
@@ -75,22 +90,18 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
         elif data['action'] == 'start_game':
             # Start the game and send the first question
-            game = await sync_to_async(Game.objects.get)(code=self.game_code)
-            questions = list(Question.objects.all())[:game.num_questions]
-            random.shuffle(questions)
+            game = await sync_to_async(Game.objects.get)(token=self.game_token)
+            game.started = True
+            await sync_to_async(game.save)()
             await self.channel_layer.group_send(
                 self.game_group_name, {
                     'type': 'game_started',
                 }
             )
-
-            await self.channel_layer.group_send(self.game_group_name, {
-                'type': 'game_started',
-                'questions': [q.text for q in questions]
-            })
+            await self.next_question()
 
         elif data['action'] == 'submit_answer':
-            # Handle answer submission and scoring
+            game = await sync_to_async(Game.objects.get)(token=self.game_token)
             player = Player.objects.get(name=data['player_name'], game__code=self.game_code)
             question = Question.objects.get(id=data['question_id'])
             if data['answer'] == question.correct_answer:
@@ -120,8 +131,15 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
     async def game_started(self, event):
         await self.send(text_data=json.dumps({
-            'type': 'game_started',
+            'action': 'game_started',
         }))
+
+    async def new_question(self, event):
+        message = {
+            'action': 'new_question',
+            'question': event['question'],
+        }
+        await self.send(text_data=json.dumps(message))
 
     async def answer_submitted(self, event):
         await self.send(text_data=json.dumps({

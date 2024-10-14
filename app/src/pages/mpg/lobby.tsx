@@ -1,12 +1,12 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
 import {Badge, Box, Button, Flex, Heading, List, ListItem} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
-import {PlayerItem} from "../../components/play/player-item"
 import AppContext from "../../core/app-context"
+import {PlayerItem} from "./play/player-item"
 
 interface Player {
   name: string;
@@ -17,9 +17,9 @@ const Lobby: React.FC = () => {
   const gameToken = localStorage.getItem('game-token')
 
   const [copied, setCopied] = useState(false)
-  const {players, startGame} = useContext(WebsocketContext)
+  const {players, startGame, question} = useContext(WebsocketContext)
   const {player} = useContext(AppContext)
-
+  const navigate = useNavigate()
 
   const copyCode = () => {
     if (gameToken) {
@@ -31,6 +31,14 @@ const Lobby: React.FC = () => {
 
     }
   }
+
+  useEffect(() => {
+    if (question) {
+      navigate('/mpg/game')
+    }
+  }, [question]);
+
+  console.log('Q', question)
 
   return (
     <Page>

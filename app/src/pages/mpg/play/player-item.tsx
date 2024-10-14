@@ -1,6 +1,6 @@
-import {MultiPlayer} from "../../core/websocket-context"
 import {Box, Card, CardBody, Flex} from "@chakra-ui/react"
 import {ImBinoculars} from "react-icons/im";
+import {MultiPlayer} from "../../../core/websocket-context"
 
 export const PlayerItem = ({player}:{player:MultiPlayer}) => {
   return (

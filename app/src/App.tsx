@@ -14,6 +14,7 @@ import {IntlProvider} from "react-intl";
 import enMessages from './locales/en.json';
 import nlMessages from './locales/nl.json';
 import {WebsocketContextProvider} from "./core/websocket-context-provider"
+import MultiPlayerGame from "./pages/mpg/multi-player-game"
 
 
 export const App = () => {
@@ -41,6 +42,7 @@ export const App = () => {
 
                   <Route path="/mpg/join/:gameCode" element={<JoinGame/>}/>
                   <Route path="/mpg/lobby" element={<Lobby/>}/>
+                  <Route path="/mpg/game" element={<MultiPlayerGame/>}/>
                 </Route>
               </Routes>
             </BrowserRouter>

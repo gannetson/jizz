@@ -133,6 +133,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
   const joinGame = ({gameToken, playerToken} : {gameToken: string, playerToken: string}) => {
     setQuestion(undefined)
+    setAnswer(undefined)
     startSocket({gameToken, playerToken})
   }
 

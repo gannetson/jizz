@@ -5,7 +5,7 @@ from channels.auth import AuthMiddlewareStack
 from django.urls import path
 from jizz.consumers import QuizConsumer  # Adjust the import as necessary
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "jizz.settings.local")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "jizz.settings.production")
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),

@@ -1,38 +1,18 @@
-import {useCallback, useContext, useEffect, useState} from "react";
-import {Box, Button, Flex, Heading, IconButton, Image, Show, SimpleGrid, Text, Tooltip} from "@chakra-ui/react";
-import {Select} from "chakra-react-select";
-import Confetti from "react-dom-confetti"
-import {ViewSpecies} from "../components/view-species";
-import {BsFillQuestionCircleFill, FiRefreshCw} from "react-icons/all";
+import {useContext} from "react";
+import {Box, Flex, Heading} from "@chakra-ui/react";
+import {BsFillQuestionCircleFill} from "react-icons/all";
 import Page from "./layout/page";
-import AppContext, {Question, Species} from "../core/app-context";
-import {Kbd} from '@chakra-ui/react'
+import AppContext, {Species} from "../core/app-context";
+import {FormattedMessage} from "react-intl";
+import {Loading} from "../components/loading";
+import {QuestionComponent} from "../components/play/question";
+import {AnswerComponent} from "../components/play/answer"
 
 const GamePage = () => {
-  const [success, setSuccess] = useState<boolean>(false);
-  const [question, setQuestion] = useState<Question | null>();
-  const [answer, setAnswer] = useState<Species | null | 'dunno'>();
-  const [picNum, setPicNum] = useState<number>(0);
-  const [options, setOptions] = useState<Species[] | null>([])
-  const {setCorrect, setWrong, country, getNextQuestion, game} = useContext(AppContext);
+  const {game, answer} = useContext(AppContext);
 
-  const nextPic = () => {
-    setPicNum((picNum + 1) % question!.species.images.length)
-  }
 
-  const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
-
-  const checkAnswer = (answer: Species) => {
-    setAnswer(answer)
-    if (answer === question?.species) {
-      setCorrect && question && setCorrect(question)
-    } else {
-      setWrong && question && setWrong(question)
-    }
-  }
-
-  const questions = game?.questions
-
+  /*
   const newQuestion = () => {
     if (questions && questions.length && getNextQuestion) {
       setAnswer(null)
@@ -52,14 +32,16 @@ const GamePage = () => {
   }, [country, questions])
 
   const handleKeyPress = useCallback((event: { key: any; }) => {
-    if (event.key === ' ') {
-      if (answer) {
-        newQuestion()
-      } else {
-        options && setAnswer('dunno')
+    if (game?.level !== 'expert' || answer) {
+      if (event.key === ' ') {
+        if (answer) {
+          newQuestion()
+        } else {
+          options && setAnswer('dunno')
+        }
+      } else if (!answer) {
+        options && checkAnswer(options[shortcuts.indexOf(event.key)])
       }
-    } else if (!answer) {
-      options && checkAnswer(options[shortcuts.indexOf(event.key)])
     }
   }, [options, answer]);
 
@@ -78,7 +60,6 @@ const GamePage = () => {
 
   const firstTry = game?.questions.filter((q) => q.errors === 0).length
   const hardest = game?.questions.sort((a, b) => (b.errors || 0) - (a.errors || 0))[0]
-
   return (
     <Page>
       <Page.Header>
@@ -90,7 +71,7 @@ const GamePage = () => {
                 hasArrow
                 label={`You have identified ${correctCount} birds correctly out of ${totalCount}. These won't be shown again.`}>
                 <Flex direction={'row'} alignItems={'center'}>
-                  Species {correctCount} / {totalCount}
+                  <FormattedMessage defaultMessage={'Species'} />  {correctCount} / {totalCount}
                   <Box ml={1}><BsFillQuestionCircleFill size={16}/></Box>
                 </Flex>
               </Tooltip>
@@ -114,28 +95,24 @@ const GamePage = () => {
         ) : (
           <>
             {question && (
-              <Box position={'relative'}>
-                {question.species.images.length && question.species.images[picNum] ? (
+              <Box position={'relative'} onClick={nextPic} cursor={'alias'}
+                   title={'Click to show another picture of the same species.'}>
+                {question.species.images.length && question.species.images[picNum] && (
                   <Image
                     src={question.species.images[picNum].url.replace('/1800', '/900')}
-                    fallbackSrc={'https://cdn.pixabay.com/photo/2012/06/08/06/19/clouds-49520_640.jpg'}
+                    fallback={<Image src='/images/jizz-logo.png' width={'200px'} marginX={'auto'}
+                                     marginY={['20px', '150px']}/>}
                   />
-                ) : (
-                  <Text>No images for this species, you'll get it for free it's {question.species.name}</Text>
                 )}
-
-                <Tooltip hasArrow label={'Click this to show another picture of the same species'}>
-                  <IconButton
-                    icon={<FiRefreshCw/>}
-                    onClick={nextPic}
-                    colorScheme="orange"
-                    aria-label="Next picture"
-                    size={'md'}
-                    isRound={true}
-                    variant='solid'
-                    position={'absolute'} top={2} right={2}>
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  icon={<FiRefreshCw/>}
+                  colorScheme="orange"
+                  aria-label="Next picture"
+                  size={'md'}
+                  isRound={true}
+                  variant='solid'
+                  position={'absolute'} top={2} right={2}>
+                </IconButton>
                 <Confetti active={question.species === answer} config={{angle: 45}}/>
               </Box>
             )}
@@ -173,9 +150,11 @@ const GamePage = () => {
               <Button onClick={() => setAnswer('dunno')} colorScheme={'gray'}>
                 <Flex justifyContent={'space-between'} width={'100%'}>
                   No clue
-                  <Show above={'md'}>
-                    <Kbd size='lg' backgroundColor={'gray.100'} borderColor={'gray.300'}>space</Kbd>
-                  </Show>
+                  {game?.level !== 'expert' && (
+                    <Show above={'md'}>
+                      <Kbd size='lg' backgroundColor={'gray.100'} borderColor={'gray.300'}>space</Kbd>
+                    </Show>
+                  )}
                 </Flex>
               </Button>
             }
@@ -200,6 +179,7 @@ const GamePage = () => {
 
               ) : (
                 <Select
+                  autoFocus={true}
                   options={questions.map((q) => ({label: q.species.name, value: q.species}))}
                   onChange={(answer) => answer && checkAnswer(answer.value)}
                 />
@@ -213,4 +193,43 @@ const GamePage = () => {
   )
 }
 
-export default GamePage;
+
+   */
+
+  const checkAnswer = (species: Species) => {
+    debugger
+  }
+
+  const question = game?.question
+  const species: Species[] = []
+  return (
+    game ? (
+      <Page>
+        <Page.Header>
+          <Flex textColor={'gray.800'} width='full' justifyContent={'space-between'}>
+            <Heading size={'lg'} noOfLines={1}>{game?.country.name}</Heading>
+            <Box>
+              <Box textAlign={'right'}>
+                <Flex direction={'row'} alignItems={'center'}>
+                  <FormattedMessage id="questions" defaultMessage={'Questions'}/> {game.progress} / {game.length}
+                  <Box ml={1}><BsFillQuestionCircleFill size={16}/></Box>
+                </Flex>
+              </Box>
+              <Box textAlign={'right'} fontWeight={'bold'} textTransform={'capitalize'}>Level: {game?.level}</Box>
+            </Box>
+          </Flex>
+        </Page.Header>
+        <Page.Body>
+          <>
+            {answer ?  <AnswerComponent /> : question && <QuestionComponent/>}
+          </>
+        </Page.Body>
+      </Page>
+
+    ) : (
+      <Loading/>
+    )
+  )
+}
+
+export default GamePage

@@ -4,6 +4,7 @@ import {createContext, Dispatch, SetStateAction} from 'react';
 export type Country = {
   code: string
   name: string
+  count?: number
 }
 
 export type Language = {
@@ -11,61 +12,102 @@ export type Language = {
   name: string
 }
 
-
-
 export type Game = {
   token: string
   level: string
   created: string
   country: Country
   language: string
-  questions: Question[]
-  correct: number
+  question: Question
+  length: number
+  progress: number
+  media: string
+  repeat: boolean
 }
 
 export type SpeciesImage = {
   url: string;
 }
 
+export type SpeciesVideo = {
+  url: string;
+}
+
+export type SpeciesSound = {
+  url: string;
+}
+
 export type Species = {
-  id: number;
-  name: string;
-  name_nl: string;
-  name_latin: string;
-  images: SpeciesImage[],
+  id: number
+  name: string
+  name_nl: string
+  name_latin: string
+  images: SpeciesImage[]
+  sounds: SpeciesSound[]
+  videos: SpeciesVideo[]
   correct?: boolean
 }
 
 
 export type Question = {
   id: number
-  species: Species,
+  number: number
+  game: Game
   options?: Species[]
-  errors?: number
+  images: SpeciesImage[]
+  sounds: SpeciesSound[]
+  videos: SpeciesVideo[]
+
+}
+
+export type Player = {
+  token: string
+  name: string
+  language: string
+  is_host?: boolean
+}
+
+
+export type Answer = {
+  question?: Question
+  answer?: Species
+  species?: Species
+  player?: Player
+  error?: number
+  number?: number
   correct?: boolean
-  picNum?: number
-  answer?: Species | null
 }
 
 
 type SharedState = {
+  socket?: WebSocket
+
+  player?: Player
+  setPlayer?: Dispatch<SetStateAction<Player | undefined>>
   level?: string
   setLevel?: Dispatch<SetStateAction<string>>
+  length?: string
+  setLength?: Dispatch<SetStateAction<string>>
   country?: Country | undefined
   setCountry?: Dispatch<SetStateAction<Country | undefined>>
-  language?: string | undefined
-  setLanguage?: Dispatch<SetStateAction<string | undefined>>
-
+  language?: 'en' | 'nl'
+  setLanguage?: Dispatch<SetStateAction<'en' | 'nl'>>
+  multiplayer?: string
+  setMultiplayer?: Dispatch<SetStateAction<string>>
+  mediaType?: string
+  setMediaType?: Dispatch<SetStateAction<string>>
   game?: Game | undefined
   setGame?: Dispatch<SetStateAction<Game | undefined>>
   progress?: string
   species?: Species[]
-  setCorrect?: (question:Question) => void,
-  setWrong?: (question:Question) => void,
-  getNextQuestion?: () => Question | undefined,
+  getNextQuestion?: () => void,
   loading?: boolean
+  commitAnswer?: (answer: Answer) => void
+  answer?: Answer
 };
 
-const AppContext = createContext<SharedState>({});
+const AppContext = createContext<SharedState>({
+
+});
 
 export default AppContext;

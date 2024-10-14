@@ -1,66 +1,29 @@
-import React, {useEffect, useState} from 'react';
-import {useNavigate, useParams, useLocation} from 'react-router-dom';
+import React, {useContext, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
-import {Badge, Box, Button, Flex, Heading, Input, List, ListItem, TagLabel} from "@chakra-ui/react"
+import {Badge, Box, Button, Flex, Heading, List, ListItem} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
+import WebsocketContext from "../../core/websocket-context"
+import {PlayerItem} from "../../components/play/player-item"
+import AppContext from "../../core/app-context"
 
 interface Player {
   name: string;
 }
 
 const Lobby: React.FC = () => {
-  const {gameCode} = useParams<{ gameCode: string }>();
-  const location = useLocation();
-  const navigate = useNavigate();
 
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const playerName = new URLSearchParams(location.search).get('playerName');
+  const gameToken = localStorage.getItem('game-token')
+
   const [copied, setCopied] = useState(false)
+  const {players, startGame} = useContext(WebsocketContext)
+  const {player} = useContext(AppContext)
 
-  useEffect(() => {
-    const socketInstance = new WebSocket(`ws://localhost:8050/ws/quiz/${gameCode}/`);
-
-    socketInstance.onopen = () => {
-      // Join the game
-      socketInstance.send(JSON.stringify({
-        action: 'join_game',
-        player_name: playerName
-      }));
-    };
-
-    socketInstance.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.message) {
-        console.log(data.message); // log player joins
-      }
-
-      if (data.players) {
-        setPlayers(data.players); // assuming server sends player list
-      }
-    };
-
-    setSocket(socketInstance);
-
-    return () => {
-      socketInstance.close();
-    };
-  }, [gameCode, playerName]);
-
-  const startGame = () => {
-    if (socket) {
-      socket.send(JSON.stringify({
-        action: 'start_game',
-      }));
-      navigate(`/mpg/game/${gameCode}?playerName=${playerName}`);
-    }
-  };
 
   const copyCode = () => {
-    if (gameCode) {
-      copy(gameCode)
+    if (gameToken) {
+      copy(gameToken)
       setCopied(true)
       setTimeout(() => {
         setCopied(false);
@@ -80,20 +43,29 @@ const Lobby: React.FC = () => {
         <Heading variant={'h3'}>Game Lobby</Heading>
         <Flex gap={4}>
           Game Code:
-          <Box><Badge onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameCode}</Badge></Box>
+          <Box><Badge onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameToken}</Badge></Box>
           {copied ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
             <Button colorScheme='orange' variant='link' onClick={copyCode}>Copy code</Button>
           )}
         </Flex>
         <Box>Players joined</Box>
-        <List>
-          {players.map((player, index) => (
-            <ListItem key={index}>{player.name}</ListItem>
+        <List spacing={4}>
+          {players && players.map((player, index) => (
+            <ListItem key={index}>
+              <PlayerItem player={player}/>
+            </ListItem>
           ))}
         </List>
-        <Button colorScheme='orange' onClick={startGame} disabled={players.length < 2}>
-          Start game
-        </Button>
+        {
+          player && player.is_host ? (
+            <Button colorScheme='orange' onClick={startGame} disabled={!players?.length || players?.length < 2}>
+              Start game
+            </Button>
+
+          ) : (
+            <FormattedMessage id={'waiting for host'} defaultMessage={'Waiting until the host starts the game.'} />
+          )
+        }
       </Page.Body>
     </Page>
   );

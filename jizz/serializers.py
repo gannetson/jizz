@@ -89,7 +89,14 @@ class PlayerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Player
-        fields = ('name', 'token', 'language')
+        fields = ('name', 'is_host', 'token', 'language')
+
+
+class MultiPlayerSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Player
+        fields = ('name', 'is_host', 'language')
 
 
 class GameSerializer(serializers.ModelSerializer):

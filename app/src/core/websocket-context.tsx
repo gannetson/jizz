@@ -63,10 +63,15 @@ export type Question = {
 export type Player = {
   token: string
   name: string
-  language: string
   is_host?: boolean
+  language: string
 }
 
+export type MultiPlayer = {
+  name: string
+  is_host?: boolean
+  language?: string
+}
 
 export type Answer = {
   question?: Question
@@ -81,33 +86,20 @@ export type Answer = {
 
 type SharedState = {
   socket?: WebSocket
-
   player?: Player
   setPlayer?: Dispatch<SetStateAction<Player | undefined>>
-  level?: string
-  setLevel?: Dispatch<SetStateAction<string>>
-  length?: string
-  setLength?: Dispatch<SetStateAction<string>>
-  country?: Country | undefined
-  setCountry?: Dispatch<SetStateAction<Country | undefined>>
-  language?: string | undefined
-  setLanguage?: Dispatch<SetStateAction<string | undefined>>
-  multiplayer?: string
-  setMultiplayer?: Dispatch<SetStateAction<string>>
-  mediaType?: string
-  setMediaType?: Dispatch<SetStateAction<string>>
-  game?: Game | undefined
-  setGame?: Dispatch<SetStateAction<Game | undefined>>
-  progress?: string
-  species?: Species[]
-  getNextQuestion?: () => void,
-  loading?: boolean
-  commitAnswer?: (answer: Answer) => void
-  answer?: Answer
+  mpg?: Game | undefined
+  gameToken?: string | null
+  setGameToken?: Dispatch<SetStateAction<string | null>>
+  players?: MultiPlayer[]
+  setMpg?: Dispatch<SetStateAction<Game | undefined>>
+  startGame?: ()=>void
+  joinGame?: ({gameToken, playerToken} : {gameToken: string, playerToken: string})=>void
+  startSocket?: ({gameToken} : {gameToken: string})=>void
 };
 
-const AppContext = createContext<SharedState>({
+const WebsocketContext = createContext<SharedState>({
 
 });
 
-export default AppContext;
+export default WebsocketContext;

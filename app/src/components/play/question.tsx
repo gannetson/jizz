@@ -62,7 +62,7 @@ export const QuestionComponent = () => {
             <ReactPlayer
               width={'100%'}
               height={'480px'}
-              url={question.videos[question.number].url}
+              url={question.videos[0].url}
               controls={true}
               playing={true}
             />

@@ -6,8 +6,6 @@ import Layout from "./pages/layout/layout";
 import HomePage from "./pages/home";
 import {AppContextProvider} from "./core/app-context-provider";
 import GamePage from "./pages/game";
-import MultiPlayerGame from "./pages/mpg/mpg"
-import CreateGame from "./pages/mpg/create"
 import JoinGame from "./pages/mpg/join"
 import Lobby from "./pages/mpg/lobby"
 import {AboutPage} from "./pages/about";
@@ -15,6 +13,7 @@ import {IntlProvider} from "react-intl";
 
 import enMessages from './locales/en.json';
 import nlMessages from './locales/nl.json';
+import {WebsocketContextProvider} from "./core/websocket-context-provider"
 
 
 export const App = () => {
@@ -30,24 +29,24 @@ export const App = () => {
   }
   return (
     <AppContextProvider>
-      <IntlProvider locale={locale} messages={messages['nl']}>
-        <ChakraProvider theme={theme}>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Layout/>}>
-                <Route index element={<HomePage/>}/>
-                <Route path='/game/' element={<GamePage/>}/>
-                <Route path='/about/' element={<AboutPage/>}/>
+      <WebsocketContextProvider>
+        <IntlProvider locale={locale} messages={messages['nl']}>
+          <ChakraProvider theme={theme}>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Layout/>}>
+                  <Route index element={<HomePage/>}/>
+                  <Route path='/game/' element={<GamePage/>}/>
+                  <Route path='/about/' element={<AboutPage/>}/>
 
-                <Route path="/mpg/create" element={<CreateGame/>}/>
-                <Route path="/mpg/join" element={<JoinGame/>}/>
-                <Route path="/mpg/lobby/:gameCode" element={<Lobby/>}/>
-                <Route path="/mpg/game/:gameCode/:playerName" element={<MultiPlayerGame/>}/>
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </ChakraProvider>
-      </IntlProvider>
+                  <Route path="/mpg/join/:gameCode" element={<JoinGame/>}/>
+                  <Route path="/mpg/lobby" element={<Lobby/>}/>
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </ChakraProvider>
+        </IntlProvider>
+      </WebsocketContextProvider>
     </AppContextProvider>
   )
 }

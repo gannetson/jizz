@@ -1,10 +1,9 @@
-import React, {FC, ReactNode, useCallback, useEffect, useState} from 'react';
+import React, {FC, ReactNode, useCallback, useContext, useEffect, useState} from 'react';
 import AppContext, {Game, Country, Question, Species, Language, Player, Answer} from "./app-context";
 
 type Props = {
   children: ReactNode;
 };
-
 
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
@@ -22,7 +21,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const gameToken = localStorage.getItem('game-token')
   const playerToken = localStorage.getItem('player-token')
 
-
   const reloadAnswer = async (givenAnswer: Answer) => {
     await fetch(`/api/answer/${givenAnswer.question?.id}/${playerToken}`, {
       method: 'GET',
@@ -31,15 +29,15 @@ const AppContextProvider: FC<Props> = ({children}) => {
         'Content-Type': 'application/json',
       }
     }).then(response => {
-          if (response.status === 200) {
-            response.json().then(data => {
-              setAnswer(data)
-            })
-          } else {
-            console.log('Could not load answer.')
-          }
-          setLoading(false)
+      if (response.status === 200) {
+        response.json().then(data => {
+          setAnswer(data)
         })
+      } else {
+        console.log('Could not load answer.')
+      }
+      setLoading(false)
+    })
   }
 
 
@@ -56,18 +54,18 @@ const AppContextProvider: FC<Props> = ({children}) => {
         player_token: playerToken
       })
     }).then(response => {
-          if (response.status === 201) {
-            response.json().then(data => {
-              setAnswer(data)
-            })
-          } else if (response.status === 500) {
-            // Already answered, reload first answer
-            reloadAnswer(givenAnswer)
-          } else {
-            console.log('Could not save answer.')
-          }
-          setLoading(false)
+      if (response.status === 201) {
+        response.json().then(data => {
+          setAnswer(data)
         })
+      } else if (response.status === 500) {
+        // Already answered, reload first answer
+        reloadAnswer(givenAnswer)
+      } else {
+        console.log('Could not save answer.')
+      }
+      setLoading(false)
+    })
   }
 
   useEffect(() => {
@@ -81,16 +79,16 @@ const AppContextProvider: FC<Props> = ({children}) => {
           'Content-Type': 'application/json',
         },
       })
-        .then(response => {
-          if (response.status === 200) {
-            response.json().then(data => {
-              setSpecies(data)
-            })
-          } else {
-            console.log('Could not load country species.')
-          }
-          setLoading(false)
-        })
+      .then(response => {
+        if (response.status === 200) {
+          response.json().then(data => {
+            setSpecies(data)
+          })
+        } else {
+          console.log('Could not load country species.')
+        }
+        setLoading(false)
+      })
 
     }
   }, [country?.code]);
@@ -106,16 +104,18 @@ const AppContextProvider: FC<Props> = ({children}) => {
           'Content-Type': 'application/json',
         },
       })
-        .then(response => {
-          if (response.status === 200) {
-            response.json().then(data => {
+      .then(response => {
+        if (response.status === 200) {
+          response.json().then(data => {
+            if (!data.multiplayer) {
               setGame(data)
-            })
-          } else {
-            console.log('Could not load game.')
-          }
-          setLoading(false)
-        })
+            }
+          })
+        } else {
+          console.log('Could not load game.')
+        }
+        setLoading(false)
+      })
 
     }
   }, [gameToken]);
@@ -129,15 +129,15 @@ const AppContextProvider: FC<Props> = ({children}) => {
         'Content-Type': 'application/json',
       }
     }).then(response => {
-          if (response.status === 200) {
-            response.json().then(data => {
-              setGame(data)
-            })
-          } else {
-            console.log('Could not load game.')
-          }
-          setLoading(false)
+      if (response.status === 200) {
+        response.json().then(data => {
+          setGame(data)
         })
+      } else {
+        console.log('Could not load game.')
+      }
+      setLoading(false)
+    })
   }
 
   useEffect(() => {
@@ -151,16 +151,16 @@ const AppContextProvider: FC<Props> = ({children}) => {
           'Content-Type': 'application/json',
         },
       })
-        .then(response => {
-          if (response.status === 200) {
-            response.json().then(data => {
-              setPlayer(data)
-            })
-          } else {
-            console.log('Could not load player.')
-          }
-          setLoading(false)
-        })
+      .then(response => {
+        if (response.status === 200) {
+          response.json().then(data => {
+            setPlayer(data)
+          })
+        } else {
+          console.log('Could not load player.')
+        }
+        setLoading(false)
+      })
 
     }
   }, [playerToken]);

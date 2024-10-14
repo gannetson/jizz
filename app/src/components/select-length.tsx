@@ -1,18 +1,7 @@
-import {Select} from "chakra-react-select";
-import {useContext, useState} from "react";
+import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {
-  Box, Button,
-  Flex,
-  Heading, Radio, RadioGroup,
-  Slider,
-  SliderFilledTrack,
-  SliderMark,
-  SliderThumb,
-  SliderTrack, Tab, TabList, Tabs,
-  Tooltip
-} from "@chakra-ui/react"
-import {FormattedMessage, useIntl} from "react-intl"
+import {Box, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {FormattedMessage} from "react-intl"
 
 
 export const SelectLength = () => {

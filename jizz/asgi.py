@@ -1,19 +1,17 @@
 import os
-
-from channels.auth import AuthMiddlewareStack
-from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
 from django.urls import path
+from jizz.consumers import QuizConsumer  # Adjust the import as necessary
 
-from jizz.consumers import QuizConsumer
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'jizz.settings.production')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "jizz.settings.local")
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         URLRouter([
-            path("ws/quiz/<str:game_code>/", QuizConsumer.as_asgi()),
+            path("mpg/<str:game_token>", QuizConsumer.as_asgi()),
         ])
     ),
 })

@@ -34,7 +34,7 @@ class Game(models.Model):
 
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True)
     language = models.CharField(max_length=100, default='en')
-    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    token = models.CharField(default=uuid.uuid4, editable=False)
     code = models.CharField(max_length=100, blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
     level = models.CharField(max_length=100)

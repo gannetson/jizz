@@ -6,7 +6,7 @@ from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer
+    Answer, Player
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
 
 
@@ -172,10 +172,20 @@ class QuestionInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         return False
 
+class PlayerInline(admin.TabularInline):
+    model = Player
+    can_delete = False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request, obj):
+        return False
+
 
 @register(Game)
 class GameAdmin(admin.ModelAdmin):
-    inlines = [QuestionInline]
+    inlines = [PlayerInline, QuestionInline]
     raw_id_fields = ['country']
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
     fields = ['country', 'language', 'created', 'token', 'length', 'multiplayer', 'media', 'repeat']
@@ -199,3 +209,9 @@ class AnswerAdmin(admin.ModelAdmin):
 @register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     raw_id_fields = ['species']
+
+
+@register(Player)
+class PlayerAdmin(admin.ModelAdmin):
+    raw_id_fields = ['game', 'user']
+    list_display = ['name', 'token']

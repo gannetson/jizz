@@ -18,7 +18,7 @@ export const CreateGame = () => {
   const {country, level, setGame, language, multiplayer, length, mediaType} = useContext(AppContext);
   const {setGameToken, joinGame} = useContext(WebsocketContext);
   const [loading, setLoading] = useState(false)
-  const {player} = useContext(AppContext);
+  const {player, setPlayer} = useContext(AppContext);
   const navigate = useNavigate()
 
 
@@ -44,9 +44,10 @@ export const CreateGame = () => {
       if (data) {
         localStorage.setItem('game-token', data.token)
         if (data.multiplayer) {
-
           setGameToken && setGameToken(data.token)
           if (player?.token && joinGame) {
+            player.is_host = true
+            setPlayer && setPlayer(player)
             await joinGame({
               gameToken: data.token,
               playerToken: player.token

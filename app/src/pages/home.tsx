@@ -1,4 +1,4 @@
-import {Flex, Heading} from "@chakra-ui/react";
+import {Button, Flex, Heading} from "@chakra-ui/react";
 import Page from "./layout/page";
 import {FormattedMessage} from "react-intl";
 import {CreateGame} from "../components/create-game"
@@ -7,9 +7,11 @@ import {useContext} from "react"
 import AppContext from "../core/app-context"
 import {Loading} from "../components/loading"
 import {LoadGame} from "../components/load-game"
+import {useNavigate} from "react-router-dom"
 
 const HomePage = () => {
   const {player, game, loading} = useContext(AppContext);
+  const navigate = useNavigate()
 
   return (
     <Page>
@@ -22,15 +24,15 @@ const HomePage = () => {
         {loading ? (
           <Loading/>
         ) : (
-          <Flex direction={'column'} gap={20}>
-            {player ? (
-              <>
-                {game && <LoadGame />}
-                <CreateGame/>
-              </>
-            ) : (
-              <CreatePlayer/>
-            )}
+          <Flex direction={'column'} gap={10}>
+            {game && <LoadGame/>}
+            <Button colorScheme={'orange'} onClick={() => navigate('/start')}>
+              <FormattedMessage id={'start game'} defaultMessage={'Start a new game'}/>
+            </Button>
+            <Button colorScheme={'orange'} onClick={() => navigate('/join')}>
+              <FormattedMessage id={'join game'} defaultMessage={'Join a game'}/>
+            </Button>
+
           </Flex>
         )}
       </Page.Body>

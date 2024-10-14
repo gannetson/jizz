@@ -58,11 +58,7 @@ class PlayerCreateView(CreateAPIView):
 class PlayerView(RetrieveAPIView):
     serializer_class = PlayerSerializer
     queryset = Player.objects.all()
-
-    def get_object(self):
-        return self.queryset.filter(
-            token=self.kwargs['token']
-        ).first()
+    lookup_field = 'token'
 
 
 class GameListView(ListCreateAPIView):
@@ -71,11 +67,11 @@ class GameListView(ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['country']
 
-    @transaction.atomic
-    def perform_create(self, serializer):
-        model = serializer.save()
-        if not model.multiplayer:
-            model.add_question()
+    # @transaction.atomic
+    # def perform_create(self, serializer):
+    #     model = serializer.save()
+    #     if not model.multiplayer:
+    #         model.add_question()
 
 
 class GameDetailView(RetrieveAPIView):

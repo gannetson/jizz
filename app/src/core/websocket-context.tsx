@@ -1,4 +1,5 @@
 import {createContext, Dispatch, SetStateAction} from 'react';
+import {Answer} from "./app-context"
 
 
 export type Country = {
@@ -73,17 +74,6 @@ export type MultiPlayer = {
   language?: string
 }
 
-export type Answer = {
-  question?: Question
-  answer?: Species
-  species?: Species
-  player: Player
-  error?: number
-  number?: number
-  correct?: boolean
-}
-
-
 type SharedState = {
   socket?: WebSocket
   player?: Player
@@ -98,6 +88,9 @@ type SharedState = {
   startGame?: ()=>void
   joinGame?: ({gameToken, playerToken} : {gameToken: string, playerToken: string})=>void
   startSocket?: ({gameToken} : {gameToken: string})=>void
+  submitAnswer?: (answer: Answer)=>void
+  nextQuestion?: ()=>void
+  answer?: Answer
 };
 
 const WebsocketContext = createContext<SharedState>({

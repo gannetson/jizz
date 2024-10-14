@@ -34,8 +34,7 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
     if (question) {
-      debugger
-      // navigate('/mpg/game')
+      navigate('/mpg/game')
     }
   }, [question]);
 

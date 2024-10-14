@@ -9,6 +9,8 @@ export const JizzMenu = () => {
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'}>Home</Link>
+            <Link href={'/start'}>Start game</Link>
+            <Link href={'/join'}>Join game</Link>
             {game && <Link href={'/game'}>Continue game</Link>}
             <Link href={'/about'}>About</Link>
             <Box>

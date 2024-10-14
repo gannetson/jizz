@@ -2,6 +2,7 @@ import uuid
 from random import randint, shuffle
 
 from django.db import models
+from shortuuid.django_fields import ShortUUIDField
 
 
 class  Country(models.Model):
@@ -34,14 +35,18 @@ class Game(models.Model):
 
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True)
     language = models.CharField(max_length=100, default='en')
-    token = models.CharField(default=uuid.uuid4, editable=False)
-    code = models.CharField(max_length=100, blank=True, null=True)
+    token = ShortUUIDField(
+        length=8,
+        max_length=10,
+        alphabet="abcdefghijklmnopqrstuvwxyz",
+    )
     created = models.DateTimeField(auto_now_add=True)
     level = models.CharField(max_length=100)
     multiplayer = models.BooleanField(default=False)
     length = models.IntegerField(default=0)
     media = models.CharField(max_length=10, default='images', choices=MEDIA_CHOICES)
     repeat = models.BooleanField(default=False)
+
 
     def add_question(self):
         all_species = Species.objects.filter(countryspecies__country=self.country)
@@ -133,6 +138,9 @@ class Species(models.Model):
         verbose_name = 'species'
         verbose_name_plural = 'species'
         ordering = ['id']
+
+    def __str__(self):
+        return self.name
 
 
 class SpeciesImage(models.Model):

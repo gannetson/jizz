@@ -3,19 +3,25 @@ import {Select} from "chakra-react-select"
 import {useCallback, useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
-import {Answer, Species} from "../../../core/app-context"
+import AppContext, {Answer, Species} from "../../../core/app-context"
 
 
 export const QuestionComponent = () => {
-  const {question, player, mpg: game, species} = useContext(WebsocketContext)
+  const {player} = useContext(AppContext)
+  const {question, mpg: game, species, submitAnswer} = useContext(WebsocketContext)
   const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
 
   const selectAnswer = (species?: Species) => {
-    const answer: Answer = {
-      question,
-      answer: species,
+    console.log(species)
+    if (player && submitAnswer) {
+      const answer: Answer = {
+        question,
+        player,
+        answer: species,
+      }
+      submitAnswer(answer)
+
     }
-    // commitAnswer && commitAnswer(answer)
 
   }
   const rotate = keyframes`

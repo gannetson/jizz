@@ -15,6 +15,9 @@ import enMessages from './locales/en.json';
 import nlMessages from './locales/nl.json';
 import MultiPlayerGame from "./pages/mpg/multi-player-game"
 import AppContext from "./core/app-context"
+import Start from "./pages/start"
+import JoinPage from "./pages/join"
+import StartPage from "./pages/start"
 
 
 export const MainContent = () => {
@@ -38,6 +41,9 @@ export const MainContent = () => {
             <Route path="/" element={<Layout/>}>
               <Route index element={<HomePage/>}/>
               <Route path='/game/' element={<GamePage/>}/>
+              <Route path='/start/' element={<StartPage />}/>
+              <Route path='/join/' element={<JoinPage />}/>
+              <Route path="/join/:gameCode" element={<JoinGame/>}/>
               <Route path='/about/' element={<AboutPage/>}/>
 
               <Route path="/mpg/join/:gameCode" element={<JoinGame/>}/>

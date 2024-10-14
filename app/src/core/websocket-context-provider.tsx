@@ -14,6 +14,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const [player, setPlayer] = useState<Player | undefined>(undefined)
   const [loading, setLoading] = useState<boolean>(false)
   const [question, setQuestion] = useState<Question | undefined>(undefined)
+  const [answer, setAnswer] = useState<Answer | undefined>(undefined)
   const [species, setSpecies] = useState<Species[]>([])
 
   const toast = useToast()
@@ -74,12 +75,25 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
             notify('New player', `${message.player_name} joined the game`)
             break
           case 'new_question':
-            notify('New question')
+            setAnswer(undefined)
+            console.log('New question')
             const question: Question = message.question
             setQuestion(question)
             break
           case 'game_started':
             notify('Game started')
+            break
+          case 'player_answered':
+            // notify(`${message.player.name} answered`)
+            console.log(`${message.player.name} answered`)
+            break
+          case 'answer_checked':
+            setAnswer(message.answer as Answer)
+            if (message.answer.correct) {
+              notify('Correct!')
+            } else {
+              notify('Incorrect!')
+            }
             break
         }
       };
@@ -112,12 +126,23 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     sendAction({ action: 'start_game', player_token: playerToken })
   }
 
+
+  const nextQuestion = () => {
+    sendAction({ action: 'next_question', player_token: playerToken })
+  }
+
   const joinGame = ({gameToken, playerToken} : {gameToken: string, playerToken: string}) => {
+    setQuestion(undefined)
     startSocket({gameToken, playerToken})
+  }
+
+  const submitAnswer = (answer: Answer) => {
+    sendAction({ action: 'submit_answer', player_token: answer.player?.token, question_id: answer.question?.id, answer_id: answer.answer?.id })
   }
 
   const gameToken = localStorage.getItem('game-token')
   const playerToken = localStorage.getItem('player-token')
+
 
   useEffect(() => {
     if (gameToken) {
@@ -155,11 +180,14 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       players,
       setMpg,
       startGame,
+      nextQuestion,
       species,
       question,
       player,
       setPlayer,
-      joinGame
+      joinGame,
+      submitAnswer,
+      answer
     }}>
       {children}
     </WebsocketContext.Provider>

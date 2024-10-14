@@ -1,20 +1,16 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext} from 'react';
 import Page from "../layout/page"
 import {Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import WebsocketContext from "../../core/websocket-context"
-import AppContext from "../../core/app-context"
 import {QuestionComponent} from "./play/question"
+import {WaitingComponent} from "./play/waiting"
 
 
 const MultiPlayerGame: React.FC = () => {
+  const {players, startGame, question, answer} = useContext(WebsocketContext)
 
-
-  const [copied, setCopied] = useState(false)
-  const {players, startGame, question} = useContext(WebsocketContext)
-  const {player} = useContext(AppContext)
-
-  console.log('Yeah')
+  console.log(answer)
 
   return (
     <Page>
@@ -25,7 +21,10 @@ const MultiPlayerGame: React.FC = () => {
       </Page.Header>
       <Page.Body>
         <Heading variant={'h3'}>Question</Heading>
-        <QuestionComponent />
+        {answer ? (
+          <WaitingComponent />
+        ) : question && <QuestionComponent />}
+
       </Page.Body>
     </Page>
   );

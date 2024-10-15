@@ -49,7 +49,7 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
     if (question) {
-      navigate('/game/game')
+      navigate('/game/play')
     }
   }, [question]);
 

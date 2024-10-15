@@ -48,7 +48,7 @@ export const MainContent = () => {
 
               <Route path="/game/join/:gameCode" element={<JoinGame/>}/>
               <Route path="/game/lobby" element={<Lobby/>}/>
-              <Route path="/game" element={<MultiPlayerGame/>}/>
+              <Route path="/game/play" element={<MultiPlayerGame/>}/>
             </Route>
           </Routes>
         </BrowserRouter>

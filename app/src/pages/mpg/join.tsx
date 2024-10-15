@@ -52,7 +52,7 @@ const JoinGame: React.FC = () => {
       if (joinGame) {
         await joinGame({gameToken: code, playerToken: data.token})
         setLoading(false)
-        navigate('/mpg/lobby')
+        navigate('/game/lobby')
 
       }
 

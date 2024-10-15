@@ -41,15 +41,14 @@ export const MainContent = () => {
           <Routes>
             <Route path="/" element={<Layout/>}>
               <Route index element={<HomePage/>}/>
-              <Route path='/game/' element={<GamePage/>}/>
               <Route path='/start/' element={<StartPage />}/>
               <Route path='/join/' element={<JoinPage />}/>
               <Route path="/join/:gameCode" element={<JoinGame/>}/>
               <Route path='/about/' element={<AboutPage/>}/>
 
-              <Route path="/mpg/join/:gameCode" element={<JoinGame/>}/>
-              <Route path="/mpg/lobby" element={<Lobby/>}/>
-              <Route path="/mpg/game" element={<MultiPlayerGame/>}/>
+              <Route path="/game/join/:gameCode" element={<JoinGame/>}/>
+              <Route path="/game/lobby" element={<Lobby/>}/>
+              <Route path="/game" element={<MultiPlayerGame/>}/>
             </Route>
           </Routes>
         </BrowserRouter>

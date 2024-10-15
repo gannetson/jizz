@@ -53,7 +53,7 @@ export const CreateGame = () => {
               gameToken: data.token,
               playerToken: player.token
             })
-            navigate('/mpg/lobby')
+            navigate('/game/lobby')
           }
 
         } else {

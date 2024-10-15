@@ -66,6 +66,7 @@ export type Player = {
   name: string
   language: string
   is_host?: boolean
+  score?: number
 }
 
 
@@ -77,6 +78,7 @@ export type Answer = {
   error?: number
   number?: number
   correct?: boolean
+  score?: number
 }
 
 

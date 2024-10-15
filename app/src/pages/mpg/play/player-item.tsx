@@ -1,16 +1,38 @@
-import {Box, Card, CardBody, Flex} from "@chakra-ui/react"
-import {ImBinoculars} from "react-icons/im";
+import {Card, CardBody, Flex, Tag} from "@chakra-ui/react"
+import {FaCheckCircle, FaClock, FaMinusCircle, FaCrown} from "react-icons/fa";
 import {MultiPlayer} from "../../../core/websocket-context"
 
-export const PlayerItem = ({player}:{player:MultiPlayer}) => {
+export const PlayerItem = ({player, showAnswer = true}: { player: MultiPlayer, showAnswer?: boolean }) => {
+  let color = 'orange.200'
+  if (showAnswer) {
+    if (player.status === 'correct') color = 'green.200'
+    if (player.status === 'incorrect') color = 'red.200'
+  }
+
+
   return (
-    <Card backgroundColor={'orange.200'} color={'orange.800'} width={['full', '300px']}>
+    <Card backgroundColor={color}>
       <CardBody py={2}>
-        <Flex gap={4} alignItems={'center'}>
-          <ImBinoculars size={'18px'} />
-          <Box fontWeight={'bold'}>{player.name}</Box>
-          {player.is_host && <Box>host</Box>}
+        <Flex gap={4} alignItems={'center'} justifyContent={'space-between'}>
+          <Flex gap={4} alignItems={'center'}>
+            {showAnswer && (
+              <>
+                {player.status === 'waiting' && <FaClock size={'18px'}/>}
+                {player.status === 'correct' && <FaCheckCircle size={'18px'}/>}
+                {player.status === 'incorrect' && <FaMinusCircle size={'18px'}/>}
+              </>
+            )}
+            <Flex gap={2} alignItems={'center'} fontWeight={'bold'}>
+              {player.name} {player.is_host && <FaCrown />}
+            </Flex>
+          </Flex>
+
+          <Flex gap={4}>
+            {showAnswer && player.last_answer?.correct && <Tag colorScheme={'green'} fontSize='sm'>+{player.last_answer.score}</Tag>}
+            <Tag fontSize='xl'>{player.score}</Tag>
+          </Flex>
         </Flex>
+
       </CardBody>
     </Card>
   )

@@ -8,7 +8,7 @@ import AppContext from "../../../core/app-context"
 
 export const WaitingComponent = () => {
 
-  const {players, nextQuestion} = useContext(WebsocketContext)
+  const {players, nextQuestion, mpg} = useContext(WebsocketContext)
   const {player} = useContext(AppContext)
 
   return (
@@ -20,21 +20,30 @@ export const WaitingComponent = () => {
           </Box>
           <Box>
             {player && player.is_host ? (
-            <Button onClick={nextQuestion} colorScheme={'orange'}>
-              <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
-            </Button>
+              mpg?.ended ? (
+                <Button onClick={nextQuestion} colorScheme={'orange'}>
+                  <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
+                </Button>
+              ) : (
+                <Button onClick={nextQuestion} colorScheme={'orange'}>
+                  <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+                </Button>
+
+              )
 
             ) : (
-              <FormattedMessage defaultMessage={'Waiting for host to continue to the next question'} id={'waiting for host to click next question'} />
+              <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}
+                                id={'waiting for host to click next question'}
+                                values={{host: mpg?.host?.name || 'host'}}/>
             )}
           </Box>
-        <List spacing={4}>
-          {players && players.map((player, index) => (
-            <ListItem key={index}>
-              <PlayerItem player={player}/>
-            </ListItem>
-          ))}
-        </List>
+          <List spacing={4}>
+            {players && players.map((player, index) => (
+              <ListItem key={index}>
+                <PlayerItem player={player}/>
+              </ListItem>
+            ))}
+          </List>
         </Flex>
       </Box>
     </>

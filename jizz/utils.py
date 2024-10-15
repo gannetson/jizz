@@ -217,24 +217,24 @@ def get_all_species():
     nr = 0
     for spec in species:
         nr += 1
-        print(f'🔎 [{nr}/{species.count()}] {spec.species.name}' , end='\r\n')
-        get_media(spec.species.id, 'photo')
+        print(f'🔎 [{nr}/{species.count()}] {spec.name}' , end='\r\n')
+        get_media(spec.id, 'photo')
 
-    species = CountrySpecies.objects.filter(sounds=None)
+    species = Species.objects.filter(sounds=None)
     print (f'{species.count()} still need to retrieve sounds')
     nr = 0
     for spec in species:
         nr += 1
-        print(f'🔎 [{nr}/{species.count()}] {spec.species.name}' , end='\r\n')
-        get_media(spec.species.id, 'audio')
+        print(f'🔎 [{nr}/{species.count()}] {spec.name}' , end='\r\n')
+        get_media(spec.id, 'audio')
 
-    species = CountrySpecies.objects.filter(videos=None)
+    species = Species.objects.filter(videos=None)
     print (f'{species.count()} still need to retrieve videos')
     nr = 0
     for spec in species:
         nr += 1
-        print(f'🔎 [{nr}/{species.count()}] {spec.species.name}' , end='\r\n')
-        get_media(spec.species.id, 'video')
+        print(f'🔎 [{nr}/{species.count()}] {spec.name}' , end='\r\n')
+        get_media(spec.id, 'video')
 
 
 def get_all_countries():

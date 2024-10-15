@@ -13,11 +13,11 @@ const SelectLanguage = () => {
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Language</Heading>
+      <Heading size={'md'} mb={4}>Player language</Heading>
       <Box mb={4}>
         <FormattedMessage
           id={'set language description'}
-          defaultMessage={'This changes the language of the bird species.'}/>
+          defaultMessage={'This changes the language of the bird species. Other players that join your game can pick another language.'}/>
       </Box>
       <RadioGroup
         value={language}

@@ -52,6 +52,7 @@ export type Species = {
 export type Question = {
   id: number
   number: number
+  sequence: number
   game: Game
   options?: Species[]
   images: SpeciesImage[]
@@ -84,7 +85,8 @@ export type Answer = {
 
 type SharedState = {
   socket?: WebSocket
-
+  playerName?: string
+  setPlayerName?: Dispatch<SetStateAction<string | undefined>>
   player?: Player
   setPlayer?: Dispatch<SetStateAction<Player | undefined>>
   level?: string

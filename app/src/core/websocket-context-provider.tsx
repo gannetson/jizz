@@ -1,5 +1,5 @@
-import React, {FC, ReactNode, useContext, useEffect, useState} from 'react';
-import AppContext, {Answer, Country, Game, Player, Question, Species} from "./app-context";
+import React, {FC, ReactNode, useEffect, useState} from 'react';
+import {Answer, Game, Player, Question, Species} from "./app-context";
 import WebsocketContext, {MultiPlayer} from "./websocket-context"
 import {useToast} from "@chakra-ui/react"
 
@@ -17,7 +17,6 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const [answer, setAnswer] = useState<Answer | undefined>(undefined)
   const [species, setSpecies] = useState<Species[]>([])
 
-  const {setMediaType} = useContext(AppContext)
 
   const toast = useToast()
 
@@ -57,8 +56,13 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
         })
   }
   const startSocket  = ({gameToken, playerToken} : {gameToken: string, playerToken?: string})=> {
+    let socketUrl = `wss://jizz.be/mpg/${gameToken}`
+    if (window.location.host === 'localhost:3000') {
+      socketUrl = `ws://localhost:8050/mpg/${gameToken}`
+    }
+    const ws = new WebSocket(socketUrl);
 
-    const ws = new WebSocket(`wss://jizz.be/mpg/${gameToken}`);
+
 
       ws.onopen = () => {
         console.log('WebSocket connection established');
@@ -86,9 +90,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           case 'game_started':
             notify('Game started')
             break
-          case 'player_answered':
-            // notify(`${message.player.name} answered`)
-            console.log(`${message.player.name} answered`)
+          case 'game_updated':
+            setMpg(message.game as Game)
             break
           case 'answer_checked':
             setAnswer(message.answer as Answer)
@@ -178,6 +181,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
   return (
     <WebsocketContext.Provider value={{
+      loading,
       startSocket,
       socket,
       mpg,

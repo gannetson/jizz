@@ -10,7 +10,6 @@ export const ResultsComponent = () => {
   const {players} = useContext(WebsocketContext)
   return (
     <>
-
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
           <Heading>

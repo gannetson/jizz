@@ -22,13 +22,7 @@ const StartPage = () => {
           <Loading/>
         ) : (
           <Flex direction={'column'} gap={20}>
-            {player ? (
-              <>
-                <CreateGame/>
-              </>
-            ) : (
-              <CreatePlayer/>
-            )}
+            <CreateGame/>
           </Flex>
         )}
       </Page.Body>

@@ -1,16 +1,12 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
-import {Badge, Box, Button, Flex, Heading, List, ListItem, Tag} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, List, ListItem, Tag} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
 import AppContext from "../../core/app-context"
 import {PlayerItem} from "./play/player-item"
-
-interface Player {
-  name: string;
-}
 
 const Lobby: React.FC = () => {
 
@@ -53,6 +49,7 @@ const Lobby: React.FC = () => {
     }
   }, [question]);
 
+
   return (
     <Page>
       <Page.Header>
@@ -85,7 +82,7 @@ const Lobby: React.FC = () => {
           ))}
         </List>
         {
-          player && player.is_host ? (
+          player?.name === mpg?.host?.name ? (
             <Button colorScheme='orange' onClick={startGame} disabled={!players?.length || players?.length < 2}>
               Start game
             </Button>

@@ -10,12 +10,20 @@ import {ResultsComponent} from "./play/results"
 
 const MultiPlayerGame: React.FC = () => {
   const {question, answer, mpg} = useContext(WebsocketContext)
+  console.log(mpg)
 
   return (
     <Page>
       <Page.Header>
         <Heading size={'lg'} noOfLines={1}>
-          <FormattedMessage id={'Multi player game'} defaultMessage={'Multi player game'}/>
+          {mpg?.ended
+            ? <FormattedMessage id={'game ended'} defaultMessage={'Game ended'}/>
+            : <FormattedMessage
+              id={'game progress'}
+              defaultMessage={'Game -  {current} of {total}'}
+              values={{current: question?.sequence, total: mpg?.length}}
+            />
+          }
         </Heading>
       </Page.Header>
       <Page.Body>

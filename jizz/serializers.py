@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from setuptools.dist import sequence
 
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
     QuestionOption
@@ -58,7 +59,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number')
+        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number', 'sequence')
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -102,14 +103,14 @@ class MultiPlayerSerializer(serializers.ModelSerializer):
 
 class GameSerializer(serializers.ModelSerializer):
     country = CountrySerializer()
-    question = QuestionSerializer(read_only=True)
+    # question = QuestionSerializer(read_only=True)
     host = MultiPlayerSerializer(read_only=True)
 
     class Meta:
         model = Game
         fields = (
             'token', 'country', 'level', 'language',
-            'question', 'created', 'multiplayer',
+            'created', 'multiplayer',
             'length', 'progress',
             'media', 'repeat', 'host', 'ended'
         )

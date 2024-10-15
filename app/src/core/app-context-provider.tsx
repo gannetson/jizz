@@ -14,6 +14,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
+  const [playerName, setPlayerName] = useState<string | undefined>()
   const [multiplayer, setMultiplayer] = useState<string>('1')
   const [mediaType, setMediaType] = useState<string>('images')
   const [species, setSpecies] = useState<Species[]>([])
@@ -190,6 +191,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setMediaType,
       player,
       setPlayer,
+      playerName,
+      setPlayerName,
       game,
       setGame,
       getNextQuestion,

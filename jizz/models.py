@@ -41,7 +41,7 @@ class Question(models.Model):
     number = models.IntegerField(default=0)
     errors = models.IntegerField(default=0)
     done = models.BooleanField(default=False)
-
+    sequence = models.IntegerField(default=1)
 
     def __str__(self):
         return f'{self.game} - {self.species}'
@@ -50,7 +50,6 @@ class QuestionOption(models.Model):
     question = models.ForeignKey('jizz.Question', on_delete=models.CASCADE)
     species = models.ForeignKey('jizz.Species', on_delete=models.CASCADE)
     order = models.PositiveIntegerField()
-
     class Meta:
         ordering = ['order']
 
@@ -86,9 +85,22 @@ class Game(models.Model):
         return self.questions.last()
 
     def add_question(self):
-        all_species = Species.objects.filter(countryspecies__country=self.country)
+        all_species = Species.objects.filter(images__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
+        if self.media == 'video':
+            all_species = Species.objects.filter(videos__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
+        if self.media == 'audio':
+            all_species = Species.objects.filter(sounds__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
+
         left_species = all_species.exclude(id__in=self.questions.values_list('species_id', flat=True))
         species = left_species.order_by('?').first()
+
+        sequence = self.questions.count() + 1
+        number = randint(1, species.images.count()) - 1
+        if self.media == 'video':
+            number = randint(1, species.videos.count()) - 1
+        if self.media == 'audio':
+            number = randint(1, species.sounds.count()) - 1
+
 
         if self.level == 'advanced':
             options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
@@ -100,8 +112,7 @@ class Game(models.Model):
 
             options = list(options1) + list(options2) + [species]
             shuffle(options)
-            number = randint(1, species.images.count()) -1
-            question = self.questions.create(species=species, number=number)
+            question = self.questions.create(species=species, number=number, sequence=sequence)
             for index, species in enumerate(options):
                 QuestionOption.objects.create(
                     question=question,
@@ -114,7 +125,7 @@ class Game(models.Model):
             options = all_species.order_by('?')[:3]
 
             question = self.questions.create(
-                species=species,
+                species=species, number=number, sequence=sequence
             )
             options = list(options) + [species]
             shuffle(options)
@@ -127,7 +138,7 @@ class Game(models.Model):
             return question
         else:
             question = self.questions.create(
-                species_id=species.id,
+                species=species, number=number, sequence=sequence
             )
             return question
 
@@ -137,7 +148,7 @@ class Game(models.Model):
 
     @property
     def progress(self):
-        return self.questions.filter(done=True).count()
+        return self.questions.count()
 
     def __str__(self):
         return f'{self.country} - {self.level} - {self.created.strftime("%X %x")}'
@@ -152,6 +163,9 @@ class Player(models.Model):
     language = models.CharField(max_length=2, default='en')
     token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
     score = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.name} - #{self.id}"
 
     @property
     def is_host(self):

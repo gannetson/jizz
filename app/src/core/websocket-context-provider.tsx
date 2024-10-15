@@ -57,8 +57,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
         })
   }
   const startSocket  = ({gameToken, playerToken} : {gameToken: string, playerToken?: string})=> {
-    const host = window.location.hostname
-    const ws = new WebSocket(`ws://${host}/mpg/${gameToken}`);
+
+    const ws = new WebSocket(`wss://jizz.be/mpg/${gameToken}`);
 
       ws.onopen = () => {
         console.log('WebSocket connection established');

@@ -211,6 +211,32 @@ def get_country_media(code='NL'):
         get_media(spec.species.id, 'video')
 
 
+def get_all_species():
+    species = Species.objects.filter(images=None)
+    print (f'{species.count()} still need to retrieve images')
+    nr = 0
+    for spec in species:
+        nr += 1
+        print(f'🔎 [{nr}/{species.count()}] {spec.species.name}' , end='\r\n')
+        get_media(spec.species.id, 'photo')
+
+    species = CountrySpecies.objects.filter(sounds=None)
+    print (f'{species.count()} still need to retrieve sounds')
+    nr = 0
+    for spec in species:
+        nr += 1
+        print(f'🔎 [{nr}/{species.count()}] {spec.species.name}' , end='\r\n')
+        get_media(spec.species.id, 'audio')
+
+    species = CountrySpecies.objects.filter(videos=None)
+    print (f'{species.count()} still need to retrieve videos')
+    nr = 0
+    for spec in species:
+        nr += 1
+        print(f'🔎 [{nr}/{species.count()}] {spec.species.name}' , end='\r\n')
+        get_media(spec.species.id, 'video')
+
+
 def get_all_countries():
     countries = Country.objects.filter(countryspecies=None).all()
     count = countries.count()

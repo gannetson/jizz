@@ -259,10 +259,20 @@ def get_all_images():
 
 
 def get_all_sounds():
-    count = Species.objects.filter(images=None).count()
+    count = Species.objects.filter(sounds=None).count()
     nr = 0
     print (f'{count} still need to retrieve sounds')
-    for species in Species.objects.filter(images=None):
+    for species in Species.objects.filter(sounds=None):
         nr += 1
         print(f'☑️ [{nr}/{count}] {species.name}')
         get_sounds(species.id)
+
+
+def get_all_videos():
+    count = Species.objects.filter(videos=None).count()
+    nr = 0
+    print (f'{count} still need to retrieve videos')
+    for species in Species.objects.filter(images=None):
+        nr += 1
+        print(f'☑️ [{nr}/{count}] {species.name}')
+        get_videos(species.id)

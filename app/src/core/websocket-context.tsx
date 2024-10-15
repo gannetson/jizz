@@ -24,6 +24,8 @@ export type Game = {
   progress: number
   media: string
   repeat: boolean
+  ended?: boolean
+  host?: Player
 }
 
 export type SpeciesImage = {
@@ -62,16 +64,23 @@ export type Question = {
 }
 
 export type Player = {
+  id: number
   token: string
   name: string
   is_host?: boolean
   language: string
+  score?: number
+  last_answer?: Answer
 }
 
 export type MultiPlayer = {
+  id: number
   name: string
   is_host?: boolean
   language?: string
+  status?: 'waiting' | 'correct' | 'incorrect'
+  score?: number
+  last_answer?: Answer
 }
 
 type SharedState = {

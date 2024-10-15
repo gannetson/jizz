@@ -5,12 +5,11 @@ import {FormattedMessage} from "react-intl"
 import WebsocketContext from "../../core/websocket-context"
 import {QuestionComponent} from "./play/question"
 import {WaitingComponent} from "./play/waiting"
+import {ResultsComponent} from "./play/results"
 
 
 const MultiPlayerGame: React.FC = () => {
-  const {players, startGame, question, answer} = useContext(WebsocketContext)
-
-  console.log(answer)
+  const {question, answer, mpg} = useContext(WebsocketContext)
 
   return (
     <Page>
@@ -20,11 +19,14 @@ const MultiPlayerGame: React.FC = () => {
         </Heading>
       </Page.Header>
       <Page.Body>
-        <Heading variant={'h3'}>Question</Heading>
-        {answer ? (
-          <WaitingComponent />
-        ) : question && <QuestionComponent />}
-
+        <>
+          {mpg?.ended ? (
+            <ResultsComponent/>
+          ) : (answer ? (
+              <WaitingComponent/>
+            ) : question && <QuestionComponent/>
+          )}
+        </>
       </Page.Body>
     </Page>
   );

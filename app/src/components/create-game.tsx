@@ -23,13 +23,14 @@ export const CreateGame = () => {
 
 
   const startGame = async () => {
-    if (country && level) {
+    if (country && level && player) {
       setLoading(true)
       const response = await fetch('/api/games/', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Token ${player.token}`,
         },
         body: JSON.stringify({
           multiplayer: multiplayer === '1',

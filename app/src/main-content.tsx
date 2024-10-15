@@ -18,6 +18,7 @@ import AppContext from "./core/app-context"
 import Start from "./pages/start"
 import JoinPage from "./pages/join"
 import StartPage from "./pages/start"
+import {ResultsComponent} from "./pages/mpg/play/results"
 
 
 export const MainContent = () => {

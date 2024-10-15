@@ -4,6 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView, \
     CreateAPIView
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
 from jizz.models import Country, Species, Game, Question, Answer, Player
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
@@ -67,11 +68,28 @@ class GameListView(ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['country']
 
-    # @transaction.atomic
-    # def perform_create(self, serializer):
-    #     model = serializer.save()
-    #     if not model.multiplayer:
-    #         model.add_question()
+    def get_token_from_header(self, request):
+        auth_header = request.headers.get('Authorization', None)
+
+        if not auth_header:
+            raise AuthenticationFailed('Authorization header is missing')
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        return token
+
+    def get_user_from_token(self, token):
+        try:
+            return Player.objects.get(token=token)
+        except Exception as e:
+            raise AuthenticationFailed('Invalid token or user does not exist')
+
+    def perform_create(self, serializer):
+        token = self.get_token_from_header(self.request)
+        player = self.get_user_from_token(token)
+        serializer.save(host=player)
 
 
 class GameDetailView(RetrieveAPIView):

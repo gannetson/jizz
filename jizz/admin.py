@@ -6,7 +6,7 @@ from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer, Player
+    Answer, Player, QuestionOption
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
 
 
@@ -186,9 +186,9 @@ class PlayerInline(admin.TabularInline):
 @register(Game)
 class GameAdmin(admin.ModelAdmin):
     inlines = [PlayerInline, QuestionInline]
-    raw_id_fields = ['country']
+    raw_id_fields = ['country', 'host']
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
-    fields = ['country', 'language', 'created', 'token', 'length', 'multiplayer', 'media', 'repeat']
+    fields = ['country', 'language', 'host', 'created', 'token', 'length', 'multiplayer', 'media', 'repeat']
     list_display = ['country', 'created', 'level', 'length', 'multiplayer']
 
     def correct(self, obj):
@@ -206,9 +206,15 @@ class AnswerAdmin(admin.ModelAdmin):
     raw_id_fields = ['answer']
 
 
+class QuestionOptionInline(admin.TabularInline):
+    model = QuestionOption
+    readonly_fields = ['question', 'species']
+
+
 @register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     raw_id_fields = ['species']
+    inlines = [QuestionOptionInline]
 
 
 @register(Player)

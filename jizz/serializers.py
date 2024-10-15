@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound
+from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
+    QuestionOption
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -46,10 +47,14 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    options = SpeciesDetailSerializer(many=True, read_only=True)
     images = ImageSerializer(source='species.images', many=True)
     videos = VideoSerializer(source='species.videos', many=True)
     sounds = SoundSerializer(source='species.sounds', many=True)
+    options = serializers.SerializerMethodField()
+
+    def get_options(self, obj):
+        option_orders = QuestionOption.objects.filter(question=obj).order_by('order')
+        return SpeciesDetailSerializer([op.species for op in option_orders], many=True).data
 
     class Meta:
         model = Question
@@ -74,25 +79,31 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Answer
-        fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id', 'number')
+        fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id', 'number', 'score')
         unique_together = ('question', 'player')
 
 
 class PlayerSerializer(serializers.ModelSerializer):
+
+    last_answer = AnswerSerializer(read_only=True)
+
     class Meta:
         model = Player
-        fields = ('name', 'is_host', 'token', 'language')
+        fields = ('id', 'name', 'is_host', 'status', 'token', 'language', 'score', 'last_answer')
 
 
 class MultiPlayerSerializer(serializers.ModelSerializer):
+    last_answer = AnswerSerializer(read_only=True)
+
     class Meta:
         model = Player
-        fields = ('name', 'is_host', 'language')
+        fields = ('id', 'name', 'is_host', 'status', 'language', 'score', 'last_answer')
 
 
 class GameSerializer(serializers.ModelSerializer):
     country = CountrySerializer()
     question = QuestionSerializer(read_only=True)
+    host = MultiPlayerSerializer()
 
     class Meta:
         model = Game
@@ -100,5 +111,5 @@ class GameSerializer(serializers.ModelSerializer):
             'token', 'country', 'level', 'language',
             'question', 'created', 'multiplayer',
             'length', 'progress',
-            'media', 'repeat'
+            'media', 'repeat', 'host', 'ended'
         )

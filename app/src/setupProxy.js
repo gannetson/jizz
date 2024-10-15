@@ -3,7 +3,7 @@ module.exports = function (app) {
     app.use(
         '/api',
         createProxyMiddleware({
-            target: 'http://127.0.0.1:8050/',
+            target: 'https://jizz.be/',
             changeOrigin: true,
         })
     );

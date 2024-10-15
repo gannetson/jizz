@@ -46,7 +46,7 @@ class Game(models.Model):
     length = models.IntegerField(default=0)
     media = models.CharField(max_length=10, default='images', choices=MEDIA_CHOICES)
     repeat = models.BooleanField(default=False)
-
+    host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
 
     def add_question(self):
         all_species = Species.objects.filter(countryspecies__country=self.country)
@@ -112,11 +112,14 @@ class Player(models.Model):
     game = models.ForeignKey(Game, related_name='players', blank=True, null=True, on_delete=models.CASCADE)
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True, blank=True)
-    is_host = models.BooleanField(default=False)
     name = models.CharField(max_length=255)
     language = models.CharField(max_length=2, default='en')
     token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
     score = models.IntegerField(default=0)
+
+    @property
+    def is_host(self):
+        return self.game_id and self.game.host == self
 
 
 class Answer(models.Model):

@@ -1,5 +1,5 @@
-import React, {FC, ReactNode, useEffect, useState} from 'react';
-import {Answer, Country, Game, Player, Question, Species} from "./app-context";
+import React, {FC, ReactNode, useContext, useEffect, useState} from 'react';
+import AppContext, {Answer, Country, Game, Player, Question, Species} from "./app-context";
 import WebsocketContext, {MultiPlayer} from "./websocket-context"
 import {useToast} from "@chakra-ui/react"
 
@@ -16,6 +16,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const [question, setQuestion] = useState<Question | undefined>(undefined)
   const [answer, setAnswer] = useState<Answer | undefined>(undefined)
   const [species, setSpecies] = useState<Species[]>([])
+
+  const {setMediaType} = useContext(AppContext)
 
   const toast = useToast()
 

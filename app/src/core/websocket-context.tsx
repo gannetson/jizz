@@ -62,6 +62,7 @@ export type Question = {
 }
 
 export type Player = {
+  id: number
   token: string
   name: string
   is_host?: boolean
@@ -69,6 +70,7 @@ export type Player = {
 }
 
 export type MultiPlayer = {
+  id: number
   name: string
   is_host?: boolean
   language?: string

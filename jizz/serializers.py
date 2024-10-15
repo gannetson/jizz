@@ -79,15 +79,20 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 
 class PlayerSerializer(serializers.ModelSerializer):
+
+    def get_is_host(self, obj):
+        return obj.game_id and obj.game.host == obj
+
     class Meta:
         model = Player
-        fields = ('name', 'is_host', 'token', 'language')
+        fields = ('id', 'name', 'is_host', 'token', 'language')
 
 
 class MultiPlayerSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Player
-        fields = ('name', 'is_host', 'language')
+        fields = ('id', 'name', 'is_host', 'language')
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -100,5 +105,5 @@ class GameSerializer(serializers.ModelSerializer):
             'token', 'country', 'level', 'language',
             'question', 'created', 'multiplayer',
             'length', 'progress',
-            'media', 'repeat'
+            'media', 'repeat', 'host'
         )

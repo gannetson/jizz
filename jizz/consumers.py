@@ -17,7 +17,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
         players = await sync_to_async(lambda: list(game.players.all()))()
         serializer = MultiPlayerSerializer(players, many=True)
-        players_data = serializer.data
+        players_data = await sync_to_async(lambda: serializer.data)()
         return players_data
 
     async def current_question(self):
@@ -71,9 +71,6 @@ class QuizConsumer(AsyncWebsocketConsumer):
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
             player = await sync_to_async(Player.objects.get)(token=data['player_token'])
             player.game = game
-            players = await self.get_players()
-            if len(players) < 2:
-                player.is_host = True
             await sync_to_async(player.save)()
             await self.channel_layer.group_send(
                 self.game_group_name, {

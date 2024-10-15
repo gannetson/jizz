@@ -61,6 +61,7 @@ export type Question = {
 }
 
 export type Player = {
+  id: number
   token: string
   name: string
   language: string

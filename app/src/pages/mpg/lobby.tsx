@@ -1,7 +1,7 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
-import {Badge, Box, Button, Flex, Heading, List, ListItem} from "@chakra-ui/react"
+import {Badge, Box, Button, Flex, Heading, List, ListItem, Tag} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
@@ -17,9 +17,12 @@ const Lobby: React.FC = () => {
   const gameToken = localStorage.getItem('game-token')
 
   const [copied, setCopied] = useState(false)
-  const {players, startGame, question} = useContext(WebsocketContext)
+  const [copied2, setCopied2] = useState(false)
+  const {players, startGame, question, mpg} = useContext(WebsocketContext)
   const {player} = useContext(AppContext)
   const navigate = useNavigate()
+
+  const gameLink = `https://jizz.be/join/${gameToken}`
 
   const copyCode = () => {
     if (gameToken) {
@@ -32,12 +35,23 @@ const Lobby: React.FC = () => {
     }
   }
 
+  const copyLink = () => {
+    if (gameLink) {
+      copy(gameLink)
+      setCopied2(true)
+      setTimeout(() => {
+        setCopied2(false);
+      }, 2000);
+
+    }
+
+  }
+
   useEffect(() => {
     if (question) {
       navigate('/mpg/game')
     }
   }, [question]);
-
 
   return (
     <Page>
@@ -49,17 +63,24 @@ const Lobby: React.FC = () => {
       <Page.Body>
         <Heading variant={'h3'}>Game Lobby</Heading>
         <Flex gap={4}>
-          Game Code:
-          <Box><Badge onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameToken}</Badge></Box>
+          Game code:
+          <Box><Tag onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameToken}</Tag></Box>
           {copied ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
             <Button colorScheme='orange' variant='link' onClick={copyCode}>Copy code</Button>
+          )}
+        </Flex>
+        <Flex gap={4}>
+          Game link:
+          <Box><Tag onClick={copyLink} fontSize='18px' colorScheme='orange'>{gameLink}</Tag></Box>
+          {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
+            <Button colorScheme='orange' variant='link' onClick={copyLink}>Copy link</Button>
           )}
         </Flex>
         <Box>Players joined</Box>
         <List spacing={4}>
           {players && players.map((player, index) => (
             <ListItem key={index}>
-              <PlayerItem player={player}/>
+              <PlayerItem showAnswer={false} showScore={false} player={player}/>
             </ListItem>
           ))}
         </List>
@@ -70,7 +91,7 @@ const Lobby: React.FC = () => {
             </Button>
 
           ) : (
-            <FormattedMessage id={'waiting for host'} defaultMessage={'Waiting until the host starts the game.'} />
+            <FormattedMessage id={'waiting for host'} defaultMessage={'Waiting until the {host} starts the game.'} values={{host: mpg?.host?.name || 'host'}}/>
           )
         }
       </Page.Body>

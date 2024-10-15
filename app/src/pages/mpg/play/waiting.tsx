@@ -16,9 +16,6 @@ export const WaitingComponent = () => {
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
           <Box>
-            <FormattedMessage id={'waiting for players'} defaultMessage={'Waiting for other players to answer'}/>
-          </Box>
-          <Box>
             {player && player.is_host ? (
               mpg?.ended ? (
                 <Button onClick={nextQuestion} colorScheme={'orange'}>

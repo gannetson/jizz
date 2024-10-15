@@ -103,7 +103,7 @@ class MultiPlayerSerializer(serializers.ModelSerializer):
 class GameSerializer(serializers.ModelSerializer):
     country = CountrySerializer()
     question = QuestionSerializer(read_only=True)
-    host = MultiPlayerSerializer()
+    host = MultiPlayerSerializer(read_only=True)
 
     class Meta:
         model = Game

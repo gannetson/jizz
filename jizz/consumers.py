@@ -3,9 +3,6 @@ import json
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .serializers import MultiPlayerSerializer, QuestionSerializer, AnswerSerializer
-
-
 class QuizConsumer(AsyncWebsocketConsumer):
     game_token = ''
     game_group_name = ''
@@ -13,6 +10,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
     async def get_players(self):
         from .models import Game
+        from .serializers import MultiPlayerSerializer, QuestionSerializer, AnswerSerializer
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
         players = await sync_to_async(lambda: list(game.players.order_by('-score').all()))()
         serializer = MultiPlayerSerializer(players, many=True)
@@ -21,6 +19,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
     async def current_question(self):
         from .models import Game
+        from .serializers import MultiPlayerSerializer, QuestionSerializer, AnswerSerializer
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
         question = await sync_to_async(game.questions.last)()
         if question:
@@ -37,6 +36,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
     async def next_question(self):
         from .models import Game
+        from .serializers import MultiPlayerSerializer, QuestionSerializer, AnswerSerializer
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
         await sync_to_async(game.add_question)()
         await self.current_question()
@@ -60,6 +60,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
 
     async def receive(self, text_data):
+        from .serializers import MultiPlayerSerializer, QuestionSerializer, AnswerSerializer
         from .models import Game, Player, Question, Answer
         data = json.loads(text_data)
 

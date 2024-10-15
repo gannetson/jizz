@@ -255,7 +255,7 @@ def get_all_images():
     for species in Species.objects.filter(images=None):
         nr += 1
         print(f'☑️ [{nr}/{count}] {species.name}')
-        get_images(species.id)
+        get_media(species.id, 'photo')
 
 
 def get_all_sounds():
@@ -265,14 +265,14 @@ def get_all_sounds():
     for species in Species.objects.filter(sounds=None):
         nr += 1
         print(f'☑️ [{nr}/{count}] {species.name}')
-        get_sounds(species.id)
+        get_media(species.id, 'audio')
 
 
 def get_all_videos():
     count = Species.objects.filter(videos=None).count()
     nr = 0
     print (f'{count} still need to retrieve videos')
-    for species in Species.objects.filter(images=None):
+    for species in Species.objects.filter(videos=None):
         nr += 1
         print(f'☑️ [{nr}/{count}] {species.name}')
-        get_videos(species.id)
+        get_media(species.id, 'video')

@@ -1,6 +1,7 @@
 import {Box, Flex, Heading, Radio, RadioGroup, Text} from "@chakra-ui/react";
 import {useContext} from "react";
 import AppContext from "../core/app-context";
+import {FormattedMessage} from "react-intl"
 
 
 const SelectLevel = () => {
@@ -8,20 +9,36 @@ const SelectLevel = () => {
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Level</Heading>
+      <Heading size={'md'} mb={4}>
+        <FormattedMessage id={'level'} defaultMessage={'Level'} />
+
+      </Heading>
       <RadioGroup onChange={setLevel} value={level} colorScheme={'orange'}>
         <Flex direction={'column'} gap={4}>
           <Radio value='beginner'>
-            <Text>Beginner</Text>
-            <Text fontSize={'xs'}>Easy multiple choice</Text>
+            <Text>
+              <FormattedMessage id={'beginner'} defaultMessage={'Beginner'} />
+            </Text>
+            <Text fontSize={'xs'}>
+              <FormattedMessage id={'simple multiple choice'} defaultMessage={'Very easy multiple choice'} />
+            </Text>
           </Radio>
           <Radio value='advanced'>
-            <Text>Advanced</Text>
-            <Text fontSize={'xs'}>Hard multiple choice</Text>
+            <Text>
+              <FormattedMessage id={'advanced'} defaultMessage={'Advanced'} />
+            </Text>
+            <Text fontSize={'xs'}>
+              Hard multiple choice
+              <FormattedMessage id={'hard multiple choice'} defaultMessage={'Multiple choice with similar species'} />
+            </Text>
           </Radio>
           <Radio value='expert'>
-            <Text>Expert</Text>
-            <Text fontSize={'xs'}>Text input (auto complete)</Text>
+            <Text>
+              <FormattedMessage id={'question'} defaultMessage={'Expert'} />
+            </Text>
+            <Text fontSize={'xs'}>
+              <FormattedMessage id={'text input'} defaultMessage={'Text input (with auto complete)'} />
+            </Text>
           </Radio>
         </Flex>
       </RadioGroup>

@@ -11,7 +11,9 @@ export const SelectLength = () => {
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Questions</Heading>
+      <Heading size={'md'} mb={4}>
+        <FormattedMessage id={'question'} defaultMessage={'Questions'} />
+      </Heading>
       {country && (
         <FormattedMessage
           id={'how many'}

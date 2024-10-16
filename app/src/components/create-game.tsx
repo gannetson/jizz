@@ -94,15 +94,13 @@ export const CreateGame = () => {
     ) : (
       <Flex direction={'column'} gap={10}>
         <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'}/></Heading>
+        <SetName/>
+        <SelectLanguage/>
+        <Divider/>
         <SelectCountry/>
-        <SelectGameType/>
         <SelectLength/>
         <SelectLevel/>
         <SelectMediaType/>
-        <Divider/>
-        <SetName/>
-        <SelectLanguage/>
-
         <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={createGame}>
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>

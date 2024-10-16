@@ -19,6 +19,7 @@ export const WaitingComponent = () => {
   const endGame = () => {
     navigate('/game/ended')
   }
+  const isHost = player?.name === mpg?.host?.name
 
   return (
     <>
@@ -30,7 +31,7 @@ export const WaitingComponent = () => {
                 <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
               </Button>
             ) : (
-              player && player.is_host ? (
+              isHost ? (
                 <Button onClick={nextQuestion} colorScheme={'orange'}>
                   <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
                 </Button>

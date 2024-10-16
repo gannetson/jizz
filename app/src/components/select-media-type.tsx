@@ -13,7 +13,9 @@ export const SelectMediaType = () => {
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Media type</Heading>
+      <Heading size={'md'} mb={4}>
+        <FormattedMessage id={'media type'} defaultMessage={'Media type'} />
+      </Heading>
       <RadioGroup
         value={mediaType}
         onChange={(val) => val && onChange(val)}

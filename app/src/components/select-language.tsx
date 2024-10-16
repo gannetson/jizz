@@ -13,7 +13,9 @@ const SelectLanguage = () => {
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>Player language</Heading>
+      <Heading size={'md'} mb={4}>
+        <FormattedMessage id={'player language'} defaultMessage={'Player language'} />
+      </Heading>
       <Box mb={4}>
         <FormattedMessage
           id={'set language description'}

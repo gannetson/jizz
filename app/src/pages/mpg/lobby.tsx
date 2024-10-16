@@ -49,6 +49,7 @@ const Lobby: React.FC = () => {
     }
   }, [question]);
 
+  const isHost = player?.name === mpg?.host?.name
 
   return (
     <Page>
@@ -82,7 +83,7 @@ const Lobby: React.FC = () => {
           ))}
         </List>
         {
-          player?.name === mpg?.host?.name ? (
+          isHost ? (
             <Button colorScheme='orange' onClick={startGame} disabled={!players?.length || players?.length < 2}>
               Start game
             </Button>

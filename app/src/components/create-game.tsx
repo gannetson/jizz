@@ -33,6 +33,7 @@ export const CreateGame = () => {
       },
       body: JSON.stringify({
         name: playerName,
+        language: language
       })
     })
     const playerData = await response.json();
@@ -92,7 +93,7 @@ export const CreateGame = () => {
       <Loading/>
     ) : (
       <Flex direction={'column'} gap={10}>
-        <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start new game'}/></Heading>
+        <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'}/></Heading>
         <SelectCountry/>
         <SelectGameType/>
         <SelectLength/>
@@ -103,7 +104,7 @@ export const CreateGame = () => {
         <SelectLanguage/>
 
         <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={createGame}>
-          <FormattedMessage id={'start game'} defaultMessage={"Start new game"}/>
+          <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>
 

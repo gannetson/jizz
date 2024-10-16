@@ -42,12 +42,12 @@ export const CreatePlayer = () => {
     ) : (
       <Flex direction={'column'} gap={10}>
         <Box>
-          <FormattedMessage id={'create game'} defaultMessage={"What's your name"}/>
+        <FormattedMessage id={'your name'} defaultMessage={"What's your name. You can pick any name you want."}/>
           <Input name={'name'} onChange={(event) => setPlayerName(event.target.value)}/>
         </Box>
         <SelectLanguage />
         <Button isDisabled={!playerName} colorScheme='orange' size='lg' onClick={createPlayer}>
-          <FormattedMessage id={'create game'} defaultMessage={"Continue"}/>
+          <FormattedMessage id={'continue'} defaultMessage={"Continue"}/>
         </Button>
       </Flex>
 

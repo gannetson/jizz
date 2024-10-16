@@ -5,6 +5,7 @@ import WebsocketContext from "../../../core/websocket-context"
 import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
 import {useNavigate} from "react-router-dom"
+import {SpeciesName} from "../../../components/species-name"
 
 
 export const WaitingComponent = () => {
@@ -21,36 +22,38 @@ export const WaitingComponent = () => {
 
   return (
     <>
-    <Box position={'relative'}>
-      <Flex direction={'column'} gap={8}>
-        <Box>
-          {done && (
-            <Button onClick={endGame} colorScheme={'orange'}>
-              <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
-            </Button>
-          )}
-          {player && player.is_host ? (
-            <Button onClick={nextQuestion} colorScheme={'orange'}>
-              <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
-            </Button>
-          ) : (
-            <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}
-          id={'waiting for host to click next question'}
-          values={{host: mpg?.host?.name || 'host'}}/>
-        )}
-    </Box>
+      <Box position={'relative'}>
+        <Flex direction={'column'} gap={8}>
+          <Box>
+            {done ? (
+              <Button onClick={endGame} colorScheme={'orange'}>
+                <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
+              </Button>
+            ) : (
+              player && player.is_host ? (
+                <Button onClick={nextQuestion} colorScheme={'orange'}>
+                  <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+                </Button>
+              ) : (
+                <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}
+                                  id={'waiting for host to click next question'}
+                                  values={{host: mpg?.host?.name || 'host'}}/>
+              )
 
-    <Text>Correct answer was <b>{answer?.species?.name}</b></Text>
-    <List spacing={4}>
-      {players && players.map((player, index) => (
-        <ListItem key={index}>
-          <PlayerItem player={player}/>
-        </ListItem>
-      ))}
-    </List>
-    </Flex>
-</Box>
-</>
+            )}
+          </Box>
 
-)
+          <Text>Correct answer was <b><SpeciesName species={answer?.species} /></b></Text>
+          <List spacing={4}>
+            {players && players.map((player, index) => (
+              <ListItem key={index}>
+                <PlayerItem player={player}/>
+              </ListItem>
+            ))}
+          </List>
+        </Flex>
+      </Box>
+    </>
+
+  )
 }

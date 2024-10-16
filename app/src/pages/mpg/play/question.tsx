@@ -4,6 +4,7 @@ import {useCallback, useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
+import {SpeciesName} from "../../../components/species-name"
 
 
 export const QuestionComponent = () => {
@@ -62,7 +63,7 @@ export const QuestionComponent = () => {
           <>
             <ReactPlayer
               width={'100%'}
-              height={'480px'}
+              height={'50%'}
               url={question.videos[0].url}
               controls={true}
               playing={true}
@@ -84,6 +85,18 @@ export const QuestionComponent = () => {
           />
 
         )}
+        {game.media === 'audio' && (
+          <Box py={8}>
+            <ReactPlayer
+              width={'100%'}
+              height={'50px'}
+              url={question.sounds[0].url}
+              controls={true}
+              playing={true}
+            />
+          </Box>
+
+        )}
       </Box>
       {question.options && question.options.length ? (
         <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
@@ -92,7 +105,7 @@ export const QuestionComponent = () => {
               return (
                 <Button key={key} colorScheme='orange' onClick={() => selectAnswer(option)}>
                   <Flex justifyContent={'space-between'} width={'100%'}>
-                    {option && player?.language === 'nl' ? option.name_nl : option.name}
+                    <SpeciesName species={option} />
                     <Show above={'md'}>
                       <Kbd size='lg' backgroundColor={'orange.600'}
                            borderColor={'orange.800'}>{shortcuts[key]}</Kbd>
@@ -107,7 +120,10 @@ export const QuestionComponent = () => {
       ) : (
         <Select
           autoFocus={true}
-          options={species?.map((q) => ({label: q.name, value: q}))}
+          options={species?.map((q) => ({
+            label: player?.language === 'nl' ? q.name_nl : q.name,
+            value: q
+          }))}
           onChange={(answer) => answer && selectAnswer(answer.value)}
         />
       )}

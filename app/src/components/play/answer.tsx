@@ -45,7 +45,7 @@ export const AnswerComponent = () => {
             </Box>
             <Box>
               <FormattedMessage
-                id={'right answer'}
+                id={'right answer indeed'}
                 defaultMessage={'It was indeed {species}'}
                 values={{species: <ViewSpecies species={answer.answer}/>}}
               />
@@ -77,7 +77,7 @@ export const AnswerComponent = () => {
                 </Box>
                 <Box>
                   <FormattedMessage
-                    id={'right answer'}
+                    id={'your answer'}
                     defaultMessage={'Your answer was {species}'}
                     values={{species: <ViewSpecies species={answer.answer}/>}}
                   />

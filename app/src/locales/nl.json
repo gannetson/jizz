@@ -1,6 +1,30 @@
 {
+  "Multi player game": "Multiplayer spel",
+  "continue": "Doorgaan",
+  "copied": "Gekopieerd!",
+  "correct": "Correct!",
+  "end game": "Einde spel",
+  "final results": "Eindresultaten",
+  "game ended": "Spel beëindigd",
+  "game progress": "Spel - {current} van {total}",
+  "how many": "Hoeveel soorten wil je beoordelen? Kies {count} als je alle soorten in {country} wilt bekijken",
+  "incorrect": "Incorrect!",
+  "join game": "Doe mee aan een spel",
+  "load game": "Spel laden",
+  "multi player": "Multiplayer",
+  "next question": "Volgende vraag",
+  "pictures": "Afbeeldingen",
+  "questions": "Vragen",
+  "right answer": "Het was {species}",
+  "right answer indeed": "Het was inderdaad {species}",
+  "set language description": "Dit verandert de taal van de vogelsoorten. Andere spelers die aan je spel deelnemen, kunnen een andere taal kiezen.",
+  "single player": "Singleplayer",
+  "sounds": "Geluiden",
+  "start game": "Start een nieuw spel",
+  "videos": "Video's",
+  "waiting for host": "Wachten tot de {host} het spel start.",
+  "waiting for host to click next question": "Wachten tot {host} doorgaat naar de volgende vraag",
   "welcome": "Welkom",
-   "old game": "Je hebt nog een oud spel!",
-  "start game": "Start een nieuw spel"
-
+  "your answer": "Je antwoord was {species}",
+  "your name": "Wat is je naam? Je kunt elke naam kiezen die je wilt."
 }

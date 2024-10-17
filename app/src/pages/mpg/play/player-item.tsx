@@ -1,8 +1,15 @@
 import {Card, CardBody, Flex, Tag} from "@chakra-ui/react"
 import {FaCheckCircle, FaClock, FaMinusCircle, FaCrown} from "react-icons/fa";
-import {MultiPlayer} from "../../../core/websocket-context"
+import {MultiPlayer} from "../../../core/app-context"
 
-export const PlayerItem = ({player, showAnswer = true, showScore= true}: { player: MultiPlayer, showAnswer?: boolean, showScore?: boolean }) => {
+export const PlayerItem = (
+  {
+    player, showAnswer = true, showScore = true
+  }: {
+    player: MultiPlayer,
+    showAnswer?: boolean,
+    showScore?: boolean
+  }) => {
   let color = 'orange.200'
   if (showAnswer) {
     if (player.status === 'correct') color = 'green.200'
@@ -23,13 +30,14 @@ export const PlayerItem = ({player, showAnswer = true, showScore= true}: { playe
               </>
             )}
             <Flex gap={2} alignItems={'center'} fontWeight={'bold'}>
-              {player.name} {player.is_host && <FaCrown />}
+              {player.name} {player.is_host && <FaCrown/>}
             </Flex>
           </Flex>
 
           {showScore && (
             <Flex gap={4}>
-              {showAnswer && player.last_answer?.correct && <Tag colorScheme={'green'} fontSize='sm'>+{player.last_answer.score}</Tag>}
+              {showAnswer && player.last_answer?.correct &&
+                <Tag colorScheme={'green'} fontSize='sm'>+{player.last_answer.score}</Tag>}
               <Tag fontSize='xl'>{player.score}</Tag>
             </Flex>
           )}

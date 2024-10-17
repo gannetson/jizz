@@ -1,5 +1,5 @@
-import {useContext, useState} from "react"
-import AppContext from "../core/app-context"
+import {useContext, useEffect, useState} from "react"
+import AppContext, {Player} from "../core/app-context"
 import {Button, Divider, Flex, Heading, Spinner} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
@@ -16,77 +16,31 @@ import {SetName} from "./set-name"
 
 export const CreateGame = () => {
 
-  const {country, level, setGame, language, multiplayer, length, mediaType, playerName} = useContext(AppContext);
-  const {setGameToken, joinGame} = useContext(WebsocketContext);
+  const {
+    player,
+    createPlayer,
+    country,
+    createGame,
+    game,
+    playerName
+  } = useContext(AppContext);
+  const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
-  const {player, setPlayer} = useContext(AppContext);
   const navigate = useNavigate()
 
 
-  const createGame = async () => {
-    setLoading(true)
-    const response = await fetch('/api/player/', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: playerName,
-        language: language
-      })
-    })
-    const playerData = await response.json();
-    if (playerData) {
-      setPlayer && setPlayer(playerData)
-      localStorage.setItem('player-token', playerData.token)
-    }
-    setLoading(false)
-
-    if (country && level) {
-      setLoading(true)
-      const response = await fetch('/api/games/', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${playerData.token}`,
-        },
-        body: JSON.stringify({
-          multiplayer: multiplayer === '1',
-          country: country.code,
-          language: language,
-          level: level,
-          length: length,
-          media: mediaType
-        })
-      })
-      const data = await response.json();
-      if (data) {
-        localStorage.setItem('game-token', data.token)
-        if (data.multiplayer) {
-          setGameToken && setGameToken(data.token)
-          if (playerData.token && joinGame) {
-            await joinGame({
-              gameToken: data.token,
-              playerToken: playerData.token
-            })
-            navigate('/game/lobby')
-          }
-
-        } else {
-          setGame && setGame(data)
-          document.location.href = '/game/'
-        }
-      }
-      setLoading(false)
-
-    }
-  }
-
   const create = async () => {
+    setLoading(true)
+    let myPlayer: Player | undefined = player
+    if (!myPlayer) {
+      myPlayer = await createPlayer()
+    }
+    const myGame = await createGame(myPlayer)
+    await joinGame(myGame, myPlayer)
+    navigate('/game/lobby')
+    setLoading(false)
+ }
 
-  }
 
   return (
     loading ? (
@@ -101,7 +55,7 @@ export const CreateGame = () => {
         <SelectLength/>
         <SelectLevel/>
         <SelectMediaType/>
-        <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={createGame}>
+        <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>

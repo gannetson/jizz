@@ -1,4 +1,4 @@
-import {Species} from "../core/websocket-context"
+import {Species} from "../core/app-context"
 import {useContext} from "react"
 import AppContext from "../core/app-context"
 

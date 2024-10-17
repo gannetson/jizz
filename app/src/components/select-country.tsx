@@ -9,20 +9,19 @@ import {FormattedMessage} from "react-intl"
 
 const SelectCountry = () => {
   const {countries} = UseCountries()
-  const {country, setCountry} = useContext(AppContext);
-  const {mpg} = useContext(WebsocketContext);
+  const {country, setCountry, game} = useContext(AppContext);
 
   const onChange = (value: string) => {
     const country = countries.find((c) => c.name === value)
-    setCountry && setCountry(country)
+    country && setCountry(country)
   }
 
   useEffect(() => {
-    if (!country && mpg?.country) {
-      setCountry && setCountry(mpg?.country)
+    if (!country && game?.country) {
+      setCountry && setCountry(game?.country)
     }
 
-  }, [mpg?.country]);
+  }, [game?.country]);
 
   return (
     <Box>

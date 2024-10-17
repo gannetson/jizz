@@ -10,16 +10,16 @@ import {SpeciesName} from "../../../components/species-name"
 
 export const WaitingComponent = () => {
 
-  const {players, nextQuestion, mpg, setMpg, answer, question} = useContext(WebsocketContext)
-  const {player} = useContext(AppContext)
+  const {players, nextQuestion, answer, question} = useContext(WebsocketContext)
+  const {player, game} = useContext(AppContext)
 
-  const done = (mpg?.length || 1) <= (question?.sequence || 0)
+  const done = (game?.length || 1) <= (question?.sequence || 0)
   const navigate = useNavigate()
 
   const endGame = () => {
     navigate('/game/ended')
   }
-  const isHost = player?.name === mpg?.host?.name
+  const isHost = player?.name === game?.host?.name
 
   return (
     <>
@@ -38,7 +38,7 @@ export const WaitingComponent = () => {
               ) : (
                 <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}
                                   id={'waiting for host to click next question'}
-                                  values={{host: mpg?.host?.name || 'host'}}/>
+                                  values={{host: game?.host?.name || 'host'}}/>
               )
 
             )}

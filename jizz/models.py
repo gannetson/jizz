@@ -85,6 +85,7 @@ class Game(models.Model):
         return self.questions.last()
 
     def add_question(self):
+        self.questions.filter(done=False).update(done=True)
         all_species = Species.objects.filter(images__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
         if self.media == 'video':
             all_species = Species.objects.filter(videos__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
@@ -195,7 +196,7 @@ class Player(models.Model):
 
 class Answer(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    question = models.ForeignKey('jizz.Question', related_name='answer', on_delete=models.CASCADE)
+    question = models.ForeignKey('jizz.Question', related_name='answers', on_delete=models.CASCADE)
     player = models.ForeignKey('jizz.Player', related_name='answers', on_delete=models.CASCADE)
     answer = models.ForeignKey('jizz.Species', related_name='answer', on_delete=models.CASCADE)
     correct = models.BooleanField(default=False)

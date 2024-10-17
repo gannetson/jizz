@@ -1,5 +1,5 @@
-import React, {FC, ReactNode, useCallback, useContext, useEffect, useState} from 'react';
-import AppContext, {Game, Country, Question, Species, Language, Player, Answer} from "./app-context";
+import React, {FC, ReactNode, useEffect, useState} from 'react';
+import AppContext, {Country, Game, Player, Species} from "./app-context";
 
 type Props = {
   children: ReactNode;
@@ -7,9 +7,7 @@ type Props = {
 
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
-  const [game, setGame] = useState<Game | undefined>();
-  const [answer, setAnswer] = useState<Answer | undefined>();
-  const [country, setCountry] = useState<Country | undefined>();
+  const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
   const [language, setLanguage] = useState<'en' | 'nl'>('en');
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
@@ -18,56 +16,29 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [multiplayer, setMultiplayer] = useState<string>('1')
   const [mediaType, setMediaType] = useState<string>('images')
   const [species, setSpecies] = useState<Species[]>([])
+  const [game, setGame] = useState<Game | undefined>(undefined)
 
-
-  const gameToken = localStorage.getItem('game-token')
   const playerToken = localStorage.getItem('player-token')
+  const gameToken = localStorage.getItem('game-token')
 
-  const reloadAnswer = async (givenAnswer: Answer) => {
-    await fetch(`/api/answer/${givenAnswer.question?.id}/${playerToken}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      }
-    }).then(response => {
-      if (response.status === 200) {
-        response.json().then(data => {
-          setAnswer(data)
-        })
-      } else {
-        console.log('Could not load answer.')
-      }
-      setLoading(false)
-    })
-  }
-
-
-  const commitAnswer = async (givenAnswer: Answer) => {
-    await fetch(`/api/answer/`, {
+  const createPlayer = async () => {
+    const response = await fetch('/api/player/', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        question_id: givenAnswer.question?.id,
-        answer_id: givenAnswer.answer?.id,
-        player_token: playerToken
+        name: playerName,
+        language: language
       })
-    }).then(response => {
-      if (response.status === 201) {
-        response.json().then(data => {
-          setAnswer(data)
-        })
-      } else if (response.status === 500) {
-        // Already answered, reload first answer
-        reloadAnswer(givenAnswer)
-      } else {
-        console.log('Could not save answer.')
-      }
-      setLoading(false)
     })
+    const data = await response.json();
+    if (data) {
+      localStorage.setItem('player-token', data.token)
+      setPlayer(data)
+      return data as Player
+    }
   }
 
   useEffect(() => {
@@ -95,85 +66,94 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }, [country?.code]);
 
-  useEffect(() => {
-    if (gameToken) {
-      setLoading(true)
-      fetch(`/api/games/${gameToken}/`, {
-        cache: 'no-cache',
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(response => {
-        if (response.status === 200) {
-          response.json().then(data => {
-            if (!data.multiplayer) {
-              setGame(data)
-            }
-          })
-        } else {
-          console.log('Could not load game.')
-        }
-        setLoading(false)
-      })
-
-    }
-  }, [gameToken]);
-
-
-  const reloadGame = async () => {
-    await fetch(`/api/games/${game?.token}`, {
+  const loadPlayer = (playerToken: string) => {
+    setLoading(true)
+    fetch(`/api/player/${playerToken}/`, {
+      cache: 'no-cache',
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-      }
-    }).then(response => {
+      },
+    })
+    .then(response => {
       if (response.status === 200) {
         response.json().then(data => {
-          setGame(data)
+          setPlayer(data)
         })
       } else {
-        console.log('Could not load game.')
+        console.log('Could not load player.')
       }
       setLoading(false)
     })
+    return player
+
   }
 
   useEffect(() => {
-    if (playerToken) {
-      setLoading(true)
-      fetch(`/api/player/${playerToken}/`, {
-        cache: 'no-cache',
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(response => {
-        if (response.status === 200) {
-          response.json().then(data => {
-            setPlayer(data)
-          })
-        } else {
-          console.log('Could not load player.')
-        }
-        setLoading(false)
-      })
-
+    if (playerToken && (!player || player.token !== playerToken)) {
+      loadPlayer(playerToken)
     }
   }, [playerToken]);
 
 
-  const getNextQuestion = async () => {
+  const createGame = async (myPlayer?: Player) => {
+    myPlayer = myPlayer ?? player
+    if (!myPlayer) {
+      console.log("Can't create game, player is not set.")
+      return
+    }
+
+    const response = await fetch('/api/games/', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${myPlayer.token}`,
+        },
+        body: JSON.stringify({
+          multiplayer: multiplayer === '1',
+          country: country.code,
+          language: language,
+          level: level,
+          length: length,
+          media: mediaType
+        })
+      })
+      const data = await response.json();
+      if (data) {
+        localStorage.setItem('game-token', data.token)
+        setGame(data)
+        return data as Game
+      }
+
+  }
+  const loadGame = async (gameCode: string) => {
     setLoading(true)
-    setAnswer(undefined)
-    await reloadGame()
+    const response = await fetch(`/api/games/${gameCode}/`, {
+      cache: 'no-cache',
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    })
+    if (response.status === 200) {
+      const data = await response.json()
+      setGame(data)
+      return data as Game
+    } else {
+      console.log('Could not load game.')
+    }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (gameToken && !game) {
+      loadGame(gameToken)
+    }
+  }, [gameToken]);
+
 
   return (
     <AppContext.Provider value={{
@@ -190,17 +170,15 @@ const AppContextProvider: FC<Props> = ({children}) => {
       mediaType,
       setMediaType,
       player,
-      setPlayer,
-      playerName,
-      setPlayerName,
+      createPlayer,
+      createGame,
+      loadGame,
       game,
       setGame,
-      getNextQuestion,
+      playerName,
+      setPlayerName,
       species,
       loading,
-      commitAnswer,
-      answer
-
     }}>
       {children}
     </AppContext.Provider>

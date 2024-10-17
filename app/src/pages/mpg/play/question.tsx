@@ -8,12 +8,12 @@ import {SpeciesName} from "../../../components/species-name"
 
 
 export const QuestionComponent = () => {
-  const {player} = useContext(AppContext)
-  const {question, mpg: game, species, submitAnswer} = useContext(WebsocketContext)
+  const {species, player} = useContext(AppContext)
+  const {question, submitAnswer} = useContext(WebsocketContext)
+  const {game} = useContext(AppContext)
   const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
 
   const selectAnswer = (species?: Species) => {
-    console.log(species)
     if (player && submitAnswer) {
       const answer: Answer = {
         question,
@@ -78,6 +78,7 @@ export const QuestionComponent = () => {
                 src='/images/jizz-logo.png'
                 animation={`${rotate} infinite 2s linear`}
                 width={'200px'}
+                maxHeight={'600px'}
                 marginX={'auto'}
                 marginY={['20px', '150px']}
               />

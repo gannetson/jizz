@@ -6,31 +6,32 @@ import WebsocketContext from "../../core/websocket-context"
 import {QuestionComponent} from "./play/question"
 import {WaitingComponent} from "./play/waiting"
 import {ResultsComponent} from "./play/results"
+import AppContext from "../../core/app-context"
 
 
 const MultiPlayerGame: React.FC = () => {
-  const {question, answer, mpg} = useContext(WebsocketContext)
-  console.log(mpg)
+  const {question, answer} = useContext(WebsocketContext)
+  const {game} = useContext(AppContext)
 
   return (
     <Page>
       <Page.Header>
         <Heading size={'lg'} noOfLines={1}>
-          {mpg?.ended
+          {game?.ended
             ? <FormattedMessage id={'game ended'} defaultMessage={'Game ended'}/>
             : <FormattedMessage
               id={'game progress'}
               defaultMessage={'Game -  {current} of {total}'}
-              values={{current: question?.sequence, total: mpg?.length}}
+              values={{current: question?.sequence, total: game?.length}}
             />
           }
         </Heading>
       </Page.Header>
       <Page.Body>
         <>
-          {mpg?.ended ? (
+          {game?.ended ? (
             <ResultsComponent/>
-          ) : (answer ? (
+          ) : (answer || question?.done ? (
               <WaitingComponent/>
             ) : question && <QuestionComponent/>
           )}

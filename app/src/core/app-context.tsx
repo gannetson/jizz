@@ -23,6 +23,8 @@ export type Game = {
   progress: number
   media: string
   repeat: boolean
+  ended?: boolean
+  host?: Player
 }
 
 export type SpeciesImage = {
@@ -53,6 +55,7 @@ export type Question = {
   id: number
   number: number
   sequence: number
+  done?: boolean
   game: Game
   options?: Species[]
   images: SpeciesImage[]
@@ -65,9 +68,20 @@ export type Player = {
   id: number
   token: string
   name: string
-  language: string
   is_host?: boolean
+  language: string
   score?: number
+  last_answer?: Answer
+}
+
+export type MultiPlayer = {
+  id: number
+  name: string
+  is_host?: boolean
+  language?: string
+  status?: 'waiting' | 'correct' | 'incorrect'
+  score?: number
+  last_answer?: Answer
 }
 
 
@@ -84,35 +98,43 @@ export type Answer = {
 
 
 type SharedState = {
-  socket?: WebSocket
   playerName?: string
   setPlayerName?: Dispatch<SetStateAction<string | undefined>>
   player?: Player
-  setPlayer?: Dispatch<SetStateAction<Player | undefined>>
-  level?: string
-  setLevel?: Dispatch<SetStateAction<string>>
-  length?: string
-  setLength?: Dispatch<SetStateAction<string>>
-  country?: Country | undefined
-  setCountry?: Dispatch<SetStateAction<Country | undefined>>
+  createPlayer: () => Promise<Player | undefined>
+  game?: Game
+  createGame: (player?: Player) => Promise<Game | undefined>
+  loadGame: (gameCode: string) => Promise<Game | undefined>
+  setGame: (game?: Game) => void
+  level: string
+  setLevel: Dispatch<SetStateAction<string>>
+  length: string
+  setLength: Dispatch<SetStateAction<string>>
+  country: Country | undefined
+  setCountry: Dispatch<SetStateAction<Country>>
   language?: 'en' | 'nl'
   setLanguage?: Dispatch<SetStateAction<'en' | 'nl'>>
   multiplayer?: string
   setMultiplayer?: Dispatch<SetStateAction<string>>
-  mediaType?: string
-  setMediaType?: Dispatch<SetStateAction<string>>
-  game?: Game | undefined
-  setGame?: Dispatch<SetStateAction<Game | undefined>>
-  progress?: string
+  mediaType: string
+  setMediaType: Dispatch<SetStateAction<string>>
   species?: Species[]
-  getNextQuestion?: () => void,
   loading?: boolean
-  commitAnswer?: (answer: Answer) => void
-  answer?: Answer
 };
 
 const AppContext = createContext<SharedState>({
-
+  createPlayer: async () => undefined,
+  createGame: async () => undefined,
+  loadGame: async () => undefined,
+  setGame: () => {},
+  level: 'advanced',
+  setLevel: () => {},
+  length: '10',
+  setLength: () => {},
+  country: { code: 'nl', name: 'Netherlands' },
+  setCountry: () => {},
+  mediaType: 'images',
+  setMediaType: () => {}
 });
 
 export default AppContext;

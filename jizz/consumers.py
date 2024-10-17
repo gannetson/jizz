@@ -2,9 +2,6 @@ import json
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from cryptography.hazmat.primitives.keywrap import aes_key_wrap_with_padding
-
-from jizz.serializers import AnswerSerializer, MultiPlayerSerializer
 
 
 class QuizConsumer(AsyncWebsocketConsumer):

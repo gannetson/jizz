@@ -152,6 +152,11 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       answer_id: answer.answer?.id
     })
   }
+  useEffect(() => {
+    if (game?.token && !socket && player?.token) {
+      joinGame(game, player)
+    }
+  }, [game?.token]);
 
   return (
     <WebsocketContext.Provider value={{

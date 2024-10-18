@@ -28,6 +28,9 @@ const HomePage = () => {
             <Button colorScheme={'orange'} onClick={() => navigate('/join')}>
               <FormattedMessage id={'join game'} defaultMessage={'Join a game'}/>
             </Button>
+            <Button colorScheme={'orange'} onClick={() => navigate('/scores')}>
+              <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>
+            </Button>
 
           </Flex>
         )}

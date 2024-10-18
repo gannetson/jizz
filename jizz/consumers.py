@@ -3,9 +3,6 @@ import json
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from jizz.models import PlayerScore
-
-
 class QuizConsumer(AsyncWebsocketConsumer):
     game_token = ''
     game_group_name = ''
@@ -131,6 +128,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 {'message': 'Game created', 'game_code': game.token, 'player_token': str(player.token)}))
 
         elif data['action'] == 'join_game':
+            from jizz.models import PlayerScore
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
             player = await sync_to_async(Player.objects.get)(token=data['player_token'])
             await sync_to_async(PlayerScore.objects.get_or_create)(
@@ -163,6 +161,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
             await self.next_question()
 
         elif data['action'] == 'submit_answer':
+            from jizz.models import PlayerScore
             player = await sync_to_async(Player.objects.get)(token=data['player_token'])
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
             player_score = await sync_to_async(PlayerScore.objects.get)(player=player, game=game)

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from setuptools.dist import sequence
 
+from jizz.admin import CountryAdmin
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
     QuestionOption, PlayerScore
 
@@ -85,7 +86,6 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 
 class PlayerSerializer(serializers.ModelSerializer):
-
     last_answer = AnswerSerializer(read_only=True)
 
     class Meta:
@@ -94,20 +94,9 @@ class PlayerSerializer(serializers.ModelSerializer):
 
 
 class MultiPlayerSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Player
-        fields = ('id', 'name',  'language', 'score')
-
-
-class PlayerScoreSerializer(serializers.ModelSerializer):
-    last_answer = AnswerSerializer(read_only=True)
-    name = serializers.CharField(source='player.name')
-    language = serializers.CharField(source='player.language')
-
-    class Meta:
-        model = PlayerScore
-        fields = ('id', 'name', 'status', 'language', 'score', 'last_answer')
+        fields = ('id', 'name', 'language', 'score')
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -121,4 +110,23 @@ class GameSerializer(serializers.ModelSerializer):
             'created', 'multiplayer',
             'length', 'progress',
             'media', 'repeat', 'host', 'ended'
+        )
+
+
+class PlayerScoreSerializer(serializers.ModelSerializer):
+    last_answer = AnswerSerializer(read_only=True)
+    name = serializers.CharField(source='player.name')
+    language = serializers.CharField(source='player.language')
+    media = serializers.CharField(source='game.media')
+    level = serializers.CharField(source='game.level')
+    length = serializers.CharField(source='game.length')
+    country = CountrySerializer(source='game.country')
+    created = serializers.DateTimeField(source='game.created')
+
+    class Meta:
+        model = PlayerScore
+        fields = (
+            'id', 'name', 'status', 'language', 'created',
+            'score', 'last_answer',
+            'media', 'level', 'length', 'country'
         )

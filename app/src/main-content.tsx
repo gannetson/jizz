@@ -15,6 +15,7 @@ import AppContext from "./core/app-context"
 import StartPage from "./pages/start"
 import JoinPage from "./pages/join"
 import GameEnded from "./pages/mpg/results"
+import Hiscores from "./pages/hiscores"
 
 
 export const MainContent = () => {
@@ -45,6 +46,8 @@ export const MainContent = () => {
               <Route path="/game/lobby" element={<Lobby/>}/>
               <Route path="/game/play" element={<MultiPlayerGame/>}/>
               <Route path="/game/ended" element={<GameEnded/>}/>
+
+              <Route path='/scores/' element={<Hiscores />}/>
 
             </Route>
           </Routes>

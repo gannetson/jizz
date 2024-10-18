@@ -11,7 +11,7 @@ export const JizzMenu = () => {
             <Link href={'/'}>Home</Link>
             <Link href={'/start'}>Start game</Link>
             <Link href={'/join'}>Join game</Link>
-            {game && <Link href={'/game'}>Continue game</Link>}
+            <Link href={'/scores'}>Hiscores</Link>
             <Link href={'/about'}>About</Link>
             <Box>
             <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>

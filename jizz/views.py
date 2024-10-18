@@ -2,13 +2,15 @@ from django.db import transaction
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
+from rest_framework.filters import OrderingFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView, \
     CreateAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
-from jizz.models import Country, Species, Game, Question, Answer, Player
+from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
-    QuestionSerializer, AnswerSerializer, PlayerSerializer
+    QuestionSerializer, AnswerSerializer, PlayerSerializer, PlayerScoreSerializer
 
 
 class CountryDetailView(DetailView):
@@ -119,6 +121,7 @@ class AnswerView(CreateAPIView):
         game = answer.question.game
         game.add_question()
 
+
 class AnswerDetail(RetrieveAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
@@ -133,3 +136,19 @@ class AnswerDetail(RetrieveAPIView):
 class QuestionDetailView(RetrieveUpdateAPIView):
     serializer_class = QuestionSerializer
     queryset = Question.objects.all()
+
+
+
+class PlayerScorePagination(PageNumberPagination):
+    page_size = 10
+
+
+class PlayerScoreListView(ListAPIView):
+    serializer_class = PlayerScoreSerializer
+    queryset = PlayerScore.objects.all()
+    pagination_class = PlayerScorePagination
+
+    filterset_fields = ['game__media', 'game__length', 'game__level', 'game__country']
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+
+    ordering = ['-score']

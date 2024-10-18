@@ -1,5 +1,5 @@
 import React, {FC, ReactNode, useEffect, useState} from 'react';
-import AppContext, {Country, Game, Player, Species} from "./app-context";
+import AppContext, {Country, Game, Player, Score, Species} from "./app-context";
 
 type Props = {
   children: ReactNode;
@@ -128,6 +128,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       }
 
   }
+
   const loadGame = async (gameCode: string) => {
     setLoading(true)
     const response = await fetch(`/api/games/${gameCode}/`, {
@@ -179,6 +180,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setPlayerName,
       species,
       loading,
+      setLoading
     }}>
       {children}
     </AppContext.Provider>

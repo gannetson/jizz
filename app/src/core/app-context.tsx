@@ -97,6 +97,18 @@ export type Answer = {
 }
 
 
+export type Score = {
+  name: string
+  score: number
+  created: Date
+  level: string
+  country: Country
+  media: string
+  length: number
+}
+
+
+
 type SharedState = {
   playerName?: string
   setPlayerName?: Dispatch<SetStateAction<string | undefined>>
@@ -104,6 +116,7 @@ type SharedState = {
   createPlayer: () => Promise<Player | undefined>
   game?: Game
   createGame: (player?: Player) => Promise<Game | undefined>
+  setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
   setGame: (game?: Game) => void
   level: string
@@ -125,6 +138,8 @@ type SharedState = {
 const AppContext = createContext<SharedState>({
   createPlayer: async () => undefined,
   createGame: async () => undefined,
+  loading: false,
+  setLoading: () => false,
   loadGame: async () => undefined,
   setGame: () => {},
   level: 'advanced',
@@ -134,7 +149,8 @@ const AppContext = createContext<SharedState>({
   country: { code: 'nl', name: 'Netherlands' },
   setCountry: () => {},
   mediaType: 'images',
-  setMediaType: () => {}
+  setMediaType: () => {},
+
 });
 
 export default AppContext;

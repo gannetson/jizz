@@ -17,7 +17,7 @@ class CountrySpeciesInline(admin.TabularInline):
     fields = readonly_fields
 
     def link(self, obj):
-        url = reverse('admin:jizz_species_change', args=((obj.species_id, )))
+        url = reverse('admin:jizz_species_change', args=((obj.species_id,)))
         return format_html('<a href="{url}">{name}</a>', url=url, name=obj.name)
 
     def has_add_permission(self, request, obj):
@@ -26,7 +26,6 @@ class CountrySpeciesInline(admin.TabularInline):
 
 @register(Country)
 class CountryAdmin(admin.ModelAdmin):
-
     readonly_fields = ['species_list', 'sync_link']
     fields = ['name', 'code', 'codes'] + readonly_fields
 
@@ -38,7 +37,8 @@ class CountryAdmin(admin.ModelAdmin):
             return '-'
         spec_url = reverse('admin:sync-species', args=(obj.pk,))
         images_url = reverse('admin:sync-images', args=(obj.pk,))
-        return format_html('<a href="{}">Synchronise species</a><br><a href="{}">Synchronise images</a>', spec_url, images_url)
+        return format_html('<a href="{}">Synchronise species</a><br><a href="{}">Synchronise images</a>', spec_url,
+                           images_url)
 
     def get_urls(self):
         urls = super().get_urls()
@@ -81,7 +81,6 @@ class CountryAdmin(admin.ModelAdmin):
         country_url = reverse('admin:jizz_country_change', args=(country.pk,))
         response = HttpResponseRedirect(country_url)
         return response
-
 
 
 class SpeciesSoundInline(admin.TabularInline):
@@ -127,7 +126,7 @@ class SpeciesVideoInline(admin.TabularInline):
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesSoundInline, SpeciesImageInline, SpeciesVideoInline]
     readonly_fields = ['sync_media', 'pic_count']
-    search_fields  = ['name']
+    search_fields = ['name']
     list_display = ['name', 'name_nl', 'pic_count']
 
     def pic_count(self, obj):
@@ -179,6 +178,7 @@ class QuestionInline(admin.TabularInline):
 
     def has_add_permission(self, request, obj):
         return False
+
 
 class PlayerInline(admin.TabularInline):
     model = Player
@@ -255,6 +255,5 @@ class PlayerAdmin(admin.ModelAdmin):
 class PlayerScoreAdmin(admin.ModelAdmin):
     raw_id_fields = ['player', 'game']
     list_display = ['player', 'game', 'score']
-    list_filter = ['game__level', 'game__length', ('game__country', admin.RelatedOnlyFieldListFilter)]
+    list_filter = ['game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
     ordering = ['-score']
-

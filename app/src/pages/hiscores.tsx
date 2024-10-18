@@ -12,14 +12,14 @@ const HomePage = () => {
   const {countries} = UseCountries()
   const {loading, setLoading} = useContext(AppContext)
   const [scores, setScores] = useState<Score[]>([])
-  const [level, setLevel] = useState<string>('advanced');
-  const [length, setLength] = useState<number>(50);
-  const [media, setMedia] = useState<string>('images');
-  const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
+  const [level, setLevel] = useState<string | undefined>('advanced');
+  const [length, setLength] = useState<string | undefined>('50');
+  const [media, setMedia] = useState<string | undefined>('images');
+  const [country, setCountry] = useState<Country | undefined>({code: 'NL', name: 'Netherlands'});
 
   const loadScores = async () => {
     setLoading(true)
-    const url = `/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country.code}`
+    const url = `/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}`
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',
@@ -42,23 +42,28 @@ const HomePage = () => {
   }, [level, length, media, country]);
 
   const levels = [
+    {value: '', label: 'All levels'},
     {value: 'easy', label: 'Easy'},
     {value: 'advanced', label: 'Advanced'},
     {value: 'expert', label: 'Expert'},
   ];
 
   const lengths = [
-    {value: 10, label: '10'},
-    {value: 20, label: '20'},
-    {value: 50, label: '50'},
-    {value: 100, label: '100'},
+    {value: '', label: 'Questions'},
+    {value: '10', label: '10'},
+    {value: '20', label: '20'},
+    {value: '50', label: '50'},
+    {value: '100', label: '100'},
   ];
 
   const mediums = [
+    {value: '', label: 'All media'},
     {value: 'images', label: 'Images'},
-    {value: 'sounds', label: 'Sounds'},
-    {value: 'videos', label: 'Videos'},
+    {value: 'audio', label: 'Sounds'},
+    {value: 'video', label: 'Videos'},
   ];
+
+  const selectCountries = [{code: '', name: 'All countries'}].concat(countries)
 
 
   return (
@@ -71,11 +76,16 @@ const HomePage = () => {
       <Page.Body>
         <Flex justifyContent={'space-evenly'}>
           <Select
-            options={countries}
+            options={selectCountries}
             getOptionLabel={(c) => c ? c.name : '?'}
             getOptionValue={(c) => c ? c.name : '?'}
             value={country}
             onChange={(val) => val && setCountry(val)}
+          />
+          <Select
+            options={mediums}
+            value={mediums.find((l) => l.value === media)}
+            onChange={(val) => val && setMedia(val.value)}
           />
           <Select
             options={levels}
@@ -84,13 +94,8 @@ const HomePage = () => {
           />
           <Select
             options={lengths}
-            value={{value: length, label: length.toString()}}
+            value={{value: length, label: length?.toString()}}
             onChange={(val) => val && setLength(val.value)}
-          />
-          <Select
-            options={mediums}
-            value={{value: media, label: media === 'images' ? 'Images' : 'Sounds'}}
-            onChange={(val) => val && setMedia(val.value)}
           />
         </Flex>
         <>

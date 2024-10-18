@@ -6,7 +6,7 @@ from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer, Player, QuestionOption
+    Answer, Player, QuestionOption, PlayerScore
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
 
 
@@ -165,6 +165,14 @@ class SpeciesAdmin(admin.ModelAdmin):
 class QuestionInline(admin.TabularInline):
     model = Question
     can_delete = False
+    readonly_fields = ['answered', 'correct']
+    fields = ['species'] + readonly_fields
+
+    def answered(self, obj):
+        return obj.answers.count()
+
+    def correct(self, obj):
+        return obj.answers.filter(correct=True).count()
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -183,13 +191,32 @@ class PlayerInline(admin.TabularInline):
         return False
 
 
+class PlayerScoreInline(admin.TabularInline):
+    model = PlayerScore
+    can_delete = False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request, obj):
+        return False
+
+
 @register(Game)
 class GameAdmin(admin.ModelAdmin):
-    inlines = [PlayerInline, QuestionInline]
+    inlines = [PlayerScoreInline, QuestionInline]
     raw_id_fields = ['country', 'host']
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
     fields = ['country', 'language', 'host', 'created', 'token', 'length', 'multiplayer', 'media', 'repeat']
-    list_display = ['country', 'created', 'level', 'length', 'multiplayer']
+    list_display = ['country', 'created', 'level', 'length', 'player_count', 'top_score']
+
+    def player_count(self, obj):
+        return obj.scores.count()
+
+    def top_score(self, obj):
+        top = obj.scores.order_by('-score').first()
+        if top:
+            return top.score
 
     def correct(self, obj):
         return obj.questions.filter(correct=True).count()
@@ -219,5 +246,15 @@ class QuestionAdmin(admin.ModelAdmin):
 
 @register(Player)
 class PlayerAdmin(admin.ModelAdmin):
-    raw_id_fields = ['game', 'user']
+    inlines = [PlayerScoreInline]
+    raw_id_fields = ['user']
     list_display = ['name', 'token']
+
+
+@register(PlayerScore)
+class PlayerScoreAdmin(admin.ModelAdmin):
+    raw_id_fields = ['player', 'game']
+    list_display = ['player', 'game', 'score']
+    list_filter = ['game__level', 'game__length', ('game__country', admin.RelatedOnlyFieldListFilter)]
+    ordering = ['-score']
+

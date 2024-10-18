@@ -2,7 +2,7 @@ from rest_framework import serializers
 from setuptools.dist import sequence
 
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption
+    QuestionOption, PlayerScore
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -90,20 +90,28 @@ class PlayerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Player
-        fields = ('id', 'name', 'is_host', 'status', 'token', 'language', 'score', 'last_answer')
+        fields = ('id', 'name', 'token', 'language', 'score', 'last_answer')
 
 
 class MultiPlayerSerializer(serializers.ModelSerializer):
-    last_answer = AnswerSerializer(read_only=True)
 
     class Meta:
         model = Player
-        fields = ('id', 'name', 'is_host', 'status', 'language', 'score', 'last_answer')
+        fields = ('id', 'name',  'language', 'score')
+
+
+class PlayerScoreSerializer(serializers.ModelSerializer):
+    last_answer = AnswerSerializer(read_only=True)
+    name = serializers.CharField(source='player.name')
+    language = serializers.CharField(source='player.language')
+
+    class Meta:
+        model = PlayerScore
+        fields = ('id', 'name', 'status', 'language', 'score', 'last_answer')
 
 
 class GameSerializer(serializers.ModelSerializer):
     country = CountrySerializer()
-    # question = QuestionSerializer(read_only=True)
     host = MultiPlayerSerializer(read_only=True)
 
     class Meta:

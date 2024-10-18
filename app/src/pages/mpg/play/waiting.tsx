@@ -25,6 +25,14 @@ export const WaitingComponent = () => {
     <>
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
+          <Text>Correct answer was <b><SpeciesName species={answer?.species} /></b></Text>
+          <List spacing={4}>
+            {players && players.map((player, index) => (
+              <ListItem key={index}>
+                <PlayerItem player={player}/>
+              </ListItem>
+            ))}
+          </List>
           <Box>
             {done ? (
               <Button onClick={endGame} colorScheme={'orange'}>
@@ -43,15 +51,6 @@ export const WaitingComponent = () => {
 
             )}
           </Box>
-
-          <Text>Correct answer was <b><SpeciesName species={answer?.species} /></b></Text>
-          <List spacing={4}>
-            {players && players.map((player, index) => (
-              <ListItem key={index}>
-                <PlayerItem player={player}/>
-              </ListItem>
-            ))}
-          </List>
         </Flex>
       </Box>
     </>

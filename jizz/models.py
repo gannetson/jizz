@@ -1,15 +1,13 @@
 import math
 import uuid
-from random import randint, shuffle, sample
+from random import randint, shuffle
 
-from IPython.terminal.shortcuts.auto_match import auto_match_parens_raw_string
 from django.db import models
 from django.db.models import Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.timezone import now
 from shortuuid.django_fields import ShortUUIDField
-from twisted.persisted.aot import Instance
 
 
 class  Country(models.Model):
@@ -157,7 +155,6 @@ class Game(models.Model):
 
 class Player(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    game = models.ForeignKey(Game, related_name='players', blank=True, null=True, on_delete=models.CASCADE)
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True, blank=True)
     name = models.CharField(max_length=255)
@@ -167,6 +164,12 @@ class Player(models.Model):
 
     def __str__(self):
         return f"{self.name} - #{self.id}"
+
+
+class PlayerScore(models.Model):
+    player = models.ForeignKey(Player, related_name='scores', on_delete=models.CASCADE)
+    game = models.ForeignKey(Game, related_name='scores', blank=True, null=True, on_delete=models.CASCADE)
+    score = models.IntegerField(default=0)
 
     @property
     def is_host(self):
@@ -193,18 +196,19 @@ class Player(models.Model):
         answer = self.answers.filter(question=question).first()
         return answer
 
+    class Meta:
+        unique_together = ('player', 'game')
+
 
 class Answer(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     question = models.ForeignKey('jizz.Question', related_name='answers', on_delete=models.CASCADE)
-    player = models.ForeignKey('jizz.Player', related_name='answers', on_delete=models.CASCADE)
+    player_score = models.ForeignKey('jizz.PlayerScore', null=True, related_name='answers', on_delete=models.CASCADE)
     answer = models.ForeignKey('jizz.Species', related_name='answer', on_delete=models.CASCADE)
     correct = models.BooleanField(default=False)
     score = models.IntegerField(default=0)
 
     def calculate_score(self):
-        if self.answer != self.question.species:
-            return 0
         time_taken = (now() - self.question.created).total_seconds()
         max_score = 500
         min_score = 100
@@ -214,19 +218,21 @@ class Answer(models.Model):
     def save(self, *args, **kwargs):
         if not self.id:
             self.correct = self.answer == self.question.species
-            self.score = self.calculate_score()
+            if self.correct:
+                self.score = self.calculate_score()
         return super().save(*args, **kwargs)
 
     class Meta:
-        unique_together = ('player', 'question')
+        unique_together = ('player_score', 'question')
 
 
 @receiver(post_save, sender=Answer)
 def update_player_score(sender, instance, created, **kwargs):
     if created:
-        instance.player.score = instance.player.answers.filter(question__game=instance.question.game).aggregate(score=Sum('score'))['score']
-        # instance.player.score += instance.score
-        instance.player.save()
+        instance.player_score.score = instance.player_score.answers.filter(
+            question__game=instance.question.game
+        ).aggregate(score=Sum('score'))['score']
+        instance.player_score.save()
 
 
 class Species(models.Model):

@@ -84,6 +84,12 @@ const HomePage = () => {
             getOptionValue={(c) => c ? c.name : '?'}
             value={country}
             onChange={(val) => val && setCountry(val)}
+            chakraStyles={{
+              menu: (provided) => ({
+                ...provided,
+                width: "300px",
+              }),
+            }}
           />
           <Select
             size={'md'}
@@ -91,6 +97,12 @@ const HomePage = () => {
             options={mediums}
             value={mediums.find((l) => l.value === media)}
             onChange={(val) => val && setMedia(val.value)}
+            chakraStyles={{
+              menu: (provided) => ({
+                ...provided,
+                width: "300px",
+              }),
+            }}
           />
           <Select
             size={'md'}
@@ -98,6 +110,12 @@ const HomePage = () => {
             options={levels}
             value={levels.find((l) => l.value === level)}
             onChange={(val) => val && setLevel(val.value)}
+            chakraStyles={{
+              menu: (provided) => ({
+                ...provided,
+                width: "300px",
+              }),
+            }}
           />
           <Select
             size={'md'}
@@ -105,6 +123,12 @@ const HomePage = () => {
             options={lengths}
             value={lengths.find((l) => l.value === length)}
             onChange={(val) => val && setLength(val.value)}
+            chakraStyles={{
+              menu: (provided) => ({
+                ...provided,
+                width: "300px",
+              }),
+            }}
           />
         </Flex>
         <>
@@ -129,10 +153,10 @@ const HomePage = () => {
                   </Tr>
                 </Thead>
                 <Tbody>
-                {scores && scores.map((score, index) => {
-                  return <ScoreLine key={index} score={score}/>
-                })}
-                  </Tbody>
+                  {scores && scores.map((score, index) => {
+                    return <ScoreLine key={index} score={score}/>
+                  })}
+                </Tbody>
               </Table>
             </TableContainer>
           )}

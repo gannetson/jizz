@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Kbd, List, ListItem, Text} from "@chakra-ui/react"
+import {Box, Button, Flex, Kbd, List, ListItem, Show, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import React, {useCallback, useContext, useEffect} from "react"
 import WebsocketContext from "../../../core/websocket-context"
@@ -60,8 +60,9 @@ export const WaitingComponent = () => {
                 <Button onClick={nextQuestion} colorScheme={'orange'}>
                   <Flex gap={8}>
                   <FormattedMessage id={'next question'} defaultMessage={'Next question'} />
-
-                  <Kbd size='lg' backgroundColor={'orange.600'} borderColor={'orange.800'}>Space</Kbd>
+                  <Show above={'md'}>
+                    <Kbd size='lg' backgroundColor={'orange.600'} borderColor={'orange.800'}>Space</Kbd>
+                  </Show>
                   </Flex>
                 </Button>
               ) : (

@@ -6,16 +6,16 @@ import {useNavigate, useParams} from "react-router-dom"
 import Page from "./layout/page"
 import AppContext from "../core/app-context"
 import GameHeader from "./mpg/game-header"
+import {SetName} from "../components/set-name"
 
 
 const JoinPage: React.FC = () => {
   const {joinGame} = useContext(WebsocketContext)
-  const {createPlayer, player,loadGame} = useContext(AppContext)
+  const {createPlayer, player,loadGame, playerName} = useContext(AppContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const {gameCode} = useParams<{ gameCode: string }>();
   const [code, setCode] = useState<string | undefined>(gameCode)
-  const [playerName, setPlayerName] = useState<string | undefined>(player?.name)
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -35,12 +35,6 @@ const JoinPage: React.FC = () => {
     }
   }
 
-  useEffect(() => {
-    if (player?.name && ! playerName) {
-      setPlayerName(player.name)
-    }
-  }, [player?.name]);
-
 
   return (
     <Page>
@@ -51,10 +45,7 @@ const JoinPage: React.FC = () => {
           Game code
           <Input name={'game_code'} value={code} onChange={(event) => setCode(event.target.value)}/>
         </Box>
-        <Box>
-          Name
-          <Input name={'name'} value={playerName} onChange={(event) => setPlayerName(event.target.value)}/>
-        </Box>
+        <SetName />
         <Button colorScheme='orange' onClick={handleSubmit} isLoading={loading} isDisabled={!code || !playerName}>
           Join game
         </Button>

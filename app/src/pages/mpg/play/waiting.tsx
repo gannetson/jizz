@@ -1,6 +1,6 @@
-import {Box, Button, Flex, List, ListItem, Text} from "@chakra-ui/react"
+import {Box, Button, Flex, Kbd, List, ListItem, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import React, {useContext} from "react"
+import React, {useCallback, useContext, useEffect} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
@@ -21,14 +21,27 @@ export const WaitingComponent = () => {
     navigate('/game/ended')
   }
   const isHost = player?.name === game?.host?.name
+  const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (event.key === ' ') {
+      done ? endGame() : nextQuestion()
+    }
+  }, [game?.level, question?.options])
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress)
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [handleKeyPress])
+
 
   return (
     <>
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
-          <Text>Correct answer was <b><ViewSpecies species={answer?.species} /></b></Text>
+          <Text>Correct answer was <b><ViewSpecies species={answer?.species}/></b></Text>
           {answer && !answer?.correct && (
-            <Text>Your answer was <b><ViewSpecies species={answer?.answer} /></b></Text>
+            <Text>Your answer was <b><ViewSpecies species={answer?.answer}/></b></Text>
           )}
           <List spacing={4}>
             {players && players.map((player, index) => (
@@ -45,7 +58,11 @@ export const WaitingComponent = () => {
             ) : (
               isHost ? (
                 <Button onClick={nextQuestion} colorScheme={'orange'}>
-                  <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+                  <Flex gap={8}>
+                  <FormattedMessage id={'next question'} defaultMessage={'Next question'} />
+
+                  <Kbd size='lg' backgroundColor={'orange.600'} borderColor={'orange.800'}>Space</Kbd>
+                  </Flex>
                 </Button>
               ) : (
                 <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}

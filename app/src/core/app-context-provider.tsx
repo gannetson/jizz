@@ -91,7 +91,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
   }
 
   const updatePlayer = async (playerToken: string) => {
-    setLoading(true)
     const response = await fetch(`/api/player/${playerToken}/`, {
       method: 'PATCH',
       headers: {
@@ -109,7 +108,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setPlayer(data)
       return data as Player
     }
-    setLoading(false)
     return player
 
   }

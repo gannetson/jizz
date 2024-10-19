@@ -100,7 +100,7 @@ const Lobby: React.FC = () => {
         }
 
         <Heading size={'md'} mt={6}>
-          <FormattedMessage id={'high score'} defaultMessage={'High score'}/>
+          <FormattedMessage id={'High score'} defaultMessage={'High score'}/>
         </Heading>
         {game?.current_highscore ? (
           <PlayerItem variant="outline" showAnswer={false} showScore={true} player={game?.current_highscore}/>

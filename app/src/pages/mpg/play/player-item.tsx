@@ -1,6 +1,7 @@
 import {Card, CardBody, Flex, Tag} from "@chakra-ui/react"
 import {FaCheckCircle, FaClock, FaMinusCircle, FaCrown} from "react-icons/fa";
 import {MultiPlayer} from "../../../core/app-context"
+import {FormattedMessage} from "react-intl"
 
 export const PlayerItem = (
   {
@@ -36,14 +37,16 @@ export const PlayerItem = (
             </Flex>
           </Flex>
 
-          {showRanking && player.ranking && (
-            <Flex gap={4}>
-              <Tag colorScheme={'orange'} fontSize='sm'>#{player.ranking} hiscore</Tag>
-            </Flex>
-          )}
 
           {showScore && (
             <Flex gap={4}>
+              {showRanking && player.ranking && (
+                <Flex gap={4}>
+                  <Tag colorScheme={'orange'} fontSize='sm'>
+                    #{player.ranking} <FormattedMessage id={'high score'} defaultMessage={'high score'} />
+                  </Tag>
+                </Flex>
+              )}
               {showAnswer && player.last_answer?.correct &&
                 <Tag colorScheme={'green'} fontSize='sm'>+{player.last_answer.score}</Tag>}
               <Tag fontSize='xl'>{player.score}</Tag>

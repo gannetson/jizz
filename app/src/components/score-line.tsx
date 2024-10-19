@@ -6,8 +6,8 @@ export const ScoreLine = ({score} : {score: Score}) => {
 
   const mediaIcon: {[key: string]: string }  = {
     'images': '📷',
-    'sounds': '🔊',
-    'videos': '🎥',
+    'audio': '🔊',
+    'video': '🎥',
   }
 
   return (

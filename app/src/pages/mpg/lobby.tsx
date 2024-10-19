@@ -56,26 +56,34 @@ const Lobby: React.FC = () => {
     <Page>
       <GameHeader/>
       <Page.Body>
-        <Heading variant={'h3'}>Game Lobby</Heading>
+        <Heading size={'lg'}>
+          <FormattedMessage id={'game lobby'} defaultMessage={'Game Lobby'}/>
+        </Heading>
         <Flex gap={4}>
-          Game code:
+          <FormattedMessage id={'code'} defaultMessage={'Code'}/>
           <Box><Tag onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameToken}</Tag></Box>
           {copied ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Button colorScheme='orange' variant='link' onClick={copyCode}>Copy</Button>
+            <Button colorScheme='orange' variant='link' onClick={copyCode}>
+              <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
+            </Button>
           )}
         </Flex>
         <Flex gap={4}>
-          Game link:
+          <FormattedMessage id={'link'} defaultMessage={'Link'}/>
           <Box><Tag onClick={copyLink} fontSize='18px' colorScheme='orange'>{gameLink}</Tag></Box>
           {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Button colorScheme='orange' variant='link' onClick={copyLink}>Copy</Button>
+            <Button colorScheme='orange' variant='link' onClick={copyLink}>
+              <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
+            </Button>
           )}
         </Flex>
-        <Box>Players joined</Box>
+        <Heading size={'md'} mt={6}>
+          <FormattedMessage id={'players joined'} defaultMessage={'Players joined'}/>
+        </Heading>
         <List spacing={4}>
           {players && players.map((player, index) => (
             <ListItem key={index}>
-              <PlayerItem showAnswer={false} showScore={false} player={player}/>
+              <PlayerItem showAnswer={false} showScore={false} showRanking={false} player={player}/>
             </ListItem>
           ))}
         </List>
@@ -86,9 +94,20 @@ const Lobby: React.FC = () => {
             </Button>
 
           ) : (
-            <FormattedMessage id={'waiting for host'} defaultMessage={'Waiting until the {host} starts the game.'} values={{host: game?.host?.name || 'host'}}/>
+            <FormattedMessage id={'waiting for host'} defaultMessage={'Waiting until the {host} starts the game.'}
+                              values={{host: game?.host?.name || 'host'}}/>
           )
         }
+
+        <Heading size={'md'} mt={6}>
+          <FormattedMessage id={'high score'} defaultMessage={'High score'}/>
+        </Heading>
+        {game?.current_highscore ? (
+          <PlayerItem variant="outline" showAnswer={false} showScore={true} player={game?.current_highscore}/>
+
+        ) : (
+          <FormattedMessage id={'no high score'} defaultMessage={'No high score yet.'}/>
+        )}
       </Page.Body>
     </Page>
   );

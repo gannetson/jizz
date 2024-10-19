@@ -10,6 +10,7 @@ import {IntlProvider} from "react-intl";
 
 import enMessages from './locales/en.json';
 import nlMessages from './locales/nl.json';
+import laMessages from './locales/la.json';
 import MultiPlayerGame from "./pages/mpg/multi-player-game"
 import AppContext from "./core/app-context"
 import StartPage from "./pages/start"
@@ -29,6 +30,7 @@ export const MainContent = () => {
   const messages = {
     en: enMessages,
     nl: nlMessages,
+    la: laMessages
   }
 
   return (

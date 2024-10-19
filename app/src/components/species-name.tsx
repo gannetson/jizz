@@ -4,7 +4,7 @@ import AppContext from "../core/app-context"
 
 export const SpeciesName = ({species}: { species?: Species }) => {
 
-  const {player} = useContext(AppContext)
+  const {language} = useContext(AppContext)
 
   if (!species) {
     return <></>
@@ -12,7 +12,7 @@ export const SpeciesName = ({species}: { species?: Species }) => {
 
   return (
     <>
-      {player?.language === 'nl' ? species.name_nl : species.name}
+      {language === 'nl' ? species.name_nl :  language === 'la' ? species.name_latin : species.name}
     </>
   )
 

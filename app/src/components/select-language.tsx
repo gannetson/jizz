@@ -29,6 +29,7 @@ const SelectLanguage = () => {
         <Flex direction={'column'} gap={4}>
           <Radio value={'en'}>English</Radio>
           <Radio value={'nl'}>Nederlands</Radio>
+          <Radio value={'la'}>Latin</Radio>
         </Flex>
       </RadioGroup>
     </Box>

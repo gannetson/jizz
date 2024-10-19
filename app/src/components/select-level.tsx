@@ -34,7 +34,7 @@ const SelectLevel = () => {
           </Radio>
           <Radio value='expert'>
             <Text>
-              <FormattedMessage id={'question'} defaultMessage={'Expert'} />
+              <FormattedMessage id={'expert'} defaultMessage={'Expert'} />
             </Text>
             <Text fontSize={'xs'}>
               <FormattedMessage id={'text input'} defaultMessage={'Text input (with auto complete)'} />

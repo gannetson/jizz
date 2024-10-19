@@ -58,7 +58,7 @@ class PlayerCreateView(CreateAPIView):
         return serializer.save(ip=ip)
 
 
-class PlayerView(RetrieveAPIView):
+class PlayerView(RetrieveUpdateAPIView):
     serializer_class = PlayerSerializer
     queryset = Player.objects.all()
     lookup_field = 'token'

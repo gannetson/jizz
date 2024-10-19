@@ -19,11 +19,15 @@ def sync_species():
 
     for row in data.content.splitlines():
         parts = row.decode().split(',')
+        print(parts)
         if parts[3] == 'species':
             Species.objects.update_or_create(
                 code= parts[2],
                 defaults={
                     'name': parts[1],
+                    'name_latin': parts[0],
+                    'tax_order': parts[8],
+                    'tax_family': parts[10]
                 }
             )
 

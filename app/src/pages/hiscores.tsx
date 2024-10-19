@@ -14,9 +14,9 @@ const HomePage = () => {
   const {loading, setLoading} = useContext(AppContext)
   const [scores, setScores] = useState<Score[]>([])
   const [level, setLevel] = useState<string | undefined>('advanced');
-  const [length, setLength] = useState<string | undefined>('20');
-  const [media, setMedia] = useState<string | undefined>('images');
-  const [country, setCountry] = useState<Country | undefined>({code: 'NL', name: 'Netherlands'});
+  const [length, setLength] = useState<string | undefined>('10');
+  const [media, setMedia] = useState<string | undefined>('');
+  const [country, setCountry] = useState<Country | undefined>({code: '', name: 'All countries'});
 
   const loadScores = async () => {
     setLoading(true)

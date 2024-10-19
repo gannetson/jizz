@@ -8,7 +8,7 @@ type Props = {
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
   const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
-  const [language, setLanguage] = useState<'en' | 'nl'>('en');
+  const [language, setLanguage] = useState<'en' | 'nl' | 'la'>('en');
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
@@ -89,6 +89,37 @@ const AppContextProvider: FC<Props> = ({children}) => {
     return player
 
   }
+
+  const updatePlayer = async (playerToken: string) => {
+    setLoading(true)
+    const response = await fetch(`/api/player/${playerToken}/`, {
+      method: 'PATCH',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: playerName,
+        language: language
+      })
+    })
+    const data = await response.json();
+    if (data) {
+      localStorage.setItem('player-token', data.token)
+      setPlayer(data)
+      return data as Player
+    }
+    setLoading(false)
+    return player
+
+  }
+
+  useEffect(() => {
+    if (player && player.language !== language) {
+      updatePlayer(player.token)
+    }
+  }, [language]);
+
 
   useEffect(() => {
     if (playerToken && (!player || player.token !== playerToken)) {

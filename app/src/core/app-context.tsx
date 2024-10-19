@@ -25,6 +25,7 @@ export type Game = {
   repeat: boolean
   ended?: boolean
   host?: Player
+  current_highscore?: Player
 }
 
 export type SpeciesImage = {
@@ -81,6 +82,7 @@ export type MultiPlayer = {
   language?: string
   status?: 'waiting' | 'correct' | 'incorrect'
   score?: number
+  ranking?: number
   last_answer?: Answer
 }
 
@@ -125,8 +127,8 @@ type SharedState = {
   setLength: Dispatch<SetStateAction<string>>
   country: Country | undefined
   setCountry: Dispatch<SetStateAction<Country>>
-  language?: 'en' | 'nl'
-  setLanguage?: Dispatch<SetStateAction<'en' | 'nl'>>
+  language?: 'en' | 'nl' | 'la'
+  setLanguage?: Dispatch<SetStateAction<'en' | 'nl' | 'la'>>
   multiplayer?: string
   setMultiplayer?: Dispatch<SetStateAction<string>>
   mediaType: string

@@ -16,8 +16,8 @@ export const SelectLength = () => {
       </Heading>
       {country && (
         <FormattedMessage
-          id={'how many'}
-          defaultMessage={'How many species do you want review? Choose {count} if you want to all the species in {country}'}
+          id={'how many questions'}
+          defaultMessage={'How many questions do you want to play?'}
           values={{count: country.count, country: country.name}}
         />
 

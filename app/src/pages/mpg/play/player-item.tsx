@@ -4,11 +4,13 @@ import {MultiPlayer} from "../../../core/app-context"
 
 export const PlayerItem = (
   {
-    player, showAnswer = true, showScore = true
+    player, showAnswer = true, showScore = true, showRanking = true, variant = 'normal'
   }: {
     player: MultiPlayer,
     showAnswer?: boolean,
-    showScore?: boolean
+    showRanking?: boolean,
+    showScore?: boolean,
+    variant?: 'outline' | 'normal'
   }) => {
   let color = 'orange.200'
   if (showAnswer) {
@@ -18,7 +20,7 @@ export const PlayerItem = (
 
 
   return (
-    <Card backgroundColor={color}>
+    <Card backgroundColor={variant === 'outline' ? undefined : color} border={variant === 'outline' ? '2px solid #eee' : undefined}>
       <CardBody py={2}>
         <Flex gap={4} alignItems={'center'} justifyContent={'space-between'}>
           <Flex gap={4} alignItems={'center'}>
@@ -33,6 +35,12 @@ export const PlayerItem = (
               {player.name} {player.is_host && <FaCrown/>}
             </Flex>
           </Flex>
+
+          {showRanking && player.ranking && (
+            <Flex gap={4}>
+              <Tag colorScheme={'orange'} fontSize='sm'>#{player.ranking} hiscore</Tag>
+            </Flex>
+          )}
 
           {showScore && (
             <Flex gap={4}>

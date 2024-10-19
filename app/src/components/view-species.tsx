@@ -18,21 +18,21 @@ import {useContext} from "react"
 
 export function ViewSpecies({species}: {species?:Species}) {
 
-  const {game} = useContext(AppContext)
+  const {language} = useContext(AppContext)
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   if (!species) return <></>
 
   return (
     <>
-      <Button variant={"link"} onClick={onOpen} rightIcon={<BsImages />}>
-        {game?.language === 'nl' ? species.name_nl : species.name}
+      <Button variant={"link"} colorScheme={'orange'} onClick={onOpen} rightIcon={<BsImages />}>
+        {language === 'nl' ? species.name_nl : species.name}
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size={"3xl"}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{game?.language === 'nl' ? species.name_nl : species.name}</ModalHeader>
+          <ModalHeader>{language === 'nl' ? species.name_nl : language === 'la' ? species.name_latin : species.name}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
           <SimpleGrid columns={{base: 1, md: 2, xl : 3}} spacing={4}>

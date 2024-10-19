@@ -10,7 +10,7 @@ from django.utils.timezone import now
 from shortuuid.django_fields import ShortUUIDField
 
 
-class  Country(models.Model):
+class Country(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=10, primary_key=True)
     codes = models.CharField(max_length=400, null=True, blank=True)
@@ -44,10 +44,12 @@ class Question(models.Model):
     def __str__(self):
         return f'{self.game} - {self.species}'
 
+
 class QuestionOption(models.Model):
     question = models.ForeignKey('jizz.Question', on_delete=models.CASCADE)
     species = models.ForeignKey('jizz.Species', on_delete=models.CASCADE)
     order = models.PositiveIntegerField()
+
     class Meta:
         ordering = ['order']
 
@@ -75,6 +77,13 @@ class Game(models.Model):
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
 
     @property
+    def current_highscore(self):
+        return PlayerScore.highscore_by_type(
+            level=self.level, country=self.country,
+            length=self.length, media=self.media
+        )
+
+    @property
     def ended(self):
         return self.questions.count() >= self.length
 
@@ -84,11 +93,14 @@ class Game(models.Model):
 
     def add_question(self):
         self.questions.filter(done=False).update(done=True)
-        all_species = Species.objects.filter(images__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
+        all_species = Species.objects.filter(images__isnull=False,
+                                             countryspecies__country=self.country).distinct().order_by('id')
         if self.media == 'video':
-            all_species = Species.objects.filter(videos__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
+            all_species = Species.objects.filter(videos__isnull=False,
+                                                 countryspecies__country=self.country).distinct().order_by('id')
         if self.media == 'audio':
-            all_species = Species.objects.filter(sounds__isnull=False, countryspecies__country=self.country).distinct().order_by('id')
+            all_species = Species.objects.filter(sounds__isnull=False,
+                                                 countryspecies__country=self.country).distinct().order_by('id')
 
         left_species = all_species.exclude(id__in=self.questions.values_list('species_id', flat=True))
         species = left_species.order_by('?').first()
@@ -99,7 +111,6 @@ class Game(models.Model):
             number = randint(1, species.videos.count()) - 1
         if self.media == 'audio':
             number = randint(1, species.sounds.count()) - 1
-
 
         if self.level == 'advanced':
             options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
@@ -171,6 +182,20 @@ class PlayerScore(models.Model):
     game = models.ForeignKey(Game, related_name='scores', blank=True, null=True, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
 
+    @classmethod
+    def highscore_by_type(cls, level=None, country=None, media=None, length=None):
+        return cls.objects.filter(
+            game__level=level,
+            game__country=country,
+            game__media=media,
+            game__length=length
+        ).order_by('-score').first()
+
+    @property
+    def ranking(self):
+        scores = PlayerScore.objects.filter(game__level=self.game.level, game__country=self.game.country, game__media=self.game.media, game__length=self.game.length).order_by('-score').all()
+        return list(scores).index(self) + 1
+
     @property
     def is_host(self):
         return self.game_id and self.game.host == self
@@ -239,6 +264,8 @@ class Species(models.Model):
     name = models.CharField(max_length=200)
     name_latin = models.CharField(max_length=200)
     name_nl = models.CharField(max_length=200, null=True, blank=True)
+    tax_family = models.CharField('Family', max_length=200, null=True, blank=True)
+    tax_order = models.CharField('Order', max_length=200, null=True, blank=True)
     code = models.CharField(max_length=10)
 
     class Meta:

@@ -99,20 +99,6 @@ class MultiPlayerSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'language', 'score')
 
 
-class GameSerializer(serializers.ModelSerializer):
-    country = CountrySerializer()
-    host = MultiPlayerSerializer(read_only=True)
-
-    class Meta:
-        model = Game
-        fields = (
-            'token', 'country', 'level', 'language',
-            'created', 'multiplayer',
-            'length', 'progress',
-            'media', 'repeat', 'host', 'ended'
-        )
-
-
 class PlayerScoreSerializer(serializers.ModelSerializer):
     last_answer = AnswerSerializer(read_only=True)
     name = serializers.CharField(source='player.name')
@@ -122,11 +108,28 @@ class PlayerScoreSerializer(serializers.ModelSerializer):
     length = serializers.CharField(source='game.length')
     country = CountrySerializer(source='game.country')
     created = serializers.DateTimeField(source='game.created')
+    ranking = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = PlayerScore
         fields = (
             'id', 'name', 'status', 'language', 'created',
             'score', 'last_answer',
-            'media', 'level', 'length', 'country'
+            'media', 'level', 'length',
+            'country', 'ranking'
+        )
+
+
+class GameSerializer(serializers.ModelSerializer):
+    country = CountrySerializer()
+    host = MultiPlayerSerializer(read_only=True)
+    current_highscore = PlayerScoreSerializer(read_only=True)
+
+    class Meta:
+        model = Game
+        fields = (
+            'token', 'country', 'level', 'language',
+            'created', 'multiplayer',
+            'length', 'progress',
+            'media', 'repeat', 'host', 'ended', 'current_highscore'
         )

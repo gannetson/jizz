@@ -125,9 +125,11 @@ class SpeciesVideoInline(admin.TabularInline):
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesSoundInline, SpeciesImageInline, SpeciesVideoInline]
+    searrch_fields = ['name', 'name_nl', 'name_latin']
     readonly_fields = ['sync_media', 'pic_count']
     search_fields = ['name']
     list_display = ['name', 'name_nl', 'pic_count']
+    list_filter = ['tax_order']
 
     def pic_count(self, obj):
         return obj.images.count()
@@ -256,4 +258,3 @@ class PlayerScoreAdmin(admin.ModelAdmin):
     raw_id_fields = ['player', 'game']
     list_display = ['player', 'game', 'score']
     list_filter = ['game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
-    ordering = ['-score']

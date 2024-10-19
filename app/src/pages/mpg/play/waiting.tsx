@@ -6,6 +6,7 @@ import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
 import {useNavigate} from "react-router-dom"
 import {SpeciesName} from "../../../components/species-name"
+import {ViewSpecies} from "../../../components/view-species"
 
 
 export const WaitingComponent = () => {
@@ -25,11 +26,14 @@ export const WaitingComponent = () => {
     <>
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
-          <Text>Correct answer was <b><SpeciesName species={answer?.species} /></b></Text>
+          <Text>Correct answer was <b><ViewSpecies species={answer?.species} /></b></Text>
+          {answer && !answer?.correct && (
+            <Text>Your answer was <b><ViewSpecies species={answer?.answer} /></b></Text>
+          )}
           <List spacing={4}>
             {players && players.map((player, index) => (
               <ListItem key={index}>
-                <PlayerItem player={player}/>
+                <PlayerItem showRanking={false} player={player}/>
               </ListItem>
             ))}
           </List>

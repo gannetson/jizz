@@ -50,7 +50,6 @@ export const CreateGame = () => {
         <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'}/></Heading>
         <SetName/>
         <SelectLanguage/>
-        <Divider/>
         <SelectCountry/>
         <SelectLength/>
         <SelectLevel/>

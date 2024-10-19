@@ -1,6 +1,6 @@
 import math
 import uuid
-from random import randint, shuffle
+from random import randint, shuffle, random
 
 from django.db import models
 from django.db.models import Sum

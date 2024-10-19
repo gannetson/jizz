@@ -2,17 +2,28 @@ import {Box, Button, Flex, Link, useColorMode} from "@chakra-ui/react";
 import AppContext from "../../core/app-context";
 import {useContext} from "react";
 import {IoIosMoon, IoIosSunny} from "react-icons/io";
+import {FormattedMessage} from "react-intl"
 
 export const JizzMenu = () => {
     const {game} = useContext(AppContext);
     const { colorMode, toggleColorMode } = useColorMode()
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
-            <Link href={'/'}>Home</Link>
-            <Link href={'/start'}>Start game</Link>
-            <Link href={'/join'}>Join game</Link>
-            <Link href={'/scores'}>Hiscores</Link>
-            <Link href={'/about'}>About</Link>
+            <Link href={'/'}>
+              <FormattedMessage id={'home'} defaultMessage={'Home'}/>
+            </Link>
+            <Link href={'/start'}>
+              <FormattedMessage id={'new game'} defaultMessage={'New game'} />
+            </Link>
+            <Link href={'/join'}>
+              <FormattedMessage id={'join game'} defaultMessage={'Join game'} />
+            </Link>
+            <Link href={'/scores'}>
+              <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
+            </Link>
+            <Link href={'/about'}>
+              <FormattedMessage id={'about jizz'} defaultMessage={'About Jizz'} />
+            </Link>
             <Box>
             <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>
                 {colorMode === 'light' ? 'Dark' : 'Light'}

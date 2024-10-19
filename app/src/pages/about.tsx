@@ -22,7 +22,7 @@ export const AboutPage = () => {
               <Heading size={'sm'}>Hi, I'm Loek! </Heading>
               <Text>
                 I've started to build this app when I was planning a trip to Cost Rica.
-                I wanted to prepare well to make most of my trip and the few birding opts I would have there.
+                I wanted to prepare well to make most of my trip and the few birding options I would have there.
                     I found that <Link color={'orange.500'} target={'_blank'} href={'https://ebird.org'}>eBird</Link> has a wonderful collection of beautiful pictures covering all species in the world.
                 They also have a neat API where you can get all kind of data, such as species list per country,
                 </Text>

@@ -68,7 +68,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           setPlayers(players)
           break
         case 'player_joined':
-          notify('New player', `${message.player_name} joined the game`)
+          console.log(`${message.player_name} joined the game`)
           break
         case 'new_question':
           setAnswer(undefined)

@@ -12,12 +12,12 @@ export const SelectLength = () => {
   return (
     <Box>
       <Heading size={'md'} mb={4}>
-        <FormattedMessage id={'question'} defaultMessage={'Questions'} />
+        <FormattedMessage id={'question'} defaultMessage={'Questions'}/>
       </Heading>
       {country && (
         <FormattedMessage
           id={'how many questions'}
-          defaultMessage={'How many questions do you want to play?'}
+          defaultMessage={'How many questions do you want to answer?'}
           values={{count: country.count, country: country.name}}
         />
 
@@ -32,7 +32,6 @@ export const SelectLength = () => {
           <Radio value={'20'}>20</Radio>
           <Radio value={'50'}>50</Radio>
           <Radio value={'100'}>100</Radio>
-          {country?.count && <Radio value={'0'}>{country?.count}</Radio>}
         </Flex>
       </RadioGroup>
     </Box>

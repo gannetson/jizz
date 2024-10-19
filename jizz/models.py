@@ -75,6 +75,8 @@ class Game(models.Model):
     media = models.CharField(max_length=10, default='images', choices=MEDIA_CHOICES)
     repeat = models.BooleanField(default=False)
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
+    tax_order = models.CharField('Taxonomic order', help_text='Only show birds from this order', max_length=100,
+                                 null=True, blank=True)
 
     @property
     def current_highscore(self):
@@ -93,14 +95,27 @@ class Game(models.Model):
 
     def add_question(self):
         self.questions.filter(done=False).update(done=True)
-        all_species = Species.objects.filter(images__isnull=False,
-                                             countryspecies__country=self.country).distinct().order_by('id')
+        all_species = Species.objects.filter(
+            images__isnull=False,
+            countryspecies__country=self.country
+        ).distinct().order_by('id')
         if self.media == 'video':
-            all_species = Species.objects.filter(videos__isnull=False,
-                                                 countryspecies__country=self.country).distinct().order_by('id')
+            all_species = Species.objects.filter(
+                videos__isnull=False,
+                countryspecies__country=self.country
+            ).distinct().order_by('id')
         if self.media == 'audio':
-            all_species = Species.objects.filter(sounds__isnull=False,
-                                                 countryspecies__country=self.country).distinct().order_by('id')
+            if self.tax_order:
+                all_species = Species.objects.filter(
+                    sounds__isnull=False,
+                    countryspecies__country=self.country,
+                    tax_order=self.tax_order
+                ).distinct().order_by('id')
+            else:
+                all_species = Species.objects.filter(
+                    sounds__isnull=False,
+                    countryspecies__country=self.country
+                ).distinct().order_by('id')
 
         left_species = all_species.exclude(id__in=self.questions.values_list('species_id', flat=True))
         species = left_species.order_by('?').first()
@@ -193,7 +208,9 @@ class PlayerScore(models.Model):
 
     @property
     def ranking(self):
-        scores = PlayerScore.objects.filter(game__level=self.game.level, game__country=self.game.country, game__media=self.game.media, game__length=self.game.length).order_by('-score').all()
+        scores = PlayerScore.objects.filter(game__level=self.game.level, game__country=self.game.country,
+                                            game__media=self.game.media, game__length=self.game.length).order_by(
+            '-score').all()
         return list(scores).index(self) + 1
 
     @property

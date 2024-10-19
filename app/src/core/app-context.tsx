@@ -123,6 +123,8 @@ type SharedState = {
   setGame: (game?: Game) => void
   level: string
   setLevel: Dispatch<SetStateAction<string>>
+  taxOrder: string
+  setTaxOrder: Dispatch<SetStateAction<string>>
   length: string
   setLength: Dispatch<SetStateAction<string>>
   country: Country | undefined
@@ -146,6 +148,8 @@ const AppContext = createContext<SharedState>({
   setGame: () => {},
   level: 'advanced',
   setLevel: () => {},
+  taxOrder: '',
+  setTaxOrder: () => {},
   length: '10',
   setLength: () => {},
   country: { code: 'nl', name: 'Netherlands' },

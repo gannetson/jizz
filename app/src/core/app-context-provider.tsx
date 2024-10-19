@@ -9,6 +9,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
   const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
   const [language, setLanguage] = useState<'en' | 'nl' | 'la'>('en');
+  const [taxOrder, setTaxOrder] = useState<string>('');
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
@@ -146,7 +147,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
           language: language,
           level: level,
           length: length,
-          media: mediaType
+          media: mediaType,
+          tax_order: taxOrder
         })
       })
       const data = await response.json();
@@ -189,6 +191,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
     <AppContext.Provider value={{
       level,
       setLevel,
+      taxOrder,
+      setTaxOrder,
       length,
       setLength,
       country,

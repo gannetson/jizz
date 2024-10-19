@@ -131,5 +131,5 @@ class GameSerializer(serializers.ModelSerializer):
             'token', 'country', 'level', 'language',
             'created', 'multiplayer',
             'length', 'progress',
-            'media', 'repeat', 'host', 'ended', 'current_highscore'
+            'media', 'repeat', 'host', 'ended', 'current_highscore', 'tax_order'
         )

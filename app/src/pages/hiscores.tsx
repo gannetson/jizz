@@ -1,4 +1,4 @@
-import {Flex, Heading, Table, Td, Th, Thead, Tr} from "@chakra-ui/react";
+import {Flex, Heading, Table, TableContainer, Tbody, Td, Th, Thead, Tr} from "@chakra-ui/react";
 import Page from "./layout/page";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
@@ -7,6 +7,7 @@ import {Loading} from "../components/loading"
 import {ScoreLine} from "../components/score-line"
 import {Select} from "chakra-react-select"
 import {UseCountries} from "../user/use-countries"
+import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 
 const HomePage = () => {
   const {countries} = UseCountries()
@@ -42,14 +43,14 @@ const HomePage = () => {
   }, [level, length, media, country]);
 
   const levels = [
-    {value: '', label: 'All levels'},
-    {value: 'easy', label: 'Easy'},
+    {value: '', label: 'Any levels'},
+    {value: 'beginner', label: 'Beginner'},
     {value: 'advanced', label: 'Advanced'},
     {value: 'expert', label: 'Expert'},
   ];
 
   const lengths = [
-    {value: '', label: 'Questions'},
+    {value: '', label: 'Any length'},
     {value: '10', label: '10'},
     {value: '20', label: '20'},
     {value: '50', label: '50'},
@@ -57,7 +58,7 @@ const HomePage = () => {
   ];
 
   const mediums = [
-    {value: '', label: 'All media'},
+    {value: '', label: 'Any media'},
     {value: 'images', label: 'Images'},
     {value: 'audio', label: 'Sounds'},
     {value: 'video', label: 'Videos'},
@@ -74,8 +75,10 @@ const HomePage = () => {
         </Heading>
       </Page.Header>
       <Page.Body>
-        <Flex justifyContent={'space-evenly'}>
+        <Flex flexWrap={'wrap'} width={'full'} gap={4}>
           <Select
+            size={'md'}
+            variant={'flushed'}
             options={selectCountries}
             getOptionLabel={(c) => c ? c.name : '?'}
             getOptionValue={(c) => c ? c.name : '?'}
@@ -83,18 +86,24 @@ const HomePage = () => {
             onChange={(val) => val && setCountry(val)}
           />
           <Select
+            size={'md'}
+            variant={'flushed'}
             options={mediums}
             value={mediums.find((l) => l.value === media)}
             onChange={(val) => val && setMedia(val.value)}
           />
           <Select
+            size={'md'}
+            variant={'flushed'}
             options={levels}
             value={levels.find((l) => l.value === level)}
             onChange={(val) => val && setLevel(val.value)}
           />
           <Select
+            size={'md'}
+            variant={'flushed'}
             options={lengths}
-            value={{value: length, label: length?.toString()}}
+            value={lengths.find((l) => l.value === length)}
             onChange={(val) => val && setLength(val.value)}
           />
         </Flex>
@@ -103,21 +112,29 @@ const HomePage = () => {
             <Loading/>
           ) : (
 
-            <Table>
-              <Thead>
-                <Tr bgColor={'orange.100'}>
-                  <Th>Player</Th>
-                  <Th>Country</Th>
-                  <Th>Media</Th>
-                  <Th>Level</Th>
-                  <Th>#</Th>
-                  <Th>Score</Th>
-                </Tr>
-              </Thead>
-              {scores && scores.map((score, index) => {
-                return <ScoreLine key={index} score={score}/>
-              })}
-            </Table>
+            <TableContainer>
+              <Table variant='striped' colorScheme='orange' size={['sm', 'md']}>
+                <Thead>
+                  <Tr bgColor={'orange.200'}>
+                    <Th>Player</Th>
+                    <Th>
+                      🇿🇿
+                    </Th>
+                    <Th>
+                      🔭
+                    </Th>
+                    <Th>Lvl</Th>
+                    <Th>#</Th>
+                    <Th>Score</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                {scores && scores.map((score, index) => {
+                  return <ScoreLine key={index} score={score}/>
+                })}
+                  </Tbody>
+              </Table>
+            </TableContainer>
           )}
         </>
       </Page.Body>

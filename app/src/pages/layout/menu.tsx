@@ -16,7 +16,7 @@ export const JizzMenu = () => {
               <FormattedMessage id={'new game'} defaultMessage={'New game'} />
             </Link>
             <Link href={'/join'}>
-              <FormattedMessage id={'join game'} defaultMessage={'Join game'} />
+              <FormattedMessage id={'join game'} defaultMessage={'Join a game'} />
             </Link>
             <Link href={'/scores'}>
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />

@@ -1,5 +1,6 @@
 import math
 import uuid
+from email.policy import default
 from random import randint, shuffle, random
 
 from django.db import models
@@ -74,6 +75,8 @@ class Game(models.Model):
     length = models.IntegerField(default=0)
     media = models.CharField(max_length=10, default='images', choices=MEDIA_CHOICES)
     repeat = models.BooleanField(default=False)
+    include_rare = models.BooleanField(default=True)
+    include_escapes = models.BooleanField(default=False)
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
     tax_order = models.CharField('Taxonomic order', help_text='Only show birds from this order', max_length=100,
                                  null=True, blank=True)
@@ -95,25 +98,35 @@ class Game(models.Model):
 
     def add_question(self):
         self.questions.filter(done=False).update(done=True)
+        statuses = ['native', 'endemic']
+        if self.include_rare:
+            statuses.extend(['rare', 'extirpated'])
+        if self.include_escapes:
+            statuses.extend(['introduced', 'uncertain', 'unknown'])
+
         all_species = Species.objects.filter(
             images__isnull=False,
+            countryspecies__status__in=statuses,
             countryspecies__country=self.country
         ).distinct().order_by('id')
         if self.media == 'video':
             all_species = Species.objects.filter(
                 videos__isnull=False,
+                countryspecies__status__in=statuses,
                 countryspecies__country=self.country
             ).distinct().order_by('id')
         if self.media == 'audio':
             if self.tax_order:
                 all_species = Species.objects.filter(
                     sounds__isnull=False,
-                    countryspecies__country=self.country,
+                    status__in=statuses,
+                    countryspecies__countryspecies__country=self.country,
                     tax_order=self.tax_order
                 ).distinct().order_by('id')
             else:
                 all_species = Species.objects.filter(
                     sounds__isnull=False,
+                    countryspecies__status__in=statuses,
                     countryspecies__country=self.country
                 ).distinct().order_by('id')
 
@@ -341,6 +354,18 @@ class CountrySpecies(models.Model):
         related_name='countryspecies',
         on_delete=models.CASCADE
     )
+
+    STATUS_CHOICES = [
+        ('unknown', 'Unknown'),
+        ('native', 'Native'),
+        ('rare', 'Rare'),
+        ('introduced', 'Introduced'),
+        ('extirpated', 'Extirpated'),
+        ('uncertain', 'Uncertain'),
+        ('endemic', 'Endemic'),
+    ]
+
+    status = models.CharField(max_length=100, default='unknown', choices=STATUS_CHOICES)
 
     @property
     def name(self):

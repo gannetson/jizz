@@ -12,6 +12,7 @@ import WebsocketContext from "../core/websocket-context"
 import {useNavigate} from "react-router-dom"
 import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
+import {SelectSpeciesStatus} from "./select-species-status"
 
 
 export const CreateGame = () => {
@@ -51,6 +52,7 @@ export const CreateGame = () => {
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
+        <SelectSpeciesStatus />
         <SelectLength/>
         <SelectLevel/>
         <SelectMediaType/>

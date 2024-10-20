@@ -125,9 +125,8 @@ class SpeciesVideoInline(admin.TabularInline):
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesSoundInline, SpeciesImageInline, SpeciesVideoInline]
-    searrch_fields = ['name', 'name_nl', 'name_latin']
+    search_fields = ['name', 'name_nl', 'name_latin']
     readonly_fields = ['sync_media', 'pic_count']
-    search_fields = ['name']
     list_display = ['name', 'name_nl', 'pic_count']
     list_filter = ['tax_order']
 
@@ -209,7 +208,10 @@ class GameAdmin(admin.ModelAdmin):
     inlines = [PlayerScoreInline, QuestionInline]
     raw_id_fields = ['country', 'host']
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
-    fields = ['country', 'language', 'host', 'created', 'token', 'length', 'multiplayer', 'media', 'repeat']
+    fields = [
+        'country', 'language', 'host', 'created', 'token',
+        'length', 'multiplayer', 'media', 'repeat', 'include_escapes', 'include_rare'
+    ]
     list_display = ['country', 'created', 'level', 'length', 'player_count', 'top_score']
 
     def player_count(self, obj):
@@ -258,3 +260,12 @@ class PlayerScoreAdmin(admin.ModelAdmin):
     raw_id_fields = ['player', 'game']
     list_display = ['player', 'game', 'score']
     list_filter = ['game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
+
+
+@register(CountrySpecies)
+class CountrySpeciesAdmin(admin.ModelAdmin):
+    list_display = ['name', 'country', 'species', 'status']
+    search_fields = ['species__name', 'species__name_nl', 'species__name_latin']
+    list_filter = ['status', 'country', ]
+    raw_id_fields = ['species', 'country']
+    list_editable = ['status']

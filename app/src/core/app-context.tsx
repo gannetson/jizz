@@ -26,6 +26,8 @@ export type Game = {
   ended?: boolean
   host?: Player
   current_highscore?: Player
+  include_rare: boolean
+  include_escapes: boolean
 }
 
 export type SpeciesImage = {
@@ -116,6 +118,10 @@ type SharedState = {
   setPlayerName?: Dispatch<SetStateAction<string | undefined>>
   player?: Player
   createPlayer: () => Promise<Player | undefined>
+  includeRare: boolean
+  setIncludeRare: Dispatch<SetStateAction<boolean>>
+  includeEscapes: boolean
+  setIncludeEscapes: Dispatch<SetStateAction<boolean>>
   game?: Game
   createGame: (player?: Player) => Promise<Game | undefined>
   setLoading: Dispatch<SetStateAction<boolean>>
@@ -146,6 +152,10 @@ const AppContext = createContext<SharedState>({
   setLoading: () => false,
   loadGame: async () => undefined,
   setGame: () => {},
+  includeEscapes: false,
+  setIncludeEscapes: () => {},
+  includeRare: true,
+  setIncludeRare: () => {},
   level: 'advanced',
   setLevel: () => {},
   taxOrder: '',

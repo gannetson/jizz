@@ -279,3 +279,53 @@ def get_all_videos():
         nr += 1
         print(f'☑️ [{nr}/{count}] {species.name}')
         get_media(species.id, 'video')
+
+
+def get_country_status(country_code='NL'):
+    country = Country.objects.get(code=country_code)
+    species = CountrySpecies.objects.filter(country=country, status='unknown')
+    print (f'{country.name} {species.count()} species')
+    url = f'https://avibase.bsc-eoc.org/checklist.jsp??lang=EN&p2=1&list=ebird&region={country_code}&version=text&lifelist=&highlight=0'
+
+    data = requests.get(url)
+    if data.status_code != 200:
+        print(f'Error: {data.status_code}')
+        return
+
+    pattern = r"<tr class='highlight1'>.*?<i>(.*?)<\/i>.*?<td>(.*?)<\/td>\s*<\/tr>"
+    matches = re.findall(pattern, data.text, re.DOTALL)
+
+    def clean_status(status):
+        clean = re.sub(r'<.*?>', '', status)
+        return clean.strip()
+
+    result = [(latin_name, clean_status(status)) for latin_name, status in matches]
+    count = 0
+    for latin_name, status in result:
+        spec = species.filter(species__name_latin=latin_name).first()
+        if spec:
+            count += 1
+            if 'Rare/Accidental' in status:
+                spec.status = 'rare'
+                spec.save()
+            elif 'Introduced species' in status:
+                spec.status = 'introduced'
+                spec.save()
+            elif 'Uncertain origin' in status:
+                spec.status = 'uncertain'
+                spec.save()
+            elif 'Endemic' in status:
+                spec.status = 'endemic'
+                spec.save()
+            elif 'Extirpated' in status:
+                spec.status = 'extirpated'
+                spec.save()
+            else:
+                spec.status = 'native'
+                spec.save()
+    print(f'{count} species updated')
+
+def get_all_country_status():
+    countries = Country.objects.all()
+    for country in countries:
+        get_country_status(country.code)

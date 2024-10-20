@@ -18,6 +18,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [mediaType, setMediaType] = useState<string>('images')
   const [species, setSpecies] = useState<Species[]>([])
   const [game, setGame] = useState<Game | undefined>(undefined)
+  const [includeRare, setIncludeRare] = useState<boolean>(true)
+  const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
 
   const playerToken = localStorage.getItem('player-token')
   const gameToken = localStorage.getItem('game-token')
@@ -148,7 +150,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
           level: level,
           length: length,
           media: mediaType,
-          tax_order: taxOrder
+          tax_order: taxOrder,
+          include_rare: includeRare,
+          include_escapes: includeEscapes
         })
       })
       const data = await response.json();
@@ -189,6 +193,10 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   return (
     <AppContext.Provider value={{
+      includeEscapes,
+      setIncludeEscapes,
+      includeRare,
+      setIncludeRare,
       level,
       setLevel,
       taxOrder,

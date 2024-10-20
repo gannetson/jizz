@@ -15,14 +15,14 @@ export const SelectSpeciesStatus = () => {
       <Checkbox
         colorScheme={'orange'}
         isChecked={includeRare}
-        onChange={(val) => setIncludeRare(Boolean(val.target.value))}
+        onChange={(val) => setIncludeRare(Boolean(val.target.checked))}
       >
         <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
       </Checkbox>
       <Checkbox
         colorScheme={'orange'}
         isChecked={includeEscapes}
-        onChange={(val) => setIncludeEscapes(Boolean(val.target.value))}
+        onChange={(val) => setIncludeEscapes(Boolean(val.target.checked))}
       >
         <FormattedMessage defaultMessage={'Include introduced & escaped species '} id={'include escaped species'}/>
       </Checkbox>

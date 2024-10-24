@@ -251,9 +251,11 @@ class QuestionAdmin(admin.ModelAdmin):
 @register(Player)
 class PlayerAdmin(admin.ModelAdmin):
     inlines = [PlayerScoreInline]
+    search_fields = ['name', 'user__username']
     raw_id_fields = ['user']
-    list_display = ['name', 'token']
-
+    list_display = ['name', 'games', 'playtime']
+    readonly_fields = ['token', 'created',  'games', 'playtime']
+    fields = ['user', ] + readonly_fields
 
 @register(PlayerScore)
 class PlayerScoreAdmin(admin.ModelAdmin):

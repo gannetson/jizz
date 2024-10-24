@@ -1,6 +1,7 @@
 **/*.pyc
 jizz/db.sqlite3
 jizz/settings/local.py
+jizz/settings/production.py
 .idea
 
 **/__pycache__

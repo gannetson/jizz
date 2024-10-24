@@ -1,5 +1,6 @@
 import math
 import uuid
+from datetime import timedelta
 from email.policy import default
 from random import randint, shuffle, random
 
@@ -201,6 +202,23 @@ class Player(models.Model):
     token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
     score = models.IntegerField(default=0)
 
+    @property
+    def games(self):
+        return self.scores.count()
+
+    @property
+    def play_time(self):
+        return sum([score.play_time for score in self.scores.all()], timedelta())
+
+    @property
+    def playtime(self):
+        seconds = self.play_time.total_seconds()
+        hours = round(seconds // 3600)
+        minutes = round((seconds % 3600) // 60)
+        if hours == 0:
+            return f'{minutes} minutes'
+        return f'{hours} hours and {minutes} minutes'
+
     def __str__(self):
         return f"{self.name} - #{self.id}"
 
@@ -209,6 +227,12 @@ class PlayerScore(models.Model):
     player = models.ForeignKey(Player, related_name='scores', on_delete=models.CASCADE)
     game = models.ForeignKey(Game, related_name='scores', blank=True, null=True, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
+
+    @property
+    def play_time(self):
+        if not self.answers.exists():
+            return timedelta()
+        return self.answers.last().created - self.game.created
 
     @classmethod
     def highscore_by_type(cls, level=None, country=None, media=None, length=None):

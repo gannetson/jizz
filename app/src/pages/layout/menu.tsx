@@ -1,12 +1,7 @@
-import {Box, Button, Flex, Link, useColorMode} from "@chakra-ui/react";
-import AppContext from "../../core/app-context";
-import {useContext} from "react";
-import {IoIosMoon, IoIosSunny} from "react-icons/io";
+import {Flex, Link} from "@chakra-ui/react";
 import {FormattedMessage} from "react-intl"
 
 export const JizzMenu = () => {
-    const {game} = useContext(AppContext);
-    const { colorMode, toggleColorMode } = useColorMode()
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'}>
@@ -24,11 +19,6 @@ export const JizzMenu = () => {
             <Link href={'/about'}>
               <FormattedMessage id={'about jizz'} defaultMessage={'About Jizz'} />
             </Link>
-            <Box>
-            <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>
-                {colorMode === 'light' ? 'Dark' : 'Light'}
-            </Button>
-            </Box>
         </Flex>
     );
 }

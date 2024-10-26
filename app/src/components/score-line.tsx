@@ -1,4 +1,4 @@
-import {Td, Tr} from "@chakra-ui/react"
+import {Table} from "@chakra-ui/react"
 import {Score} from "../core/app-context"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 
@@ -11,13 +11,13 @@ export const ScoreLine = ({score} : {score: Score}) => {
   }
 
   return (
-    <Tr>
-      <Td>{score.name}</Td>
-      <Td>{getUnicodeFlagIcon(score.country.code)}</Td>
-      <Td>{mediaIcon[score.media]}</Td>
-      <Td>{score.level.substring(0,2)}</Td>
-      <Td>{score.length}</Td>
-      <Td>{score.score}</Td>
-    </Tr>
+    <Table.Row>
+      <Table.Cell>{score.name}</Table.Cell>
+      <Table.Cell>{getUnicodeFlagIcon(score.country.code)}</Table.Cell>
+      <Table.Cell>{mediaIcon[score.media]}</Table.Cell>
+      <Table.Cell>{score.level.substring(0,2)}</Table.Cell>
+      <Table.Cell>{score.length}</Table.Cell>
+      <Table.Cell>{score.score}</Table.Cell>
+    </Table.Row>
   )
 }

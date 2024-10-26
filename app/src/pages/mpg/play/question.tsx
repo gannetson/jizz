@@ -1,6 +1,6 @@
-import {Box, Button, Flex, Image, Kbd, keyframes, Link, Show, SimpleGrid, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, Flex, Image, Link, SimpleGrid, useDisclosure} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
-import {useCallback, useContext, useEffect} from "react"
+import {useContext} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -13,7 +13,7 @@ export const QuestionComponent = () => {
   const {species, player} = useContext(AppContext)
   const {question, submitAnswer} = useContext(WebsocketContext)
   const {game} = useContext(AppContext)
-  const {onOpen, onClose, isOpen} = useDisclosure()
+  const {onOpen, onClose, open} = useDisclosure()
 
   const selectAnswer = (species?: Species) => {
     if (player && submitAnswer) {
@@ -27,14 +27,6 @@ export const QuestionComponent = () => {
     }
 
   }
-  const rotate = keyframes`
-    from {
-      transform: rotate(360deg)
-    }
-    to {
-      transform: rotate(0deg)
-    }
-  `
 
   if (!question || !game) return <></>
 
@@ -44,7 +36,7 @@ export const QuestionComponent = () => {
 
   return (
     <>
-      <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
+      <FlagMedia question={question} open={open} onClose={onClose}/>
       <Box position={'relative'}>
         {game.media === 'video' && (
           <>
@@ -63,7 +55,6 @@ export const QuestionComponent = () => {
             fallback={
               <Image
                 src='/images/jizz-logo.png'
-                animation={`${rotate} infinite 2s linear`}
                 width={'200px'}
                 maxHeight={'600px'}
                 marginX={'auto'}

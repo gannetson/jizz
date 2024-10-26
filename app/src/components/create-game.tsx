@@ -1,11 +1,10 @@
-import {useContext, useEffect, useState} from "react"
+import {useContext, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Button, Divider, Flex, Heading, Spinner} from "@chakra-ui/react"
+import {Button, Flex, Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
 import SelectLevel from "./select-level"
-import {SelectGameType} from "./select-game-type"
 import {Loading} from "./loading"
 import {SelectLength} from "./select-length"
 import WebsocketContext from "../core/websocket-context"
@@ -56,7 +55,7 @@ export const CreateGame = () => {
         <SelectLength/>
         <SelectLevel/>
         <SelectMediaType/>
-        <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
+        <Button disabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>

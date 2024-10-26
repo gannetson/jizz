@@ -4,9 +4,9 @@ export const Loading = () => {
   return (
     <Flex justifyContent={'center'}>
       <Spinner
-        thickness='8px'
-        speed='1s'
-        emptyColor='orange.200'
+        borderWidth='8px'
+        animationDuration='1s'
+        css={{ "--spinner-track-color": "colors.orange.200" }}
         color='orange.400'
         size='xl'
       />

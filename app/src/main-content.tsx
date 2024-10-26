@@ -1,6 +1,5 @@
 import * as React from "react"
 import {useContext, useEffect} from "react"
-import {ChakraProvider, theme,} from "@chakra-ui/react"
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import Layout from "./pages/layout/layout";
 import HomePage from "./pages/home";
@@ -17,7 +16,8 @@ import StartPage from "./pages/start"
 import JoinPage from "./pages/join"
 import GameEnded from "./pages/mpg/results"
 import Hiscores from "./pages/hiscores"
-
+import {Provider} from "./components/ui/provider"
+import {Toaster} from "./components/ui/toaster"
 
 export const MainContent = () => {
   useEffect(() => {
@@ -35,7 +35,8 @@ export const MainContent = () => {
 
   return (
     <IntlProvider locale={language as 'en' | 'nl'} messages={messages[language as 'en' | 'nl']}>
-      <ChakraProvider theme={theme}>
+      <Toaster />
+      <Provider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Layout/>}>
@@ -54,7 +55,7 @@ export const MainContent = () => {
             </Route>
           </Routes>
         </BrowserRouter>
-      </ChakraProvider>
+      </Provider>
     </IntlProvider>
   )
 }

@@ -1,7 +1,8 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Checkbox, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {Box, Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
+import {SegmentedControl} from "./ui/segmented-control"
 
 
 export const SelectMediaType = () => {
@@ -11,39 +12,18 @@ export const SelectMediaType = () => {
     setMediaType && setMediaType(value)
   }
 
-  const toggleTaxOrder = () => {
-    setTaxOrder(taxOrder === 'Passeriformes' ? '' : 'Passeriformes')
-  }
+  const mediaTypes = [
+    {value: 'images', label: 'Pictures'},
+    {value: 'audio', label: 'Sounds'},
+    {value: 'video', label: 'Videos'},
+  ]
 
   return (
     <Box>
       <Heading size={'md'} mb={4}>
         <FormattedMessage id={'media type'} defaultMessage={'Media type'}/>
       </Heading>
-      <RadioGroup
-        value={mediaType}
-        onChange={(val) => val && onChange(val)}
-        colorScheme={'orange'}
-      >
-        <Flex direction={'column'} gap={4}>
-          <Radio value={'images'}>
-            <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
-          </Radio>
-          <Radio value={'audio'}>
-            <Flex gap={4}>
-              <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
-              {/*{mediaType === 'audio' && (*/}
-              {/*  <Checkbox colorScheme={'orange'} isChecked={taxOrder === 'Passeriformes'} onChange={toggleTaxOrder}>*/}
-              {/*    <FormattedMessage id={'only passeriformes'} defaultMessage={'Only song birds / Passeriformes'}/>*/}
-              {/*  </Checkbox>*/}
-              {/*)}*/}
-            </Flex>
-          </Radio>
-          <Radio value={'video'}>
-            <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
-          </Radio>
-        </Flex>
-      </RadioGroup>
+      <SegmentedControl items={mediaTypes} onChange={(val: string) => val && onChange(val)} />
     </Box>
   )
 };

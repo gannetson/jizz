@@ -2,18 +2,9 @@ import {Outlet} from "react-router-dom";
 import {
   Box,
   Button,
-  Container,
   Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerOverlay,
   Flex,
   Heading, Image, Link, Menu,
-  Radio,
-  RadioGroup,
   Text,
   useDisclosure
 } from "@chakra-ui/react";
@@ -25,7 +16,7 @@ import AppContext from "../../core/app-context";
 import {JizzMenu} from "./menu";
 
 const Layout = () => {
-  const {isOpen, onOpen, onClose} = useDisclosure()
+  const {open, onOpen, onClose} = useDisclosure()
   const {level, setLevel} = useContext(AppContext);
 
   return (
@@ -34,21 +25,21 @@ const Layout = () => {
       <Button variant="ghost" color={'gray.800'} p={2} onClick={onOpen} position={'fixed'} zIndex={20} top={1} left={2}>
         <GiHamburgerMenu/>
       </Button>
-      <Drawer
-        isOpen={isOpen}
-        placement='left'
+      <Drawer.Root
+        open={open}
+        placement='start'
         onClose={onClose}
       >
-        <DrawerOverlay/>
-        <DrawerContent>
-          <DrawerCloseButton/>
-          <DrawerHeader>Menu</DrawerHeader>
+        <Drawer.Backdrop />
+        <Drawer.Content>
+          <Drawer.CloseTrigger/>
+          <Drawer.Header>Menu</Drawer.Header>
 
-          <DrawerBody>
+          <Drawer.Body>
             <JizzMenu/>
-          </DrawerBody>
+          </Drawer.Body>
 
-          <DrawerFooter>
+          <Drawer.Footer>
             <Flex direction={'column'} gap={4}>
               <Box mb={10}>
                 All data & images
@@ -63,9 +54,9 @@ const Layout = () => {
                 Contact <Link color='orange.500' href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>
               </Box>
             </Flex>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Root>
     </>
   )
 };

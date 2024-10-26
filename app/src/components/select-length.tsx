@@ -1,7 +1,8 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {Box, Flex, Heading } from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
+import {SegmentedControl} from "./ui/segmented-control"
 
 
 export const SelectLength = () => {
@@ -22,18 +23,7 @@ export const SelectLength = () => {
         />
 
       )}
-      <RadioGroup
-        value={length}
-        colorScheme={'orange'}
-        onChange={(val) => val && setLength && setLength(val)}
-      >
-        <Flex gap={10} mt={4}>
-          <Radio value={'10'}>10</Radio>
-          <Radio value={'20'}>20</Radio>
-          <Radio value={'50'}>50</Radio>
-          <Radio value={'100'}>100</Radio>
-        </Flex>
-      </RadioGroup>
+      <SegmentedControl onChange={(val: string) => val && setLength && setLength(val)} items={['10', '20', '50', '100']} />
     </Box>
   )
 };

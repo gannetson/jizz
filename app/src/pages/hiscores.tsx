@@ -1,4 +1,4 @@
-import {Flex, Heading, Table, TableContainer, Tbody, Td, Th, Thead, Tr} from "@chakra-ui/react";
+import {Flex, Heading, Table} from "@chakra-ui/react";
 import Page from "./layout/page";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
@@ -7,7 +7,6 @@ import {Loading} from "../components/loading"
 import {ScoreLine} from "../components/score-line"
 import {Select} from "chakra-react-select"
 import {UseCountries} from "../user/use-countries"
-import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 
 const HomePage = () => {
   const {countries} = UseCountries()
@@ -136,29 +135,27 @@ const HomePage = () => {
             <Loading/>
           ) : (
 
-            <TableContainer>
-              <Table variant='striped' colorScheme='orange' size={['sm', 'md']}>
-                <Thead>
-                  <Tr bgColor={'orange.200'}>
-                    <Th>Player</Th>
-                    <Th>
-                      🇿🇿
-                    </Th>
-                    <Th>
-                      🔭
-                    </Th>
-                    <Th>Lvl</Th>
-                    <Th>#</Th>
-                    <Th>Score</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {scores && scores.map((score, index) => {
-                    return <ScoreLine key={index} score={score}/>
-                  })}
-                </Tbody>
-              </Table>
-            </TableContainer>
+            <Table.Root striped colorScheme='orange' size={['sm', 'md']}>
+              <Table.Header bgColor={'orange.200'}>
+                <Table.Row>
+                  <Table.ColumnHeader>Player</Table.ColumnHeader>
+                  <Table.ColumnHeader>
+                    🇿🇿
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader>
+                    🔭
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader>Lvl</Table.ColumnHeader>
+                  <Table.ColumnHeader>#</Table.ColumnHeader>
+                  <Table.ColumnHeader>Score</Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {scores && scores.map((score, index) => {
+                  return <ScoreLine key={index} score={score}/>
+                })}
+              </Table.Body>
+            </Table.Root>
           )}
         </>
       </Page.Body>

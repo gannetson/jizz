@@ -1,7 +1,8 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Checkbox, Flex, Heading} from "@chakra-ui/react"
+import {Box, Flex, Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
+import {Checkbox} from "./ui/checkbox"
 
 
 export const SelectSpeciesStatus = () => {
@@ -14,15 +15,15 @@ export const SelectSpeciesStatus = () => {
       <Flex direction={'column'} gap={4}>
       <Checkbox
         colorScheme={'orange'}
-        isChecked={includeRare}
-        onChange={(val) => setIncludeRare(Boolean(val.target.checked))}
+        checked={includeRare}
+        onCheckedChange={(val: Boolean) => setIncludeRare(Boolean(val))}
       >
         <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
       </Checkbox>
       <Checkbox
         colorScheme={'orange'}
-        isChecked={includeEscapes}
-        onChange={(val) => setIncludeEscapes(Boolean(val.target.checked))}
+        checked={includeEscapes}
+        onCheckedChange={(val: Boolean) => setIncludeEscapes(Boolean(val))}
       >
         <FormattedMessage defaultMessage={'Include introduced & escaped species '} id={'include escaped species'}/>
       </Checkbox>

@@ -5,7 +5,6 @@ import WebsocketContext from "../../../core/websocket-context"
 import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
 import {useNavigate} from "react-router-dom"
-import {SpeciesName} from "../../../components/species-name"
 import {ViewSpecies} from "../../../components/view-species"
 
 
@@ -21,19 +20,6 @@ export const WaitingComponent = () => {
     navigate('/game/ended')
   }
   const isHost = player?.name === game?.host?.name
-  const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (event.key === ' ') {
-      done ? endGame() : nextQuestion()
-    }
-  }, [game?.level, question?.options])
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress)
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress)
-    }
-  }, [handleKeyPress])
-
 
   return (
     <>
@@ -58,12 +44,7 @@ export const WaitingComponent = () => {
             ) : (
               isHost ? (
                 <Button onClick={nextQuestion} colorScheme={'orange'}>
-                  <Flex gap={8}>
                   <FormattedMessage id={'next question'} defaultMessage={'Next question'} />
-                  <Show above={'md'}>
-                    <Kbd size='lg' backgroundColor={'orange.600'} borderColor={'orange.800'}>Space</Kbd>
-                  </Show>
-                  </Flex>
                 </Button>
               ) : (
                 <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}

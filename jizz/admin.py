@@ -6,7 +6,7 @@ from django.urls import reverse, path, re_path
 from django.utils.html import format_html
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer, Player, QuestionOption, PlayerScore
+    Answer, Player, QuestionOption, PlayerScore, FlagQuestion
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
 
 
@@ -195,6 +195,8 @@ class PlayerInline(admin.TabularInline):
 class PlayerScoreInline(admin.TabularInline):
     model = PlayerScore
     can_delete = False
+    readonly_fields = ['game', 'score', 'playtime']
+    fields = ['game', 'score', 'playtime']
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -236,6 +238,12 @@ class GameAdmin(admin.ModelAdmin):
 class AnswerAdmin(admin.ModelAdmin):
     raw_id_fields = ['answer']
 
+@register(FlagQuestion)
+class FlagQuestionAdmin(admin.ModelAdmin):
+    readonly_fields = ['created', 'question', 'player', 'description']
+    fields = readonly_fields
+    list_display = ['created', 'question', 'player', 'description']
+
 
 class QuestionOptionInline(admin.TabularInline):
     model = QuestionOption
@@ -260,8 +268,16 @@ class PlayerAdmin(admin.ModelAdmin):
 @register(PlayerScore)
 class PlayerScoreAdmin(admin.ModelAdmin):
     raw_id_fields = ['player', 'game']
-    list_display = ['player', 'game', 'score']
+    list_display = ['player', 'game', 'progress', 'length', 'score']
     list_filter = ['game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
+
+    def progress(self, obj):
+        questions = obj.answers.count()
+        correct = obj.answers.filter(correct=True).count()
+        return f"{correct} / {questions}"
+
+    def length(self, obj):
+        return obj.game.length
 
 
 @register(CountrySpecies)

@@ -234,6 +234,15 @@ class PlayerScore(models.Model):
             return timedelta()
         return self.answers.last().created - self.game.created
 
+    @property
+    def playtime(self):
+        seconds = self.play_time.total_seconds()
+        hours = round(seconds // 3600)
+        minutes = round((seconds % 3600) // 60)
+        if hours == 0:
+            return f'{minutes} minutes'
+        return f'{hours} hours and {minutes} minutes'
+
     @classmethod
     def highscore_by_type(cls, level=None, country=None, media=None, length=None):
         return cls.objects.filter(
@@ -365,6 +374,21 @@ class SpeciesVideo(models.Model):
 
     class Meta:
         unique_together = ('species', 'url')
+
+
+class FlagQuestion(models.Model):
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name='flags'
+    )
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name='flags'
+    )
+    description = models.CharField(max_length=200, null=True, blank=True)
+    created = models.DateTimeField(auto_now=True)
 
 
 class CountrySpecies(models.Model):

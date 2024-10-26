@@ -8,9 +8,9 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIV
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
-from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore
+from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore, FlagQuestion
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
-    QuestionSerializer, AnswerSerializer, PlayerSerializer, PlayerScoreSerializer
+    QuestionSerializer, AnswerSerializer, PlayerSerializer, PlayerScoreSerializer, FlagQuestionSerializer
 
 
 class CountryDetailView(DetailView):
@@ -62,6 +62,11 @@ class PlayerView(RetrieveUpdateAPIView):
     serializer_class = PlayerSerializer
     queryset = Player.objects.all()
     lookup_field = 'token'
+
+
+class FlagQuestionView(ListCreateAPIView):
+    serializer_class = FlagQuestionSerializer
+    queryset = FlagQuestion.objects.all()
 
 
 class GameListView(ListCreateAPIView):

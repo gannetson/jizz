@@ -1,9 +1,6 @@
 from rest_framework import serializers
-from setuptools.dist import sequence
-
-from jizz.admin import CountryAdmin
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption, PlayerScore
+    QuestionOption, PlayerScore, FlagQuestion
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -83,6 +80,22 @@ class AnswerSerializer(serializers.ModelSerializer):
         model = Answer
         fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id', 'number', 'score')
         unique_together = ('question', 'player')
+
+
+class FlagQuestionSerializer(serializers.ModelSerializer):
+
+    player_token = serializers.CharField(write_only=True)
+    question_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = FlagQuestion
+        fields = ('player_token', 'description', 'question_id')
+
+    def create(self, validated_data):
+        player = Player.objects.get(token=validated_data.pop('player_token'))
+        question = Question.objects.get(id=validated_data.pop('question_id'))
+        description = validated_data.pop('description')
+        return FlagQuestion.objects.create(description=description, player=player, question=question)
 
 
 class PlayerSerializer(serializers.ModelSerializer):

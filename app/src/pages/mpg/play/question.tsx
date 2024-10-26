@@ -1,17 +1,19 @@
-import {Box, Button, Flex, Image, Kbd, keyframes, Show, SimpleGrid} from "@chakra-ui/react"
+import {Box, Button, Flex, Image, Kbd, keyframes, Link, Show, SimpleGrid, useDisclosure} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
 import {useCallback, useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
+import {FormattedMessage} from "react-intl"
+import {FlagMedia} from "./flag-media"
 
 
 export const QuestionComponent = () => {
   const {species, player} = useContext(AppContext)
   const {question, submitAnswer} = useContext(WebsocketContext)
   const {game} = useContext(AppContext)
-  const shortcuts = ['a', 'j', 's', 'k', 'd', 'l']
+  const {onOpen, onClose, isOpen} = useDisclosure()
 
   const selectAnswer = (species?: Species) => {
     if (player && submitAnswer) {
@@ -26,38 +28,23 @@ export const QuestionComponent = () => {
 
   }
   const rotate = keyframes`
-      from {
-          transform: rotate(360deg)
-      }
-      to {
-          transform: rotate(0deg)
-      }
+    from {
+      transform: rotate(360deg)
+    }
+    to {
+      transform: rotate(0deg)
+    }
   `
-
-  const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (game?.level !== 'expert') {
-      if (event.key === ' ') {
-        selectAnswer(undefined)
-      } else {
-        const index = shortcuts.indexOf(event.key)
-        if (index !== -1 && question?.options) {
-          selectAnswer(question.options[index])
-        }
-      }
-    }
-  }, [game?.level, question?.options, selectAnswer, shortcuts])
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress)
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress)
-    }
-  }, [handleKeyPress])
 
   if (!question || !game) return <></>
 
+  const flagMedia = () => {
+    onOpen()
+  }
+
   return (
     <>
+      <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
       <Box position={'relative'}>
         {game.media === 'video' && (
           <>
@@ -98,6 +85,11 @@ export const QuestionComponent = () => {
           </Box>
 
         )}
+        <Flex justifyContent={'end'}>
+          <Link onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
+            🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
+          </Link>
+        </Flex>
       </Box>
       {question.options && question.options.length ? (
         <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
@@ -105,13 +97,7 @@ export const QuestionComponent = () => {
             question.options.map((option, key) => {
               return (
                 <Button key={key} colorScheme='orange' onClick={() => selectAnswer(option)}>
-                  <Flex justifyContent={'space-between'} width={'100%'}>
-                    <SpeciesName species={option} />
-                    <Show above={'md'}>
-                      <Kbd size='lg' backgroundColor={'orange.600'}
-                           borderColor={'orange.800'}>{shortcuts[key]}</Kbd>
-                    </Show>
-                  </Flex>
+                  <SpeciesName species={option}/>
                 </Button>
               )
             })

@@ -193,6 +193,12 @@ class Game(models.Model):
         return f'{self.country} - {self.level} - {self.created.strftime("%X %x")}'
 
 
+class CountryBadges(models.Model):
+    player = models.ForeignKey('jizz.Player', on_delete=models.CASCADE)
+    country = models.ForeignKey('jizz.Country', on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+
 class Player(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
@@ -205,6 +211,14 @@ class Player(models.Model):
     @property
     def games(self):
         return self.scores.count()
+
+    @property
+    def country_badges(self):
+        return self.scores.filter(
+            game__length=20,
+            score__gte=6000,
+            game__level='advanced'
+        ).order_by('score').distinct('game__country')
 
     @property
     def play_time(self):

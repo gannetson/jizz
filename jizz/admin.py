@@ -1,9 +1,13 @@
+from collections import defaultdict
+
 from django.contrib import admin, messages
 from django.contrib.admin import register
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.http import HttpResponseRedirect
+from django.template.loader import render_to_string
 from django.urls import reverse, path, re_path
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
     Answer, Player, QuestionOption, PlayerScore, FlagQuestion
@@ -270,6 +274,24 @@ class PlayerScoreAdmin(admin.ModelAdmin):
     raw_id_fields = ['player', 'game']
     list_display = ['player', 'game', 'progress', 'length', 'score']
     list_filter = ['game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
+    readonly_fields = ['playtime', 'order_score']
+    fields = ['player', 'game', 'score', 'playtime', 'order_score']
+
+    def order_score(self, obj):
+        results = obj.answers.values('question__species__tax_order', 'correct').annotate(correct_count=Count('correct'))
+        order_counts = defaultdict(lambda: {'True': 0, 'False': 0})
+
+        for entry in results:
+            tax_order = entry['question__species__tax_order']
+            correct = str(entry['correct'])
+            count = entry['correct_count']
+            order_counts[tax_order][correct] = count
+            order_counts[tax_order]['percentage'] = int(order_counts[tax_order]['True'] / (order_counts[tax_order]['True'] + order_counts[tax_order]['False']) * 100)
+
+        order_counts = dict(order_counts)
+        context = {'order_counts': order_counts}
+        html = render_to_string('jizz/order_score.html', context)
+        return mark_safe(html)
 
     def progress(self, obj):
         questions = obj.answers.count()

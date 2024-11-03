@@ -64,6 +64,12 @@ class PlayerView(RetrieveUpdateAPIView):
     lookup_field = 'token'
 
 
+class PlayerStatsView(RetrieveAPIView):
+    serializer_class = PlayerSerializer
+    queryset = Player.objects.all()
+    lookup_field = 'token'
+
+
 class FlagQuestionView(ListCreateAPIView):
     serializer_class = FlagQuestionSerializer
     queryset = FlagQuestion.objects.all()

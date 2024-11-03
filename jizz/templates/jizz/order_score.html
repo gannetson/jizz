@@ -1,0 +1,20 @@
+<table style="border-collapse: collapse; width: 100%;">
+    <thead>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 8px;">Order</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Correct</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Incorrect</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Percentage</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order, counts in order_counts.items %}
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ order }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ counts.True }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ counts.False }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ counts.percentage }}%</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

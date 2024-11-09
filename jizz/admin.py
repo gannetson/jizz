@@ -10,7 +10,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer, Player, QuestionOption, PlayerScore, FlagQuestion
+    Answer, Player, QuestionOption, PlayerScore, FlagQuestion, Feedback
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
 
 
@@ -309,3 +309,11 @@ class CountrySpeciesAdmin(admin.ModelAdmin):
     list_filter = ['status', 'country', ]
     raw_id_fields = ['species', 'country']
     list_editable = ['status']
+
+
+@register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    readonly_fields = ['player', 'comment', 'rating']
+    list_display = ['player', 'comment', 'rating']
+
+

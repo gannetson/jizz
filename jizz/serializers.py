@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption, PlayerScore, FlagQuestion
+    QuestionOption, PlayerScore, FlagQuestion, Feedback
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -150,3 +150,17 @@ class GameSerializer(serializers.ModelSerializer):
             'include_rare',
             'include_escapes'
         )
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    comment = serializers.CharField(allow_blank=True)
+    player_token = serializers.CharField(required=False)
+    rating = serializers.IntegerField()
+
+    def create(self, validated_data):
+        player = Player.objects.filter(token=validated_data.pop('player_token')).first()
+        return Feedback.objects.create(player=player, **validated_data)
+
+    class Meta:
+        model = Feedback
+        fields = ('comment', 'player_token', 'rating', 'created')

@@ -8,9 +8,10 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIV
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
-from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore, FlagQuestion
+from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore, FlagQuestion, Feedback
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
-    QuestionSerializer, AnswerSerializer, PlayerSerializer, PlayerScoreSerializer, FlagQuestionSerializer
+    QuestionSerializer, AnswerSerializer, PlayerSerializer, PlayerScoreSerializer, FlagQuestionSerializer, \
+    FeedbackSerializer
 
 
 class CountryDetailView(DetailView):
@@ -163,3 +164,9 @@ class PlayerScoreListView(ListAPIView):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
     ordering = ['-score']
+
+
+class FeedbackListView(ListCreateAPIView):
+    serializer_class = FeedbackSerializer
+    queryset = Feedback.objects.all()
+

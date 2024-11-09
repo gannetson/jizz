@@ -79,8 +79,13 @@ class Game(models.Model):
     include_rare = models.BooleanField(default=True)
     include_escapes = models.BooleanField(default=False)
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
-    tax_order = models.CharField('Taxonomic order', help_text='Only show birds from this order', max_length=100,
-                                 null=True, blank=True)
+    tax_order = models.CharField(
+        'Taxonomic order',
+        help_text='Only show birds from this order',
+        max_length=100,
+        null=True,
+        blank=True
+    )
 
     @property
     def current_highscore(self):
@@ -438,3 +443,138 @@ class CountrySpecies(models.Model):
 
     class Meta:
         unique_together = ('country', 'species')
+
+
+class Feedback(models.Model):
+    player = models.ForeignKey(
+        Player,
+        related_name='feedback',
+        on_delete=models.CASCADE
+    )
+    comment = models.TextField(default='', null=True, blank=True)
+    rating = models.IntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True)
+
+
+
+LEVELS = [
+    {
+        'level': 'beginner',
+        'length': 10,
+        'media': 'images',
+        'jokers': 2,
+        'include_rare': False,
+        'include_escapes': False,
+    },
+    {
+        'level': 'beginner',
+        'length': 20,
+        'media': 'video',
+        'jokers': 2,
+        'include_rare': False,
+        'include_escapes': False,
+    },
+    {
+        'level': 'advanced',
+        'length': 20,
+        'media': 'images',
+        'jokers': 2,
+        'include_rare': False,
+        'include_escapes': False,
+    },
+    {
+        'level': 'advanced',
+        'length': 50,
+        'media': 'images',
+        'jokers': 5,
+        'include_rare': True,
+        'include_escapes': False,
+    },
+    {
+        'level': 'advanced',
+        'length': 10,
+        'media': 'videos',
+        'jokers': 0,
+        'include_rare': True,
+        'include_escapes': False,
+    },
+    {
+        'level': 'expert',
+        'length': 20,
+        'media': 'images',
+        'jokers': 2,
+        'include_rare': True,
+        'include_escapes': False,
+    },
+    {
+        'level': 'advanced',
+        'length': 20,
+        'media': 'sounds',
+        'jokers': 5,
+        'include_rare': True,
+        'include_escapes': False,
+    },
+    {
+        'level': 'expert',
+        'length': 20,
+        'media': 'videos',
+        'jokers': 1,
+        'include_rare': True,
+        'include_escapes': False,
+    },
+]
+
+
+class ChallengeLevel(models.Model):
+    game = models.ForeignKey(
+        Game,
+        related_name='challenges',
+        on_delete=models.CASCADE
+    )
+    challenge = models.ForeignKey(
+        'jizz.CountryChallenge',
+        related_name='levels',
+        on_delete=models.CASCADE
+    )
+    level = models.IntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True)
+    jokers = models.IntegerField(default=0)
+    passed = models.BooleanField(default=True)
+
+
+class CountryChallenge(models.Model):
+    country = models.ForeignKey(
+        Country,
+        related_name='challenges',
+        on_delete=models.CASCADE
+    )
+    player = models.ForeignKey(
+        Player,
+        related_name='challenges',
+        on_delete=models.CASCADE
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    level = models.IntegerField(default=0)
+
+    def new_level(self):
+        specs = LEVELS[self.level]
+        game = Game.objects.create(
+            host=self.player,
+            country=self.country,
+            **specs
+        )
+
+        level = ChallengeLevel.objects.create(
+            level=self.level,
+            game=game,
+            **specs
+        )
+        return level
+
+    @property
+    def last_level(self):
+        if self.levels.exists():
+            return self.levels.last()
+        else:
+            return self.new_level()

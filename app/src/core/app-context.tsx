@@ -32,14 +32,20 @@ export type Game = {
 
 export type SpeciesImage = {
   url: string;
+  link?: string
+  contributor?: string
 }
 
 export type SpeciesVideo = {
   url: string;
+  link?: string
+  contributor?: string
 }
 
 export type SpeciesSound = {
   url: string;
+  link?: string
+  contributor?: string
 }
 
 export type Species = {

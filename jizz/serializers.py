@@ -16,19 +16,19 @@ class CountrySerializer(serializers.ModelSerializer):
 class ImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpeciesImage
-        fields = ('url',)
+        fields = ('url', 'link', 'contributor')
 
 
 class VideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpeciesVideo
-        fields = ('url',)
+        fields = ('url', 'link', 'contributor')
 
 
 class SoundSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpeciesSound
-        fields = ('url',)
+        fields = ('url', 'link', 'contributor')
 
 
 class SpeciesListSerializer(serializers.ModelSerializer):

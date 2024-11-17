@@ -11,7 +11,8 @@ from django.utils.safestring import mark_safe
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
     Answer, Player, QuestionOption, PlayerScore, FlagQuestion, Feedback
-from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds
+from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds, \
+    get_media_citation
 
 
 class CountrySpeciesInline(admin.TabularInline):
@@ -103,8 +104,8 @@ class SpeciesSoundInline(admin.TabularInline):
 class SpeciesImageInline(admin.TabularInline):
     model = SpeciesImage
 
-    readonly_fields = ['img']
-    fields = ['img']
+    readonly_fields = ['img', 'link', 'contributor']
+    fields = readonly_fields
 
     def img(self, obj):
         return format_html("<img src='{url}' width='400px' />", url=obj.url)
@@ -116,8 +117,8 @@ class SpeciesImageInline(admin.TabularInline):
 class SpeciesVideoInline(admin.TabularInline):
     model = SpeciesVideo
 
-    readonly_fields = ['vid']
-    fields = ['vid']
+    readonly_fields = ['vid', 'url', 'contributor']
+    fields = readonly_fields
 
     def vid(self, obj):
         return format_html('<video controls> <source src="{url}" type="video/mp4" /></video>', url=obj.url)
@@ -157,9 +158,12 @@ class SpeciesAdmin(admin.ModelAdmin):
 
     def get_media(self, request, pk=None):
         species = Species.objects.get(pk=pk)
-        get_images(species.id)
-        get_sounds(species.id)
-        get_videos(species.id)
+        # get_images(species.id)
+        # get_sounds(species.id)
+        # get_videos(species.id)
+        for image in species.images.all():
+            if not image.contributor:
+                get_media_citation(image)
         messages.add_message(request, messages.INFO, f'Found {species.images.count()} images.')
         species_url = reverse('admin:jizz_species_change', args=(species.pk,))
         response = HttpResponseRedirect(species_url)

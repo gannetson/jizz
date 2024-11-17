@@ -329,3 +329,38 @@ def get_all_country_status():
     countries = Country.objects.all()
     for country in countries:
         get_country_status(country.code)
+
+
+def get_media_citation(model):
+    if isinstance(model, SpeciesVideo):
+        asset_id = model.url.split('/')[-3]
+    else:
+        asset_id = model.url.split('/')[-2]
+    url = f'https://macaulaylibrary.org/asset/{asset_id}'
+    data = requests.get(url)
+    if data.status_code != 200:
+        print(f'Error: {data.status_code}')
+        return
+    pattern = r'<span\s+class="main"[^>]*>(.*?)</span>'
+    match = re.search(pattern, data.text)
+
+    if match:
+        name = match.group(1)
+        model.contributor = name
+        print(name)
+    model.link = url
+    model.save()
+
+
+def get_all_citations():
+    for species in Species.objects.all():
+        print(species.name)
+        print('> Images')
+        for image in species.images.filter(contributor__isnull=True).all():
+            get_media_citation(image)
+        print('> Sounds')
+        for sound in species.sounds.filter(contributor__isnull=True).all():
+            get_media_citation(sound)
+        print('> Videos')
+        for video in species.videos.filter(contributor__isnull=True).all():
+            get_media_citation(video)

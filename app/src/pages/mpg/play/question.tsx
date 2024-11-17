@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Image, Kbd, keyframes, Link, Show, SimpleGrid, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, Flex, Image, Kbd, keyframes, Link, Show, SimpleGrid, Text, useDisclosure} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
 import {useCallback, useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
@@ -28,12 +28,12 @@ export const QuestionComponent = () => {
 
   }
   const rotate = keyframes`
-    from {
-      transform: rotate(360deg)
-    }
-    to {
-      transform: rotate(0deg)
-    }
+      from {
+          transform: rotate(360deg)
+      }
+      to {
+          transform: rotate(0deg)
+      }
   `
 
   if (!question || !game) return <></>
@@ -41,6 +41,7 @@ export const QuestionComponent = () => {
   const flagMedia = () => {
     onOpen()
   }
+
 
   return (
     <>
@@ -55,33 +56,55 @@ export const QuestionComponent = () => {
               controls={true}
               playing={true}
             />
+            <Text fontSize={'xs'}>
+              {question.videos[question.number].contributor}
+              <Link href={question.videos[question.number].link} isExternal>
+                Macaulay Library at the Cornell Lab
+              </Link>
+            </Text>
           </>
         )}
         {game.media === 'images' && (
-          <Image
-            src={question.images[question.number].url.replace('/1800', '/900')}
-            fallback={
-              <Image
-                src='/images/jizz-logo.png'
-                animation={`${rotate} infinite 2s linear`}
-                width={'200px'}
-                maxHeight={'600px'}
-                marginX={'auto'}
-                marginY={['20px', '150px']}
-              />
-            }
-          />
+          <>
+            <Image
+              src={question.images[question.number].url.replace('/1800', '/900')}
+              fallback={
+                <Image
+                  src='/images/jizz-logo.png'
+                  animation={`${rotate} infinite 2s linear`}
+                  width={'200px'}
+                  maxHeight={'600px'}
+                  marginX={'auto'}
+                  marginY={['20px', '150px']}
+                />
+              }
+            />
+            <Text fontSize={'xs'}>
+              {question.images[question.number].contributor}
+              <Link href={question.images[question.number].link} isExternal>
+                Macaulay Library at the Cornell Lab
+              </Link>
+            </Text>
+          </>
 
         )}
         {game.media === 'audio' && (
           <Box py={8}>
-            <ReactPlayer
-              width={'100%'}
-              height={'50px'}
-              url={question.sounds[question.number].url}
-              controls={true}
-              playing={true}
-            />
+            <>
+              <ReactPlayer
+                width={'100%'}
+                height={'50px'}
+                url={question.sounds[question.number].url}
+                controls={true}
+                playing={true}
+              />
+              <Text fontSize={'xs'}>
+                {question.images[question.number].contributor}
+                <Link href={question.images[question.number].link} isExternal>
+                  Macaulay Library at the Cornell Lab
+                </Link>
+              </Text>
+            </>
           </Box>
 
         )}

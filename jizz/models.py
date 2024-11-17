@@ -361,6 +361,8 @@ class Species(models.Model):
 
 class SpeciesImage(models.Model):
     url = models.URLField()
+    link = models.URLField(null=True, blank=True)
+    contributor= models.CharField(max_length=200, null=True, blank=True)
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
@@ -373,6 +375,8 @@ class SpeciesImage(models.Model):
 
 class SpeciesSound(models.Model):
     url = models.URLField()
+    link = models.URLField(null=True, blank=True)
+    contributor= models.CharField(max_length=200, null=True, blank=True)
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
@@ -385,6 +389,8 @@ class SpeciesSound(models.Model):
 
 class SpeciesVideo(models.Model):
     url = models.URLField()
+    link = models.URLField(null=True, blank=True)
+    contributor= models.CharField(max_length=200, null=True, blank=True)
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,

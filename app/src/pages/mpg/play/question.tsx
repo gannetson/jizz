@@ -42,6 +42,15 @@ export const QuestionComponent = () => {
     onOpen()
   }
 
+  const skipQuestion = () => {
+    selectAnswer(undefined)
+  }
+
+  const flag = (
+    <Link float={'right'} onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
+      🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
+    </Link>
+  )
 
   return (
     <>
@@ -56,8 +65,9 @@ export const QuestionComponent = () => {
               controls={true}
               playing={true}
             />
-            <Text fontSize={'xs'}>
-              {question.videos[question.number].contributor}
+            {flag}
+            <Text fontSize={'sm'}>
+              {question.videos[question.number].contributor} {' / '}
               <Link href={question.videos[question.number].link} isExternal>
                 Macaulay Library at the Cornell Lab
               </Link>
@@ -79,9 +89,10 @@ export const QuestionComponent = () => {
                 />
               }
             />
-            <Text fontSize={'xs'}>
-              {question.images[question.number].contributor}
-              <Link href={question.images[question.number].link} isExternal>
+            {flag}
+            <Text fontSize={'sm'}>
+              {question.images[question.number].contributor} {' / '}
+              <Link onClick={skipQuestion} href={question.images[question.number].link} isExternal>
                 Macaulay Library at the Cornell Lab
               </Link>
             </Text>
@@ -98,8 +109,9 @@ export const QuestionComponent = () => {
                 controls={true}
                 playing={true}
               />
-              <Text fontSize={'xs'}>
-                {question.images[question.number].contributor}
+              {flag}
+              <Text fontSize={'sm'}>
+                {question.images[question.number].contributor} {' / '}
                 <Link href={question.images[question.number].link} isExternal>
                   Macaulay Library at the Cornell Lab
                 </Link>
@@ -108,11 +120,7 @@ export const QuestionComponent = () => {
           </Box>
 
         )}
-        <Flex justifyContent={'end'}>
-          <Link onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
-            🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
-          </Link>
-        </Flex>
+
       </Box>
       {question.options && question.options.length ? (
         <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>

@@ -204,7 +204,7 @@ class PlayerScoreInline(admin.TabularInline):
     model = PlayerScore
     can_delete = False
     readonly_fields = ['game', 'score', 'playtime']
-    fields = ['game', 'score', 'playtime']
+    fields = ['game', 'score', 'playtime', 'player']
 
     def has_change_permission(self, request, obj=None):
         return False

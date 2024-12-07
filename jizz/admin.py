@@ -10,7 +10,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer, Player, QuestionOption, PlayerScore, FlagQuestion, Feedback
+    Answer, Player, QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction
 from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds, \
     get_media_citation
 
@@ -321,3 +321,14 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_display = ['player', 'comment', 'rating']
 
 
+class ReactionAdminInline(admin.StackedInline):
+    readonly_fields = ['created']
+    model = Reaction
+    extra = 0
+
+
+@register(Update)
+class UpdateAdmin(admin.ModelAdmin):
+    readonly_fields = ['created']
+    list_display = ['created', 'user', 'message']
+    inlines = [ReactionAdminInline]

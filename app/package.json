@@ -10,7 +10,7 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.4.3",
     "@types/country-flag-icons": "^1.2.2",
-    "@types/date-fns": "^2.6.0",
+    "@types/date-fns": "^2.6.3",
     "@types/jest": "^28.1.8",
     "@types/node": "^12.20.55",
     "@types/react": "^18.2.15",

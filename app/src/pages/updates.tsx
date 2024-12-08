@@ -5,33 +5,18 @@ import {useContext, useEffect, useState} from "react"
 import AppContext, {Update} from "../core/app-context"
 import {Loading} from "../components/loading"
 import {UpdateLine} from "../components/updates/update-line"
+import {loadUpdates} from "../core/updates"
 
 const UpdatesPage = () => {
   const {loading, setLoading} = useContext(AppContext)
   const [updates, setUpdates] = useState<Update[]>([])
 
-  const loadUpdates = async () => {
-    setLoading(true)
-    const url = `/api/updates/`
-    const response = await fetch(url, {
-      cache: 'no-cache',
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    })
-    if (response.status === 200) {
-      const data = await response.json()
-      setUpdates(data.results)
-    } else {
-      console.log('Could not load updates.')
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    loadUpdates()
+    setLoading(true)
+    loadUpdates().then(updates => {
+      setUpdates(updates)
+      setLoading(false)
+    })
   }, []);
 
   return (

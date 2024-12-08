@@ -196,7 +196,6 @@ const AppContext = createContext<SharedState>({
   setCountry: () => {},
   mediaType: 'images',
   setMediaType: () => {},
-
 });
 
 export default AppContext;

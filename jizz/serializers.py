@@ -129,7 +129,7 @@ class UpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Update
-        fields = ('created', 'user', 'title', 'message', 'reactions', 'user')
+        fields = ('id', 'created', 'user', 'title', 'message', 'reactions', 'user')
 
 
 class PlayerSerializer(serializers.ModelSerializer):

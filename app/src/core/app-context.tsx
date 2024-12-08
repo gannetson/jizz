@@ -119,10 +119,10 @@ export type Score = {
 
 
 export type Reaction = {
-  created: Date
+  created?: Date
   message: string
-  name: string
-  update_id: number
+  name?: string
+  update_id: string
   player_token: string
 }
 
@@ -134,6 +134,7 @@ export type User = {
 
 
 export type Update = {
+  id: string
   created: Date
   message: string
   title: string

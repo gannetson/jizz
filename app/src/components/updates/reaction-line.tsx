@@ -10,7 +10,7 @@ export const ReactionLine = ({reaction}: { reaction: Reaction }) => {
         <Box py={2}>{reaction.message}</Box>
         <Flex py={2} textColor={'orange.600'} justifyContent={'space-between'}>
           <Box>{reaction.name} </Box>
-          <Box fontStyle={'italic'}>{format(reaction.created, 'PP')}</Box>
+          <Box fontStyle={'italic'}>{format(reaction?.created || new Date(), 'PP')}</Box>
         </Flex>
       </Box>
     </>

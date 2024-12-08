@@ -5,7 +5,7 @@ from rest_framework_simplejwt import views as jwt_views
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
     GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView, AnswerDetail, PlayerScoreListView, \
-    FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView
+    FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, ReactionView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -41,5 +41,6 @@ urlpatterns = [
 
     re_path(r"^api/feedback/$", FeedbackListView.as_view(), name="feedback"),
     re_path(r"^api/updates/$", UpdateView.as_view(), name="updates"),
+    re_path(r"^api/updates/reactions/$", ReactionView.as_view(), name="reactions"),
 
 ]

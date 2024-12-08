@@ -29,7 +29,7 @@ export const UpdateLine = ({update}: { update: Update }) => {
         {update.reactions && update.reactions.map(
           (reaction, index) => <ReactionLine key={index} reaction={reaction}/>
         )}
-        {player && <ReactionForm />}
+        {player && <ReactionForm update={update} />}
       </Flex>
     </>
   )

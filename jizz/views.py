@@ -8,10 +8,11 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIV
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
-from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore, FlagQuestion, Feedback, Update
+from jizz.models import Country, Species, Game, Question, Answer, Player, PlayerScore, FlagQuestion, Feedback, Update, \
+    Reaction
 from jizz.serializers import CountrySerializer, SpeciesListSerializer, SpeciesDetailSerializer, GameSerializer, \
     QuestionSerializer, AnswerSerializer, PlayerSerializer, PlayerScoreSerializer, FlagQuestionSerializer, \
-    FeedbackSerializer, UpdateSerializer
+    FeedbackSerializer, UpdateSerializer, ReactionSerializer
 
 
 class CountryDetailView(DetailView):
@@ -174,8 +175,14 @@ class FeedbackListView(ListCreateAPIView):
 class UpdatePagination(PageNumberPagination):
     page_size = 10
 
+
 class UpdateView(ListAPIView):
     pagination_class = UpdatePagination
     serializer_class = UpdateSerializer
     queryset = Update.objects.all()
     ordering = ['-created']
+
+
+class ReactionView(CreateAPIView):
+    serializer_class = ReactionSerializer
+    queryset = Reaction.objects.all()

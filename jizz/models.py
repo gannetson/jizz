@@ -462,6 +462,36 @@ class Feedback(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
 
+class Update(models.Model):
+    title = models.CharField(max_length=200)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    message = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created']
+
+
+class Reaction(models.Model):
+    player = models.ForeignKey(
+        Player,
+        related_name='reactions',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE
+    )
+    update = models.ForeignKey(
+        Update,
+        related_name='reactions',
+        on_delete=models.CASCADE
+    )
+    message = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def name(self):
+        return self.player.name
+
 
 LEVELS = [
     {

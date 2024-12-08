@@ -1,6 +1,7 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption, PlayerScore, FlagQuestion, Feedback
+    QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -96,6 +97,39 @@ class FlagQuestionSerializer(serializers.ModelSerializer):
         question = Question.objects.get(id=validated_data.pop('question_id'))
         description = validated_data.pop('description')
         return FlagQuestion.objects.create(description=description, player=player, question=question)
+
+
+class ReactionSerializer(serializers.ModelSerializer):
+
+    player_token = serializers.CharField(write_only=True)
+    update_id = serializers.IntegerField(write_only=True)
+    name = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Reaction
+        fields = ('player_token', 'message', 'update_id', 'created', 'name')
+
+    def create(self, validated_data):
+        player = Player.objects.get(token=validated_data.pop('player_token'))
+        update = Update.objects.get(id=validated_data.pop('update_id'))
+        message = validated_data.pop('message')
+        return Reaction.objects.create(message=message, player=player, update=update)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'last_name')
+
+
+class UpdateSerializer(serializers.ModelSerializer):
+
+    reactions = ReactionSerializer(many=True, read_only=True)
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Update
+        fields = ('id', 'created', 'user', 'title', 'message', 'reactions', 'user')
 
 
 class PlayerSerializer(serializers.ModelSerializer):

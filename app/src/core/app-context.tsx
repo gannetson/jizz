@@ -118,6 +118,30 @@ export type Score = {
 }
 
 
+export type Reaction = {
+  created?: Date
+  message: string
+  name?: string
+  update_id: string
+  player_token: string
+}
+
+export type User = {
+  username: string
+  first_name: string
+  last_name: string
+}
+
+
+export type Update = {
+  id: string
+  created: Date
+  message: string
+  title: string
+  user: User
+  reactions: Reaction[]
+}
+
 
 type SharedState = {
   playerName?: string

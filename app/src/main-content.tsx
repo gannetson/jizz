@@ -18,6 +18,7 @@ import JoinPage from "./pages/join"
 import GameEnded from "./pages/mpg/results"
 import Hiscores from "./pages/hiscores"
 import {ChallengePage} from "./pages/challenge"
+import Updates from "./pages/updates"
 
 
 export const MainContent = () => {
@@ -52,6 +53,7 @@ export const MainContent = () => {
               <Route path="/game/ended" element={<GameEnded/>}/>
 
               <Route path='/scores/' element={<Hiscores />}/>
+              <Route path='/updates/' element={<Updates />}/>
 
             </Route>
           </Routes>

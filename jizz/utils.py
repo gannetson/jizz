@@ -62,12 +62,24 @@ def sync_regions(country, code):
 
 
 def sync_country(code='ZNZ'):
+    if code == 'world':
+        sync_world()
+        return
     country = Country.objects.get(code=code)
     if country.codes:
         for code in country.codes.split(','):
             sync_regions(country, code)
     else:
         sync_regions(country, country.code)
+
+
+def sync_world():
+    country = Country.objects.get(code='world')
+    for spec in Species.objects.all():
+        CountrySpecies.objects.get_or_create(
+            country=country,
+            species=spec
+        )
 
 
 def get_media(id=1, media='photo'):

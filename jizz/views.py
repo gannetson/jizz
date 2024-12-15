@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Case, When, Value
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
@@ -29,6 +30,13 @@ class CountryDetailView(DetailView):
 class CountryViewSet(viewsets.ModelViewSet):
     serializer_class = CountrySerializer
     queryset = Country.objects.exclude(countryspecies__isnull=True).all()
+
+    queryset = Country.objects.annotate(
+        custom_order=Case(
+            When(code="world", then=Value(0)),
+            default=Value(1),
+        )
+    ).exclude(countryspecies__isnull=True).order_by("custom_order", "name")
 
 
 class SpeciesListView(ListAPIView):

@@ -3,7 +3,6 @@ import {UseCountries} from "../user/use-countries";
 import {Select} from "chakra-react-select";
 import {useContext, useEffect} from "react";
 import AppContext from "../core/app-context";
-import WebsocketContext from "../core/websocket-context"
 import {FormattedMessage} from "react-intl"
 
 

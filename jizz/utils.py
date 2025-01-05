@@ -76,9 +76,10 @@ def sync_country(code='ZNZ'):
 def sync_world():
     country = Country.objects.get(code='world')
     for spec in Species.objects.all():
-        CountrySpecies.objects.get_or_create(
+        CountrySpecies.objects.update_or_create(
             country=country,
-            species=spec
+            species=spec,
+            defaults={'status': 'native'}
         )
 
 

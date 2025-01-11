@@ -13,6 +13,7 @@ import {useNavigate} from "react-router-dom"
 import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
+import {requestNotificationPermission, sendNotification} from "../core/notifications"
 
 
 export const CreateCountryChallenge = () => {
@@ -58,6 +59,8 @@ export const CreateCountryChallenge = () => {
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
+        <Button onClick={()=> requestNotificationPermission()}>Request</Button>
+        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!ss'})}>Test</Button>
         <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>

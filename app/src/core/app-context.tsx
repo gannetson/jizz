@@ -50,6 +50,7 @@ export type SpeciesSound = {
 
 export type Species = {
   id: number
+  code: string
   name: string
   name_nl: string
   name_latin: string

@@ -1,6 +1,7 @@
 import {
-  Button,
-  Image,
+  Box,
+  Button, Flex,
+  Image, Link,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -11,35 +12,42 @@ import {
   SimpleGrid,
   useDisclosure
 } from "@chakra-ui/react";
-import {BsImages} from "react-icons/all";
+import {BsImages, BsBoxArrowRight} from "react-icons/all";
 import AppContext, {Species} from "../core/app-context";
 import {useContext} from "react"
+import {FormattedMessage} from "react-intl"
 
 
-export function ViewSpecies({species}: {species?:Species}) {
+export function ViewSpecies({species}: { species?: Species }) {
 
   const {language} = useContext(AppContext)
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const {isOpen, onOpen, onClose} = useDisclosure()
 
   if (!species) return <></>
 
   return (
     <>
-      <Button variant={"link"} colorScheme={'orange'} onClick={onOpen} rightIcon={<BsImages />}>
+      <Button variant={"link"} colorScheme={'orange'} onClick={onOpen} rightIcon={<BsImages/>}>
         {language === 'nl' ? species.name_nl : species.name}
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size={"3xl"}>
-        <ModalOverlay />
+        <ModalOverlay/>
         <ModalContent>
           <ModalHeader>{language === 'nl' ? species.name_nl : language === 'la' ? species.name_latin : species.name}</ModalHeader>
-          <ModalCloseButton />
+          <ModalCloseButton/>
           <ModalBody>
-          <SimpleGrid columns={{base: 1, md: 2, xl : 3}} spacing={4}>
-            {species.images.map((img, key) => (
-              <Image width={'300px'} key={key} src={img.url} alt={species.name}/>
-            ))}
-          </SimpleGrid>
+            <Link href={'https://ebird.org/species/' + species.code} isExternal={true}>
+              <Flex gap={2} mb={4} alignItems={'center'}>
+                <FormattedMessage defaultMessage={'View on eBird'} id={'view on eBird'}/>
+                <BsBoxArrowRight/>
+              </Flex>
+            </Link>
+            <SimpleGrid columns={{base: 1, md: 2, xl: 3}} spacing={4}>
+              {species.images.map((img, key) => (
+                <Image width={'300px'} key={key} src={img.url} alt={species.name}/>
+              ))}
+            </SimpleGrid>
           </ModalBody>
 
           <ModalFooter>

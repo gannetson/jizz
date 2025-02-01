@@ -12,13 +12,20 @@
     }
   };
 
-  export const sendNotification = ({title, body}: {title:string, body:string}) => {
-    if (Notification.permission === "granted") {
-      new Notification(title, {
-        body: body,
-        icon: "https://jizz.be/images/logo.svg",
-      });
-    } else {
-      alert("Please allow notifications first.");
-    }
-  };
+export const sendNotification = async ({title, body}: {title: string, body: string}): Promise<void> => {
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.ready;
+    registration.showNotification('Jizz - Bird quiz', {
+      body: 'Ready to identify some birds?',
+      icon: '/images/logo.png',
+      badge: '/images/badge.png',
+      data: { url: 'https://jizz.be/challenge' },
+      actions: [
+        { action: 'open', title: 'Open App' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
+    });
+  } else {
+    console.error('Service Worker is not supported in this browser.');
+  }
+};

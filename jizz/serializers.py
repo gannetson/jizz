@@ -43,7 +43,7 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Species
-        fields = ('name', 'name_latin', 'name_nl', 'id', 'images')
+        fields = ('name', 'code', 'name_latin', 'name_nl', 'id', 'images')
 
 
 class QuestionSerializer(serializers.ModelSerializer):

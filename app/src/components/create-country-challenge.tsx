@@ -53,14 +53,14 @@ export const CreateCountryChallenge = () => {
         <Text>
           <FormattedMessage
             id={'country challenge description'}
-            defaultMessage={'You will run through different levels. It will start easy, but it will get harder. The final level will be a thorough. Let\'s see how far you get.'}
+            defaultMessage={'You will run through different levels. Some easy and some quite difficult.'}
           />
         </Text>
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
         <Button onClick={()=> requestNotificationPermission()}>Request</Button>
-        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!ss'})}>Test</Button>
+        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})}>Test</Button>
         <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>

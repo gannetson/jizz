@@ -28,7 +28,6 @@ const SelectLevel = () => {
               <FormattedMessage id={'advanced'} defaultMessage={'Advanced'} />
             </Text>
             <Text fontSize={'xs'}>
-              Hard multiple choice
               <FormattedMessage id={'hard multiple choice'} defaultMessage={'Multiple choice with similar species'} />
             </Text>
           </Radio>

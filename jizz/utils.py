@@ -13,37 +13,37 @@ API_VERSION = 'v2'
 def sync_species():
 
     data = requests.get(
-        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale=en_UK',
+        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale=en_UK&fmt=json',
         headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
     )
-
-    for row in data.content.splitlines():
-        parts = row.decode().split(',')
-        if parts[3] == 'species':
+    results = data.json()
+    for row in results:
+        if row['category'] == 'species':
             Species.objects.update_or_create(
-                code= parts[2],
+                code= row['speciesCode'],
                 defaults={
-                    'name': parts[1],
-                    'name_latin': parts[0],
-                    'tax_order': parts[8],
-                    'tax_family': parts[10]
+                    'name': row['comName'],
+                    'name_latin': row['sciName'],
+                    'tax_order': row['order'],
+                    'tax_family_en': row['familyComName'],
+                    'tax_family': row['familySciName']
                 }
             )
 
     data = requests.get(
-        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale=nl',
+        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale=nl&fmt=json',
         headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
     )
-
-    for row in data.content.splitlines():
-        parts = row.decode().split(',')
-        if parts[3] == 'species':
+    results = data.json()
+    for row in results:
+        if row['category'] == 'species':
             Species.objects.update_or_create(
-                code= parts[2],
+                code= row['speciesCode'],
                 defaults={
-                    'name_nl': parts[1],
+                    'name_nl': row['comName'],
                 }
             )
+    print("Done syncing species")
 
 
 def sync_regions(country, code):

@@ -346,6 +346,7 @@ class Species(models.Model):
     name = models.CharField(max_length=200)
     name_latin = models.CharField(max_length=200)
     name_nl = models.CharField(max_length=200, null=True, blank=True)
+    tax_family_en = models.CharField('Family english', max_length=200, null=True, blank=True)
     tax_family = models.CharField('Family', max_length=200, null=True, blank=True)
     tax_order = models.CharField('Order', max_length=200, null=True, blank=True)
     code = models.CharField(max_length=10)

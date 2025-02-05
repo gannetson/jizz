@@ -54,6 +54,9 @@ export type Species = {
   name: string
   name_nl: string
   name_latin: string
+  tax_order: string
+  tax_family: string
+  tax_family_en: string
   images: SpeciesImage[]
   sounds: SpeciesSound[]
   videos: SpeciesVideo[]

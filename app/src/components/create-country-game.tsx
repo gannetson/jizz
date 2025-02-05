@@ -14,10 +14,9 @@ import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
 import {requestNotificationPermission, sendNotification} from "../core/notifications"
-import CountrySummary from "./country-summary"
 
 
-export const CreateCountryChallenge = () => {
+export const CreateCountryGame = () => {
 
   const {
     player,
@@ -50,17 +49,16 @@ export const CreateCountryChallenge = () => {
       <Loading/>
     ) : (
       <Flex direction={'column'} gap={10}>
-        <Heading size={'lg'}><FormattedMessage id='country challenge' defaultMessage={'Country challenge'}/></Heading>
+        <Heading size={'lg'}><FormattedMessage id='country challenge' defaultMessage={'Country species'}/></Heading>
         <Text>
           <FormattedMessage
             id={'country challenge description'}
-            defaultMessage={'You will run through different levels. Some easy and some quite difficult.'}
+            defaultMessage={'You have to recognise all species.'}
           />
         </Text>
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
-        <CountrySummary />
         <Button onClick={()=> requestNotificationPermission()}>Request</Button>
         <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})}>Test</Button>
         <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>

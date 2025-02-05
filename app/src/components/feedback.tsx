@@ -41,12 +41,12 @@ export const Feedback = () => {
             <Heading size={'md'}>
               <FormattedMessage id={'feedback'} defaultMessage={'Feedback'}/>
             </Heading>
-            <FormattedMessage id={'feedback message'} defaultMessage={'Do you like this app?'}/>
+            <FormattedMessage id={'do you like this'} defaultMessage={'Do you like this app?'}/>
             <StarRating rating={rating} setRating={setRating} count={5} size={20}/>
             <Flex gap={2}>
-              <FormattedMessage id={'feedback message'} defaultMessage={'Comments / suggestions'}/>
+              <FormattedMessage id={'comments'} defaultMessage={'Comments / suggestions'}/>
               <Text as={'span'} fontStyle={'italic'} textColor={'gray.400'}>
-                <FormattedMessage id={'feedback message'} defaultMessage={'optional'}/>
+                <FormattedMessage id={'optional'} defaultMessage={'optional'}/>
               </Text>
             </Flex>
 

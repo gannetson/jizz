@@ -35,7 +35,7 @@ class SoundSerializer(serializers.ModelSerializer):
 class SpeciesListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Species
-        fields = ('name', 'name_latin', 'name_nl', 'id')
+        fields = ('name', 'name_latin', 'name_nl', 'id', 'tax_family', 'tax_family_en', 'tax_order')
 
 
 class SpeciesDetailSerializer(serializers.ModelSerializer):

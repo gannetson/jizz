@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+    'oauth2_provider',
+    'social_django',
+    'rest_framework_social_oauth2',
     'jizz'
 ]
 
@@ -54,7 +57,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'jizz.urls'
@@ -127,15 +130,35 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = 'django/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.apple.AppleIdAuth',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+# Social OAuth2 settings
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<YOUR_GOOGLE_CLIENT_ID>'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<YOUR_GOOGLE_CLIENT_SECRET>'
+
+SOCIAL_AUTH_APPLE_ID_CLIENT = '<YOUR_APPLE_CLIENT_ID>'
+SOCIAL_AUTH_APPLE_ID_SECRET = '<YOUR_APPLE_SECRET>'
+
+SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = '<YOUR_MICROSOFT_CLIENT_ID>'
+SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = '<YOUR_MICROSOFT_SECRET>'
+SOCIAL_AUTH_AZUREAD_TENANT_ID = '<YOUR_MICROSOFT_TENANT_ID>'
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'rest_framework_social_oauth2.authentication.SocialAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
    'DEFAULT_FILTER_BACKENDS': [
@@ -149,3 +172,29 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True
 }
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<YOUR_GOOGLE_CLIENT_ID>'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<YOUR_GOOGLE_CLIENT_SECRET>'
+SOCIAL_AUTH_APPLE_ID_CLIENT = '<YOUR_APPLE_CLIENT_ID>'
+SOCIAL_AUTH_APPLE_ID_SECRET = '<YOUR_APPLE_CLIENT_SECRET>'
+SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = '<YOUR_MICROSOFT_CLIENT_ID>'
+SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = '<YOUR_MICROSOFT_CLIENT_SECRET>'
+SOCIAL_AUTH_AZUREAD_TENANT_ID = '<YOUR_TENANT_ID>'
+
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = 'http://localhost:3000/login/google'
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://jizz.be",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
+CORS_ALLOW_HEADERS = ["*"]
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
+# SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"

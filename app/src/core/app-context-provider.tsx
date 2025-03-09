@@ -1,5 +1,6 @@
 import React, {FC, ReactNode, useEffect, useState} from 'react';
-import AppContext, {Country, Game, Player, Score, Species} from "./app-context";
+import AppContext, {Answer, Country, CountryChallenge, Game, Player, Question, Score, Species} from "./app-context";
+import { useToast } from '@chakra-ui/react';
 
 type Props = {
   children: ReactNode;
@@ -20,10 +21,14 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [game, setGame] = useState<Game | undefined>(undefined)
   const [includeRare, setIncludeRare] = useState<boolean>(true)
   const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
+  const [countryChallenge, setCountryChallenge] = useState<CountryChallenge | undefined>(undefined)
+  const [challengeQuestion, setChallengeQuestion] = useState<Question | undefined>(undefined)
 
   const playerToken = localStorage.getItem('player-token')
   const gameToken = localStorage.getItem('game-token')
 
+  const toast = useToast()
+  
   const createPlayer = async () => {
     const response = await fetch('/api/player/', {
       method: 'POST',
@@ -190,6 +195,79 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }, [gameToken]);
 
+  const startCountryChallenge = async (country: Country, player: Player) => {
+    setLoading(true);
+
+    console.log('starting challenge', country, player)  
+    try {
+      const response = await fetch('/api/country-challenges/', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${player.token}`,
+        },
+        body: JSON.stringify({
+          country: country.code,
+        })
+      })
+      const data = await response.json()
+      setCountryChallenge(data as CountryChallenge)
+    } catch (error) {
+      toast({
+        title: 'Error starting challenge',
+        description: 'Unable to start the challenge. Please try again.',
+        status: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const selectChallengeAnswer = async (answer: Species) => {
+    console.log('selecting answer', answer)
+    if (!player) {
+      console.log('Player is not set.')
+      return
+    }
+    const question_id = challengeQuestion?.id
+    const answer_id = answer.id
+
+    if (!question_id || !answer_id) {
+      console.log('Question or answer is not set.')
+      return
+    }
+
+    const response = await fetch(`/api/answer/`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${player.token}`,
+      },
+      body: JSON.stringify({
+        question_id: question_id,
+        answer_id: answer_id,
+        player_token: player.token,
+      })
+    })
+    const data = await response.json()
+    console.log('data', data)
+  }
+
+  const getNewChallengeQuestion = async () => {
+    const response = await fetch(`/api/games/${gameToken}/question`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    })
+    console.log('response', response)
+    const data = await response.json()
+    setChallengeQuestion(data as Question)
+  }
 
   return (
     <AppContext.Provider value={{
@@ -217,6 +295,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
       loadGame,
       game,
       setGame,
+      startCountryChallenge,
+      countryChallenge,
+      selectChallengeAnswer,
+      challengeQuestion,
+      getNewChallengeQuestion,
       playerName,
       setPlayerName,
       species,

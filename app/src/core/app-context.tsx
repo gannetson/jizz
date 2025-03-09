@@ -1,4 +1,5 @@
 import {createContext, Dispatch, SetStateAction} from 'react';
+import { useState } from 'react';
 
 
 export type Country = {
@@ -146,6 +147,33 @@ export type Update = {
   reactions: Reaction[]
 }
 
+export type ChallengeLevel = {
+  sequence: number
+  level: 'beginner' | 'advanced' | 'expert'
+  title: string
+  description: string
+  length: number
+  media: string
+  jokers: number
+}
+
+export type CountryGame = {
+  id: number
+  game: Game
+  challenge_level: ChallengeLevel
+  created: string
+  status: 'new' | 'running' | 'passed' | 'failed'
+  remaining_jokers: number
+}
+
+export type CountryChallenge = {
+  id: number
+  country: Country
+  player: Player
+  created: string
+  levels: CountryGame[]
+  status: 'new' | 'running' | 'passed' | 'failed'
+}
 
 type SharedState = {
   playerName?: string
@@ -158,6 +186,11 @@ type SharedState = {
   setIncludeEscapes: Dispatch<SetStateAction<boolean>>
   game?: Game
   createGame: (player?: Player) => Promise<Game | undefined>
+  startCountryChallenge: (country: Country, player: Player) => Promise<void>
+  countryChallenge?: CountryChallenge
+  challengeQuestion?: Question
+  getNewChallengeQuestion: () => Promise<void>
+  selectChallengeAnswer: (species: Species) => Promise<void>
   setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
   setGame: (game?: Game) => void
@@ -200,6 +233,11 @@ const AppContext = createContext<SharedState>({
   setCountry: () => {},
   mediaType: 'images',
   setMediaType: () => {},
+  startCountryChallenge: async () => {},
+  countryChallenge: undefined,
+  getNewChallengeQuestion: async () => {},
+  challengeQuestion: undefined,
+  selectChallengeAnswer: async () => {},
 });
 
 export default AppContext;

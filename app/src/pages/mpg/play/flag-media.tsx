@@ -6,9 +6,8 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
-  ModalOverlay, Textarea, useToast
+  ModalOverlay, ModalProps, Textarea, useToast
 } from "@chakra-ui/react"
-import {ModalProps} from "@chakra-ui/modal/dist/modal"
 import {FormattedMessage, useIntl} from "react-intl"
 import {useContext, useState} from "react"
 

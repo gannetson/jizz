@@ -24,6 +24,9 @@ export const JizzMenu = () => {
             <Link href={'/updates'}>
               <FormattedMessage id={'Updates'} defaultMessage={'Updates'} />
             </Link>
+            <Link href={'/privacy'}>
+              <FormattedMessage id={'privacy'} defaultMessage={'Privacy'} />
+            </Link>
             <Link href={'/about'}>
               <FormattedMessage id={'about jizz'} defaultMessage={'About Jizz'} />
             </Link>

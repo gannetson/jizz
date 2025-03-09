@@ -103,6 +103,7 @@ class Game(models.Model):
         return self.questions.last()
 
     def add_question(self):
+        print('Adding question')
         self.questions.filter(done=False).update(done=True)
         statuses = ['native', 'endemic']
         if self.include_rare:
@@ -449,6 +450,8 @@ class CountrySpecies(models.Model):
         return self.species.name_latin
 
     class Meta:
+        verbose_name = 'Country Species'
+        verbose_name_plural = 'Country Species'
         unique_together = ('country', 'species')
 
 
@@ -494,89 +497,33 @@ class Reaction(models.Model):
         return self.player.name
 
 
-LEVELS = [
-    {
-        'level': 'beginner',
-        'length': 10,
-        'media': 'images',
-        'jokers': 2,
-        'include_rare': False,
-        'include_escapes': False,
-    },
-    {
-        'level': 'beginner',
-        'length': 20,
-        'media': 'video',
-        'jokers': 2,
-        'include_rare': False,
-        'include_escapes': False,
-    },
-    {
-        'level': 'advanced',
-        'length': 20,
-        'media': 'images',
-        'jokers': 2,
-        'include_rare': False,
-        'include_escapes': False,
-    },
-    {
-        'level': 'advanced',
-        'length': 50,
-        'media': 'images',
-        'jokers': 5,
-        'include_rare': True,
-        'include_escapes': False,
-    },
-    {
-        'level': 'advanced',
-        'length': 10,
-        'media': 'videos',
-        'jokers': 0,
-        'include_rare': True,
-        'include_escapes': False,
-    },
-    {
-        'level': 'expert',
-        'length': 20,
-        'media': 'images',
-        'jokers': 2,
-        'include_rare': True,
-        'include_escapes': False,
-    },
-    {
-        'level': 'advanced',
-        'length': 20,
-        'media': 'sounds',
-        'jokers': 5,
-        'include_rare': True,
-        'include_escapes': False,
-    },
-    {
-        'level': 'expert',
-        'length': 20,
-        'media': 'videos',
-        'jokers': 1,
-        'include_rare': True,
-        'include_escapes': False,
-    },
-]
-
-
 class ChallengeLevel(models.Model):
-    game = models.ForeignKey(
-        Game,
-        related_name='challenges',
-        on_delete=models.CASCADE
+    LEVEL_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('advanced', 'Advanced'),
+        ('expert', 'Expert'),
+    ]
+    
+    sequence = models.IntegerField(default=0)  # renamed from 'level'
+    level = models.CharField(
+        max_length=20,
+        choices=LEVEL_CHOICES,
+        default='advanced'
     )
-    challenge = models.ForeignKey(
-        'jizz.CountryChallenge',
-        related_name='levels',
-        on_delete=models.CASCADE
-    )
-    level = models.IntegerField(default=0)
-    created = models.DateTimeField(auto_now_add=True)
+    length = models.IntegerField(default=0)
     jokers = models.IntegerField(default=0)
-    passed = models.BooleanField(default=True)
+    include_rare = models.BooleanField(default=False)
+    include_escapes = models.BooleanField(default=False)
+    media = models.CharField(max_length=10, default='images')
+    title = models.CharField(max_length=200)
+    description = models.TextField(default='')
+    tax_order = models.CharField(
+        'Order',
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text='Only show birds from this taxonomic order'
+    )
 
 
 class CountryChallenge(models.Model):
@@ -592,26 +539,53 @@ class CountryChallenge(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True)
 
-    level = models.IntegerField(default=0)
 
-    def new_level(self):
-        specs = LEVELS[self.level]
-        game = Game.objects.create(
-            host=self.player,
-            country=self.country,
-            **specs
-        )
+class CountryGame(models.Model):
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('running', 'Running'),
+        ('passed', 'Passed'),
+        ('failed', 'Failed'),
+    ]
 
-        level = ChallengeLevel.objects.create(
-            level=self.level,
-            game=game,
-            **specs
-        )
-        return level
+    country_challenge = models.ForeignKey(
+        CountryChallenge,
+        related_name='games',
+        on_delete=models.CASCADE
+    )
+    game = models.ForeignKey(
+        Game,
+        related_name='country_games',
+        on_delete=models.CASCADE
+    )
+    challenge_level = models.ForeignKey(
+        ChallengeLevel,
+        related_name='country_games',
+        on_delete=models.CASCADE
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='new'
+    )
 
     @property
-    def last_level(self):
-        if self.levels.exists():
-            return self.levels.last()
+    def remaining_jokers(self):
+        total_errors = self.game.questions.aggregate(total=models.Sum('errors'))['total'] or 0
+        return max(0, self.challenge_level.jokers - total_errors)
+
+    def update_status(self):
+        if self.remaining_jokers <= 0:
+            self.status = 'failed'
+        elif self.game.ended and self.remaining_jokers > 0:
+            self.status = 'passed'
         else:
-            return self.new_level()
+            self.status = 'running'
+
+    def save(self, *args, **kwargs):
+        # Only update status if the instance already exists
+        if self.pk:
+            self.update_status()
+        super().save(*args, **kwargs)
+

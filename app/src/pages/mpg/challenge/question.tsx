@@ -1,32 +1,19 @@
-import {Box, Button, Flex, Image, keyframes, Link, SimpleGrid, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, Flex, Image, Link, SimpleGrid, useDisclosure} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
-import {useContext} from "react"
+import {useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
 import {FormattedMessage} from "react-intl"
 import {FlagMedia} from "../play/flag-media"
+import {keyframes} from "@emotion/react"
+import { Loading } from "../../../components/loading"
 
-
-export const QuestionComponent = () => {
-  const {species, player} = useContext(AppContext)
-  const {question, submitAnswer} = useContext(WebsocketContext)
-  const {game} = useContext(AppContext)
+export const ChallengeQuestion = () => {
+  const {species, player, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
   const {onOpen, onClose, isOpen} = useDisclosure()
 
-  const selectAnswer = (species?: Species) => {
-    if (player && submitAnswer) {
-      const answer: Answer = {
-        question,
-        player,
-        answer: species,
-      }
-      submitAnswer(answer)
-
-    }
-
-  }
   const rotate = keyframes`
     from {
       transform: rotate(360deg)
@@ -36,11 +23,26 @@ export const QuestionComponent = () => {
     }
   `
 
-  if (!question || !game) return <></>
-
   const flagMedia = () => {
     onOpen()
   }
+
+  useEffect(() => {
+    if (!question) {
+    getNewChallengeQuestion()
+    }
+  }, [question])
+  
+  const game = countryChallenge?.levels[0].game
+  console.log('question', question)
+  console.log('countryChallenge', countryChallenge)
+  console.log('game', game)
+
+
+  if (!question || !game) {
+    return <Loading/>
+  }
+
 
   return (
     <>

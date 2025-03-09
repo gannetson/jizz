@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction
+    QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction, CountryChallenge, CountryGame, ChallengeLevel
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -75,7 +75,10 @@ class AnswerSerializer(serializers.ModelSerializer):
         question = Question.objects.get(id=validated_data.pop('question_id'))
         answer = Species.objects.get(id=validated_data.pop('answer_id'))
         correct = answer == question.species
-        return Answer.objects.create(player=player, question=question, answer=answer, correct=correct)
+        player_score, _created = PlayerScore.objects.get_or_create(player=player, game=question.game)
+        if Answer.objects.filter(player_score=player_score, question=question).exists():
+            return Answer.objects.filter(player_score=player_score, question=question).first()
+        return Answer.objects.create(player_score=player_score, question=question, answer=answer, correct=correct)
 
     class Meta:
         model = Answer
@@ -198,3 +201,28 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ('comment', 'player_token', 'rating', 'created')
+
+
+class ChallengeLevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChallengeLevel
+        fields = ['sequence', 'level', 'title', 'description', 'length', 'media', 'jokers']
+
+
+class CountryGameSerializer(serializers.ModelSerializer):
+    challenge_level = ChallengeLevelSerializer()
+    remaining_jokers = serializers.IntegerField(read_only=True)
+    game = GameSerializer(read_only=True)
+    
+    class Meta:
+        model = CountryGame
+        fields = ['id', 'game', 'challenge_level', 'created', 'status', 'remaining_jokers']
+
+
+class CountryChallengeSerializer(serializers.ModelSerializer):
+    levels = CountryGameSerializer(source='games', many=True, read_only=True)
+    player = PlayerSerializer(read_only=True)
+    
+    class Meta:
+        model = CountryChallenge
+        fields = ['id', 'country', 'player', 'created', 'levels']

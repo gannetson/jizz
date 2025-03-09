@@ -5,7 +5,7 @@ module.exports = function (app) {
     : 'https://jizz.be/'
 
   app.use(
-    '/api',
+    ['/api', '/admin', '/auth', '/token', '/django'],
     createProxyMiddleware({
       target: target,
       changeOrigin: true,

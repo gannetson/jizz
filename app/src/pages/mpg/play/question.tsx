@@ -1,12 +1,13 @@
-import {Box, Button, Flex, Image, Kbd, keyframes, Link, Show, SimpleGrid, Text, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, Image, Link, SimpleGrid, Text, useDisclosure} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
-import {useCallback, useContext, useEffect} from "react"
+import {useContext} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
 import {FormattedMessage} from "react-intl"
 import {FlagMedia} from "./flag-media"
+import {keyframes} from "@emotion/react"
 
 
 export const QuestionComponent = () => {
@@ -23,10 +24,9 @@ export const QuestionComponent = () => {
         answer: species,
       }
       submitAnswer(answer)
-
     }
-
   }
+
   const rotate = keyframes`
       from {
           transform: rotate(360deg)

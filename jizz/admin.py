@@ -2,22 +2,24 @@ from collections import defaultdict
 
 from django.contrib import admin, messages
 from django.contrib.admin import register
-from django.db.models import Sum, Count
+from django.db.models import Count, Sum
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
-from django.urls import reverse, path, re_path
+from django.urls import path, re_path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from jizz.models import Country, Species, CountrySpecies, SpeciesImage, Game, Question, SpeciesSound, SpeciesVideo, \
-    Answer, Player, QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction
-from jizz.utils import sync_country, get_country_images, get_images, sync_species, get_videos, get_sounds, \
-    get_media_citation
+from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
+                         CountrySpecies, Feedback, FlagQuestion, Game, Player,
+                         PlayerScore, Question, QuestionOption, Reaction,
+                         Species, SpeciesImage, SpeciesSound, SpeciesVideo,
+                         Update, CountryGame)
+from jizz.utils import (get_country_images, get_images, get_media_citation,
+                        get_sounds, get_videos, sync_country, sync_species)
 
 
 class CountrySpeciesInline(admin.TabularInline):
     model = CountrySpecies
-
     readonly_fields = ['link']
     fields = readonly_fields
 
@@ -332,3 +334,30 @@ class UpdateAdmin(admin.ModelAdmin):
     readonly_fields = ['created']
     list_display = ['created', 'user', 'message']
     inlines = [ReactionAdminInline]
+
+
+class CountryGameInline(admin.TabularInline):
+    model = CountryGame
+    readonly_fields = ['game', 'challenge_level', 'created', 'status', 'remaining_jokers']
+    fields = readonly_fields
+    can_delete = False
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        return False
+
+@admin.register(CountryChallenge)
+class CountryChallengeAdmin(admin.ModelAdmin):
+    list_display = ['country', 'player', 'created']
+    list_filter = ['country', 'player']
+    readonly_fields = ['created']
+    inlines = [CountryGameInline]
+    raw_id_fields = ['player', 'country']
+
+
+@admin.register(ChallengeLevel)
+class ChallengeLevelAdmin(admin.ModelAdmin):
+    list_display = ['sequence', 'level', 'title', 'media', 'length', 'jokers', 'include_rare', 'include_escapes']
+    list_filter = ['level', 'media', 'include_rare', 'include_escapes']
+    search_fields = ['title', 'description']
+    ordering = ['sequence']

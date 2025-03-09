@@ -21,27 +21,22 @@ export const CreateCountryChallenge = () => {
     player,
     createPlayer,
     country,
-    createGame,
-    game,
-    playerName
+    startCountryChallenge,
+    loading
   } = useContext(AppContext);
-  const {joinGame} = useContext(WebsocketContext)
-  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
 
   const create = async () => {
-    setLoading(true)
     let myPlayer: Player | undefined = player
     if (!myPlayer) {
       myPlayer = await createPlayer()
     }
-    const myGame = await createGame(myPlayer)
-    await joinGame(myGame, myPlayer)
-    navigate('/game/lobby')
-    setLoading(false)
+    if (!country || !myPlayer) {
+      return
+    }
+    const myGame = await startCountryChallenge(country, myPlayer)
  }
-
 
   return (
     loading ? (
@@ -58,7 +53,7 @@ export const CreateCountryChallenge = () => {
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
-        <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
+        <Button isDisabled={!country || !player} colorScheme='orange' size='lg' onClick={create}>
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>
       </Flex>

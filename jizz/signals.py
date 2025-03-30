@@ -27,10 +27,3 @@ def create_initial_country_game(sender, instance, created, **kwargs):
             game=game,
             challenge_level=initial_level,
         )
-
-
-@receiver(post_save, sender=Game)
-def update_country_game_status(sender, instance, **kwargs):
-    # Update status of associated country games when game is updated
-    for country_game in instance.country_games.all():
-        country_game.update_status() 

@@ -29,6 +29,7 @@ export type Game = {
   current_highscore?: Player
   include_rare: boolean
   include_escapes: boolean
+  scores: Player[]
 }
 
 export type SpeciesImage = {
@@ -86,6 +87,7 @@ export type Player = {
   language: string
   score?: number
   last_answer?: Answer
+  answers: Answer[]
 }
 
 export type MultiPlayer = {
@@ -102,6 +104,7 @@ export type MultiPlayer = {
 
 export type Answer = {
   question?: Question
+  sequence?: number
   answer?: Species
   species?: Species
   player?: Player
@@ -191,6 +194,7 @@ type SharedState = {
   challengeQuestion?: Question
   getNewChallengeQuestion: () => Promise<void>
   selectChallengeAnswer: (species: Species) => Promise<void>
+  getNewChallengLevel: () => Promise<void>
   setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
   setGame: (game?: Game) => void
@@ -238,6 +242,7 @@ const AppContext = createContext<SharedState>({
   getNewChallengeQuestion: async () => {},
   challengeQuestion: undefined,
   selectChallengeAnswer: async () => {},
+  getNewChallengLevel: async () => {}
 });
 
 export default AppContext;

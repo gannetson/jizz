@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Image, Link, SimpleGrid, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Icon, Image, Link, SimpleGrid, useDisclosure} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
 import {useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
@@ -9,10 +9,24 @@ import {FormattedMessage} from "react-intl"
 import {FlagMedia} from "../play/flag-media"
 import {keyframes} from "@emotion/react"
 import { Loading } from "../../../components/loading"
+import Page from "../../layout/page"
+import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaSkull } from "react-icons/fa"
+import { IconType } from "react-icons"
+import { useNavigate } from "react-router-dom"
+
+type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
+
+const iconMapping: Record<ResultType, IconType> = {
+  'open': FaDotCircle,
+  'correct': FaCheckCircle,
+  'joker': FaHeart,
+  'incorrect': FaSkull
+}
 
 export const ChallengeQuestion = () => {
   const {species, player, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
   const {onOpen, onClose, isOpen} = useDisclosure()
+  const navigate = useNavigate()
 
   const rotate = keyframes`
     from {
@@ -27,25 +41,67 @@ export const ChallengeQuestion = () => {
     onOpen()
   }
 
+  const level = countryChallenge?.levels[0];
+
   useEffect(() => {
+    console.log(level?.status)
     if (!question) {
     getNewChallengeQuestion()
     }
-  }, [question])
+  }, [question, level])
   
   const game = countryChallenge?.levels[0].game
-  console.log('question', question)
-  console.log('countryChallenge', countryChallenge)
-  console.log('game', game)
 
-
-  if (!question || !game) {
+  if (!question || !game || !level) {
     return <Loading/>
   }
+
+  if (level.status === 'failed' || level.status === 'passed') {
+    navigate('/challenge');
+  }
+
+  // Initialize array with 'open'
+  const results: ResultType[] = Array.from({ length: level.game.length }, () => 'open')
+
+  // Get answers array
+  const answers = level.game.scores && level.game.scores[0] && level.game.scores[0].answers || []
+
+  // Update results with correct/incorrect based on answers
+  answers.forEach(answer => {
+    const index = (answer.sequence  || 1) -1
+    results[index] = answer.correct ? 'correct' : 'incorrect'
+  })
+
+  const incorrectIndices = results.reduce((indices: number[], result, index) => {
+    if (result === 'incorrect') indices.push(index)
+    return indices
+  }, [])
+
+  let jokers = level.challenge_level.jokers
+  incorrectIndices.slice(0, jokers).forEach(index => {
+    results[index] = 'joker'
+  })
 
 
   return (
     <>
+    <Page>
+      <Page.Header>
+        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+          {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
+        </Heading>
+        <Flex gap={2} alignItems={'center'}>
+          {results.map((result, i) => (
+            <Icon key={i} as={iconMapping[result]} color={result === 'open' ? "orange.300" : "orange.600"} boxSize={6} />
+          ))}
+        </Flex>
+        <Flex gap={2} alignItems={'center'}>
+          {[...Array(level.challenge_level.jokers)].map((_, i) => (
+            <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "orange.600" : "orange.300"} boxSize={6} />
+          ))}
+        </Flex>
+      </Page.Header>
+      <Page.Body>
       <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
       <Box position={'relative'}>
         {game.media === 'video' && (
@@ -116,7 +172,9 @@ export const ChallengeQuestion = () => {
           onChange={(answer) => answer && selectAnswer(answer.value)}
         />
       )}
-    </>
+      </Page.Body>
+    </Page>
+    </> 
 
   )
 }

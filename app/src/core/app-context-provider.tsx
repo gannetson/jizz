@@ -1,6 +1,7 @@
 import React, {FC, ReactNode, useEffect, useState} from 'react';
 import AppContext, {Answer, Country, CountryChallenge, Game, Player, Question, Score, Species} from "./app-context";
 import { useToast } from '@chakra-ui/react';
+import { assignUniqueKeysToParts } from 'react-intl/src/utils';
 
 type Props = {
   children: ReactNode;
@@ -198,7 +199,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const startCountryChallenge = async (country: Country, player: Player) => {
     setLoading(true);
 
-    console.log('starting challenge', country, player)  
     try {
       const response = await fetch('/api/country-challenges/', {
         method: 'POST',
@@ -224,9 +224,41 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   };
 
+  const loadCountryChallenge = async () => {
+    if (!player) {
+      console.log('Player is not set.')
+      return
+    }
+    if (!countryChallenge) {
+      console.log('No country challenge in progress.')
+      return
+    }
+    const question_id = challengeQuestion?.id
+      setLoading(true)
+      try {
+        const response = await fetch(`/api/country-challenges/${countryChallenge.id}/`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Token ${player.token}`,
+          }
+        })
+        const data = await response.json()
+        setCountryChallenge(data as CountryChallenge)
+      } catch (error) {
+        toast({
+          title: 'Error loading challenge',
+          description: 'Please start a new countr challenge.',
+          status: 'error',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+  
 
   const selectChallengeAnswer = async (answer: Species) => {
-    console.log('selecting answer', answer)
     if (!player) {
       console.log('Player is not set.')
       return
@@ -253,10 +285,35 @@ const AppContextProvider: FC<Props> = ({children}) => {
       })
     })
     const data = await response.json()
-    console.log('data', data)
+    loadCountryChallenge()
+    getNewChallengeQuestion()
+
   }
 
+  const getNewChallengLevel = async () => {
+    if (!player) {
+      console.log('Player is not set.')
+      return
+    }
+    if (!countryChallenge) {
+      console.log('No country challenge set.')
+      return
+    }
+    const response = await fetch(`/api/challenge/${countryChallenge.id}/next-level`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${player.token}`,
+      },
+    })
+    loadCountryChallenge()
+
+  }
+
+
   const getNewChallengeQuestion = async () => {
+    const gameToken = countryChallenge?.levels[0].game.token
     const response = await fetch(`/api/games/${gameToken}/question`, {
       method: 'GET',
       headers: {
@@ -266,7 +323,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
     })
     console.log('response', response)
     const data = await response.json()
-    setChallengeQuestion(data as Question)
+    if (response.status === 200) {
+      setChallengeQuestion(data as Question)
+    } else (
+      console.log(response)
+    ) 
+
   }
 
   return (
@@ -300,6 +362,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       selectChallengeAnswer,
       challengeQuestion,
       getNewChallengeQuestion,
+      getNewChallengLevel,
       playerName,
       setPlayerName,
       species,

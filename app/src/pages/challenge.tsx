@@ -7,9 +7,27 @@ import {Loading} from "../components/loading"
 import {CreateCountryChallenge} from "../components/create-country-challenge"
 import { StartLevel } from "./mpg/challenge/start";
 import { ChallengeQuestion } from "./mpg/challenge/question";
+import { FailedLevel } from "./mpg/challenge/failed";
+import { PassedLevel } from "./mpg/challenge/passed";
 
 export const ChallengePage = () => {
   const {player, loading, countryChallenge} = useContext(AppContext);
+
+  let body = <CreateCountryChallenge/>
+  switch(countryChallenge?.levels[0].status) {
+    case 'new':
+      body = <StartLevel/>
+      break;
+    case 'running':
+      body = <ChallengeQuestion/>
+      break;
+    case 'failed':
+      body = <FailedLevel/>
+      break;
+    case 'passed':
+      body = <PassedLevel/>
+      break;
+  }
 
   return (
     <Page>
@@ -22,15 +40,7 @@ export const ChallengePage = () => {
         {loading ? (
           <Loading/>
         ) : (
-          countryChallenge ? (
-            countryChallenge.levels[0].status === 'new' ? (
-              <StartLevel/>
-            ) : (
-              <ChallengeQuestion />
-            )
-          ) : (
-            <CreateCountryChallenge/>
-          )
+          body
         )}
       </Page.Body>
     </Page>

@@ -8,16 +8,17 @@ import WebsocketContext from '../../../core/websocket-context';
 import AppContext from '../../../core/app-context';
 import { FaHeart } from 'react-icons/fa';
 
-export const StartLevel: React.FC = () => {
-  const { player, countryChallenge, loading } = useContext(AppContext);
+export const FailedLevel: React.FC = () => {
+  const { player, countryChallenge, loading, getNewChallengLevel } = useContext(AppContext);
   const navigate = useNavigate();
 
-  const startLevel = () => {
-    navigate('/challenge/play');
-  };
 
   const level = countryChallenge?.levels[0];
   const round = level ? level.challenge_level.sequence + 1 : '?'
+
+  const restartLevel = ()=> {
+    getNewChallengLevel();
+  }
 
   if (!level) {
     return (
@@ -35,28 +36,15 @@ export const StartLevel: React.FC = () => {
   return (
     <Flex direction={'column'} gap={10}>
       <Heading size={'lg'}>
-        <FormattedMessage id={'challenge title'} defaultMessage={'Round {round} - {title}'} values={{round, title: level?.challenge_level.title}} />
+        <FormattedMessage id={'challenge title'} defaultMessage={'Failed! {round} - {title}'} values={{round, title: level?.challenge_level.title}} />
         </Heading>
       <FormattedMessage
-        id={'challenge description'}
+        id={'failed description'}
         defaultMessage={
-          "You will run through different levels. It will start easy, but it will get harder. The final level will be a thorough. Let's see how far you get."
+          "Ouch! That was one wrong answer too many..."
         }
       />
-      <FormattedMessage
-        id={'challenge phase'}
-        defaultMessage={'You are playing {country}.'}
-        values={{
-          country: countryChallenge?.country.name,
-        }}
-      />
-      <Heading size={'md'}>
-        <FormattedMessage id={'this level'} defaultMessage={'What is this level about?'} />
-      </Heading>
 
-      <Text>
-        {level.challenge_level.description}
-      </Text>
 
 
       <Flex gap={2}>
@@ -65,8 +53,8 @@ export const StartLevel: React.FC = () => {
           <Icon key={i} as={FaHeart} color="orange.600" boxSize={6} />
         ))}
       </Flex>
-      <Button colorScheme="orange" onClick={startLevel}>
-        <FormattedMessage id="start level" defaultMessage="Start Level" />
+      <Button colorScheme="orange" onClick={restartLevel}>
+        <FormattedMessage id="start level" defaultMessage="Retart Level" />
       </Button>
     </Flex>
 

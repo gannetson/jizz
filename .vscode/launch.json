@@ -1,0 +1,37 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Django",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": [
+                "runserver",
+                "8050"
+            ],
+            "django": true,
+            "justMyCode": true,
+
+            "env": {
+                "PYTHONPATH": "~/.virtualenvs/jizz/bin/python",
+                "DJANGO_SETTINGS_MODULE": "jizz.settings.local"
+            }
+        },
+        {
+            "name": "React",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/app",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["start"],
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Django + React",
+            "configurations": ["Django", "React"]
+        }
+    ]
+}

@@ -18,6 +18,11 @@ from social_core.backends.google import GoogleOAuth2
 from social_core.exceptions import AuthException
 from social_django.utils import load_strategy
 from rest_framework import status
+from rest_framework.exceptions import NotFound
+from rest_framework import generics
+from django.shortcuts import get_object_or_404
+from .models import CountryChallenge, CountryGame, ChallengeLevel, Game
+from .serializers import GameSerializer, CountryGameSerializer
 
 from jizz.models import (Answer, Country, CountryChallenge, Feedback,
                          FlagQuestion, Game, Player, PlayerScore, Question,
@@ -31,6 +36,36 @@ from jizz.serializers import (AnswerSerializer, CountryChallengeSerializer,
 
 User = get_user_model()
 
+
+class GetPlayerMixin:
+
+    def get_token_from_header(self, request):
+        auth_header = request.headers.get('Authorization', None)
+
+        if not auth_header:
+            raise AuthenticationFailed('Authorization header is missing')
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        return token
+
+    def get_user_from_token(self, token):
+        try:
+            return Player.objects.get(token=token)
+        except Exception as e:
+            raise AuthenticationFailed('Invalid token or user does not exist')
+
+    def get_player_from_token(self, request):
+        token = self.get_token_from_header(self.request)
+        return self.get_user_from_token(token)
+
+    def get_player_from_request(self, request):
+        token = self.get_token_from_header(self.request)
+        player = self.get_user_from_token(token)
+        return player
+   
 
 class CountryDetailView(DetailView):
     model = Country
@@ -101,34 +136,16 @@ class FlagQuestionView(ListCreateAPIView):
     queryset = FlagQuestion.objects.all()
 
 
-class GameListView(ListCreateAPIView):
+class GameListView(ListCreateAPIView, GetPlayerMixin):
     serializer_class = GameSerializer
     queryset = Game.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['country']
 
-    def get_token_from_header(self, request):
-        auth_header = request.headers.get('Authorization', None)
-
-        if not auth_header:
-            raise AuthenticationFailed('Authorization header is missing')
-        try:
-            token = auth_header.split(' ')[1]
-        except IndexError:
-            raise AuthenticationFailed('Invalid Authorization header format')
-
-        return token
-
-    def get_user_from_token(self, token):
-        try:
-            return Player.objects.get(token=token)
-        except Exception as e:
-            raise AuthenticationFailed('Invalid token or user does not exist')
-
     def perform_create(self, serializer):
-        token = self.get_token_from_header(self.request)
-        player = self.get_user_from_token(token)
+        player = self.get_player_from_request(self.request)
         serializer.save(host=player)
+
 
 
 class GameDetailView(RetrieveAPIView):
@@ -144,7 +161,7 @@ class QuestionView(RetrieveAPIView):
     def get_object(self):
         game = Game.objects.get(token=self.kwargs['token'])
         if game.ended:
-            return None
+            raise NotFound("Game has ended")
         if not game.question:
             game.add_question()
         return game.question
@@ -210,43 +227,22 @@ class UpdateView(ListAPIView):
     ordering = ['-created']
 
 
-class CountryChallengeViewSet(viewsets.ModelViewSet):
+class CountryChallengeViewSet(viewsets.ModelViewSet, GetPlayerMixin):
     serializer_class = CountryChallengeSerializer
 
     def get_queryset(self):
+        player = self.get_player_from_request(self.request)
+
         return CountryChallenge.objects.filter(
-            player=self.request.user
+            player=player
         ).prefetch_related(
             'games',
             'games__challenge_level',
             'games__game'
         )
-
-    def get_token_from_header(self, request):
-        auth_header = request.headers.get('Authorization', None)
-
-        if not auth_header:
-            raise AuthenticationFailed('Authorization header is missing')
-        try:
-            token = auth_header.split(' ')[1]
-        except IndexError:
-            raise AuthenticationFailed('Invalid Authorization header format')
-
-        return token
-
-    def get_user_from_token(self, token):
-        try:
-            return Player.objects.get(token=token)
-        except Exception as e:
-            raise AuthenticationFailed('Invalid token or user does not exist')
-
-    def get_player_from_token(self, request):
-        token = self.get_token_from_header(self.request)
-        return self.get_user_from_token(token)
-
+    
     def perform_create(self, serializer):
-        token = self.get_token_from_header(self.request)
-        player = self.get_user_from_token(token)
+        player = self.get_player_from_request(self.request)
         serializer.save(player=player)
 
 
@@ -292,3 +288,66 @@ class GoogleLoginView(APIView):
 class ReactionView(CreateAPIView):
     serializer_class = ReactionSerializer
     queryset = Reaction.objects.all()
+
+
+class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):
+    serializer_class = CountryGameSerializer
+
+    def get_challenge_level(self, country_challenge):
+        last_game = country_challenge.games.order_by('-created').first()
+        
+        if not last_game or last_game.status == 'passed':
+            # Get next challenge level
+            next_sequence = last_game.challenge_level.sequence + 1 if last_game else 0
+            challenge_level = ChallengeLevel.objects.filter(
+                sequence=next_sequence
+            ).first()
+            
+            if not challenge_level:
+                return None
+        else:
+            # Retry the same level
+            challenge_level = last_game.challenge_level
+            
+        return challenge_level
+
+    def perform_create(self, serializer):
+        player = self.get_player_from_request(self.request)
+        country_challenge = get_object_or_404(
+            CountryChallenge, 
+            id=self.kwargs['challenge_id'],
+            player=player
+        )
+        
+        challenge_level = self.get_challenge_level(country_challenge)
+        if not challenge_level:
+            raise ValidationError({'error': 'No more levels available'})
+
+        # Create new game with the challenge level settings
+        game = Game.objects.create(
+            country=country_challenge.country,
+            level=challenge_level.level,
+            length=challenge_level.length,
+            media=challenge_level.media,
+            include_rare=challenge_level.include_rare,
+            include_escapes=challenge_level.include_escapes,
+            tax_order=challenge_level.tax_order,
+            host=country_challenge.player
+        )
+
+        # Save the country game using the serializer
+        serializer.save(
+            country_challenge=country_challenge,
+            game=game,
+            challenge_level=challenge_level
+        )
+
+
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        # Add game data to response
+        response.data['game'] = GameSerializer(
+            response.data['game']
+        ).data
+        return response

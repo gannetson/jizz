@@ -69,6 +69,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     answer_id = serializers.IntegerField(write_only=True)
     question_id = serializers.IntegerField(write_only=True)
     number = serializers.IntegerField(read_only=True, source='question.number')
+    sequence = serializers.IntegerField(source='question.sequence', read_only=True)
 
     def create(self, validated_data):
         player = Player.objects.get(token=validated_data.pop('player_token'))
@@ -82,7 +83,12 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Answer
-        fields = ('id', 'question_id', 'player_token', 'answer', 'correct', 'species', 'answer_id', 'number', 'score')
+        fields = (
+            'id', 'question_id', 'player_token', 
+            'answer', 'correct', 'species', 
+            'answer_id', 'number', 'score',
+            'sequence'
+            )
         unique_together = ('question', 'player')
 
 
@@ -159,12 +165,13 @@ class PlayerScoreSerializer(serializers.ModelSerializer):
     country = CountrySerializer(source='game.country')
     created = serializers.DateTimeField(source='game.created')
     ranking = serializers.IntegerField(read_only=True)
+    answers = AnswerSerializer(read_only=True, many=True)
 
     class Meta:
         model = PlayerScore
         fields = (
             'id', 'name', 'status', 'language', 'created',
-            'score', 'last_answer',
+            'score', 'last_answer', 'answers',
             'media', 'level', 'length',
             'country', 'ranking'
         )
@@ -174,6 +181,11 @@ class GameSerializer(serializers.ModelSerializer):
     country = CountrySerializer()
     host = MultiPlayerSerializer(read_only=True)
     current_highscore = PlayerScoreSerializer(read_only=True)
+    scores = PlayerScoreSerializer(
+        many=True, 
+        read_only=True
+    )
+
 
     class Meta:
         model = Game
@@ -185,7 +197,8 @@ class GameSerializer(serializers.ModelSerializer):
             'host', 'ended',
             'current_highscore', 'tax_order',
             'include_rare',
-            'include_escapes'
+            'include_escapes',
+            'scores'
         )
 
 
@@ -210,10 +223,11 @@ class ChallengeLevelSerializer(serializers.ModelSerializer):
 
 
 class CountryGameSerializer(serializers.ModelSerializer):
-    challenge_level = ChallengeLevelSerializer()
+    challenge_level = ChallengeLevelSerializer(read_only=True)
     remaining_jokers = serializers.IntegerField(read_only=True)
     game = GameSerializer(read_only=True)
-    
+    status = serializers.CharField(read_only=True)
+
     class Meta:
         model = CountryGame
         fields = ['id', 'game', 'challenge_level', 'created', 'status', 'remaining_jokers']

@@ -96,7 +96,7 @@ class Game(models.Model):
 
     @property
     def ended(self):
-        return self.questions.count() >= self.length
+        return self.questions.filter(done=True).count() >= self.length
 
     @property
     def last_question(self):
@@ -538,6 +538,7 @@ class CountryChallenge(models.Model):
         on_delete=models.CASCADE
     )
     created = models.DateTimeField(auto_now_add=True)
+        
 
 
 class CountryGame(models.Model):
@@ -564,24 +565,24 @@ class CountryGame(models.Model):
         on_delete=models.CASCADE
     )
     created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default='new'
-    )
 
     @property
     def remaining_jokers(self):
-        total_errors = self.game.questions.aggregate(total=models.Sum('errors'))['total'] or 0
-        return max(0, self.challenge_level.jokers - total_errors)
-
-    def update_status(self):
-        if self.remaining_jokers <= 0:
-            self.status = 'failed'
-        elif self.game.ended and self.remaining_jokers > 0:
-            self.status = 'passed'
-        else:
-            self.status = 'running'
+        failed = self.game.questions.filter(
+            answers__correct=False, 
+            answers__answer__isnull=False
+        ).count()
+        return self.challenge_level.jokers - failed
+    
+    @property
+    def status(self):
+        if self.remaining_jokers < 0:
+            return 'failed'
+        elif self.game.ended and self.remaining_jokers >= 0:
+            return 'passed'
+        elif self.game.questions.count():
+            return'running'
+        return 'new'
 
     def save(self, *args, **kwargs):
         # Only update status if the instance already exists
@@ -589,3 +590,8 @@ class CountryGame(models.Model):
             self.update_status()
         super().save(*args, **kwargs)
 
+    class Meta:
+        ordering = ['-id']
+        
+
+from .signals import *

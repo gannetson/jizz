@@ -285,9 +285,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       })
     })
     const data = await response.json()
-    loadCountryChallenge()
-    getNewChallengeQuestion()
-
+    await loadCountryChallenge()
+    return data.correct
   }
 
   const getNewChallengLevel = async () => {

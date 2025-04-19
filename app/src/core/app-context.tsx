@@ -193,7 +193,7 @@ type SharedState = {
   countryChallenge?: CountryChallenge
   challengeQuestion?: Question
   getNewChallengeQuestion: () => Promise<void>
-  selectChallengeAnswer: (species: Species) => Promise<void>
+  selectChallengeAnswer: (species: Species) => Promise<Boolean>
   getNewChallengLevel: () => Promise<void>
   setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
@@ -241,7 +241,7 @@ const AppContext = createContext<SharedState>({
   countryChallenge: undefined,
   getNewChallengeQuestion: async () => {},
   challengeQuestion: undefined,
-  selectChallengeAnswer: async () => {},
+  selectChallengeAnswer: async () => {return false},
   getNewChallengLevel: async () => {}
 });
 

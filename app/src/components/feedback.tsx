@@ -52,7 +52,7 @@ export const Feedback = () => {
 
             <Textarea onChange={(val) => setComment(val.target.value)}/>
             <Box>
-              <Button onClick={submit} isDisabled={!rating && !comment} colorScheme={'orange'}>
+              <Button onClick={submit} isDisabled={!rating && !comment}>
                 <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
               </Button>
             </Box>

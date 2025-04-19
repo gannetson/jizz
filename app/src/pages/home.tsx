@@ -33,25 +33,25 @@ const HomePage = () => {
           <Loading/>
         ) : (
           <Flex direction={'column'} gap={10}>
-            <Button colorScheme={'orange'} onClick={() => navigate('/start')}>
+            <Button onClick={() => navigate('/start')}>
               <FormattedMessage id={'start game'} defaultMessage={'Start a new game'}/>
             </Button>
-            <Button colorScheme={'orange'} variant='outline' onClick={() => navigate('/join')}>
+            <Button variant='outline' onClick={() => navigate('/join')}>
               <FormattedMessage id={'join game'} defaultMessage={'Join a game'}/>
             </Button>
             <Hide>
-              <Button colorScheme={'orange'} onClick={() => navigate('/challenge')}>
+              <Button onClick={() => navigate('/challenge')}>
                 <Flex gap={4}>
                   <FormattedMessage id={'country challenge'} defaultMessage={'Country challenge'}/>
                 </Flex>
               </Button>
             </Hide>
-              <Button colorScheme={'orange'} variant='ghost' onClick={() => navigate('/scores')}>
+              <Button variant='ghost' onClick={() => navigate('/scores')}>
                 <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>
               </Button>
             <Feedback/>
             {updates && updates.length > 0 &&  <UpdateLine update={updates[0]} />}
-              <Button colorScheme={'orange'} variant='ghost' onClick={() => navigate('/updates')}>
+              <Button variant='ghost' onClick={() => navigate('/updates')}>
                 <FormattedMessage id={'more updates'} defaultMessage={'More updates'}/>
               </Button>
 

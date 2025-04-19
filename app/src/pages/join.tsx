@@ -48,7 +48,7 @@ const JoinPage: React.FC = () => {
         </Box>
         <SetName/>
         <SelectLanguage/>
-        <Button colorScheme='orange' onClick={handleSubmit} isLoading={loading} isDisabled={!code || !playerName}>
+        <Button onClick={handleSubmit} isLoading={loading} isDisabled={!code || !playerName}>
           Join game
         </Button>
       </Page.Body>

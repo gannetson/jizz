@@ -64,18 +64,18 @@ const Lobby: React.FC = () => {
         </Heading>
         <Flex gap={4}>
           <FormattedMessage id={'code'} defaultMessage={'Code'}/>
-          <Box><Tag onClick={copyCode} fontSize='18px' colorScheme='orange'>{gameToken}</Tag></Box>
+          <Box><Tag onClick={copyCode} fontSize='18px'>{gameToken}</Tag></Box>
           {copied ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Button colorScheme='orange' variant='link' onClick={copyCode}>
+            <Button variant='link' onClick={copyCode}>
               <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
             </Button>
           )}
         </Flex>
         <Flex gap={4}>
           <FormattedMessage id={'link'} defaultMessage={'Link'}/>
-          <Box><Tag onClick={copyLink} fontSize='18px' colorScheme='orange'>{gameLink}</Tag></Box>
+          <Box><Tag onClick={copyLink} fontSize='18px'>{gameLink}</Tag></Box>
           {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Button colorScheme='orange' variant='link' onClick={copyLink}>
+            <Button variant='link' onClick={copyLink}>
               <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
             </Button>
           )}
@@ -92,7 +92,7 @@ const Lobby: React.FC = () => {
         </List>
         {
           isHost ? (
-            <Button colorScheme='orange' onClick={startGame}>
+            <Button onClick={startGame}>
               Start game
             </Button>
 

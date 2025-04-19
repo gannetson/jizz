@@ -1,6 +1,5 @@
 import * as React from "react"
 import {useContext, useEffect} from "react"
-import {ChakraProvider, theme,} from "@chakra-ui/react"
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import Layout from "./pages/layout/layout";
 import HomePage from "./pages/home";
@@ -41,32 +40,30 @@ export const MainContent = () => {
 
   return (
     <IntlProvider locale={language as 'en' | 'nl'} messages={messages[language as 'en' | 'nl']}>
-      <ChakraProvider theme={theme}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout/>}>
-              <Route index element={<HomePage/>}/>
-              <Route path="/login" element={<Login />} />
-              <Route path="/login/:provider" element={<AuthCallback />} />
-              <Route path='/start/' element={<StartPage />}/>
-              <Route path='/join/' element={<JoinPage />}/>
-              <Route path="/join/:gameCode" element={<JoinPage/>}/>
-              <Route path='/about/' element={<AboutPage/>}/>
-              <Route path='/privacy/' element={<PrivacyPage/>}/>
-              <Route path='/challenge/' element={<ChallengePage />}/>
-              <Route path='/challenge/play' element={<ChallengeQuestion />}/>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout/>}>
+            <Route index element={<HomePage/>}/>
+            <Route path="/login" element={<Login />} />
+            <Route path="/login/:provider" element={<AuthCallback />} />
+            <Route path='/start/' element={<StartPage />}/>
+            <Route path='/join/' element={<JoinPage />}/>
+            <Route path="/join/:gameCode" element={<JoinPage/>}/>
+            <Route path='/about/' element={<AboutPage/>}/>
+            <Route path='/privacy/' element={<PrivacyPage/>}/>
+            <Route path='/challenge/' element={<ChallengePage />}/>
+            <Route path='/challenge/play' element={<ChallengeQuestion />}/>
 
-              <Route path="/game/lobby" element={<Lobby/>}/>
-              <Route path="/game/play" element={<MultiPlayerGame/>}/>
-              <Route path="/game/ended" element={<GameEnded/>}/>
+            <Route path="/game/lobby" element={<Lobby/>}/>
+            <Route path="/game/play" element={<MultiPlayerGame/>}/>
+            <Route path="/game/ended" element={<GameEnded/>}/>
 
-              <Route path='/scores/' element={<Hiscores />}/>
-              <Route path='/updates/' element={<Updates />}/>
+            <Route path='/scores/' element={<Hiscores />}/>
+            <Route path='/updates/' element={<Updates />}/>
 
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ChakraProvider>
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </IntlProvider>
   )
 }

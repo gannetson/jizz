@@ -4,7 +4,8 @@ import {AppContextProvider} from "./core/app-context-provider";
 import {WebsocketContextProvider} from "./core/websocket-context-provider"
 import {MainContent} from "./main-content"
 import {registerServiceWorker} from "./core/register-service-worker"
-
+import {ChakraProvider} from "@chakra-ui/react"
+import { theme } from "./theme";
 registerServiceWorker()
 
 export const App = () => {
@@ -14,11 +15,13 @@ export const App = () => {
   }, []);
 
   return (
-    <AppContextProvider>
-      <WebsocketContextProvider>
-        <MainContent/>
-      </WebsocketContextProvider>
-    </AppContextProvider>
+    <ChakraProvider theme={theme}>
+      <AppContextProvider>
+        <WebsocketContextProvider>
+            <MainContent/>
+        </WebsocketContextProvider>
+      </AppContextProvider>
+    </ChakraProvider>
   )
 }
 

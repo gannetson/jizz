@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Heading, Icon, Image, Link, SimpleGrid, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Icon, Image, Link, Popover, PopoverArrow,PopoverCloseButton,  PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, Card} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
 import {useContext, useEffect} from "react"
 import ReactPlayer from "react-player"
@@ -10,7 +10,7 @@ import {FlagMedia} from "../play/flag-media"
 import {keyframes} from "@emotion/react"
 import { Loading } from "../../../components/loading"
 import Page from "../../layout/page"
-import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaSkull } from "react-icons/fa"
+import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaQuestion, FaSkull } from "react-icons/fa"
 import { IconType } from "react-icons"
 import { useNavigate } from "react-router-dom"
 
@@ -90,11 +90,7 @@ export const ChallengeQuestion = () => {
         <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
           {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
-        <Flex gap={2} alignItems={'center'}>
-          {results.map((result, i) => (
-            <Icon key={i} as={iconMapping[result]} color={result === 'open' ? "orange.300" : "orange.600"} boxSize={6} />
-          ))}
-        </Flex>
+
         <Flex gap={2} alignItems={'center'}>
           {[...Array(level.challenge_level.jokers)].map((_, i) => (
             <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "orange.600" : "orange.300"} boxSize={6} />
@@ -102,6 +98,7 @@ export const ChallengeQuestion = () => {
         </Flex>
       </Page.Header>
       <Page.Body>
+
       <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
       <Box position={'relative'}>
         {game.media === 'video' && (
@@ -154,7 +151,7 @@ export const ChallengeQuestion = () => {
           {
             question.options.map((option, key) => {
               return (
-                <Button key={key} colorScheme='orange' onClick={() => selectAnswer(option)}>
+                <Button key={key} onClick={() => selectAnswer(option)}>
                   <SpeciesName species={option}/>
                 </Button>
               )
@@ -172,6 +169,18 @@ export const ChallengeQuestion = () => {
           onChange={(answer) => answer && selectAnswer(answer.value)}
         />
       )}
+
+      <Heading size={'md'}>
+        <FormattedMessage id={"progress"} defaultMessage={"Progress"}/>
+      </Heading>
+      <Card bgColor={'orange.100'} p={4}>
+        <Box>
+          {results.map((result, i) => (
+            <Icon p={1} key={i} as={iconMapping[result]} color={result === 'open' ? "orange.300" : "orange.600"} boxSize={8} />
+          ))}
+          </Box>
+      </Card>
+
       </Page.Body>
     </Page>
     </> 

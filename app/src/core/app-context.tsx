@@ -231,7 +231,7 @@ const AppContext = createContext<SharedState>({
   setLevel: () => {},
   taxOrder: '',
   setTaxOrder: () => {},
-  length: '10',
+  length: '20',
   setLength: () => {},
   country: { code: 'nl', name: 'Netherlands' },
   setCountry: () => {},

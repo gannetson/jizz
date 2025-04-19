@@ -53,7 +53,7 @@ export const FailedLevel: React.FC = () => {
           <Icon key={i} as={FaHeart} color="orange.600" boxSize={6} />
         ))}
       </Flex>
-      <Button colorScheme="orange" onClick={restartLevel}>
+      <Button onClick={restartLevel}>
         <FormattedMessage id="start level" defaultMessage="Retart Level" />
       </Button>
     </Flex>

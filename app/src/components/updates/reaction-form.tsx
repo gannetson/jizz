@@ -51,10 +51,10 @@ export const ReactionForm = ({update}: { update: Update }) => {
             <Textarea backgroundColor='white' onChange={(value) => setMessage(value.target.value)}/>
           </CardBody>
           <CardFooter py={2} textColor={'orange.600'} justifyContent={'space-between'}>
-            <Button variant={'outline'} colorScheme={'orange'} onClick={onClose}>
+            <Button variant={'outline'} onClick={onClose}>
               <FormattedMessage defaultMessage={'Cancel'} id={'cancel'}/>
             </Button>
-            <Button colorScheme={'orange'} onClick={postReaction}>
+            <Button onClick={postReaction}>
               <FormattedMessage defaultMessage={'Post'} id={'post'}/>
             </Button>
           </CardFooter>
@@ -62,7 +62,7 @@ export const ReactionForm = ({update}: { update: Update }) => {
 
       ) : (
         <Box>
-          <Button variant={'outline'} colorScheme={'orange'} onClick={onOpen}>
+          <Button variant={'outline'} onClick={onOpen}>
             <FormattedMessage defaultMessage={'Post reaction'} id={'post reaction'}/>
           </Button>
         </Box>

@@ -27,7 +27,7 @@ export function ViewSpecies({species}: { species?: Species }) {
 
   return (
     <>
-      <Button variant={"link"} colorScheme={'orange'} onClick={onOpen} rightIcon={<BsImages/>}>
+      <Button variant={"link"} onClick={onOpen} rightIcon={<BsImages/>}>
         {language === 'nl' ? species.name_nl : species.name}
       </Button>
 

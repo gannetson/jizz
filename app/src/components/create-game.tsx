@@ -56,7 +56,7 @@ export const CreateGame = () => {
         <SelectLength/>
         <SelectLevel/>
         <SelectMediaType/>
-        <Button isDisabled={!country || !playerName} colorScheme='orange' size='lg' onClick={create}>
+        <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>

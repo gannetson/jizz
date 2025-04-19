@@ -126,8 +126,8 @@ class Game(models.Model):
             if self.tax_order:
                 all_species = Species.objects.filter(
                     sounds__isnull=False,
-                    status__in=statuses,
-                    countryspecies__countryspecies__country=self.country,
+                    countryspecies__status__in=statuses,
+                    countryspecies__country=self.country,
                     tax_order=self.tax_order
                 ).distinct().order_by('id')
             else:

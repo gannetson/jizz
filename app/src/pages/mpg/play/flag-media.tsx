@@ -67,10 +67,10 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
         </ModalBody>
         <ModalFooter>
           <Flex justifyContent={'space-between'} width={'full'}>
-            <Button colorScheme={'gray'} onClick={onClose}>
+            <Button onClick={onClose}>
               <FormattedMessage defaultMessage={'Cancel'} id='cancel'/>
             </Button>
-            <Button colorScheme={'orange'} onClick={onSubmit}>
+            <Button onClick={onSubmit}>
               <FormattedMessage defaultMessage={'Flag'} id='flag'/>
             </Button>
           </Flex>

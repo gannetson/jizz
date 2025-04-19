@@ -65,7 +65,7 @@ export const StartLevel: React.FC = () => {
           <Icon key={i} as={FaHeart} color="orange.600" boxSize={6} />
         ))}
       </Flex>
-      <Button colorScheme="orange" onClick={startLevel}>
+      <Button onClick={startLevel}>
         <FormattedMessage id="start level" defaultMessage="Start Level" />
       </Button>
     </Flex>

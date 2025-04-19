@@ -127,7 +127,7 @@ export const QuestionComponent = () => {
           {
             question.options.map((option, key) => {
               return (
-                <Button key={key} colorScheme='orange' onClick={() => selectAnswer(option)}>
+                <Button key={key} onClick={() => selectAnswer(option)}>
                   <SpeciesName species={option}/>
                 </Button>
               )

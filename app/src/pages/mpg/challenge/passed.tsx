@@ -53,7 +53,7 @@ export const PassedLevel: React.FC = () => {
       </Text>
 
       <Flex gap={4}>
-        <Button colorScheme="orange" onClick={nextLevel}>
+        <Button onClick={nextLevel}>
           <FormattedMessage id="next level" defaultMessage="Next Level" />
         </Button>
       </Flex>

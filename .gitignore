@@ -5,6 +5,8 @@ jizz/settings/production.py
 .idea
 
 **/__pycache__
-frontend/node_modules
 
 app/node_modules
+app/node_modules/*
+build
+.env

@@ -1,6 +1,6 @@
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Button, Divider, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
+import {Button, Card, Divider, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
@@ -52,6 +52,12 @@ export const CreateCountryChallenge = () => {
             defaultMessage={'You will run through different levels. Some easy and some quite difficult.'}
           />
         </Text>
+        <Card bgColor={'orange.700'} textColor={'white'} fontWeight={'bold'} p={4} borderRadius={'xl'}>
+          <FormattedMessage
+            id={'country challenge warning'}
+            defaultMessage={'WARNING! This is still in development. Some features will not work as expected. Please send any feedback through the form on the homme page.'}
+          />
+        </Card>
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>

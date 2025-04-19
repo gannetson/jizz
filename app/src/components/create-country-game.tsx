@@ -49,10 +49,10 @@ export const CreateCountryGame = () => {
       <Loading/>
     ) : (
       <Flex direction={'column'} gap={10}>
-        <Heading size={'lg'}><FormattedMessage id='country challenge' defaultMessage={'Country species'}/></Heading>
+        <Heading size={'lg'}><FormattedMessage id='country species ' defaultMessage={'Country species'}/></Heading>
         <Text>
           <FormattedMessage
-            id={'country challenge description'}
+            id={'All species'}
             defaultMessage={'You have to recognise all species.'}
           />
         </Text>

@@ -54,7 +54,7 @@ export const FailedLevel: React.FC = () => {
         ))}
       </Flex>
       <Button onClick={restartLevel}>
-        <FormattedMessage id="start level" defaultMessage="Retart Level" />
+        <FormattedMessage id="Restart level" defaultMessage="Retart Level" />
       </Button>
     </Flex>
 

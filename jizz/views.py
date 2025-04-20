@@ -248,7 +248,7 @@ class CountryChallengeViewSet(viewsets.ModelViewSet, GetPlayerMixin):
             'games',
             'games__challenge_level',
             'games__game'
-        ).first()
+        ).last()
         if not challenge:
             raise Http404(
                 "No challenges found for this player."

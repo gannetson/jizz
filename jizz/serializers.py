@@ -219,7 +219,12 @@ class FeedbackSerializer(serializers.ModelSerializer):
 class ChallengeLevelSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChallengeLevel
-        fields = ['sequence', 'level', 'title', 'description', 'length', 'media', 'jokers']
+        fields = [
+            'sequence', 'level', 
+            'title', 'description', 
+            'title_nl', 'description_nl',
+            'length', 'media', 'jokers'
+        ]
 
 
 class CountryGameSerializer(serializers.ModelSerializer):

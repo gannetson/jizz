@@ -9,7 +9,7 @@ import AppContext from '../../../core/app-context';
 import { FaHeart } from 'react-icons/fa';
 
 export const StartLevel: React.FC = () => {
-  const { player, countryChallenge, loading } = useContext(AppContext);
+  const { player, countryChallenge, loading, language } = useContext(AppContext);
   const navigate = useNavigate();
 
   const startLevel = () => {
@@ -35,27 +35,18 @@ export const StartLevel: React.FC = () => {
   return (
     <Flex direction={'column'} gap={10}>
       <Heading size={'lg'}>
-        <FormattedMessage id={'challenge title'} defaultMessage={'Round {round} - {title}'} values={{round, title: level?.challenge_level.title}} />
+        <FormattedMessage 
+          id={'challenge title'} 
+          defaultMessage={'Round {round} - {title}'} 
+          values={{round, title: language === 'nl' ? level?.challenge_level.title_nl : level?.challenge_level.title}} 
+        />
         </Heading>
-      <FormattedMessage
-        id={'challenge description'}
-        defaultMessage={
-          "You will run through different levels. It will start easy, but it will get harder. The final level will be a thorough. Let's see how far you get."
-        }
-      />
-      <FormattedMessage
-        id={'challenge phase'}
-        defaultMessage={'You are playing {country}.'}
-        values={{
-          country: countryChallenge?.country.name,
-        }}
-      />
       <Heading size={'md'}>
         <FormattedMessage id={'this level'} defaultMessage={'What is this level about?'} />
       </Heading>
 
       <Text>
-        {level.challenge_level.description}
+        {language === 'nl' ? level.challenge_level.description_nl : level.challenge_level.description}
       </Text>
 
 

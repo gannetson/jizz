@@ -25,7 +25,7 @@ const iconMapping: Record<ResultType, IconType> = {
 }
 
 export const ChallengeQuestion = () => {
-  const {species, player, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
+  const {species, player, language, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
   const {onOpen, onClose, isOpen} = useDisclosure()
   const navigate = useNavigate()
   const [showAnimation, setShowAnimation] = useState<'correct' | 'incorrect' | null>(null)
@@ -233,7 +233,7 @@ export const ChallengeQuestion = () => {
             <Heading size={'md'}>
               <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
               &nbsp;&middot;&nbsp;
-              {level.challenge_level.title}
+              {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
             </Heading>
           </Show>
           <Flex gap={2} alignItems={'center'}>
@@ -247,7 +247,7 @@ export const ChallengeQuestion = () => {
             <Heading size={'md'}>
               <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
               &nbsp;&middot;&nbsp;
-              {level.challenge_level.title}
+              {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
             </Heading>
           </Show>
 

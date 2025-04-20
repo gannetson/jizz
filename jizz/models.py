@@ -517,6 +517,8 @@ class ChallengeLevel(models.Model):
     media = models.CharField(max_length=10, default='images')
     title = models.CharField(max_length=200)
     description = models.TextField(default='')
+    title_nl = models.CharField(max_length=200, null=True, blank=True)
+    description_nl = models.TextField(default='', null=True, blank=True)
     tax_order = models.CharField(
         'Order',
         max_length=200,

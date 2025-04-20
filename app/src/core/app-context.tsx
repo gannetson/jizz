@@ -153,8 +153,10 @@ export type Update = {
 export type ChallengeLevel = {
   sequence: number
   level: 'beginner' | 'advanced' | 'expert'
-  title: string
+  title: string 
+  title_nl: string
   description: string
+  description_nl: string
   length: number
   media: string
   jokers: number

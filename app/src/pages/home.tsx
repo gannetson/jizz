@@ -39,13 +39,11 @@ const HomePage = () => {
             <Button variant='outline' onClick={() => navigate('/join')}>
               <FormattedMessage id={'join game'} defaultMessage={'Join a game'}/>
             </Button>
-            <Hide>
               <Button onClick={() => navigate('/challenge')}>
                 <Flex gap={4}>
-                  <FormattedMessage id={'country challenge'} defaultMessage={'Country challenge'}/>
+                  <FormattedMessage id={'country challenge'} defaultMessage={'Country challenge (beta)'}/>
                 </Flex>
               </Button>
-            </Hide>
               <Button variant='ghost' onClick={() => navigate('/scores')}>
                 <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>
               </Button>

@@ -30,12 +30,19 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const toast = useToast()
   
+  const noCacheHeaders = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }
+
   const createPlayer = async () => {
     const response = await fetch('/api/player/', {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        ...noCacheHeaders,
       },
       body: JSON.stringify({
         name: playerName,
@@ -57,8 +64,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
         cache: 'no-cache',
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          ...noCacheHeaders,
         },
       })
       .then(response => {
@@ -78,12 +84,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const loadPlayer = async (playerToken: string) => {
     setLoading(true)
     const response = await fetch(`/api/player/${playerToken}/`, {
-      cache: 'no-cache',
+      cache: 'no-store',
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+        ...noCacheHeaders,
+        'Authorization': `Token ${playerToken}`
+      }
     })
     const data = await response.json()
     if (data) {
@@ -99,10 +105,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const updatePlayer = async (playerToken: string) => {
     const response = await fetch(`/api/player/${playerToken}/`, {
+      cache: 'no-store',
       method: 'PATCH',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        ...noCacheHeaders,
+        'Authorization': `Token ${playerToken}`
       },
       body: JSON.stringify({
         name: playerName,
@@ -141,11 +148,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
 
     const response = await fetch('/api/games/', {
+        cache: 'no-store',
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${myPlayer.token}`,
+          ...noCacheHeaders,
+          'Authorization': `Token ${myPlayer.token}`
         },
         body: JSON.stringify({
           multiplayer: multiplayer === '1',
@@ -171,12 +178,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const loadGame = async (gameCode: string) => {
     setLoading(true)
     const response = await fetch(`/api/games/${gameCode}/`, {
-      cache: 'no-cache',
+      cache: 'no-store',
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: noCacheHeaders
     })
     if (response.status === 200) {
       const data = await response.json()
@@ -199,11 +203,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
     try {
       const response = await fetch('/api/country-challenges/', {
+        cache: 'no-store',
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${player.token}`,
+          ...noCacheHeaders,
+          'Authorization': `Token ${player.token}`
         },
         body: JSON.stringify({
           country: country.code,
@@ -234,11 +238,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
     setLoading(true)
     try {
       const response = await fetch(`/api/country-challenges/current/`, {
+        cache: 'no-store',
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${playerToken}`,
+          ...noCacheHeaders,
+          'Authorization': `Token ${playerToken}`
         }
       })
       const data = await response.json()
@@ -271,8 +275,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     const response = await fetch(`/api/answer/`, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        ...noCacheHeaders,
         'Authorization': `Token ${player.token}`,
       },
       body: JSON.stringify({
@@ -299,12 +302,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
     const response = await fetch(`/api/challenge/${countryChallenge.id}/next-level?${hash}`, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        ...noCacheHeaders,
         'Authorization': `Token ${player.token}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
       },
       cache: 'no-store'
     })
@@ -326,11 +325,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     const response = await fetch(`/api/games/${gameToken}/question?${hash}`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+        ...noCacheHeaders,
       },
       cache: 'no-store'
     })

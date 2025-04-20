@@ -298,7 +298,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       console.log('No country challenge set.')
       return
     }
-    const response = await fetch(`/api/challenge/${countryChallenge.id}/next-level`, {
+    const hash = new Date().getTime()
+    const response = await fetch(`/api/challenge/${countryChallenge.id}/next-level?${hash}`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',

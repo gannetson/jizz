@@ -93,6 +93,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     })
     const data = await response.json()
     if (data) {
+      setLanguage(data.language)
       setPlayer(data)
       setLoading(false)
       return data as Player

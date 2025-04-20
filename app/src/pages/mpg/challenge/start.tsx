@@ -70,5 +70,5 @@ export const StartLevel: React.FC = () => {
       </Button>
     </Flex>
 
-);
+  );
 };

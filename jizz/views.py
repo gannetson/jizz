@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Case, When, Value
+from django.http import Http404
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
@@ -240,6 +241,19 @@ class CountryChallengeViewSet(viewsets.ModelViewSet, GetPlayerMixin):
             'games__challenge_level',
             'games__game'
         )
+    
+    def get_object(self):
+        player = self.get_player_from_request(self.request)
+        challenge = CountryChallenge.objects.filter(player=player).prefetch_related(
+            'games',
+            'games__challenge_level',
+            'games__game'
+        ).first()
+        if not challenge:
+            raise Http404(
+                "No challenges found for this player."
+            )
+        return challenge
     
     def perform_create(self, serializer):
         player = self.get_player_from_request(self.request)

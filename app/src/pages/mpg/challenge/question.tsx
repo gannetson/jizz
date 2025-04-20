@@ -48,12 +48,12 @@ export const ChallengeQuestion = () => {
   const level = countryChallenge?.levels[0];
 
   useEffect(() => {
-    console.log(level?.status)
     if (!question) {
-    getNewChallengeQuestion()
+      getNewChallengeQuestion()
     }
   }, [question, level])
   
+
   const game = countryChallenge?.levels[0].game
 
   if (!question || !game || !level) {

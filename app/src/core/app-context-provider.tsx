@@ -75,9 +75,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }, [country?.code]);
 
-  const loadPlayer = (playerToken: string) => {
+  const loadPlayer = async (playerToken: string) => {
     setLoading(true)
-    fetch(`/api/player/${playerToken}/`, {
+    const response = await fetch(`/api/player/${playerToken}/`, {
       cache: 'no-cache',
       method: 'GET',
       headers: {
@@ -85,18 +85,16 @@ const AppContextProvider: FC<Props> = ({children}) => {
         'Content-Type': 'application/json',
       },
     })
-    .then(response => {
-      if (response.status === 200) {
-        response.json().then(data => {
-          setPlayer(data)
-        })
-      } else {
-        console.log('Could not load player.')
-      }
+    const data = await response.json()
+    if (data) {
+      setPlayer(data)
       setLoading(false)
-    })
-    return player
-
+      return data as Player
+    } else {
+      console.log('Could not load player.')
+      setLoading(false)
+      return undefined
+    }
   }
 
   const updatePlayer = async (playerToken: string) => {
@@ -225,37 +223,36 @@ const AppContextProvider: FC<Props> = ({children}) => {
   };
 
   const loadCountryChallenge = async () => {
+    const playerToken = localStorage.getItem('player-token')
+    if (!playerToken) {
+      console.log('Player token is not set.')
+      return
+    }
     if (!player) {
-      console.log('Player is not set.')
-      return
+      await loadPlayer(playerToken)
     }
-    if (!countryChallenge) {
-      console.log('No country challenge in progress.')
-      return
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/country-challenges/current/`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${playerToken}`,
+        }
+      })
+      const data = await response.json()
+      setCountryChallenge(data as CountryChallenge)
+    } catch (error) {
+      toast({
+        title: 'Error loading challenge',
+        description: 'Please start a new country challenge.',
+        status: 'error',
+      });
+    } finally {
+      setLoading(false);
     }
-    const question_id = challengeQuestion?.id
-      setLoading(true)
-      try {
-        const response = await fetch(`/api/country-challenges/${countryChallenge.id}/`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Token ${player.token}`,
-          }
-        })
-        const data = await response.json()
-        setCountryChallenge(data as CountryChallenge)
-      } catch (error) {
-        toast({
-          title: 'Error loading challenge',
-          description: 'Please start a new countr challenge.',
-          status: 'error',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  };
   
 
   const selectChallengeAnswer = async (answer: Species) => {
@@ -315,8 +312,14 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   }
 
-
   const getNewChallengeQuestion = async () => {
+    if (!countryChallenge) {
+      await loadCountryChallenge()
+      if (!countryChallenge) {
+        console.log('No country challenge set.')
+        return
+      }
+    }
     const gameToken = countryChallenge?.levels[0].game.token
     const hash = new Date().getTime()
 
@@ -329,6 +332,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
         'Pragma': 'no-cache',
         'Expires': '0'
       },
+      cache: 'no-store'
     })
     console.log('response', response)
     const data = await response.json()

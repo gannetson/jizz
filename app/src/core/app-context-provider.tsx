@@ -318,11 +318,16 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const getNewChallengeQuestion = async () => {
     const gameToken = countryChallenge?.levels[0].game.token
-    const response = await fetch(`/api/games/${gameToken}/question`, {
+    const hash = new Date().getTime()
+
+    const response = await fetch(`/api/games/${gameToken}/question?${hash}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
     })
     console.log('response', response)

@@ -4,24 +4,26 @@ import {AppContextProvider} from "./core/app-context-provider";
 import {WebsocketContextProvider} from "./core/websocket-context-provider"
 import {MainContent} from "./main-content"
 import {registerServiceWorker} from "./core/register-service-worker"
-import {ChakraProvider} from "@chakra-ui/react"
-import { theme } from "./theme";
+import { ChakraProvider } from '@chakra-ui/react'
+import { theme } from './theme'
+
 registerServiceWorker()
 
 export const App = () => {
   useEffect(() => {
     document.title = "Jizz"
-
-  }, []);
+  }, [])
 
   return (
-    <ChakraProvider theme={theme}>
+    <ChakraProvider theme={theme} resetCSS>
       <AppContextProvider>
         <WebsocketContextProvider>
-            <MainContent/>
+          <MainContent/>
         </WebsocketContextProvider>
       </AppContextProvider>
     </ChakraProvider>
   )
 }
+
+export default App
 

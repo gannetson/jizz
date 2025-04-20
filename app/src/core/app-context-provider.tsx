@@ -304,7 +304,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': `Token ${player.token}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
+      cache: 'no-store'
     })
     loadCountryChallenge()
 

@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": ["react", "react-intl", "@types/react-intl"],
     "target": "es5",
     "lib": [
       "dom",

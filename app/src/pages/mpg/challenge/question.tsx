@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Heading, Icon, Image, Link, Popover, PopoverArrow,PopoverCloseButton,  PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, Card, useColorModeValue} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Icon, Image, Link, Popover, PopoverArrow,PopoverCloseButton,  PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, Card, useColorModeValue, Show} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
 import {useContext, useEffect, useState} from "react"
 import ReactPlayer from "react-player"
@@ -229,11 +229,13 @@ export const ChallengeQuestion = () => {
           <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
             {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
           </Heading>
-          <Heading size={'md'}>
-            <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
-            &nbsp;&middot;&nbsp;
-            {level.challenge_level.title}
-          </Heading>
+          <Show above="md">
+            <Heading size={'md'}>
+              <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
+              &nbsp;&middot;&nbsp;
+              {level.challenge_level.title}
+            </Heading>
+          </Show>
           <Flex gap={2} alignItems={'center'}>
             {[...Array(level.challenge_level.jokers)].map((_, i) => (
               <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "orange.600" : "orange.300"} boxSize={6} />
@@ -241,6 +243,13 @@ export const ChallengeQuestion = () => {
           </Flex>
         </Page.Header>
         <Page.Body>
+        <Show below="md">
+            <Heading size={'md'}>
+              <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
+              &nbsp;&middot;&nbsp;
+              {level.challenge_level.title}
+            </Heading>
+          </Show>
 
         <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
         <Box position={'relative'}>

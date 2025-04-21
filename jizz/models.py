@@ -111,17 +111,33 @@ class Game(models.Model):
         if self.include_escapes:
             statuses.extend(['introduced', 'uncertain', 'unknown'])
 
-        all_species = Species.objects.filter(
-            images__isnull=False,
-            countryspecies__status__in=statuses,
-            countryspecies__country=self.country
-        ).distinct().order_by('id')
-        if self.media == 'video':
+        if self.tax_order:
             all_species = Species.objects.filter(
-                videos__isnull=False,
+                images__isnull=False,
+                countryspecies__status__in=statuses,
+                countryspecies__country=self.country,
+                tax_order=self.tax_order
+            ).distinct().order_by('id')
+        else:
+            all_species = Species.objects.filter(
+                images__isnull=False,
                 countryspecies__status__in=statuses,
                 countryspecies__country=self.country
             ).distinct().order_by('id')
+        if self.media == 'video':
+            if self.tax_order:
+                all_species = Species.objects.filter(
+                    videos__isnull=False,
+                    countryspecies__status__in=statuses,
+                    countryspecies__country=self.country,
+                    tax_order=self.tax_order
+                ).distinct().order_by('id')
+            else:
+                all_species = Species.objects.filter(
+                    videos__isnull=False,
+                    countryspecies__status__in=statuses,
+                    countryspecies__country=self.country
+                ).distinct().order_by('id')
         if self.media == 'audio':
             if self.tax_order:
                 all_species = Species.objects.filter(

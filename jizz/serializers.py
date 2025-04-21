@@ -241,6 +241,7 @@ class CountryGameSerializer(serializers.ModelSerializer):
 class CountryChallengeSerializer(serializers.ModelSerializer):
     levels = CountryGameSerializer(source='games', many=True, read_only=True)
     player = PlayerSerializer(read_only=True)
+    country = CountrySerializer(read_only=True)
     
     class Meta:
         model = CountryChallenge

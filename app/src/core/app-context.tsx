@@ -193,9 +193,10 @@ type SharedState = {
   createGame: (player?: Player) => Promise<Game | undefined>
   startCountryChallenge: (country: Country, player: Player) => Promise<void>
   countryChallenge?: CountryChallenge
+  loadCountryChallenge: () => Promise<void>
   challengeQuestion?: Question
   getNewChallengeQuestion: () => Promise<void>
-  selectChallengeAnswer: (species: Species) => Promise<Boolean>
+  selectChallengeAnswer: (species: Species) => Promise<Answer>
   getNewChallengLevel: () => Promise<void>
   setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
@@ -241,9 +242,10 @@ const AppContext = createContext<SharedState>({
   setMediaType: () => {},
   startCountryChallenge: async () => {},
   countryChallenge: undefined,
+  loadCountryChallenge: async () => {},
   getNewChallengeQuestion: async () => {},
   challengeQuestion: undefined,
-  selectChallengeAnswer: async () => {return false},
+  selectChallengeAnswer: async () => { return { correct: false } as Answer },
   getNewChallengLevel: async () => {}
 });
 

@@ -287,7 +287,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     })
     const data = await response.json()
     await loadCountryChallenge()
-    return data.correct
+    return data
   }
 
   const getNewChallengLevel = async () => {
@@ -369,6 +369,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setGame,
       startCountryChallenge,
       countryChallenge,
+      loadCountryChallenge,
       selectChallengeAnswer,
       challengeQuestion,
       getNewChallengeQuestion,

@@ -6,6 +6,7 @@ import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
 import {useNavigate} from "react-router-dom"
 import {ViewSpecies} from "../../../components/view-species"
+import { AnswerFeedback } from "../../../components/answer-feedback"
 
 
 export const WaitingComponent = () => {

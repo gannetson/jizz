@@ -21,11 +21,12 @@ const floatAnimation = keyframes`
 `;
 
 const HomePage = () => {
-  const {player, loading} = useContext(AppContext);
+  const {player, loading, countryChallenge, loadCountryChallenge} = useContext(AppContext);
   const navigate = useNavigate()
   const [updates, setUpdates] = useState<Update[]>([])
 
   useEffect(() => {
+    loadCountryChallenge()
     loadUpdates().then(updates => {
       setUpdates(updates)
     })
@@ -50,54 +51,74 @@ const HomePage = () => {
             <Button variant='outline' onClick={() => navigate('/join')}>
               <FormattedMessage id={'join game'} defaultMessage={'Join a game'}/>
             </Button>
-              <Button onClick={() => navigate('/challenge')} position="relative">
+            
+            {countryChallenge && countryChallenge.levels && countryChallenge.levels.length > 0 && (
+              <Button colorScheme="orange" onClick={() => navigate('/challenge/play')} position="relative">
                 <Flex gap={4}>
-                  <FormattedMessage id={'country challenge'} defaultMessage={'Country challenge (beta)'}/>
+                  <FormattedMessage 
+                    id={'continue challenge'} 
+                    defaultMessage={'Continue challenge - {country} - Level {level}'} 
+                    values={{
+                      country: countryChallenge.country.name,
+                      level: countryChallenge.levels[0].challenge_level.sequence + 1
+                    }}
+                  />
                 </Flex>
+              </Button>
+            )}
+            
+            <Button onClick={() => navigate('/challenge')} position="relative">
+              <Flex gap={4}>
+                {countryChallenge ? (
+                  <FormattedMessage id={'new country challenge'} defaultMessage={'New country challenge'}/>
+                ):(
+                  <FormattedMessage id={'country challenge'} defaultMessage={'Country challenge'}/>
+                )}
+              </Flex>
+              <Box
+                position="absolute"
+                top="-25px"
+                right="-25px"
+                width="100px"
+                height="100px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                zIndex={1}
+              >
                 <Box
                   position="absolute"
-                  top="-25px"
-                  right="-25px"
                   width="100px"
                   height="100px"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  zIndex={1}
+                  animation={`${floatAnimation} 3s ease-in-out infinite`}
                 >
+                  <Icon
+                    as={FaCertificate}
+                    boxSize="100px"
+                    color="orange.700"
+                    position="absolute"
+                    top="0"
+                    left="0"
+                  />
                   <Box
                     position="absolute"
-                    width="100px"
-                    height="100px"
-                    animation={`${floatAnimation} 3s ease-in-out infinite`}
+                    color="white"
+                    fontSize="sm"
+                    fontWeight="bold"
+                    textAlign="center"
+                    width="100%"
+                    top="50%"
+                    left="50%"
+                    transform="translate(-50%, -50%)"
                   >
-                    <Icon
-                      as={FaCertificate}
-                      boxSize="100px"
-                      color="orange.700"
-                      position="absolute"
-                      top="0"
-                      left="0"
-                    />
-                    <Box
-                      position="absolute"
-                      color="white"
-                      fontSize="sm"
-                      fontWeight="bold"
-                      textAlign="center"
-                      width="100%"
-                      top="50%"
-                      left="50%"
-                      transform="translate(-50%, -50%)"
-                    >
-                      10 levels
-                    </Box>
+                    10 levels
                   </Box>
                 </Box>
-              </Button>
-              <Button variant='ghost' onClick={() => navigate('/scores')}>
-                <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>
-              </Button>
+              </Box>
+            </Button>
+            <Button variant='ghost' onClick={() => navigate('/scores')}>
+              <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>
+            </Button>
             <Feedback/>
             {updates && updates.length > 0 &&  <UpdateLine update={updates[0]} />}
               <Button variant='ghost' onClick={() => navigate('/updates')}>

@@ -14,6 +14,8 @@ import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaQuestion, FaSkull
 import { IconType } from "react-icons"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
+import { AnswerFeedback } from "../../../components/answer-feedback"
+import Flag from 'react-world-flags'
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
 
@@ -28,10 +30,10 @@ export const ChallengeQuestion = () => {
   const {species, player, language, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
   const {onOpen, onClose, isOpen} = useDisclosure()
   const navigate = useNavigate()
-  const [showAnimation, setShowAnimation] = useState<'correct' | 'incorrect' | null>(null)
-  const [heartState, setHeartState] = useState<'whole' | 'broken'>('whole')
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [isCorrect, setIsCorrect] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
-
+  const [response, setResponse] = useState<Answer | null>(null)
   const rotate = keyframes`
     from {
       transform: rotate(360deg)
@@ -67,27 +69,17 @@ export const ChallengeQuestion = () => {
 
   const giveAnswer = async (answer: Species) => {
     setLoading(true)
-    const correct = await selectAnswer(answer)
-    setShowAnimation(correct ? 'correct' : 'incorrect')
-    if (!correct) {
-      // Toggle between whole and broken heart
-      const interval = setInterval(() => {
-        setHeartState('broken')
-      }, 700)
-      setTimeout(() => {
-        clearInterval(interval)
-        setShowAnimation(null)
-        setHeartState('whole')
-        setLoading(false)
-        getNewChallengeQuestion()
-      }, 2000)
-    } else {
-      setTimeout(() => {
-        setShowAnimation(null)
-        setLoading(false)
-        getNewChallengeQuestion()
-      }, 2000)
-    }
+    const result = await selectAnswer(answer)
+    setResponse(result)
+    setIsCorrect(!!result.correct)
+    setShowFeedback(true)
+  }
+
+  const handleAnimationComplete = () => {
+    setShowFeedback(false)
+    setLoading(false)
+    getNewChallengeQuestion()
+    setResponse(null)
   }
 
   // Initialize array with 'open'
@@ -117,112 +109,12 @@ export const ChallengeQuestion = () => {
     <>
       <Page>
         <>
-            {showAnimation && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{
-                  position: 'fixed',
-                  top: 150,
-                  left: 0,
-                  right: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 1000,
-                }}
-              >
-                {showAnimation === 'correct' ? (
-                  <motion.div
-                    initial={{ scale: 0, y: -100 }}
-                    animate={{ 
-                      scale: [0, 1.2, 1],
-                      y: [0, -20, 0],
-                    }}
-                    transition={{
-                      duration: 0.5,
-                      times: [0, 0.3, 1],
-                      ease: "easeOut"
-                    }}
-                  >
-                    <Box
-                      position="relative"
-                      width="160px"
-                      height="160px"
-                      borderRadius="50%"
-                      bg="white"
-                      boxShadow="0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1), inset 0 2px 4px 0 rgba(0, 0, 0, 0.1)"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      _before={{
-                        content: '""',
-                        position: 'absolute',
-                        top: '2px',
-                        left: '2px',
-                        right: '2px',
-                        bottom: '2px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.3))',
-                        zIndex: 1
-                      }}
-                    >
-                      <Icon
-                        as={FaCheckCircle}
-                        boxSize={32}
-                        color="orange.600"
-                        position="relative"
-                        zIndex={2}
-                      />
-                    </Box>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    animate={{ 
-                      x: [0, 20, -20, 20, -20, 0],
-                      rotate: [0, 10, -10, 10, 0, 0],
-                    }}
-                    transition={{
-                      duration: 0.5,
-                      repeat: 2,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <Box
-                      position="relative"
-                      width="160px"
-                      height="160px"
-                      borderRadius="50%"
-                      bg="white"
-                      boxShadow="0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1), inset 0 2px 4px 0 rgba(0, 0, 0, 0.1)"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      _before={{
-                        content: '""',
-                        position: 'absolute',
-                        top: '2px',
-                        left: '2px',
-                        right: '2px',
-                        bottom: '2px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.3))',
-                        zIndex: 1
-                      }}
-                    >
-                      <Icon
-                        as={heartState === 'whole' ? FaHeart : FaHeartBroken}
-                        boxSize={32}
-                        color="orange.600"
-                        position="relative"
-                        zIndex={2}
-                      />
-                    </Box>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
+          {showFeedback && (
+            <AnswerFeedback 
+              correct={isCorrect} 
+              onAnimationComplete={handleAnimationComplete} 
+            />
+          )}
         </>
 
         <Page.Header>
@@ -231,9 +123,14 @@ export const ChallengeQuestion = () => {
           </Heading>
           <Show above="md">
             <Heading size={'md'}>
-              <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
-              &nbsp;&middot;&nbsp;
-              {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
+              <Flex align="center" gap={2}>
+                <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
+                <Flag 
+                  code={countryChallenge?.country?.code} 
+                  style={{ width: '30px', height: 'auto' }} 
+                />
+                  {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
+              </Flex>
             </Heading>
           </Show>
           <Flex gap={2} alignItems={'center'}>
@@ -246,7 +143,10 @@ export const ChallengeQuestion = () => {
         <Show below="md">
             <Heading size={'md'}>
               <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
-              &nbsp;&middot;&nbsp;
+              <Flag 
+                code={countryChallenge?.country?.code} 
+                style={{ width: '30px', height: 'auto' }} 
+              />
               {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
             </Heading>
           </Show>
@@ -303,7 +203,12 @@ export const ChallengeQuestion = () => {
             {
               question.options.map((option, key) => {
                 return (
-                  <Button key={key} onClick={() => giveAnswer(option)} isLoading={loading}>
+                  <Button 
+                    key={key} 
+                    onClick={() => giveAnswer(option)} 
+                    isDisabled={loading} 
+                    colorScheme={response?.species?.id === option.id ? 'green' : response?.answer?.id === option.id ? 'red' : 'orange'}
+                  >
                     <SpeciesName species={option}/>
                   </Button>
                 )

@@ -3,6 +3,8 @@ import AppContext from "../../core/app-context";
 import {useContext} from "react";
 import {IoIosMoon, IoIosSunny} from "react-icons/io";
 import {FormattedMessage} from "react-intl"
+import SelectLanguage from "../../components/select-language";
+import ChangeLanguage from "../../components/change-language";
 
 export const JizzMenu = () => {
     const {game} = useContext(AppContext);
@@ -34,10 +36,12 @@ export const JizzMenu = () => {
               <FormattedMessage id={'about jizz'} defaultMessage={'About Jizz'} />
             </Link>
             <Box>
-            <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>
-                {colorMode === 'light' ? 'Dark' : 'Light'}
-            </Button>
+              <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>
+                  {colorMode === 'light' ? 'Dark' : 'Light'}
+              </Button>
             </Box>
+
+            <ChangeLanguage />
         </Flex>
     );
 }

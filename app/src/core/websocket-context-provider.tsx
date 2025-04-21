@@ -25,13 +25,13 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const playerToken = localStorage.getItem('player-token')
 
 
-  const notify = (title: string, description?: string) => {
+  const notify = (title: string, description?: string, colorScheme?: string) => {
     toast({
       title,
       description,
       isClosable: true,
-      colorScheme: "orange",
-      position: "top",
+      colorScheme: colorScheme || "orange",
+      position: "bottom",
       duration: 2000
     })
   }
@@ -84,9 +84,9 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
         case 'answer_checked':
           setAnswer(message.answer as Answer)
           if (message.answer.correct) {
-            notify('Correct!')
+            notify('Correct!', undefined, 'green')
           } else {
-            notify('Incorrect!')
+            notify('Incorrect!', undefined, 'red')
           }
           break
       }

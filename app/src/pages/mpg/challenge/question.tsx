@@ -142,12 +142,14 @@ export const ChallengeQuestion = () => {
         <Page.Body>
         <Show below="md">
             <Heading size={'md'}>
-              <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
-              <Flag 
-                code={countryChallenge?.country?.code} 
-                style={{ width: '30px', height: 'auto' }} 
-              />
-              {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
+              <Flex align="center" gap={2}>
+                <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
+                <Flag 
+                  code={countryChallenge?.country?.code} 
+                  style={{ width: '30px', height: 'auto' }} 
+                />
+                {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
+              </Flex>
             </Heading>
           </Show>
 

@@ -300,6 +300,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return
     }
     const hash = new Date().getTime()
+    setChallengeQuestion(undefined)
     const response = await fetch(`/api/challenge/${countryChallenge.id}/next-level?${hash}`, {
       method: 'POST',
       headers: {

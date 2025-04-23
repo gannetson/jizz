@@ -210,9 +210,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
           ...noCacheHeaders,
           'Authorization': `Token ${player.token}`
         },
-        body: JSON.stringify({
-          country: country.code,
-        })
+        body: JSON.stringify({country_code: country.code})
       })
       const data = await response.json()
       setCountryChallenge(data as CountryChallenge)

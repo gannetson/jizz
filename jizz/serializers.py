@@ -242,7 +242,8 @@ class CountryChallengeSerializer(serializers.ModelSerializer):
     levels = CountryGameSerializer(source='games', many=True, read_only=True)
     player = PlayerSerializer(read_only=True)
     country = CountrySerializer(read_only=True)
+    country_code = serializers.CharField(source='country_id', write_only=True)
     
     class Meta:
         model = CountryChallenge
-        fields = ['id', 'country', 'player', 'created', 'levels']
+        fields = ['id', 'country', 'player', 'created', 'levels', 'country_code']

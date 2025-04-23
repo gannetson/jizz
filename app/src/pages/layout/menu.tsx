@@ -6,7 +6,7 @@ import {FormattedMessage} from "react-intl"
 import SelectLanguage from "../../components/select-language";
 import ChangeLanguage from "../../components/change-language";
 
-export const JizzMenu = () => {
+export const ExpertBirderMenu = () => {
     const {game} = useContext(AppContext);
     const { colorMode, toggleColorMode } = useColorMode()
     return (
@@ -33,7 +33,7 @@ export const JizzMenu = () => {
               <FormattedMessage id={'privacy'} defaultMessage={'Privacy'} />
             </Link>
             <Link href={'/about'}>
-              <FormattedMessage id={'about jizz'} defaultMessage={'About Jizz'} />
+              <FormattedMessage id={'about jizz'} defaultMessage={'About ExpertBirder'} />
             </Link>
             <Box>
               <Button onClick={toggleColorMode} leftIcon={colorMode === 'light' ? <IoIosMoon /> :<IoIosSunny />}>

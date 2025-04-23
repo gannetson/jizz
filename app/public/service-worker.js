@@ -1,6 +1,6 @@
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'Jizz - Bird quiz';
+  const title = data.title || 'ExpertBirder - Bird quiz';
   const options = {
     body: data.body || 'You got mail',
     icon: data.icon || '/images/jizz-logo.png',

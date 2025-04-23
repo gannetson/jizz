@@ -15,18 +15,18 @@ export const PrivacyPage = () => {
     <Page>
       <Page.Header>
         <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
-          Privacy Policy for Jizz - Bird Identification App
+          Privacy Policy for ExpertBirder - Bird Identification App
         </Heading>
       </Page.Header>
       <Page.Body>
         <Heading size={'sm'}>Introduction</Heading>
         <Text>
-          Welcome to Jizz - Bird Identification App ("Jizz", "we", "our", "us"). We are committed to protecting your
+          Welcome to ExpertBirder - Bird Identification App ("ExpertBirder", "we", "our", "us"). We are committed to protecting your
           privacy and ensuring that your personal data is handled securely. This Privacy Policy explains how we collect,
           use, disclose, and safeguard your information when you use our mobile application and services.
         </Text>
         <Text>
-          By using Jizz, you agree to the collection and use of information in accordance with this Privacy Policy.
+          By using ExpertBirder, you agree to the collection and use of information in accordance with this Privacy Policy.
         </Text>
 
         <Heading size={'sm'}>Information We Collect</Heading>

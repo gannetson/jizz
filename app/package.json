@@ -43,7 +43,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "deploy": "scp -r build birdr.be:/var/www/birdr/birdr/app",
+    "deploy": "scp -r build birdr.pro:/var/www/jizz/jizz/app",
     "release": "npm run build && npm run deploy",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

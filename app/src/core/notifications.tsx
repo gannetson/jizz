@@ -15,11 +15,11 @@
 export const sendNotification = async ({title, body}: {title: string, body: string}): Promise<void> => {
   if ('serviceWorker' in navigator) {
     const registration = await navigator.serviceWorker.ready;
-    registration.showNotification('Jizz - Bird quiz', {
+    registration.showNotification('Birdr - Bird quiz', {
       body: 'Ready to identify some birds?',
       icon: '/images/logo.png',
       badge: '/images/badge.png',
-      data: { url: 'https://jizz.be/challenge' },
+      data: { url: 'https://birdr.be/challenge' },
       actions: [
         { action: 'open', title: 'Open App' },
         { action: 'dismiss', title: 'Dismiss' },

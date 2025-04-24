@@ -15,7 +15,7 @@ export const AboutPage = () => {
         <Page>
             <Page.Header>
                 <Heading  textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
-                    About Jizz
+                    About Birdr
                 </Heading>
             </Page.Header>
             <Page.Body>
@@ -29,16 +29,7 @@ export const AboutPage = () => {
 
                 <Text>
                     With my background in programming, I started to put this app together. Back-end / API is in
-                    Django and front-end in React. All code is open source and available on <Link color={'orange.500'} target={'_blank'} href={'https://github.com/gannetson/jizz'}>GitHub</Link>.
-                </Text>
-              <Heading size={'sm'}>Jizz?</Heading>
-              <Text>
-               In birdwatching, "jizz" refers to the overall impression or general appearance of a bird,
-                which includes its shape, behavior, movement, posture, flight pattern, and habitat.
-                Birders use "jizz" as a quick way to identify birds, often before getting a detailed
-                look at specific features like plumage or markings. It’s a holistic sense developed
-                over time by experienced birdwatchers, enabling them to recognize species even from
-                a brief glance or in less-than-ideal viewing conditions.
+                    Django and front-end in React. All code is open source and available on <Link color={'orange.500'} target={'_blank'} href={'https://github.com/gannetson/birdr'}>GitHub</Link>.
                 </Text>
               <Heading size={'sm'}>Contact & feedback</Heading>
               <Text>

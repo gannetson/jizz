@@ -26,7 +26,7 @@ import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 
 export const MainContent = () => {
   useEffect(() => {
-    document.title = "Jizz"
+    document.title = "Birdr"
 
   }, []);
   const {language} = useContext(AppContext)

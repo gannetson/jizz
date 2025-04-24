@@ -1,5 +1,5 @@
 {
-  "name": "jizz",
+  "name": "birdr",
   "version": "0.3.0",
   "private": true,
   "dependencies": {
@@ -43,7 +43,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "deploy": "scp -r build jizz.be:/var/www/jizz/jizz/app",
+    "deploy": "scp -r build birdr.be:/var/www/birdr/birdr/app",
     "release": "npm run build && npm run deploy",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

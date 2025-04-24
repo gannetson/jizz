@@ -19,7 +19,7 @@ const Lobby: React.FC = () => {
   const {player, game} = useContext(AppContext)
   const navigate = useNavigate()
 
-  const gameLink = `https://jizz.be/join/${gameToken}`
+  const gameLink = `https://birdr.be/join/${gameToken}`
 
   const copyCode = () => {
     if (gameToken) {

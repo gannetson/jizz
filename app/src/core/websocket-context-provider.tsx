@@ -46,7 +46,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       return
     }
 
-    let socketUrl = `wss://jizz.be/mpg/${game.token}`
+    let socketUrl = `wss://birdr.be/mpg/${game.token}`
     if (window.location.host === 'localhost:3000') {
       socketUrl = `ws://localhost:8050/mpg/${game.token}`
     }

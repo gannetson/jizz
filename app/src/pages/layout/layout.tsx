@@ -22,7 +22,7 @@ import SelectCountry from "../../components/select-country";
 import SelectLevel from "../../components/select-level";
 import {useContext} from "react";
 import AppContext from "../../core/app-context";
-import {JizzMenu} from "./menu";
+import {BirdrMenu} from "./menu";
 
 const Layout = () => {
   const {isOpen, onOpen, onClose} = useDisclosure()
@@ -45,7 +45,7 @@ const Layout = () => {
           <DrawerHeader>Menu</DrawerHeader>
 
           <DrawerBody>
-            <JizzMenu/>
+            <BirdrMenu/>
           </DrawerBody>
 
           <DrawerFooter>

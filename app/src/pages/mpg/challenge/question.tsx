@@ -169,7 +169,7 @@ export const ChallengeQuestion = () => {
               src={question.images[question.number].url.replace('/1800', '/900')}
               fallback={
                 <Image
-                  src='/images/jizz-logo.png'
+                  src='/images/birdr-logo.png'
                   animation={`${rotate} infinite 2s linear`}
                   width={'200px'}
                   maxHeight={'600px'}

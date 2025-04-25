@@ -23,6 +23,7 @@ export const CreateCountryChallenge = () => {
     player,
     createPlayer,
     country,
+    playerName,
     startCountryChallenge,
     loading
   } = useContext(AppContext);
@@ -65,7 +66,7 @@ export const CreateCountryChallenge = () => {
 
         {/* <Button onClick={()=> requestNotificationPermission()}>Request</Button>
         <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})}>Test</Button> */}
-        <Button isDisabled={!country || !player} size='lg' onClick={create}>
+        <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>
       </Flex>

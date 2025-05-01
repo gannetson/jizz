@@ -1,6 +1,6 @@
 {
-  "name": "jizz",
-  "version": "0.3.0",
+  "name": "birdr",
+  "version": "0.8.0",
   "private": true,
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",

@@ -298,7 +298,10 @@ def get_country_status(country_code='NL'):
     country = Country.objects.get(code=country_code)
     species = CountrySpecies.objects.filter(country=country, status='unknown')
     print (f'{country.name} {species.count()} species')
-    url = f'https://avibase.bsc-eoc.org/checklist.jsp??lang=EN&p2=1&list=ebird&region={country_code}&version=text&lifelist=&highlight=0'
+    code = country_code
+    if code == 'GB':
+        code = 'UK'
+    url = f'https://avibase.bsc-eoc.org/checklist.jsp??lang=EN&p2=1&list=ebird&region={code}&version=text&lifelist=&highlight=0'
 
     data = requests.get(url)
     if data.status_code != 200:

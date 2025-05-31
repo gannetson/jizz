@@ -1,11 +1,10 @@
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Button, Divider, Flex, Heading, Spinner} from "@chakra-ui/react"
+import {Button, Flex, Heading, Image} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
 import SelectLevel from "./select-level"
-import {SelectGameType} from "./select-game-type"
 import {Loading} from "./loading"
 import {SelectLength} from "./select-length"
 import WebsocketContext from "../core/websocket-context"
@@ -13,21 +12,65 @@ import {useNavigate} from "react-router-dom"
 import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
+import {UseCountries} from "../user/use-countries"
 
 
-export const CreateGame = () => {
+type GameProps = {
+  country?: string;
+  length?: string;
+  level?: string;
+  includeRare?: boolean
+  mediaType?: string;
+}
+
+export const CreateGame = ({
+                             country: pickCountry,
+                             length: pickLength,
+                             level: pickLevel,
+                             includeRare,
+                             mediaType: pickMediaType
+                           }: GameProps) => {
 
   const {
     player,
     createPlayer,
     country,
+    setCountry,
+    setLevel,
+    setLength,
     createGame,
-    game,
+    setIncludeRare,
+    setMediaType,
     playerName
   } = useContext(AppContext);
   const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const {countries} = UseCountries()
+
+  useEffect(() => {
+    if (pickCountry && countries && countries.length) {
+      const country = countries.find((c) => c.code === pickCountry)
+      country && setCountry(country)
+    }
+    if (pickLength) {
+      setLength(pickLength)
+    }
+    if (pickLevel) {
+      setLevel(pickLevel)
+    }
+    if (pickMediaType) {
+      setMediaType(pickMediaType)
+    }
+    if (includeRare !== undefined) {
+      setIncludeRare(includeRare)
+    }
+
+  }, [
+    countries, pickCountry,
+    pickLevel, pickLength, pickMediaType, includeRare,
+    setLevel, setMediaType, setIncludeRare, setLength
+  ]);
 
 
   const create = async () => {
@@ -40,8 +83,7 @@ export const CreateGame = () => {
     await joinGame(myGame, myPlayer)
     navigate('/game/lobby')
     setLoading(false)
- }
-
+  }
 
   return (
     loading ? (
@@ -49,13 +91,24 @@ export const CreateGame = () => {
     ) : (
       <Flex direction={'column'} gap={10}>
         <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'}/></Heading>
+        {country?.code === 'NL-NH' && (
+          <Flex gap={4}>
+            <FormattedMessage
+              defaultMessage={'A special game for DBA Texel Bird Week! You get 20 pictures, with a higher chance to see rare species.'}
+              id={'texel game info'}/>
+            <Image src={'/images/dba.png'} height={"20"}/>
+          </Flex>
+        )}
+        <FormattedMessage
+          defaultMessage={'To get a high score, you need to identify the birds correctly, but you also need to be fast! After each answer you see how many points you got.'}
+          id={'game info'}/>
         <SetName/>
         <SelectLanguage/>
-        <SelectCountry/>
-        <SelectSpeciesStatus />
-        <SelectLength/>
-        <SelectLevel/>
-        <SelectMediaType/>
+        {!pickCountry && <SelectCountry/>}
+        {includeRare === undefined && <SelectSpeciesStatus/>}
+        {!pickLength && <SelectLength/>}
+        {!pickLevel && <SelectLevel/>}
+        {!pickMediaType && <SelectMediaType/>}
         <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>

@@ -6,14 +6,14 @@ import AppContext from "../../core/app-context"
 
 
 const GameHeader: React.FC = () => {
-  const {player} = useContext(AppContext)
+  const {player, country} = useContext(AppContext)
 
 
   return (
     <Page.Header>
       <Flex justifyContent={'space-between'} width={'full'} alignItems={'center'}>
         <Heading size={'lg'} noOfLines={1}>
-          <FormattedMessage id={'Multi player game'} defaultMessage={'Multi player game'}/>
+          {country?.name ? country.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
         <Box>
           {player?.name}

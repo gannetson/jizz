@@ -1,7 +1,7 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
-import {Box, Button, Flex, Heading, List, ListItem, Tag} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Link, List, ListItem, Tag} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
@@ -12,8 +12,6 @@ import GameHeader from "./game-header"
 const Lobby: React.FC = () => {
 
   const gameToken = localStorage.getItem('game-token')
-
-  const [copied, setCopied] = useState(false)
   const [copied2, setCopied2] = useState(false)
   const {players, startGame, question} = useContext(WebsocketContext)
   const {player, game} = useContext(AppContext)
@@ -21,16 +19,6 @@ const Lobby: React.FC = () => {
 
   const gameLink = `https://birdr.pro/join/${gameToken}`
 
-  const copyCode = () => {
-    if (gameToken) {
-      copy(gameToken)
-      setCopied(true)
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-
-    }
-  }
 
   const copyLink = () => {
     if (gameLink) {
@@ -51,9 +39,6 @@ const Lobby: React.FC = () => {
   }, [question]);
 
   const isHost = player?.name === game?.host?.name
-  console.log('player', player)
-  console.log('game', game)
-  console.log('isHost', isHost)
 
   return (
     <Page>
@@ -63,21 +48,16 @@ const Lobby: React.FC = () => {
           <FormattedMessage id={'game lobby'} defaultMessage={'Game Lobby'}/>
         </Heading>
         <Flex gap={4}>
-          <FormattedMessage id={'code'} defaultMessage={'Code'}/>
-          <Box><Tag onClick={copyCode} fontSize='18px'>{gameToken}</Tag></Box>
-          {copied ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Button variant='link' onClick={copyCode}>
-              <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
-            </Button>
-          )}
+          <FormattedMessage id={'explain mpg'}
+                            defaultMessage={'You can play against other players by sharing this link with them. If you want to play solo, you can start the game right away.'}/>
         </Flex>
         <Flex gap={4}>
           <FormattedMessage id={'link'} defaultMessage={'Link'}/>
           <Box><Tag onClick={copyLink} fontSize='18px'>{gameLink}</Tag></Box>
           {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Button variant='link' onClick={copyLink}>
+            <Link fontWeight='bold' textDecoration='underline' onClick={copyLink}>
               <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
-            </Button>
+            </Link>
           )}
         </Flex>
         <Heading size={'md'} mt={6}>
@@ -97,8 +77,11 @@ const Lobby: React.FC = () => {
             </Button>
 
           ) : (
-            <FormattedMessage id={'waiting for host'} defaultMessage={'Waiting until the {host} starts the game.'}
-                              values={{host: game?.host?.name || 'host'}}/>
+            <FormattedMessage
+              id={'waiting for host'}
+              defaultMessage={'Waiting until the {host} starts the game.'}
+              values={{host: game?.host?.name || 'host'}}
+            />
           )
         }
 

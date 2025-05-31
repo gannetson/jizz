@@ -111,6 +111,9 @@ class Game(models.Model):
         if self.include_escapes:
             statuses.extend(['introduced', 'uncertain', 'unknown'])
 
+        if self.country.code == 'NL-NH' and random() < 0.3:
+            statuses = ['rare']
+
         if self.tax_order:
             all_species = Species.objects.filter(
                 images__isnull=False,

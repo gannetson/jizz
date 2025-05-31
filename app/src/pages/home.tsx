@@ -1,4 +1,4 @@
-import {Button, Flex, Heading, Hide, Box, Icon} from "@chakra-ui/react";
+import {Button, Flex, Heading, Hide, Box, Icon, Image} from "@chakra-ui/react";
 import { FaCertificate } from "react-icons/fa";
 import Page from "./layout/page";
 import {FormattedMessage} from "react-intl";
@@ -9,16 +9,7 @@ import {useNavigate} from "react-router-dom"
 import {Feedback} from "../components/feedback"
 import {loadUpdates} from "../core/updates"
 import {UpdateLine} from "../components/updates/update-line"
-import { keyframes } from "@emotion/react";
-
-const floatAnimation = keyframes`
-  0% { transform: scale(1) rotate(0deg); }
-  20% { transform: scale(1.1) rotate(5deg); }
-  40% { transform: scale(1) rotate(0deg); }
-  60% { transform: scale(1.1) rotate(-5deg); }
-  80% { transform: scale(1.1) rotate(5deg); }
-  100% { transform: scale(1) rotate(0deg); }
-`;
+import {ButtonBadge} from "../components/forms/button-badge"
 
 const HomePage = () => {
   const {player, loading, countryChallenge, loadCountryChallenge} = useContext(AppContext);
@@ -48,10 +39,11 @@ const HomePage = () => {
             <Button onClick={() => navigate('/start')}>
               <FormattedMessage id={'start game'} defaultMessage={'Start a new game'}/>
             </Button>
-            <Button variant='outline' onClick={() => navigate('/join')}>
-              <FormattedMessage id={'join game'} defaultMessage={'Join a game'}/>
+            <Button onClick={() => navigate('/texel/start')}>
+              <FormattedMessage id={'start texel game'} defaultMessage={'Texel Big Day Game'}/>
+              <Image src={'/images/dba.png'} height={"20"}/>
             </Button>
-            
+
             {countryChallenge && countryChallenge.levels && countryChallenge.levels.length > 0 && (
               <Button colorScheme="orange" onClick={() => navigate('/challenge/play')} position="relative">
                 <Flex gap={4}>
@@ -75,46 +67,7 @@ const HomePage = () => {
                   <FormattedMessage id={'country challenge'} defaultMessage={'Country challenge'}/>
                 )}
               </Flex>
-              <Box
-                position="absolute"
-                top="-25px"
-                right="-25px"
-                width="100px"
-                height="100px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                zIndex={1}
-              >
-                <Box
-                  position="absolute"
-                  width="100px"
-                  height="100px"
-                  animation={`${floatAnimation} 3s ease-in-out infinite`}
-                >
-                  <Icon
-                    as={FaCertificate}
-                    boxSize="100px"
-                    color="orange.700"
-                    position="absolute"
-                    top="0"
-                    left="0"
-                  />
-                  <Box
-                    position="absolute"
-                    color="white"
-                    fontSize="sm"
-                    fontWeight="bold"
-                    textAlign="center"
-                    width="100%"
-                    top="50%"
-                    left="50%"
-                    transform="translate(-50%, -50%)"
-                  >
-                    10 levels
-                  </Box>
-                </Box>
-              </Box>
+
             </Button>
             <Button variant='ghost' onClick={() => navigate('/scores')}>
               <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>

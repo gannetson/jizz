@@ -36,7 +36,7 @@ export const FailedLevel: React.FC = () => {
   return (
     <Flex direction={'column'} gap={10}>
       <Heading size={'lg'}>
-        <FormattedMessage id={'challenge title'} defaultMessage={'Failed! {round} - {title}'} values={{round, title: level?.challenge_level.title}} />
+        <FormattedMessage id={'failed tound'} defaultMessage={'Failed! {round} - {title}'} values={{round, title: level?.challenge_level.title}} />
         </Heading>
       <FormattedMessage
         id={'failed description'}

@@ -92,5 +92,10 @@
   "waiting for host": "Wachten tot {host} het spel start.",
   "waiting for host to click next question": "Wachten tot {host} doorgaat naar de volgende vraag",
   "welcome": "Welkom",
-  "your name": "Wat is je naam? Je kunt elke naam kiezen die je wilt."
+  "your name": "Wat is je naam? Je kunt elke naam kiezen die je wilt.",
+  "explain mpg": "Je kunt tegen andere spelers spelen door deze link met hen te delen. Als je alleen wilt spelen, kun je direct beginnen.",
+  "flag modal description": "Kun je ons vertellen wat er mis was met deze vraag?",
+  "game info": "Om een hoge score te behalen, moet je de vogels correct identificeren, maar je moet ook snel zijn! Na elk antwoord zie je hoeveel punten je hebt gekregen.",
+  "start texel game": "Texel Big Day Spel",
+  "texel game info": "Een speciaal spel voor DBA Texel Bird Week! Je krijgt 35 afbeeldingen, met een hogere kans om zeldzame soorten te zien."
 }

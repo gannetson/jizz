@@ -52,7 +52,7 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
         <ModalBody>
           <Flex direction={'column'} gap={8}>
             <FormattedMessage
-              id={'flag modal title'}
+              id={'flag modal description'}
               defaultMessage={'Can you tell us what was wrong with this question?'}
             />
             <Textarea

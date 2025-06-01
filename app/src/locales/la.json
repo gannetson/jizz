@@ -92,5 +92,10 @@
   "waiting for host": "Exspectatur donec {host} ludum incipiat.",
   "waiting for host to click next question": "Exspectatur donec {host} pergat ad proximam quaestionem",
   "welcome": "Salve",
-  "your name": "Quod est nomen tuum? Potes eligere quodcumque nomen vis."
+  "your name": "Quod est nomen tuum? Potes eligere quodcumque nomen vis.",
+  "explain mpg": "Potestis contra alios lusores ludere hanc connexionem cum eis communicando. Si solus ludere vis, statim incipere potes.",
+  "flag modal description": "Potesne indicare quid erratum sit in hac quaestione?",
+  "game info": "Ut summum gradum obtineas, aves recte cognoscere debes, sed etiam celer esse debes! Post unumquodque responsum vides quot puncta obtinueris.",
+  "start texel game": "Ludus Magnus Dies Texel",
+  "texel game info": "Ludus specialis pro Hebdomade Avium Texel DBA! XXXV imagines accipies, cum maiori probabilitate species raras videndi."
 }

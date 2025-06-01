@@ -94,7 +94,7 @@ export const CreateGame = ({
         {country?.code === 'NL-NH' && (
           <Flex gap={4}>
             <FormattedMessage
-              defaultMessage={'A special game for DBA Texel Bird Week! You get 20 pictures, with a higher chance to see rare species.'}
+              defaultMessage={'A special game for DBA Texel Bird Week! You get 35 pictures, with a higher chance to see rare species.'}
               id={'texel game info'}/>
             <Image src={'/images/dba.png'} height={"20"}/>
           </Flex>

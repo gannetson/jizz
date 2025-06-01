@@ -1,6 +1,6 @@
 import { extendTheme } from '@chakra-ui/react'
 import { buttonTheme } from './base/button.styling'
-import { inputTheme, selectTheme, checkboxTheme, radioTheme } from './base/form.styling'
+import { inputTheme, selectTheme, checkboxTheme, radioTheme, linkTheme } from './base/form.styling'
 
 export const theme = extendTheme({
   styles: {
@@ -34,5 +34,6 @@ export const theme = extendTheme({
     Select: selectTheme,
     Checkbox: checkboxTheme,
     Radio: radioTheme,
+    Link: linkTheme,
   },
 }) 

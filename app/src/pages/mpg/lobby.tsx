@@ -55,7 +55,7 @@ const Lobby: React.FC = () => {
           <FormattedMessage id={'link'} defaultMessage={'Link'}/>
           <Box><Tag onClick={copyLink} fontSize='18px'>{gameLink}</Tag></Box>
           {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
-            <Link fontWeight='bold' textDecoration='underline' onClick={copyLink}>
+            <Link onClick={copyLink}>
               <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
             </Link>
           )}

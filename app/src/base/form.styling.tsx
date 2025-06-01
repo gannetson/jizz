@@ -110,6 +110,27 @@ const baseRadio = defineStyle({
   }
 })
 
+const baseLink = defineStyle({
+  color: 'orange.500',
+  textDecoration: 'underline',
+  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+  fontWeight: 'bold',
+  _hover: {
+    color: 'orange.600',
+    textDecoration: 'underline',
+    transform: 'translateY(-2px) scale(1.02)',
+    textShadow: '0 2px 4px rgba(237, 137, 54, 0.3)',
+  },
+  _active: {
+    transform: 'none',
+    textShadow: 'none',
+  },
+  _focus: {
+    color: 'orange.600',
+    textDecoration: 'underline',
+  }
+})
+
 export const inputTheme = defineStyleConfig({
   defaultProps: {
     variant: 'base',
@@ -143,5 +164,14 @@ export const radioTheme = defineStyleConfig({
   },
   variants: {
     base: baseRadio,
+  },
+})
+
+export const linkTheme = defineStyleConfig({
+  defaultProps: {
+    variant: 'base',
+  },
+  variants: {
+    base: baseLink,
   },
 }) 

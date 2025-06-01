@@ -14,7 +14,8 @@ export const ChallengePage = () => {
   const {player, loading, countryChallenge} = useContext(AppContext);
 
   let body = <CreateCountryChallenge/>
-  switch(countryChallenge?.levels[0].status) {
+  const status = countryChallenge?.levels?.[0]?.status
+  switch(status) {
     case 'new':
       body = <StartLevel/>
       break;

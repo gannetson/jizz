@@ -19,9 +19,6 @@ export const ChallengePage = () => {
     case 'new':
       body = <StartLevel/>
       break;
-    case 'running':
-      body = <ChallengeQuestion/>
-      break;
     case 'failed':
       body = <FailedLevel/>
       break;

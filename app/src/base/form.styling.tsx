@@ -47,6 +47,10 @@ const baseSelect = defineStyle({
   },
   icon: {
     color: 'orange.500',
+  },
+  placeholder: {
+    color: 'orange.400',
+    fontWeight: 'normal',
   }
 })
 
@@ -131,6 +135,27 @@ const baseLink = defineStyle({
   }
 })
 
+const menuLink = defineStyle({
+  color: 'orange.500',
+  textDecoration: 'none',
+  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+  fontWeight: 'bold',
+  _hover: {
+    color: 'orange.600',
+    textDecoration: 'none',
+    transform: 'translateY(-2px) scale(1.02)',
+    textShadow: '0 2px 4px rgba(237, 137, 54, 0.3)',
+  },
+  _active: {
+    transform: 'none',
+    textShadow: 'none',
+  },
+  _focus: {
+    color: 'orange.600',
+    textDecoration: 'none',
+  }
+})
+
 export const inputTheme = defineStyleConfig({
   defaultProps: {
     variant: 'base',
@@ -173,5 +198,6 @@ export const linkTheme = defineStyleConfig({
   },
   variants: {
     base: baseLink,
+    menu: menuLink,
   },
 }) 

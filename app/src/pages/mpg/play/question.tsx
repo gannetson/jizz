@@ -138,11 +138,25 @@ export const QuestionComponent = () => {
       ) : (
         <Select
           autoFocus={true}
+          placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
+
           options={species?.map((q) => ({
             label: player?.language === 'nl' ? q.name_nl : q.name,
             value: q
           }))}
           onChange={(answer) => answer && selectAnswer(answer.value)}
+          chakraStyles={{
+            placeholder: (provided) => ({
+              ...provided,
+              color: 'orange.300',
+              fontWeight: 'normal',
+            }),
+            input: (provided) => ({
+              ...provided,
+              color: 'orange.500',
+              fontWeight: 'bold',
+            })
+          }}
         />
       )}
     </>

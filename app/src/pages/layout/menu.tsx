@@ -11,28 +11,28 @@ export const BirdrMenu = () => {
     const { colorMode, toggleColorMode } = useColorMode()
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
-            <Link href={'/'}>
+            <Link href={'/'} variant="menu">
               <FormattedMessage id={'home'} defaultMessage={'Home'}/>
             </Link>
-            <Link href={'/start'}>
+            <Link href={'/start'} variant="menu">
               <FormattedMessage id={'new game'} defaultMessage={'New game'} />
             </Link>
-            <Link href={'/join'}>
+            <Link href={'/join'} variant="menu">
               <FormattedMessage id={'join game'} defaultMessage={'Join a game'} />
             </Link>
-            <Link href={'/scores'}>
+            <Link href={'/scores'} variant="menu">
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
             </Link>
-            <Link href={'/challenge'}>
+            <Link href={'/challenge'} variant="menu">
               <FormattedMessage id={'challenge'} defaultMessage={'Challenge (beta)'} />
             </Link>
-            <Link href={'/updates'}>
+            <Link href={'/updates'} variant="menu">
               <FormattedMessage id={'Updates'} defaultMessage={'Updates'} />
             </Link>
-            <Link href={'/privacy'}>
+            <Link href={'/privacy'} variant="menu">
               <FormattedMessage id={'privacy'} defaultMessage={'Privacy'} />
             </Link>
-            <Link href={'/about'}>
+            <Link href={'/about'} variant="menu">
               <FormattedMessage id={'about birdr'} defaultMessage={'About Birdr'} />
             </Link>
             <Box>

@@ -23,6 +23,7 @@ import {AuthCallback} from "./components/auth/auth-callback"
 import {PrivacyPage} from "./pages/privacy"
 import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 import TexelStartPage from "./pages/texel/start"
+import TexelHiscorePage from "./pages/texel/hiscores"
 
 
 export const MainContent = () => {
@@ -56,6 +57,7 @@ export const MainContent = () => {
             <Route path='/challenge/play' element={<ChallengeQuestion />}/>
 
             <Route path='/texel/start/' element={<TexelStartPage />}/>
+            <Route path='/texel/scores/' element={<TexelHiscorePage />}/>
 
             <Route path="/game/lobby" element={<Lobby/>}/>
             <Route path="/game/play" element={<MultiPlayerGame/>}/>

@@ -8,6 +8,7 @@ import {ScoreLine} from "../../components/score-line"
 import {Select} from "chakra-react-select"
 import {UseCountries} from "../../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
+import {ScoreLineShort} from "../../components/score-line-short"
 
 const TexelHiscorePage = () => {
   const {countries} = UseCountries()
@@ -20,7 +21,7 @@ const TexelHiscorePage = () => {
 
   const loadScores = async () => {
     setLoading(true)
-    const url = `/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}`
+    const url = `/api/scores/?game__level=advanced&game__length=35&game__media=images&game__country=NL-NH`
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',
@@ -40,97 +41,17 @@ const TexelHiscorePage = () => {
 
   useEffect(() => {
     loadScores()
-  }, [level, length, media, country]);
-
-  const levels = [
-    {value: '', label: 'Any levels'},
-    {value: 'beginner', label: 'Beginner'},
-    {value: 'advanced', label: 'Advanced'},
-    {value: 'expert', label: 'Expert'},
-  ];
-
-  const lengths = [
-    {value: '', label: 'Any length'},
-    {value: '10', label: '10'},
-    {value: '20', label: '20'},
-    {value: '50', label: '50'},
-    {value: '100', label: '100'},
-  ];
-
-  const mediums = [
-    {value: '', label: 'Any media'},
-    {value: 'images', label: 'Images'},
-    {value: 'audio', label: 'Sounds'},
-    {value: 'video', label: 'Videos'},
-  ];
-
-  const selectCountries = [{code: '', name: 'All countries'}].concat(countries)
+  }, []);
 
 
   return (
     <Page>
       <Page.Header>
         <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
-          <FormattedMessage id='hiscores' defaultMessage={'High Scores'}/>
+          <FormattedMessage id='hiscores texel' defaultMessage={'High Scores - DBA Bird Week'}/>
         </Heading>
       </Page.Header>
       <Page.Body>
-        <Flex flexWrap={'wrap'} width={'full'} gap={4}>
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={selectCountries}
-            getOptionLabel={(c) => c ? c.name : '?'}
-            getOptionValue={(c) => c ? c.name : '?'}
-            value={country}
-            onChange={(val) => val && setCountry(val)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={mediums}
-            value={mediums.find((l) => l.value === media)}
-            onChange={(val) => val && setMedia(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={levels}
-            value={levels.find((l) => l.value === level)}
-            onChange={(val) => val && setLevel(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={lengths}
-            value={lengths.find((l) => l.value === length)}
-            onChange={(val) => val && setLength(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-        </Flex>
         <>
           {loading ? (
             <Loading/>
@@ -140,21 +61,15 @@ const TexelHiscorePage = () => {
               <Table variant='striped' colorScheme='orange' size={['sm', 'md']}>
                 <Thead>
                   <Tr bgColor={'orange.200'}>
-                    <Th>Player</Th>
-                    <Th>
-                      🇿🇿
-                    </Th>
-                    <Th>
-                      🔭
-                    </Th>
-                    <Th>Lvl</Th>
-                    <Th>#</Th>
-                    <Th>Score</Th>
+                  <Th>#</Th>
+                  <Th>Player</Th>
+                  <Th>Date</Th>
+                  <Th>Score</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {scores && scores.map((score, index) => {
-                    return <ScoreLine key={index} score={score}/>
+                    return <ScoreLineShort key={index} score={score}/>
                   })}
                 </Tbody>
               </Table>

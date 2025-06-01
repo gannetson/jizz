@@ -117,6 +117,7 @@ export type Answer = {
 
 export type Score = {
   name: string
+  ranking: number
   score: number
   created: Date
   level: string

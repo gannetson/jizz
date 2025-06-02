@@ -7,10 +7,8 @@ import {FormattedMessage} from "react-intl"
 
 
 const SelectCountry = () => {
-  const {countries: countryList} = UseCountries()
+  const {countries} = UseCountries()
   const {country, setCountry, game} = useContext(AppContext);
-
-  const countries = countryList.filter((c) => (!c.code.includes('-')))
 
   const onChange = (value: string) => {
     const country = countries.find((c) => c.name === value)
@@ -21,9 +19,7 @@ const SelectCountry = () => {
     if (!country && game?.country) {
       setCountry && setCountry(game?.country)
     }
-
   }, [game?.country]);
-
 
   return (
     <Box>

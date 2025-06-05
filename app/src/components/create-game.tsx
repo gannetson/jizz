@@ -96,13 +96,13 @@ export const CreateGame = ({
             <Box>
             <FormattedMessage
               defaultMessage={'A special game for DBA Texel Bird Week! You get 35 pictures, with a higher chance to see rare species.'}
-              id={'texel game info'} /> 
+              id={'texel game info'}
+            />
               <br />  <br />
               <Link href={'/texel/scores/'}>
                 <FormattedMessage id={'hiscores texel'} defaultMessage={'High Scores - DBA Bird Week'} />
               </Link>
               </Box>
-            <Image src={'/images/dba.png'} height={"20"} />
           </Flex>
         )}
         <FormattedMessage

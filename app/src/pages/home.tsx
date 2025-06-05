@@ -41,7 +41,6 @@ const HomePage = () => {
             </Button>
             <Button onClick={() => navigate('/texel/start')}>
               <FormattedMessage id={'start texel game'} defaultMessage={'Texel Big Day Game'}/>
-              <Image src={'/images/dba.png'} height={"20"}/>
             </Button>
 
             {countryChallenge && countryChallenge.levels && countryChallenge.levels.length > 0 && (

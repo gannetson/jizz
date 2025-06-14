@@ -216,7 +216,14 @@ class Game(models.Model):
                 countryspecies__country=self.country
             ).distinct().order_by('id')
         if self.media == 'video':
-            if self.tax_order:
+            if self.tax_family:
+                all_species = Species.objects.filter(
+                    videos__isnull=False,
+                    countryspecies__status__in=statuses,
+                    countryspecies__country=self.country,
+                    tax_family=self.tax_family
+                ).distinct().order_by('id')
+            elif self.tax_order:
                 all_species = Species.objects.filter(
                     videos__isnull=False,
                     countryspecies__status__in=statuses,
@@ -230,7 +237,14 @@ class Game(models.Model):
                     countryspecies__country=self.country
                 ).distinct().order_by('id')
         if self.media == 'audio':
-            if self.tax_order:
+            if self.tax_family:
+                all_species = Species.objects.filter(
+                    sounds__isnull=False,
+                    countryspecies__status__in=statuses,
+                    countryspecies__country=self.country,
+                    tax_family=self.tax_family
+                ).distinct().order_by('id')
+            elif self.tax_order:
                 all_species = Species.objects.filter(
                     sounds__isnull=False,
                     countryspecies__status__in=statuses,

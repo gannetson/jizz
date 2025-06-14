@@ -222,7 +222,8 @@ class GameAdmin(admin.ModelAdmin):
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
     fields = [
         'country', 'language', 'host', 'created', 'token',
-        'length', 'multiplayer', 'media', 'repeat', 'include_escapes', 'include_rare'
+        'length', 'multiplayer', 'media', 'repeat', 'include_escapes', 'include_rare', 
+        'tax_order', 'tax_family'
     ]
     list_display = ['country', 'created', 'level', 'length', 'player_count', 'top_score']
 

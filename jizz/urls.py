@@ -6,8 +6,9 @@ from rest_framework.routers import DefaultRouter
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
     GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView, AnswerDetail, PlayerScoreListView, \
-    FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, ReactionView, \
-    AddChallengeLevelView
+    FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
+    ReactionView, \
+    AddChallengeLevelView, FamilyListView, OrderListView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -35,7 +36,10 @@ urlpatterns = [
 
     re_path(r"^api/games/$", GameListView.as_view(), name="game-list"),
     re_path(r"^api/games/(?P<token>[\w-]+)/$", GameDetailView.as_view(), name="game-detail"),
+    re_path(r"^api/species/$", SpeciesListView.as_view(), name="species-list"),
 
+    re_path(r"^api/families/$", FamilyListView.as_view(), name="family-list"),
+    re_path(r"^api/orders/$", OrderListView.as_view(), name="order-list"),
 
     re_path(r"^api/games/(?P<token>[\w-]+)/question$", QuestionView.as_view(), name="game-question-detail"),
     re_path(r"^api/answer/$", AnswerView.as_view(), name="answer-create"),

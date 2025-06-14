@@ -2,6 +2,8 @@ import React, {FC, ReactNode, useEffect, useState} from 'react';
 import AppContext, {Answer, Country, CountryChallenge, Game, Player, Question, Score, Species} from "./app-context";
 import { useToast } from '@chakra-ui/react';
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
+import {TaxOrder} from "../user/use-tax-order"
+import {TaxFamily} from "../user/use-tax-family"
 
 type Props = {
   children: ReactNode;
@@ -11,7 +13,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
   const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
   const [language, setLanguage] = useState<'en' | 'nl' | 'la'>('en');
-  const [taxOrder, setTaxOrder] = useState<string>('');
+  const [taxOrder, setTaxOrder] = useState<TaxOrder | undefined>();
+  const [taxFamily, setTaxFamily] = useState<TaxFamily | undefined>();
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
@@ -162,7 +165,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
           level: level,
           length: length,
           media: mediaType,
-          tax_order: taxOrder,
+          tax_order: taxOrder?.tax_order,
+          tax_family: taxFamily?.tax_family,
           include_rare: includeRare,
           include_escapes: includeEscapes
         })
@@ -349,6 +353,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setLevel,
       taxOrder,
       setTaxOrder,
+      taxFamily,
+      setTaxFamily,
       length,
       setLength,
       country,

@@ -1,5 +1,7 @@
 import {createContext, Dispatch, SetStateAction} from 'react';
 import { useState } from 'react';
+import { TaxOrder } from '../user/use-tax-order';
+import {TaxFamily} from "../user/use-tax-family"
 
 
 export type Country = {
@@ -26,6 +28,8 @@ export type Game = {
   repeat: boolean
   ended?: boolean
   host?: Player
+  tax_order?: string
+  tax_family?: string
   current_highscore?: Player
   include_rare: boolean
   include_escapes: boolean
@@ -204,8 +208,10 @@ type SharedState = {
   setGame: (game?: Game) => void
   level: string
   setLevel: Dispatch<SetStateAction<string>>
-  taxOrder: string
-  setTaxOrder: Dispatch<SetStateAction<string>>
+  taxOrder?: TaxOrder
+  setTaxOrder?: Dispatch<SetStateAction<TaxOrder | undefined>>
+  taxFamily?: TaxFamily
+  setTaxFamily?: Dispatch<SetStateAction<TaxFamily | undefined>>
   length: string
   setLength: Dispatch<SetStateAction<string>>
   country: Country | undefined
@@ -233,8 +239,10 @@ const AppContext = createContext<SharedState>({
   setIncludeRare: () => {},
   level: 'advanced',
   setLevel: () => {},
-  taxOrder: '',
+  taxOrder: undefined,
   setTaxOrder: () => {},
+  taxFamily: undefined,
+  setTaxFamily: () => {},
   length: '20',
   setLength: () => {},
   country: { code: 'nl', name: 'Netherlands' },

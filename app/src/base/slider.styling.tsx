@@ -20,6 +20,7 @@ export const useSliderStyles = () => {
       _focus: { 
         boxShadow: '0 0 0 3px rgba(237, 137, 54, 0.3)',
       },
+      zIndex: 'auto'
     },
     mark: {
       color: markColor,

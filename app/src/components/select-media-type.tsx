@@ -5,14 +5,10 @@ import {FormattedMessage} from "react-intl"
 
 
 export const SelectMediaType = () => {
-  const {mediaType, setMediaType, taxOrder,setTaxOrder} = useContext(AppContext);
+  const {mediaType, setMediaType} = useContext(AppContext);
 
   const onChange = (value: string) => {
     setMediaType && setMediaType(value)
-  }
-
-  const toggleTaxOrder = () => {
-    setTaxOrder(taxOrder === 'Passeriformes' ? '' : 'Passeriformes')
   }
 
   return (
@@ -32,11 +28,6 @@ export const SelectMediaType = () => {
           <Radio value={'audio'}>
             <Flex gap={4}>
               <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
-              {/*{mediaType === 'audio' && (*/}
-              {/*  <Checkbox colorScheme={'orange'} isChecked={taxOrder === 'Passeriformes'} onChange={toggleTaxOrder}>*/}
-              {/*    <FormattedMessage id={'only passeriformes'} defaultMessage={'Only song birds / Passeriformes'}/>*/}
-              {/*  </Checkbox>*/}
-              {/*)}*/}
             </Flex>
           </Radio>
           <Radio value={'video'}>

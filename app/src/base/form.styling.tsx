@@ -83,7 +83,8 @@ const baseCheckbox = defineStyle({
     fontSize: 'lg',
     fontWeight: 'bold',
     color: 'orange.500',
-  }
+  },
+  
 })
 
 const baseRadio = defineStyle({

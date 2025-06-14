@@ -1,18 +1,20 @@
-import { useContext, useEffect, useState } from "react"
-import AppContext, { Player } from "../core/app-context"
-import { Box, Button, Flex, Heading, Image, Link } from "@chakra-ui/react"
-import { FormattedMessage } from "react-intl"
+import {useContext, useEffect, useState} from "react"
+import AppContext, {Player} from "../core/app-context"
+import {Box, Button, Flex, Heading, Image, Link} from "@chakra-ui/react"
+import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
 import SelectLevel from "./select-level"
-import { Loading } from "./loading"
-import { SelectLength } from "./select-length"
+import {Loading} from "./loading"
+import {SelectLength} from "./select-length"
 import WebsocketContext from "../core/websocket-context"
-import { useNavigate } from "react-router-dom"
-import { SelectMediaType } from "./select-media-type"
-import { SetName } from "./set-name"
-import { SelectSpeciesStatus } from "./select-species-status"
-import { UseCountries } from "../user/use-countries"
+import {useNavigate} from "react-router-dom"
+import {SelectMediaType} from "./select-media-type"
+import {SetName} from "./set-name"
+import {SelectSpeciesStatus} from "./select-species-status"
+import {UseCountries} from "../user/use-countries"
+import SelectTaxOrder from "./select-order"
+import SelectTaxFamily from "./select-family"
 
 
 type GameProps = {
@@ -24,12 +26,12 @@ type GameProps = {
 }
 
 export const CreateGame = ({
-  country: pickCountry,
-  length: pickLength,
-  level: pickLevel,
-  includeRare,
-  mediaType: pickMediaType
-}: GameProps) => {
+                             country: pickCountry,
+                             length: pickLength,
+                             level: pickLevel,
+                             includeRare,
+                             mediaType: pickMediaType
+                           }: GameProps) => {
 
   const {
     player,
@@ -43,10 +45,10 @@ export const CreateGame = ({
     setMediaType,
     playerName
   } = useContext(AppContext);
-  const { joinGame } = useContext(WebsocketContext)
+  const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { countries } = UseCountries()
+  const {countries} = UseCountries()
 
   useEffect(() => {
     if (pickCountry && countries && countries.length) {
@@ -87,36 +89,48 @@ export const CreateGame = ({
 
   return (
     loading ? (
-      <Loading />
+      <Loading/>
     ) : (
       <Flex direction={'column'} gap={10}>
-        <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'} /></Heading>
+        <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'}/></Heading>
         {country?.code === 'NL-NH' && (
           <Flex gap={4}>
             <Box>
-            <FormattedMessage
-              defaultMessage={'A special game for DBA Texel Bird Week! You get 35 pictures, with a higher chance to see rare species.'}
-              id={'texel game info'}
-            />
-              <br />  <br />
+              <FormattedMessage
+                defaultMessage={'A special game for DBA Texel Bird Week! You get 35 pictures, with a higher chance to see rare species.'}
+                id={'texel game info'}
+              />
+              <br/> <br/>
               <Link href={'/texel/scores/'}>
-                <FormattedMessage id={'hiscores texel'} defaultMessage={'High Scores - DBA Bird Week'} />
+                <FormattedMessage id={'hiscores texel'} defaultMessage={'High Scores - DBA Bird Week'}/>
               </Link>
-              </Box>
+            </Box>
           </Flex>
         )}
         <FormattedMessage
           defaultMessage={'To get a high score, you need to identify the birds correctly, but you also need to be fast! After each answer you see how many points you got.'}
-          id={'game info'} />
-        <SetName />
-        <SelectLanguage />
-        {!pickCountry && <SelectCountry />}
-        {includeRare === undefined && <SelectSpeciesStatus />}
-        {!pickLength && <SelectLength />}
-        {!pickLevel && <SelectLevel />}
-        {!pickMediaType && <SelectMediaType />}
+          id={'game info'}/>
+        <SetName/>
+        <SelectLanguage/>
+        {!pickCountry && (
+          <>
+            <SelectCountry/>
+            <Flex gap={4}>
+              <Box flex={1}>
+              <SelectTaxOrder/>
+              </Box>
+              <Box flex={1}>
+              <SelectTaxFamily />
+              </Box>
+            </Flex>
+          </>
+        )}
+        {includeRare === undefined && <SelectSpeciesStatus/>}
+        {!pickLength && <SelectLength/>}
+        {!pickLevel && <SelectLevel/>}
+        {!pickMediaType && <SelectMediaType/>}
         <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
-          <FormattedMessage id={'start game'} defaultMessage={"Start a new game"} />
+          <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>
 

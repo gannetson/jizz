@@ -6,8 +6,10 @@ from random import randint, shuffle, random
 
 from django.db import models
 from django.db.models import Sum
+from django.db.models.aggregates import Min
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.functional import lazy
 from django.utils.timezone import now
 from shortuuid.django_fields import ShortUUIDField
 
@@ -56,6 +58,74 @@ class QuestionOption(models.Model):
         ordering = ['order']
 
 
+class Species(models.Model):
+    name = models.CharField(max_length=200)
+    name_latin = models.CharField(max_length=200)
+    name_nl = models.CharField(max_length=200, null=True, blank=True)
+    tax_family_en = models.CharField('Family english', max_length=200, null=True, blank=True)
+    tax_family = models.CharField('Family', max_length=200, null=True, blank=True)
+    tax_order = models.CharField('Order', max_length=200, null=True, blank=True)
+    code = models.CharField(max_length=10)
+
+    class Meta:
+        verbose_name = 'species'
+        verbose_name_plural = 'species'
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
+
+from django.db.models import Count
+
+from django.db.models import Count, Subquery, OuterRef
+
+from django.db.models import Count, Min
+
+
+def get_tax_order_choices(country=None):
+    qs = Species.objects.all()
+
+    if country is not None:
+        qs = qs.filter(countryspecies__country=country)
+
+    tax_orders = (
+        qs.values('tax_order')
+        .annotate(
+            count=Count('id'),
+            first=Min('id')
+        )
+        .order_by('first')
+    )
+
+    return [
+        (o['tax_order'], f"{o['tax_order']} ({o['count']})")
+        for o in tax_orders
+    ]
+
+from django.db.models import Count, Min
+
+
+def get_tax_family_choices(country=None):
+    qs = Species.objects.all()
+
+    if country is not None:
+        qs = qs.filter(countryspecies__country=country)
+
+    families = (
+        qs.values('tax_family', 'tax_family_en')
+        .annotate(
+            count=Count('id'),
+            first=Min('id')
+        )
+        .order_by('first')
+    )
+
+    return [
+        (f['tax_family'], f"{f['tax_family']} - {f['tax_family_en']} ({f['count']})") for f in families
+    ]
+
+
 class Game(models.Model):
     MEDIA_CHOICES = [
         ('images', 'Images'),
@@ -79,10 +149,21 @@ class Game(models.Model):
     include_rare = models.BooleanField(default=True)
     include_escapes = models.BooleanField(default=False)
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
+
+    tax_family = models.CharField(
+        'Taxonomic family',
+        help_text='Only show birds from this family',
+        max_length=100,
+        choices=lazy(get_tax_family_choices, tuple)(),
+        null=True,
+        blank=True
+    )
+
     tax_order = models.CharField(
         'Taxonomic order',
         help_text='Only show birds from this order',
         max_length=100,
+        choices=lazy(get_tax_order_choices, tuple)(),
         null=True,
         blank=True
     )
@@ -114,7 +195,14 @@ class Game(models.Model):
         if self.country.code == 'NL-NH' and random() < 0.3:
             statuses = ['rare']
 
-        if self.tax_order:
+        if self.tax_family:
+            all_species = Species.objects.filter(
+                images__isnull=False,
+                countryspecies__status__in=statuses,
+                countryspecies__country=self.country,
+                tax_family=self.tax_family
+            ).distinct().order_by('id')
+        elif self.tax_order:
             all_species = Species.objects.filter(
                 images__isnull=False,
                 countryspecies__status__in=statuses,
@@ -362,28 +450,10 @@ def update_player_score(sender, instance, created, **kwargs):
         instance.player_score.save()
 
 
-class Species(models.Model):
-    name = models.CharField(max_length=200)
-    name_latin = models.CharField(max_length=200)
-    name_nl = models.CharField(max_length=200, null=True, blank=True)
-    tax_family_en = models.CharField('Family english', max_length=200, null=True, blank=True)
-    tax_family = models.CharField('Family', max_length=200, null=True, blank=True)
-    tax_order = models.CharField('Order', max_length=200, null=True, blank=True)
-    code = models.CharField(max_length=10)
-
-    class Meta:
-        verbose_name = 'species'
-        verbose_name_plural = 'species'
-        ordering = ['id']
-
-    def __str__(self):
-        return self.name
-
-
 class SpeciesImage(models.Model):
     url = models.URLField()
     link = models.URLField(null=True, blank=True)
-    contributor= models.CharField(max_length=200, null=True, blank=True)
+    contributor = models.CharField(max_length=200, null=True, blank=True)
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
@@ -397,7 +467,7 @@ class SpeciesImage(models.Model):
 class SpeciesSound(models.Model):
     url = models.URLField()
     link = models.URLField(null=True, blank=True)
-    contributor= models.CharField(max_length=200, null=True, blank=True)
+    contributor = models.CharField(max_length=200, null=True, blank=True)
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
@@ -411,7 +481,7 @@ class SpeciesSound(models.Model):
 class SpeciesVideo(models.Model):
     url = models.URLField()
     link = models.URLField(null=True, blank=True)
-    contributor= models.CharField(max_length=200, null=True, blank=True)
+    contributor = models.CharField(max_length=200, null=True, blank=True)
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
@@ -522,7 +592,7 @@ class ChallengeLevel(models.Model):
         ('advanced', 'Advanced'),
         ('expert', 'Expert'),
     ]
-    
+
     sequence = models.IntegerField(default=0)  # renamed from 'level'
     level = models.CharField(
         max_length=20,
@@ -559,7 +629,6 @@ class CountryChallenge(models.Model):
         on_delete=models.CASCADE
     )
     created = models.DateTimeField(auto_now_add=True)
-        
 
 
 class CountryGame(models.Model):
@@ -590,11 +659,11 @@ class CountryGame(models.Model):
     @property
     def remaining_jokers(self):
         failed = self.game.questions.filter(
-            answers__correct=False, 
+            answers__correct=False,
             answers__answer__isnull=False
         ).count()
         return self.challenge_level.jokers - failed
-    
+
     @property
     def status(self):
         if self.remaining_jokers < 0:
@@ -602,7 +671,7 @@ class CountryGame(models.Model):
         elif self.game.ended and self.remaining_jokers >= 0:
             return 'passed'
         elif self.game.questions.count():
-            return'running'
+            return 'running'
         return 'new'
 
     def save(self, *args, **kwargs):
@@ -613,6 +682,6 @@ class CountryGame(models.Model):
 
     class Meta:
         ordering = ['-id']
-        
+
 
 from .signals import *

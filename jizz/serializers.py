@@ -38,6 +38,22 @@ class SpeciesListSerializer(serializers.ModelSerializer):
         fields = ('name', 'name_latin', 'name_nl', 'id', 'tax_family', 'tax_family_en', 'tax_order')
 
 
+class FamilyListSerializer(serializers.ModelSerializer):
+    count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Species
+        fields = ('tax_family', 'tax_family_en', 'count')
+
+
+class OrderListSerializer(serializers.ModelSerializer):
+    count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Species
+        fields = ('tax_order', 'count')
+
+
 class SpeciesDetailSerializer(serializers.ModelSerializer):
     images = ImageSerializer(many=True)
 
@@ -195,7 +211,9 @@ class GameSerializer(serializers.ModelSerializer):
             'length', 'progress',
             'media', 'repeat',
             'host', 'ended',
-            'current_highscore', 'tax_order',
+            'current_highscore',
+            'tax_order',
+            'tax_family',
             'include_rare',
             'include_escapes',
             'scores'

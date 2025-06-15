@@ -184,7 +184,6 @@ class Game(models.Model):
         return self.questions.last()
 
     def add_question(self):
-        print('Adding question')
         self.questions.filter(done=False).update(done=True)
         statuses = ['native', 'endemic']
         if self.include_rare:
@@ -259,7 +258,10 @@ class Game(models.Model):
                 ).distinct().order_by('id')
 
         left_species = all_species.exclude(id__in=self.questions.values_list('species_id', flat=True))
-        species = left_species.order_by('?').first()
+        if left_species.exists():
+            species = left_species.order_by('?').first()
+        else:
+            species = all_species.order_by('?').first()
 
         sequence = self.questions.count() + 1
         number = randint(1, species.images.count()) - 1

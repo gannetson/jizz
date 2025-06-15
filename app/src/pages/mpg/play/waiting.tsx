@@ -11,7 +11,7 @@ import { AnswerFeedback } from "../../../components/answer-feedback"
 
 export const WaitingComponent = () => {
 
-  const {players, nextQuestion, answer, question} = useContext(WebsocketContext)
+  const {players, nextQuestion, question} = useContext(WebsocketContext)
   const {player, game} = useContext(AppContext)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)

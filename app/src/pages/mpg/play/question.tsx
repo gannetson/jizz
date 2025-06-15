@@ -1,29 +1,37 @@
-import { Box, Button, Image, Link, SimpleGrid, Text, useDisclosure } from "@chakra-ui/react"
-import { Select } from "chakra-react-select"
-import { useContext, useState } from "react"
+import {Box, Button, Flex, Image, Link, List, ListItem, SimpleGrid, Text, useDisclosure} from "@chakra-ui/react"
+import {Select} from "chakra-react-select"
+import React, {useContext, useState} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
-import AppContext, { Answer, Species } from "../../../core/app-context"
-import { SpeciesName } from "../../../components/species-name"
-import { FormattedMessage } from "react-intl"
-import { FlagMedia } from "./flag-media"
-import { keyframes } from "@emotion/react"
-import { ViewSpecies } from "../../../components/view-species"
-import { SpeciesModal } from "../../../components/species-modal"
-import { AnswerFeedback } from "../../../components/answer-feedback"
-import { WaitingComponent } from "./waiting"
-import { BsImageFill, BsImages } from "react-icons/bs"
+import AppContext, {Answer, Species} from "../../../core/app-context"
+import {SpeciesName} from "../../../components/species-name"
+import {FormattedMessage} from "react-intl"
+import {FlagMedia} from "./flag-media"
+import {keyframes} from "@emotion/react"
+import {ViewSpecies} from "../../../components/view-species"
+import {SpeciesModal} from "../../../components/species-modal"
+import {AnswerFeedback} from "../../../components/answer-feedback"
+import {WaitingComponent} from "./waiting"
+import {BsImageFill, BsImages} from "react-icons/bs"
+import {PlayerItem} from "./player-item"
+import {useNavigate} from "react-router-dom"
 
 
 export const QuestionComponent = () => {
-  const { species, player } = useContext(AppContext)
-  const { question, submitAnswer, answer } = useContext(WebsocketContext)
-  const { game } = useContext(AppContext)
-  const { onOpen, onClose, isOpen } = useDisclosure()
+  const {species, player, game} = useContext(AppContext)
+  const {players, nextQuestion, question, submitAnswer, answer} = useContext(WebsocketContext)
+  const {onOpen, onClose, isOpen} = useDisclosure()
   const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
-  const { isOpen: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose } = useDisclosure()
+  const {isOpen: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
 
+  const done = (game?.length || 1) <= (question?.sequence || 0)
+  const navigate = useNavigate()
+
+  const endGame = () => {
+    navigate('/game/ended')
+  }
+  const isHost = player?.name === game?.host?.name
   const viewSpecies = (species: Species) => {
     setShowSpecies(species)
     onSpeciesOpen()
@@ -65,17 +73,22 @@ export const QuestionComponent = () => {
     setShowFeedback(false)
   }
 
+  const getNextQuestion = () => {
+    setShowFeedback(false)
+    nextQuestion()
+  }
+
 
   const flag = (
     <Link float={'right'} onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
-      🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"} />
+      🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
     </Link>
   )
 
   return (
     <>
-      <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen} />
-      <FlagMedia question={question} isOpen={isOpen} onClose={onClose} />
+      <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen}/>
+      <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
       <>
         {showFeedback && (
           <AnswerFeedback
@@ -151,9 +164,38 @@ export const QuestionComponent = () => {
         )}
 
       </Box>
-      {answer && <WaitingComponent />}
+      {answer && (<Box position={'relative'}>
+        <Flex direction={'column'} gap={8}>
+          <List spacing={4}>
+            {players && players.map((player, index) => (
+              <ListItem key={index}>
+                <PlayerItem showRanking={false} player={player}/>
+              </ListItem>
+            ))}
+          </List>
+          <Box>
+            {done ? (
+              <Button onClick={endGame} width='full'>
+                <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
+              </Button>
+            ) : (
+              isHost ? (
+                <Button onClick={getNextQuestion} width='full'>
+                  <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+                </Button>
+              ) : (
+                <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}
+                                  id={'waiting for host to click next question'}
+                                  values={{host: game?.host?.name || 'host'}}/>
+              )
+
+            )}
+          </Box>
+        </Flex>
+      </Box>)}
+
       {question.options && question.options.length ? (
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+        <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
           {
             question.options.map((option, key) => {
               if (answer) {
@@ -165,14 +207,14 @@ export const QuestionComponent = () => {
                     gap={4}
                     colorScheme={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'gray'}
                   >
-                    <SpeciesName species={option} />
+                    <SpeciesName species={option}/>
                     <BsImages/>
                   </Button>
                 )
               } else {
                 return (
                   <Button key={key} onClick={() => selectAnswer(option)}>
-                    <SpeciesName species={option} />
+                    <SpeciesName species={option}/>
                   </Button>
                 )
               }
@@ -182,7 +224,7 @@ export const QuestionComponent = () => {
 
       ) : (
         answer ? (
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+          <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
             <Button
               onClick={() => answer.species && viewSpecies(answer.species)}
               variant={'outline'}
@@ -207,7 +249,7 @@ export const QuestionComponent = () => {
         ) : (
           <Select
             autoFocus={true}
-            placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."} />}
+            placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
 
             options={species?.map((q) => ({
               label: player?.language === 'nl' ? q.name_nl : q.name,

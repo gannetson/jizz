@@ -1,20 +1,33 @@
-import {Box, Button, Image, Link, SimpleGrid, Text, useDisclosure} from "@chakra-ui/react"
-import {Select} from "chakra-react-select"
-import {useContext} from "react"
+import { Box, Button, Image, Link, SimpleGrid, Text, useDisclosure } from "@chakra-ui/react"
+import { Select } from "chakra-react-select"
+import { useContext, useState } from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
-import AppContext, {Answer, Species} from "../../../core/app-context"
-import {SpeciesName} from "../../../components/species-name"
-import {FormattedMessage} from "react-intl"
-import {FlagMedia} from "./flag-media"
-import {keyframes} from "@emotion/react"
+import AppContext, { Answer, Species } from "../../../core/app-context"
+import { SpeciesName } from "../../../components/species-name"
+import { FormattedMessage } from "react-intl"
+import { FlagMedia } from "./flag-media"
+import { keyframes } from "@emotion/react"
+import { ViewSpecies } from "../../../components/view-species"
+import { SpeciesModal } from "../../../components/species-modal"
+import { AnswerFeedback } from "../../../components/answer-feedback"
+import { WaitingComponent } from "./waiting"
+import { BsImageFill, BsImages } from "react-icons/bs"
 
 
 export const QuestionComponent = () => {
-  const {species, player} = useContext(AppContext)
-  const {question, submitAnswer} = useContext(WebsocketContext)
-  const {game} = useContext(AppContext)
-  const {onOpen, onClose, isOpen} = useDisclosure()
+  const { species, player } = useContext(AppContext)
+  const { question, submitAnswer, answer } = useContext(WebsocketContext)
+  const { game } = useContext(AppContext)
+  const { onOpen, onClose, isOpen } = useDisclosure()
+  const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
+  const { isOpen: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose } = useDisclosure()
+  const [showFeedback, setShowFeedback] = useState(false)
+
+  const viewSpecies = (species: Species) => {
+    setShowSpecies(species)
+    onSpeciesOpen()
+  }
 
   const selectAnswer = (species?: Species) => {
     if (player && submitAnswer) {
@@ -24,6 +37,7 @@ export const QuestionComponent = () => {
         answer: species,
       }
       submitAnswer(answer)
+      setShowFeedback(true)
     }
   }
 
@@ -46,15 +60,30 @@ export const QuestionComponent = () => {
     selectAnswer(undefined)
   }
 
+
+  const handleAnimationComplete = () => {
+    setShowFeedback(false)
+  }
+
+
   const flag = (
     <Link float={'right'} onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
-      🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
+      🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"} />
     </Link>
   )
 
   return (
     <>
-      <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
+      <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen} />
+      <FlagMedia question={question} isOpen={isOpen} onClose={onClose} />
+      <>
+        {showFeedback && (
+          <AnswerFeedback
+            correct={Boolean(answer?.correct)}
+            onAnimationComplete={handleAnimationComplete}
+          />
+        )}
+      </>
       <Box position={'relative'}>
         {game.media === 'video' && (
           <>
@@ -69,7 +98,7 @@ export const QuestionComponent = () => {
             <Text fontSize={'sm'}>
               {question.videos[question.number].contributor} {' / '}
               <Link href={question.videos[question.number].link} isExternal>
-                Macaulay Library at the Cornell Lab
+                Macaulay Library
               </Link>
             </Text>
           </>
@@ -93,7 +122,7 @@ export const QuestionComponent = () => {
             <Text fontSize={'sm'}>
               {question.images[question.number].contributor} {' / '}
               <Link onClick={skipQuestion} href={question.images[question.number].link} isExternal>
-                Macaulay Library at the Cornell Lab
+                Macaulay Library
               </Link>
             </Text>
           </>
@@ -113,7 +142,7 @@ export const QuestionComponent = () => {
               <Text fontSize={'sm'}>
                 {question.images[question.number].contributor} {' / '}
                 <Link href={question.images[question.number].link} isExternal>
-                  Macaulay Library at the Cornell Lab
+                  Macaulay Library
                 </Link>
               </Text>
             </>
@@ -122,42 +151,83 @@ export const QuestionComponent = () => {
         )}
 
       </Box>
+      {answer && <WaitingComponent />}
       {question.options && question.options.length ? (
-        <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {
             question.options.map((option, key) => {
-              return (
-                <Button key={key} onClick={() => selectAnswer(option)}>
-                  <SpeciesName species={option}/>
-                </Button>
-              )
+              if (answer) {
+                return (
+                  <Button
+                    key={key}
+                    onClick={() => viewSpecies(option)}
+                    variant={'outline'}
+                    gap={4}
+                    colorScheme={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'gray'}
+                  >
+                    <SpeciesName species={option} />
+                    <BsImages/>
+                  </Button>
+                )
+              } else {
+                return (
+                  <Button key={key} onClick={() => selectAnswer(option)}>
+                    <SpeciesName species={option} />
+                  </Button>
+                )
+              }
             })
           }
         </SimpleGrid>
 
       ) : (
-        <Select
-          autoFocus={true}
-          placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
+        answer ? (
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Button
+              onClick={() => answer.species && viewSpecies(answer.species)}
+              variant={'outline'}
+              colorScheme={'green'}
+              gap={4}
+            >
+              {answer.species?.name}
+              <BsImages/>
+            </Button>
+            {!answer?.correct && (
+              <Button
+                onClick={() => answer.answer && viewSpecies(answer.answer)}
+                variant={'outline'}
+                colorScheme={'red'}
+                gap={4}
+              >
+                {answer.answer?.name}
+                <BsImages/>
+              </Button>
+            )}
+          </SimpleGrid>
+        ) : (
+          <Select
+            autoFocus={true}
+            placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."} />}
 
-          options={species?.map((q) => ({
-            label: player?.language === 'nl' ? q.name_nl : q.name,
-            value: q
-          }))}
-          onChange={(answer) => answer && selectAnswer(answer.value)}
-          chakraStyles={{
-            placeholder: (provided) => ({
-              ...provided,
-              color: 'orange.300',
-              fontWeight: 'normal',
-            }),
-            input: (provided) => ({
-              ...provided,
-              color: 'orange.500',
-              fontWeight: 'bold',
-            })
-          }}
-        />
+            options={species?.map((q) => ({
+              label: player?.language === 'nl' ? q.name_nl : q.name,
+              value: q
+            }))}
+            onChange={(answer) => answer && selectAnswer(answer.value)}
+            chakraStyles={{
+              placeholder: (provided) => ({
+                ...provided,
+                color: 'orange.300',
+                fontWeight: 'normal',
+              }),
+              input: (provided) => ({
+                ...provided,
+                color: 'orange.500',
+                fontWeight: 'bold',
+              })
+            }}
+          />
+        )
       )}
     </>
 

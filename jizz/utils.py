@@ -18,6 +18,7 @@ def sync_species():
     )
     results = data.json()
     for row in results:
+        print(row)
         if row['category'] == 'species':
             Species.objects.update_or_create(
                 code= row['speciesCode'],

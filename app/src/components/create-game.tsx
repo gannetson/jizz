@@ -115,14 +115,14 @@ export const CreateGame = ({
         {!pickCountry && (
           <>
             <SelectCountry/>
-            {/*<Flex gap={4}>*/}
-            {/*  <Box flex={1}>*/}
-            {/*  <SelectTaxOrder/>*/}
-            {/*  </Box>*/}
-            {/*  <Box flex={1}>*/}
-            {/*  <SelectTaxFamily />*/}
-            {/*  </Box>*/}
-            {/*</Flex>*/}
+            <Flex gap={4}>
+              <Box flex={1}>
+                <SelectTaxOrder/>
+              </Box>
+              <Box flex={1}>
+                <SelectTaxFamily/>
+              </Box>
+            </Flex>
           </>
         )}
         {includeRare === undefined && <SelectSpeciesStatus/>}

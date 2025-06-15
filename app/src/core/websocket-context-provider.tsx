@@ -83,11 +83,6 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           break
         case 'answer_checked':
           setAnswer(message.answer as Answer)
-          if (message.answer.correct) {
-            notify('Correct!', undefined, 'green')
-          } else {
-            notify('Incorrect!', undefined, 'red')
-          }
           break
       }
     };

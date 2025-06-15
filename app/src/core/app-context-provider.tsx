@@ -4,6 +4,7 @@ import { useToast } from '@chakra-ui/react';
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
 import {TaxOrder} from "../user/use-tax-order"
 import {TaxFamily} from "../user/use-tax-family"
+import { useNavigate } from 'react-router-dom';
 
 type Props = {
   children: ReactNode;
@@ -30,7 +31,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const playerToken = localStorage.getItem('player-token')
   const gameToken = localStorage.getItem('game-token')
-
   const toast = useToast()
   
   const noCacheHeaders = {
@@ -95,6 +95,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
       }
     })
     const data = await response.json()
+    if (response.status !== 200) {
+      setLoading(false)
+      localStorage.removeItem('player-token')
+      console.log('Could not load player.', response.status, data);
+      window.location.reload();
+    }
     if (data) {
       setLanguage(data.language)
       setPlayer(data)
@@ -193,6 +199,10 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return data as Game
     } else {
       console.log('Could not load game.')
+      localStorage.removeItem('game-token')
+      const data = await response.json()
+      console.log('Could not load player.', response.status, data);
+      window.location.reload();
     }
     setLoading(false)
   }

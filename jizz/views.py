@@ -27,12 +27,12 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
-from .models import CountryChallenge, CountryGame, ChallengeLevel, Game
+from .models import CountryChallenge, CountryGame, ChallengeLevel, Game, Language
 from .serializers import (
     GameSerializer,
     CountryGameSerializer,
     FamilyListSerializer,
-    OrderListSerializer,
+    OrderListSerializer, LanguageSerializer,
 )
 
 from jizz.models import (
@@ -135,6 +135,11 @@ class SpeciesListView(ListAPIView):
 class SpeciesDetailView(RetrieveAPIView):
     serializer_class = SpeciesDetailSerializer
     queryset = Species.objects.all()
+
+
+class LanguageListView(ListAPIView):
+    serializer_class = LanguageSerializer
+    queryset = Language.objects.all()
 
 
 class FamilyListView(ListAPIView):

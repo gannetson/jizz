@@ -1,12 +1,10 @@
 import math
 import uuid
 from datetime import timedelta
-from email.policy import default
 from random import randint, shuffle, random
 
 from django.db import models
 from django.db.models import Sum
-from django.db.models.aggregates import Min
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.functional import lazy
@@ -76,11 +74,18 @@ class Species(models.Model):
         return self.name
 
 
-from django.db.models import Count
+class Language(models.Model):
+    code = models.CharField(max_length=10, primary_key=True)
+    name = models.CharField(max_length=200)
 
-from django.db.models import Count, Subquery, OuterRef
+    def __str__(self):
+        return self.name
 
-from django.db.models import Count, Min
+
+class SpeciesName(models.Model):
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    language = models.ForeignKey(Language, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
 
 
 def get_tax_order_choices(country=None):
@@ -333,7 +338,7 @@ class Player(models.Model):
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True, blank=True)
     name = models.CharField(max_length=255)
-    language = models.CharField(max_length=2, default='en')
+    language = models.CharField(max_length=100, default='en')
     token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
     score = models.IntegerField(default=0)
 
@@ -700,4 +705,3 @@ class CountryGame(models.Model):
         ordering = ['-id']
 
 
-from .signals import *

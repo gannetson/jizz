@@ -4,7 +4,8 @@ import re
 import requests
 from django.conf import settings
 
-from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesSound, SpeciesVideo
+from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesSound, SpeciesVideo, Language, \
+    SpeciesName
 
 SERVER_NAME = 'api.ebird.org'
 API_VERSION = 'v2'
@@ -45,6 +46,44 @@ def sync_species():
                 }
             )
     print("Done syncing species")
+
+
+def sync_names():
+
+    for lang in Language.objects.all():
+        print(f'getting names for {lang.name}')
+        data = requests.get(
+            f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale={lang.code}&fmt=json',
+            headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
+        )
+        results = data.json()
+        for row in results:
+            species = Species.objects.filter(code=row['speciesCode']).first()
+            if species:
+                SpeciesName.objects.update_or_create(
+                    language=lang,
+                    species=species,
+                    defaults={
+                        'name': row['comName'],
+                    }
+                )
+    print("Done syncing names")
+
+
+def sync_languages():
+    data = requests.get(
+        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxa-locales/ebird',
+        headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
+    )
+    results = data.json()
+    for row in results:
+        country, created = Language.objects.update_or_create(
+            code=row['code'],
+            defaults={
+                'name': row['name'],
+            }
+        )
+    print("Done syncing languages")
 
 
 def sync_regions(country, code):

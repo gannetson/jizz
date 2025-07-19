@@ -8,7 +8,7 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView, AnswerDetail, PlayerScoreListView, \
     FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
-    AddChallengeLevelView, FamilyListView, OrderListView
+    AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -27,6 +27,7 @@ urlpatterns = [
 
     path('api/', include(router.urls)),
 
+    re_path(r"^api/languages/$", LanguageListView.as_view(), name="language-list"),
     re_path(r"^api/player/$", PlayerCreateView.as_view(), name="player-create"),
     re_path(r"^api/player/(?P<token>[\w-]+)/$", PlayerView.as_view(), name="player-load"),
     re_path(r"^api/player/(?P<token>[\w-]+)/stats/$", PlayerStatsView.as_view(), name="player-stats"),

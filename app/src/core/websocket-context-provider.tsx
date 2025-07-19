@@ -19,7 +19,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
   const toast = useToast()
 
-  const {game, setGame, player} = useContext(AppContext)
+  const {game, setGame, player, language} = useContext(AppContext)
 
   const gameToken = localStorage.getItem('game-token')
   const playerToken = localStorage.getItem('player-token')
@@ -52,11 +52,14 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     }
     const ws = new WebSocket(socketUrl);
 
-
     ws.onopen = () => {
       console.log('WebSocket connection established');
       console.log('Joining game')
-      ws.send(JSON.stringify({action: 'join_game', player_token: player.token}))
+      ws.send(JSON.stringify({
+        action: 'join_game', 
+        player_token: player.token,
+        language_code: language
+      }))
     };
 
     ws.onmessage = (event) => {
@@ -117,7 +120,10 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
   const sendAction = (data: {}) => {
     if (socket) {
-      socket.send(JSON.stringify(data))
+      socket.send(JSON.stringify({
+        ...data,
+        language_code: language
+      }))
     } else {
       console.log("Error sending action. Socket not ready.")
     }

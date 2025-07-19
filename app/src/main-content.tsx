@@ -39,9 +39,10 @@ export const MainContent = () => {
     nl: nlMessages,
     la: laMessages
   }
+  const locale  = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
 
   return (
-    <IntlProvider locale={language as 'en' | 'nl'} messages={messages[language as 'en' | 'nl']}>
+    <IntlProvider locale={locale} messages={messages[locale]}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout/>}>

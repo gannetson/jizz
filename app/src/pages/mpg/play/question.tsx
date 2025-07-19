@@ -1,4 +1,16 @@
-import {Box, Button, Flex, Image, Link, List, ListItem, SimpleGrid, Text, useDisclosure} from "@chakra-ui/react"
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Image,
+  Link,
+  List,
+  ListItem,
+  SimpleGrid,
+  Text,
+  useDisclosure
+} from "@chakra-ui/react"
 import {Select} from "chakra-react-select"
 import React, {useContext, useState} from "react"
 import ReactPlayer from "react-player"
@@ -37,14 +49,15 @@ export const QuestionComponent = () => {
     onSpeciesOpen()
   }
 
-  const selectAnswer = (species?: Species) => {
+  const selectAnswer = async (species?: Species) => {
+    setShowFeedback(false)
     if (player && submitAnswer) {
       const answer: Answer = {
         question,
         player,
         answer: species,
       }
-      submitAnswer(answer)
+      await submitAnswer(answer)
       setShowFeedback(true)
     }
   }
@@ -85,10 +98,34 @@ export const QuestionComponent = () => {
     </Link>
   )
 
+  const nextButton = (
+    <Box>
+      {done ? (
+        <Button onClick={endGame} width='full'>
+          <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
+        </Button>
+      ) : (
+        isHost ? (
+          <Button onClick={getNextQuestion} width='full'>
+            <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+          </Button>
+        ) : (
+          <FormattedMessage
+            defaultMessage={'Waiting for {host} to continue to the next question'}
+            id={'waiting for host to click next question'}
+            values={{host: game?.host?.name || 'host'}}/>
+        )
+
+      )}
+    </Box>
+
+  )
+
   return (
     <>
       <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen}/>
       <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
+      {nextButton}
       <>
         {showFeedback && (
           <AnswerFeedback
@@ -164,35 +201,6 @@ export const QuestionComponent = () => {
         )}
 
       </Box>
-      {answer && (<Box position={'relative'}>
-        <Flex direction={'column'} gap={8}>
-          <List spacing={4}>
-            {players && players.map((player, index) => (
-              <ListItem key={index}>
-                <PlayerItem showRanking={false} player={player}/>
-              </ListItem>
-            ))}
-          </List>
-          <Box>
-            {done ? (
-              <Button onClick={endGame} width='full'>
-                <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
-              </Button>
-            ) : (
-              isHost ? (
-                <Button onClick={getNextQuestion} width='full'>
-                  <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
-                </Button>
-              ) : (
-                <FormattedMessage defaultMessage={'Waiting for {host} to continue to the next question'}
-                                  id={'waiting for host to click next question'}
-                                  values={{host: game?.host?.name || 'host'}}/>
-              )
-
-            )}
-          </Box>
-        </Flex>
-      </Box>)}
 
       {question.options && question.options.length ? (
         <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
@@ -203,9 +211,8 @@ export const QuestionComponent = () => {
                   <Button
                     key={key}
                     onClick={() => viewSpecies(option)}
-                    variant={'outline'}
                     gap={4}
-                    colorScheme={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'gray'}
+                    colorScheme={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'orange'}
                   >
                     <SpeciesName species={option}/>
                     <BsImages/>
@@ -227,7 +234,6 @@ export const QuestionComponent = () => {
           <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
             <Button
               onClick={() => answer.species && viewSpecies(answer.species)}
-              variant={'outline'}
               colorScheme={'green'}
               gap={4}
             >
@@ -237,7 +243,6 @@ export const QuestionComponent = () => {
             {!answer?.correct && (
               <Button
                 onClick={() => answer.answer && viewSpecies(answer.answer)}
-                variant={'outline'}
                 colorScheme={'red'}
                 gap={4}
               >
@@ -270,6 +275,22 @@ export const QuestionComponent = () => {
             }}
           />
         )
+      )}
+      {answer && (
+        <>
+          {nextButton}
+          <Box position={'relative'} mt={8}>
+            <Flex direction={'column'} gap={8}>
+              <List spacing={4}>
+                {players && players.map((player, index) => (
+                  <ListItem key={index}>
+                    <PlayerItem showRanking={false} player={player}/>
+                  </ListItem>
+                ))}
+              </List>
+            </Flex>
+          </Box>
+        </>
       )}
     </>
 

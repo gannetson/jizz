@@ -13,7 +13,7 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
                          CountrySpecies, Feedback, FlagQuestion, Game, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
-                         Update, CountryGame)
+                         Update, CountryGame, Language, SpeciesName)
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species)
 
@@ -170,6 +170,21 @@ class SpeciesAdmin(admin.ModelAdmin):
         species_url = reverse('admin:jizz_species_change', args=(species.pk,))
         response = HttpResponseRedirect(species_url)
         return response
+
+
+@register(Language)
+class LanguageAdmin(admin.ModelAdmin):
+    fields = ['code', 'name']
+
+
+@register(SpeciesName)
+class SpeciesNameAdmin(admin.ModelAdmin):
+    readonly_fields = ['language', 'species']
+    fields = ['language', 'species', 'name']
+    list_display = ['name', 'language', 'species']
+    list_filter = ['language']
+    search_fields = ['name', 'species__name']
+
 
 
 class QuestionInline(admin.TabularInline):

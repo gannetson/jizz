@@ -60,6 +60,7 @@ export type Species = {
   name: string
   name_nl: string
   name_latin: string
+  name_translated: string
   tax_order: string
   tax_family: string
   tax_family_en: string
@@ -185,6 +186,7 @@ export type CountryChallenge = {
   status: 'new' | 'running' | 'passed' | 'failed'
 }
 
+
 type SharedState = {
   playerName?: string
   setPlayerName?: Dispatch<SetStateAction<string | undefined>>
@@ -216,8 +218,8 @@ type SharedState = {
   setLength: Dispatch<SetStateAction<string>>
   country: Country | undefined
   setCountry: Dispatch<SetStateAction<Country>>
-  language?: 'en' | 'nl' | 'la'
-  setLanguage?: Dispatch<SetStateAction<'en' | 'nl' | 'la'>>
+  language?: string
+  setLanguage?: Dispatch<SetStateAction<string>>
   multiplayer?: string
   setMultiplayer?: Dispatch<SetStateAction<string>>
   mediaType: string

@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction, CountryChallenge, CountryGame, ChallengeLevel
+    QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction, CountryChallenge, CountryGame, \
+    ChallengeLevel, Language, SpeciesName
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -33,9 +34,22 @@ class SoundSerializer(serializers.ModelSerializer):
 
 
 class SpeciesListSerializer(serializers.ModelSerializer):
+
+    name_translated = serializers.SerializerMethodField()
+
+    def get_name_translated(self, obj):
+        try:
+            species_name = SpeciesName.objects.get(
+                species=obj,
+                language=self.context['request'].query_params.get('language')
+            )
+            return species_name.name
+        except SpeciesName.DoesNotExist:
+            return obj.name
+
     class Meta:
         model = Species
-        fields = ('name', 'name_latin', 'name_nl', 'id', 'tax_family', 'tax_family_en', 'tax_order')
+        fields = ('name', 'name_latin', 'name_nl', 'name_translated', 'id', 'tax_family', 'tax_family_en', 'tax_order')
 
 
 class FamilyListSerializer(serializers.ModelSerializer):
@@ -60,7 +74,6 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Species
         fields = ('name', 'code', 'name_latin', 'name_nl', 'id', 'images')
-
 
 class QuestionSerializer(serializers.ModelSerializer):
     images = ImageSerializer(source='species.images', many=True)
@@ -218,6 +231,12 @@ class GameSerializer(serializers.ModelSerializer):
             'include_escapes',
             'scores'
         )
+
+
+class LanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Language
+        fields = ('code', 'name')
 
 
 class FeedbackSerializer(serializers.ModelSerializer):

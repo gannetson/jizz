@@ -13,7 +13,7 @@ type Props = {
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
   const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
-  const [language, setLanguage] = useState<'en' | 'nl' | 'la'>('en');
+  const [language, setLanguage] = useState<string>('en');
   const [taxOrder, setTaxOrder] = useState<TaxOrder | undefined>();
   const [taxFamily, setTaxFamily] = useState<TaxFamily | undefined>();
   const [loading, setLoading] = useState(false)
@@ -63,7 +63,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   useEffect(() => {
     if (country?.code) {
       setLoading(true)
-      fetch(`/api/species/?countryspecies__country=${country.code}`, {
+      fetch(`/api/species/?countryspecies__country=${country.code}&language=${language}`, {
         cache: 'no-cache',
         method: 'GET',
         headers: {
@@ -82,7 +82,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       })
 
     }
-  }, [country?.code]);
+  }, [country?.code, language]);
 
   const loadPlayer = async (playerToken: string) => {
     setLoading(true)

@@ -23,18 +23,22 @@ export const SelectMediaType = () => {
       >
         <Flex direction={'column'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'images'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>
                 <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
               </RadioGroupItemText>
             </RadioGroupItem>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'audio'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>
                 <Flex gap={4}>
                   <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
@@ -43,9 +47,11 @@ export const SelectMediaType = () => {
             </RadioGroupItem>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'video'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>
                 <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
               </RadioGroupItemText>

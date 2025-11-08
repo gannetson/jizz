@@ -39,17 +39,13 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
     if (response.status === 201) {
       toaster.create({
         render: () => (
-          <Toast.Root status="success">
-            <Toast.Title>{intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."})}</Toast.Title>
-          </Toast.Root>
+          <Toast.Root status="success" title={intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."})} />
         )
       })
     } else {
       toaster.create({
         render: () => (
-          <Toast.Root status="error">
-            <Toast.Title>{intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})}</Toast.Title>
-          </Toast.Root>
+          <Toast.Root status="error" title={intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})} />
         )
       })
     }

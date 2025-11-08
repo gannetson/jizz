@@ -31,30 +31,38 @@ export const SelectLength = () => {
       >
         <Flex direction={'row'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'10'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>10</RadioGroupItemText>
             </RadioGroupItem>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'20'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>20</RadioGroupItemText>
             </RadioGroupItem>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'50'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>50</RadioGroupItemText>
             </RadioGroupItem>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
             <RadioGroupItem value={'100'}>
               <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemControl />
+              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
               <RadioGroupItemText>100</RadioGroupItemText>
             </RadioGroupItem>
           </Box>

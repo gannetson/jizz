@@ -22,18 +22,22 @@ export const SelectGameType = () => {
       >
         <Flex direction={'column'} gap={4}>
         <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
           <RadioGroupItem value={'0'}>
             <RadioGroupItemHiddenInput />
-            <RadioGroupItemControl cursor="pointer" />
+            <RadioGroupItemControl />
+            {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
             <RadioGroupItemText>
               <FormattedMessage id={'single player'} defaultMessage={'Single player'} />
             </RadioGroupItemText>
           </RadioGroupItem>
         </Box>
         <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
           <RadioGroupItem value={'1'}>
             <RadioGroupItemHiddenInput />
-            <RadioGroupItemControl cursor="pointer" />
+            <RadioGroupItemControl />
+            {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
             <RadioGroupItemText>
               <FormattedMessage id={'multi player'} defaultMessage={'Multi player'} />
             </RadioGroupItemText>

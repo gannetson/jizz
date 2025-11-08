@@ -25,16 +25,11 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
 
   const notify = (title: string, description?: string, colorPalette?: string) => {
-    description && (
     toaster.create({
       render: () => (
-        <Toast.Root status="info">
-          <Toast.Title>{title}</Toast.Title>
-          {description && <Toast.Description>{description}</Toast.Description>}
-        </Toast.Root>
+        <Toast.Root status="info" title={title} description={description} />
       )
     })
-  )
   }
 
   const connectSocket = (game?: Game, player?: Player) => {

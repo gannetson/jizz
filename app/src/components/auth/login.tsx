@@ -14,7 +14,7 @@ export const Login = () => {
 
   return (
     <VStack gap={4}>
-      <Button colorPalette="red" onClick={() => handleSocialLogin("google-oauth2")}>
+      <Button colorPalette="error" onClick={() => handleSocialLogin("google-oauth2")}>
         Login with Google
       </Button>
       <GoogleAuth />

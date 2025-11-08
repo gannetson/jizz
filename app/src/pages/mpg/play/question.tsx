@@ -9,10 +9,12 @@ import {
   ListItem,
   SimpleGrid,
   Text,
-  useDisclosure
+  useDisclosure,
+  Select,
+  Portal,
+  createListCollection
 } from "@chakra-ui/react"
-import {ChakraSelect} from "../../../components/chakra-select"
-import React, {useContext, useState} from "react"
+import React, {useContext, useState, useMemo} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -28,6 +30,63 @@ import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
 import {useNavigate} from "react-router-dom"
 
+const SpeciesSelect = ({ species, player, onSelect, autoFocus, placeholder }: { 
+  species: Species[], 
+  player: any, 
+  onSelect: (species: Species) => void,
+  autoFocus?: boolean,
+  placeholder?: React.ReactNode
+}) => {
+  const collection = useMemo(() => {
+    const items = species.map((s, index) => ({
+      label: player?.language === 'nl' ? s.name_nl : s.name,
+      value: String(s.id || s.name),
+      original: s,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [species, player?.language]);
+
+  const handleValueChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0];
+    const selectedSpecies = species.find((s) => String(s.id || s.name) === selectedValue);
+    if (selectedSpecies) {
+      onSelect(selectedSpecies);
+    }
+  };
+
+  const placeholderText = typeof placeholder === 'string' ? placeholder : 'Start typing your answer...';
+
+  return (
+    <Select.Root
+      collection={collection}
+      value={[]}
+      onValueChange={handleValueChange}
+    >
+      <Select.HiddenSelect />
+      <Select.Control>
+        <Select.Trigger autoFocus={autoFocus}>
+          <Select.ValueText placeholder={placeholderText} />
+        </Select.Trigger>
+        <Select.IndicatorGroup>
+          <Select.Indicator />
+        </Select.IndicatorGroup>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+            {collection.items.map((item: any) => (
+              <Select.Item key={item.value} item={item}>
+                <Select.ItemIndicator />
+                <Select.ItemText>{item.label}</Select.ItemText>
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
+};
 
 export const QuestionComponent = () => {
   const {species, player, game} = useContext(AppContext)
@@ -93,7 +152,7 @@ export const QuestionComponent = () => {
 
 
   const flag = (
-    <Link float={'right'} onClick={flagMedia} fontSize={'sm'} color={'red.700'}>
+    <Link float={'right'} onClick={flagMedia} fontSize={'sm'} color={'error.700'}>
       🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
     </Link>
   )
@@ -101,14 +160,20 @@ export const QuestionComponent = () => {
   const nextButton = (
     <Box>
       {done ? (
-        <Button onClick={endGame} width='full'>
+        <Button onClick={endGame} width='full' colorPalette={'primary'}>
           <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
         </Button>
       ) : (
         isHost ? (
-          <Button onClick={getNextQuestion} width='full'>
-            <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+          answer ? (
+          <Button onClick={getNextQuestion} width='full' colorPalette={'primary'}>
+            <FormattedMessage id={'next question'} defaultMessage={'Hext question'}/>
           </Button>
+          ) : (
+            <Button disabled={true} width='full' colorPalette={'primary'}>
+              <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
+            </Button>
+          )
         ) : (
           <FormattedMessage
             defaultMessage={'Waiting for {host} to continue to the next question'}
@@ -205,15 +270,17 @@ export const QuestionComponent = () => {
                     key={key}
                     onClick={() => viewSpecies(option)}
                     gap={4}
-                    colorPalette={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'orange'}
+                    colorPalette={
+                      answer?.species?.id === option.id 
+                      ? 'success' 
+                      : answer?.answer?.id === option.id ? 'error' : 'warning'}
                   >
                     <SpeciesName species={option}/>
-                    <BsImages/>
                   </Button>
                 )
               } else {
                 return (
-                  <Button key={key} onClick={() => selectAnswer(option)}>
+                  <Button colorPalette={'primary'} key={key} onClick={() => selectAnswer(option)}>
                     <SpeciesName species={option}/>
                   </Button>
                 )
@@ -227,7 +294,7 @@ export const QuestionComponent = () => {
           <SimpleGrid columns={{base: 1, md: 2}} gap={4}>
             <Button
               onClick={() => answer.species && viewSpecies(answer.species)}
-              colorPalette={'green'}
+              colorPalette={'success'}
               gap={4}
             >
               {answer.species?.name}
@@ -236,7 +303,7 @@ export const QuestionComponent = () => {
             {!answer?.correct && (
               <Button
                 onClick={() => answer.answer && viewSpecies(answer.answer)}
-                colorPalette={'red'}
+                colorPalette={'error'}
                 gap={4}
               >
                 {answer.answer?.name}
@@ -245,31 +312,17 @@ export const QuestionComponent = () => {
             )}
           </SimpleGrid>
         ) : (
-          <ChakraSelect
+          <SpeciesSelect
+            species={species || []}
+            player={player}
+            onSelect={selectAnswer}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
-            options={species || []}
-            getOptionLabel={(q) => player?.language === 'nl' ? q.name_nl : q.name}
-            getOptionValue={(q) => String(q.id || q.name)}
-            onChange={(answer) => answer && selectAnswer(answer)}
-            chakraStyles={{
-              placeholder: (provided) => ({
-                ...provided,
-                color: 'orange.300',
-                fontWeight: 'normal',
-              }),
-              input: (provided) => ({
-                ...provided,
-                color: 'orange.500',
-                fontWeight: 'bold',
-              })
-            }}
           />
         )
       )}
+      {nextButton}
       {answer && (
-        <>
-          {nextButton}
           <Box position={'relative'} mt={8}>
             <Flex direction={'column'} gap={8}>
               <ListRoot gap={4}>
@@ -281,7 +334,6 @@ export const QuestionComponent = () => {
               </ListRoot>
             </Flex>
           </Box>
-        </>
       )}
     </>
 

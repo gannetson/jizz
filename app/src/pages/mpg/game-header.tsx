@@ -1,7 +1,7 @@
 import React, {useContext} from 'react';
 import {Box, Flex, Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import Page from "../layout/page"
+import { Page } from "../../shared/components/layout"
 import AppContext from "../../core/app-context"
 
 

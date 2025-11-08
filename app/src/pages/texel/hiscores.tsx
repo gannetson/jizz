@@ -1,11 +1,10 @@
 import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow} from "@chakra-ui/react";
-import Page from "../layout/page";
+import { Page } from "../../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Country, Score} from "../../core/app-context"
 import {Loading} from "../../components/loading"
 import {ScoreLine} from "../../components/score-line"
-import {ChakraSelect} from "../../components/chakra-select"
 import {UseCountries} from "../../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 import {ScoreLineShort} from "../../components/score-line-short"
@@ -58,9 +57,9 @@ const TexelHiscorePage = () => {
           ) : (
 
             <Box overflowX="auto">
-              <TableRoot variant='line' colorPalette='orange' size={['sm', 'md']}>
+              <TableRoot variant='line' colorPalette='primary' size={['sm', 'md']}>
                 <TableHeader>
-                  <TableRow bgColor={'orange.200'}>
+                  <TableRow bgColor={'primary.200'}>
                   <TableColumnHeader>#</TableColumnHeader>
                   <TableColumnHeader>Player</TableColumnHeader>
                   <TableColumnHeader>Date</TableColumnHeader>

@@ -1,10 +1,10 @@
 import {Box, Button, Flex, Link} from "@chakra-ui/react";
-import AppContext from "../../core/app-context";
+import AppContext from "../../../core/app-context";
 import {useContext, useState} from "react";
 import {IoIosMoon, IoIosSunny} from "react-icons/io";
 import {FormattedMessage} from "react-intl"
-import SelectLanguage from "../../components/select-language";
-import ChangeLanguage from "../../components/change-language";
+import SelectLanguage from "../../../components/select-language";
+import ChangeLanguage from "../../../components/change-language";
 
 export const BirdrMenu = () => {
     const {game} = useContext(AppContext);
@@ -40,7 +40,7 @@ export const BirdrMenu = () => {
               <FormattedMessage id={'about birdr'} defaultMessage={'About Birdr'} />
             </Link>
             <Box>
-              <Button onClick={toggleColorMode}>
+              <Button onClick={toggleColorMode} colorPalette="primary">
                   {colorMode === 'light' ? <IoIosMoon /> : <IoIosSunny />}
                   {colorMode === 'light' ? 'Dark' : 'Light'}
               </Button>
@@ -50,3 +50,4 @@ export const BirdrMenu = () => {
         </Flex>
     );
 }
+

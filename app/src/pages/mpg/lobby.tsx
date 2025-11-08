@@ -1,6 +1,6 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
-import Page from "../layout/page"
+import { Page } from "../../shared/components/layout"
 import {Box, Button, Flex, Heading, Link, ListRoot, ListItem, TagRoot, VStack, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
@@ -94,7 +94,7 @@ const Lobby: React.FC = () => {
         </ListRoot>
         {
           isHost ? (
-            <Button onClick={startGame}>
+            <Button onClick={startGame} colorPalette="primary">
               Start game
             </Button>
 

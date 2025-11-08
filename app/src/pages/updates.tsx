@@ -1,5 +1,5 @@
 import {Heading} from "@chakra-ui/react";
-import Page from "./layout/page";
+import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Update} from "../core/app-context"

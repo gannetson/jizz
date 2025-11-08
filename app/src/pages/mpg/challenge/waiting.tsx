@@ -37,11 +37,11 @@ export const WaitingComponent = () => {
           </ListRoot>
           <Box>
             {done ? (
-              <Button onClick={endGame} colorPalette={'orange'}>
+              <Button onClick={endGame} colorPalette={'primary'}>
                 <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
               </Button>
             ) : (
-              <Button onClick={nextQuestion} colorPalette={'orange'}>
+              <Button onClick={nextQuestion} colorPalette={'primary'}>
                 <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
               </Button>
             )}

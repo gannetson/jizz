@@ -1,7 +1,7 @@
 import * as React from "react"
 import {useContext, useEffect} from "react"
 import {BrowserRouter, Route, Routes} from "react-router-dom";
-import Layout from "./pages/layout/layout";
+import { Layout } from "./shared/components/layout";
 import HomePage from "./pages/home";
 import Lobby from "./pages/mpg/lobby"
 import {AboutPage} from "./pages/about";

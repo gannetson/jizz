@@ -35,12 +35,12 @@ export const WaitingComponent = () => {
           </ListRoot>
           <Box>
             {done ? (
-              <Button onClick={endGame} width='full'>
+              <Button onClick={endGame} width='full' colorPalette="primary">
                 <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
               </Button>
             ) : (
               isHost ? (
-                <Button onClick={nextQuestion} width='full'>
+                <Button onClick={nextQuestion} width='full' colorPalette="primary">
                   <FormattedMessage id={'next question'} defaultMessage={'Next question'} />
                 </Button>
               ) : (

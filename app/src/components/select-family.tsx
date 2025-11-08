@@ -1,6 +1,5 @@
-import {Box, Heading} from "@chakra-ui/react";
-import {ChakraSelect} from "./chakra-select";
-import {useContext, useEffect} from "react";
+import {Box, Heading, Select, Portal, createListCollection} from "@chakra-ui/react";
+import {useContext, useEffect, useMemo} from "react";
 import AppContext from "../core/app-context";
 import {FormattedMessage} from "react-intl"
 import {TaxFamily, UseTaxFamily} from "../user/use-tax-family";
@@ -10,9 +9,31 @@ const SelectTaxFamily = () => {
   const {taxFamilies} = UseTaxFamily()
   const {taxFamily, setTaxFamily, game} = useContext(AppContext);
 
-  const onChange = (value?: TaxFamily) => {
-    setTaxFamily && setTaxFamily(value)
-  }
+  const collection = useMemo(() => {
+    const items = taxFamilies.map((t, index) => ({
+      label: `${t.tax_family} - ${t.tax_family_en} (${t.count})`,
+      value: t.tax_family,
+      original: t,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [taxFamilies]);
+
+  const selectedValue = taxFamily ? taxFamily.tax_family : undefined;
+
+  const handleValueChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0];
+    if (selectedValue) {
+      const selectedFamily = taxFamilies.find((t) => t.tax_family === selectedValue);
+      if (selectedFamily && setTaxFamily) {
+        setTaxFamily(selectedFamily);
+      }
+    } else {
+      if (setTaxFamily) {
+        setTaxFamily(undefined);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!taxFamily && game?.tax_family) {
@@ -32,14 +53,36 @@ const SelectTaxFamily = () => {
         <FormattedMessage id={'tax family'} defaultMessage={'Taxonomic family'} />
 
       </Heading>
-      <ChakraSelect<TaxFamily>
-        isClearable={true}
-        options={taxFamilies}
-        getOptionLabel={(c) => c ? `${c.tax_family} - ${c.tax_family_en} (${c.count})` : '?'}
-        getOptionValue={(c) => c ? c.tax_family : '?'}
-        value={taxFamily || null}
-        onChange={(val) => onChange(val || undefined)}
-      />
+      <Select.Root
+        collection={collection}
+        value={selectedValue ? [selectedValue] : []}
+        onValueChange={handleValueChange}
+      >
+        <Select.HiddenSelect />
+        <Select.Control>
+          <Select.Trigger>
+            <Select.ValueText placeholder="Select family..." />
+          </Select.Trigger>
+          <Select.IndicatorGroup>
+            <Select.Indicator />
+            {selectedValue && setTaxFamily && (
+              <Select.ClearTrigger onClick={() => setTaxFamily(undefined)} />
+            )}
+          </Select.IndicatorGroup>
+        </Select.Control>
+        <Portal>
+          <Select.Positioner>
+            <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+              {collection.items.map((item: any) => (
+                <Select.Item key={item.value} item={item}>
+                  <Select.ItemIndicator />
+                  <Select.ItemText>{item.label}</Select.ItemText>
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Positioner>
+        </Portal>
+      </Select.Root>
     </Box>
   )
 };

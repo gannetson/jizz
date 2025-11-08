@@ -43,7 +43,7 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
               </Dialog.Body>
 
               <Dialog.Footer>
-                <Button onClick={onClose}>
+                <Button onClick={onClose} colorPalette="primary">
                   Close
                 </Button>
               </Dialog.Footer>

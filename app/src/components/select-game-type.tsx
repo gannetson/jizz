@@ -16,15 +16,17 @@ export const SelectGameType = () => {
     <Box>
       <Heading size={'md'} mb={4}>Players</Heading>
       <RadioGroup.Root
+        colorPalette="primary"
         value={multiplayer}
         onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
-        colorPalette={'orange'}
       >
         <Flex direction={'column'} gap={4}>
         <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
           <RadioGroup.Item value={'0'}>
             <RadioGroup.ItemHiddenInput />
-            <RadioGroup.ItemControl />
+            <RadioGroup.ItemControl>
+              <RadioGroup.ItemIndicator />
+            </RadioGroup.ItemControl>
             <RadioGroup.ItemText>
               <FormattedMessage id={'single player'} defaultMessage={'Single player'} />
             </RadioGroup.ItemText>
@@ -33,7 +35,9 @@ export const SelectGameType = () => {
         <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
           <RadioGroup.Item value={'1'}>
             <RadioGroup.ItemHiddenInput />
-            <RadioGroup.ItemControl />
+            <RadioGroup.ItemControl>
+              <RadioGroup.ItemIndicator />
+            </RadioGroup.ItemControl>
             <RadioGroup.ItemText>
               <FormattedMessage id={'multi player'} defaultMessage={'Multi player'} />
             </RadioGroup.ItemText>

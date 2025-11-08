@@ -1,6 +1,5 @@
-import {Box, Button, Flex, Heading, Icon, Image, Link, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, CardRoot} from "@chakra-ui/react"
-import {ChakraSelect} from "../../../components/chakra-select"
-import {useContext, useEffect, useState} from "react"
+import {Box, Button, Flex, Heading, Icon, Image, Link, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, CardRoot, Select, Portal, createListCollection, Spinner} from "@chakra-ui/react"
+import {useContext, useEffect, useState, useMemo} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -9,7 +8,7 @@ import {FormattedMessage} from "react-intl"
 import {FlagMedia} from "../play/flag-media"
 import {keyframes} from "@emotion/react"
 import { Loading } from "../../../components/loading"
-import Page from "../../layout/page"
+import { Page } from "../../../shared/components/layout"
 import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaQuestion, FaSkull } from "react-icons/fa"
 import { IconType } from "react-icons"
 import { useNavigate } from "react-router-dom"
@@ -25,6 +24,82 @@ const iconMapping: Record<ResultType, IconType> = {
   'joker': FaHeart,
   'incorrect': FaSkull
 }
+
+const SpeciesSelect = ({ species, player, onSelect, loading, autoFocus, placeholder }: { 
+  species: Species[], 
+  player: any, 
+  onSelect: (species: Species) => void,
+  loading?: boolean,
+  autoFocus?: boolean,
+  placeholder?: React.ReactNode
+}) => {
+  const collection = useMemo(() => {
+    const items = species.map((s, index) => ({
+      label: player?.language === 'nl' ? s.name_nl : s.name,
+      value: String(s.id || s.name),
+      original: s,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [species, player?.language]);
+
+  const handleValueChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0];
+    const selectedSpecies = species.find((s) => String(s.id || s.name) === selectedValue);
+    if (selectedSpecies) {
+      onSelect(selectedSpecies);
+    }
+  };
+
+  const placeholderText = typeof placeholder === 'string' ? placeholder : 'Start typing your answer...';
+
+  return (
+    <Select.Root
+      collection={collection}
+      value={[]}
+      onValueChange={handleValueChange}
+      disabled={loading}
+    >
+      <Select.HiddenSelect />
+      <Select.Control>
+        <Select.Trigger autoFocus={autoFocus}>
+          <Select.ValueText placeholder={placeholderText} />
+        </Select.Trigger>
+        <Select.IndicatorGroup>
+          {loading ? (
+            <Box position="absolute" right="8px" top="50%" transform="translateY(-50%)" zIndex={1}>
+              <Spinner size="sm" />
+            </Box>
+          ) : (
+            <Select.Indicator />
+          )}
+        </Select.IndicatorGroup>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+            {loading ? (
+              <Box p={2} textAlign="center" color="gray.500">
+                Loading...
+              </Box>
+            ) : collection.items.length === 0 ? (
+              <Box p={2} textAlign="center" color="gray.500">
+                No options found
+              </Box>
+            ) : (
+              collection.items.map((item: any) => (
+                <Select.Item key={item.value} item={item}>
+                  <Select.ItemIndicator />
+                  <Select.ItemText>{item.label}</Select.ItemText>
+                </Select.Item>
+              ))
+            )}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
+};
 
 export const ChallengeQuestion = () => {
   const {species, player, language, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
@@ -135,7 +210,7 @@ export const ChallengeQuestion = () => {
           </Box>
           <Flex gap={2} alignItems={'center'}>
             {[...Array(level.challenge_level.jokers)].map((_, i) => (
-              <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "orange.600" : "orange.300"} boxSize={6} />
+              <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "primary.600" : "primary.300"} boxSize={6} />
             ))}
           </Flex>
         </Page.Header>
@@ -188,7 +263,7 @@ export const ChallengeQuestion = () => {
 
           )}
           <Flex justifyContent={'end'}>
-            <Link onClick={flagMedia} fontSize={'sm'} color={'red.700'}>
+            <Link onClick={flagMedia} fontSize={'sm'} color={'error.700'}>
               🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
             </Link>
           </Flex>
@@ -202,7 +277,7 @@ export const ChallengeQuestion = () => {
                     key={key} 
                     onClick={() => giveAnswer(option)} 
                     disabled={loading} 
-                    colorPalette={response?.species?.id === option.id ? 'green' : response?.answer?.id === option.id ? 'red' : 'orange'}
+                    colorPalette={response?.species?.id === option.id ? 'success' : response?.answer?.id === option.id ? 'error' : 'primary'}
                   >
                     <SpeciesName species={option}/>
                   </Button>
@@ -212,36 +287,23 @@ export const ChallengeQuestion = () => {
           </SimpleGrid>
 
         ) : (
-          <ChakraSelect
+          <SpeciesSelect
+            species={species || []}
+            player={player}
+            onSelect={giveAnswer}
+            loading={loading}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
-            options={species || []}
-            getOptionLabel={(q) => player?.language === 'nl' ? q.name_nl : q.name}
-            getOptionValue={(q) => String(q.id || q.name)}
-            isLoading={loading}
-            onChange={(answer) => answer && giveAnswer(answer)}
-            chakraStyles={{
-              placeholder: (provided) => ({
-                ...provided,
-                color: 'orange.300',
-                fontWeight: 'normal',
-              }),
-              input: (provided) => ({
-                ...provided,
-                color: 'orange.500',
-                fontWeight: 'bold',
-              })
-            }}
           />
         )}
 
         <Heading size={'md'}>
           <FormattedMessage id={"progress"} defaultMessage={"Progress"}/>
         </Heading>
-        <CardRoot bgColor={'orange.100'} p={4}>
+        <CardRoot bgColor={'primary.100'} p={4}>
           <Box>
             {results.map((result, i) => (
-              <Icon p={1} key={i} as={iconMapping[result]} color={result === 'open' ? "orange.300" : "orange.600"} boxSize={8} />
+              <Icon p={1} key={i} as={iconMapping[result]} color={result === 'open' ? "primary.300" : "primary.600"} boxSize={8} />
             ))}
             </Box>
         </CardRoot>

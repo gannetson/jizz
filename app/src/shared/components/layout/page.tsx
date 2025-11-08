@@ -29,3 +29,4 @@ export default function Page({ children }: Properties) {
     </Grid>
   )
 }
+

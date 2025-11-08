@@ -26,11 +26,11 @@ export const Feedback = () => {
   }
 
   return (
-    <CardRoot border={"1px solid"} shadow={'lg'} borderColor={'gray.300'} backgroundColor={submitted ? 'orange.100' : undefined} borderRadius='8px' p={8}>
+    <CardRoot border={"1px solid"} shadow={'lg'} borderColor={'gray.300'} backgroundColor={submitted ? 'primary.100' : undefined} borderRadius='8px' p={8}>
       <Flex direction={'column'} gap={4}>
         {submitted ? (
           <>
-            <Heading size={'md'} color={'orange.500'}>
+            <Heading size={'md'} color={'primary.500'}>
               <FormattedMessage id={'thanks'} defaultMessage={'Thanks!'}/>
             </Heading>
             <FormattedMessage id={'thanks for your feedback message'} defaultMessage={'Thank you for your feedback!'}/>
@@ -51,7 +51,7 @@ export const Feedback = () => {
 
             <Textarea cursor="text" onChange={(val) => setComment(val.target.value)}/>
             <Box>
-              <Button onClick={submit} disabled={!rating && !comment}>
+              <Button onClick={submit} disabled={!rating && !comment} colorPalette="primary">
                 <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
               </Button>
             </Box>

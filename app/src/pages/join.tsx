@@ -3,7 +3,7 @@ import {Box, Button, Flex, Heading, Input} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import WebsocketContext from "../core/websocket-context"
 import {useNavigate, useParams} from "react-router-dom"
-import Page from "./layout/page"
+import { Page } from "../shared/components/layout"
 import AppContext from "../core/app-context"
 import GameHeader from "./mpg/game-header"
 import {SetName} from "../components/set-name"
@@ -48,7 +48,7 @@ const JoinPage: React.FC = () => {
         </Box>
         <SetName/>
         <SelectLanguage/>
-        <Button onClick={handleSubmit} loading={loading} disabled={!code || !playerName}>
+        <Button onClick={handleSubmit} loading={loading} disabled={!code || !playerName} colorPalette="primary">
           Join game
         </Button>
       </Page.Body>

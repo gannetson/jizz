@@ -59,9 +59,9 @@ export const CreateCountryGame = () => {
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
-        <Button onClick={()=> requestNotificationPermission()}>Request</Button>
-        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})}>Test</Button>
-        <Button disabled={!country || !playerName} size='lg' onClick={create}>
+        <Button onClick={()=> requestNotificationPermission()} colorPalette="primary">Request</Button>
+        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})} colorPalette="primary">Test</Button>
+        <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>
       </Flex>

@@ -1,11 +1,10 @@
-import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow} from "@chakra-ui/react";
-import Page from "./layout/page";
+import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection} from "@chakra-ui/react";
+import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
-import {useContext, useEffect, useState} from "react"
+import {useContext, useEffect, useState, useMemo} from "react"
 import AppContext, {Country, Score} from "../core/app-context"
 import {Loading} from "../components/loading"
 import {ScoreLine} from "../components/score-line"
-import {ChakraSelect} from "../components/chakra-select"
 import {UseCountries} from "../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 
@@ -66,6 +65,103 @@ const HomePage = () => {
 
   const selectCountries = [{code: '', name: 'All countries'}].concat(countries)
 
+  const countryCollection = useMemo(() => {
+    const items = selectCountries.map((c, index) => ({
+      label: c.name,
+      value: c.name,
+      original: c,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [selectCountries]);
+
+  const mediaCollection = useMemo(() => {
+    const items = mediums.map((m, index) => ({
+      label: m.label,
+      value: m.value,
+      original: m,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [mediums]);
+
+  const levelCollection = useMemo(() => {
+    const items = levels.map((l, index) => ({
+      label: l.label,
+      value: l.value,
+      original: l,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [levels]);
+
+  const lengthCollection = useMemo(() => {
+    const items = lengths.map((l, index) => ({
+      label: l.label,
+      value: l.value,
+      original: l,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [lengths]);
+
+  const countryValue = country ? country.name : undefined;
+  const mediaValue = media || '';
+  const levelValue = level || '';
+  const lengthValue = length || '';
+
+  const handleCountryChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0];
+    const selectedCountry = selectCountries.find((c) => c.name === selectedValue);
+    if (selectedCountry) {
+      setCountry(selectedCountry);
+    }
+  };
+
+  const handleMediaChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setMedia(selectedValue);
+  };
+
+  const handleLevelChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setLevel(selectedValue);
+  };
+
+  const handleLengthChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setLength(selectedValue);
+  };
+
+  const renderSelect = (collection: any, value: string | undefined, onValueChange: (details: { value: string[] }) => void, placeholder: string) => (
+    <Select.Root
+      collection={collection}
+      value={value ? [value] : []}
+      onValueChange={onValueChange}
+    >
+      <Select.HiddenSelect />
+      <Select.Control>
+        <Select.Trigger>
+          <Select.ValueText placeholder={placeholder} />
+        </Select.Trigger>
+        <Select.IndicatorGroup>
+          <Select.Indicator />
+        </Select.IndicatorGroup>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+            {collection.items.map((item: any) => (
+              <Select.Item key={item.value} item={item}>
+                <Select.ItemIndicator />
+                <Select.ItemText>{item.label}</Select.ItemText>
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
 
   return (
     <Page>
@@ -76,34 +172,10 @@ const HomePage = () => {
       </Page.Header>
       <Page.Body>
         <Flex flexWrap={'wrap'} width={'full'} gap={4}>
-          <ChakraSelect
-            options={selectCountries}
-            getOptionLabel={(c) => c ? c.name : '?'}
-            getOptionValue={(c) => c ? c.name : '?'}
-            value={country}
-            onChange={(val) => val && setCountry(val)}
-          />
-          <ChakraSelect
-            options={mediums}
-            getOptionLabel={(m) => m.label}
-            getOptionValue={(m) => m.value}
-            value={mediums.find((l) => l.value === media) || null}
-            onChange={(val) => val && setMedia(val.value)}
-          />
-          <ChakraSelect
-            options={levels}
-            getOptionLabel={(l) => l.label}
-            getOptionValue={(l) => l.value}
-            value={levels.find((l) => l.value === level) || null}
-            onChange={(val) => val && setLevel(val.value)}
-          />
-          <ChakraSelect
-            options={lengths}
-            getOptionLabel={(l) => l.label}
-            getOptionValue={(l) => l.value}
-            value={lengths.find((l) => l.value === length) || null}
-            onChange={(val) => val && setLength(val.value)}
-          />
+          {renderSelect(countryCollection, countryValue, handleCountryChange, 'Select country...')}
+          {renderSelect(mediaCollection, mediaValue, handleMediaChange, 'Select media...')}
+          {renderSelect(levelCollection, levelValue, handleLevelChange, 'Select level...')}
+          {renderSelect(lengthCollection, lengthValue, handleLengthChange, 'Select length...')}
         </Flex>
         <>
           {loading ? (
@@ -111,9 +183,9 @@ const HomePage = () => {
           ) : (
 
             <Box overflowX="auto">
-              <TableRoot variant='line' colorPalette='orange' size={['sm', 'md']}>
+              <TableRoot variant='line' colorPalette='primary' size={['sm', 'md']}>
                 <TableHeader>
-                  <TableRow bgColor={'orange.200'}>
+                  <TableRow bgColor={'primary.200'}>
                     <TableColumnHeader>Player</TableColumnHeader>
                     <TableColumnHeader>
                       🇿🇿

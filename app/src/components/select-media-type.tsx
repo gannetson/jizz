@@ -17,15 +17,17 @@ export const SelectMediaType = () => {
         <FormattedMessage id={'media type'} defaultMessage={'Media type'}/>
       </Heading>
       <RadioGroup.Root
+        colorPalette="primary"
         value={mediaType}
         onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
-        colorPalette={'orange'}
       >
         <Flex direction={'column'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
             <RadioGroup.Item value={'images'}>
               <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
               <RadioGroup.ItemText>
                 <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
               </RadioGroup.ItemText>
@@ -34,7 +36,9 @@ export const SelectMediaType = () => {
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
             <RadioGroup.Item value={'audio'}>
               <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
               <RadioGroup.ItemText>
                 <Flex gap={4}>
                   <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
@@ -45,7 +49,9 @@ export const SelectMediaType = () => {
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
             <RadioGroup.Item value={'video'}>
               <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
               <RadioGroup.ItemText>
                 <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
               </RadioGroup.ItemText>

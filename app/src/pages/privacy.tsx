@@ -1,5 +1,5 @@
 import {Box, Button, Flex, Heading, Link, ListItem, Spinner, Text, ListRoot} from "@chakra-ui/react";
-import Page from "./layout/page";
+import { Page } from "../shared/components/layout";
 import SelectCountry from "../components/select-country";
 import SelectLevel from "../components/select-level";
 import AppContext from "../core/app-context";
@@ -78,7 +78,7 @@ export const PrivacyPage = () => {
           <ListItem>Opt out of communications</ListItem>
         </ListRoot>
         <Text>
-          To exercise these rights, please contact us at <Link color={'orange.500'} target={'_blank'}
+          To exercise these rights, please contact us at <Link color={'primary.500'} target={'_blank'}
                                                                href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>.
         </Text>
 
@@ -87,7 +87,7 @@ export const PrivacyPage = () => {
           If you have any questions about this Privacy Policy, you can contact us at:
         </Text>
         <Text>
-          <Link color={'orange.500'} target={'_blank'} href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>.
+          <Link color={'primary.500'} target={'_blank'} href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>.
         </Text>
 
         <Text>

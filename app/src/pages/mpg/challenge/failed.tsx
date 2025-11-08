@@ -2,7 +2,7 @@ import React, { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Flex, Heading, Icon, Text } from '@chakra-ui/react';
 import { FormattedMessage } from 'react-intl';
-import Page from '../../layout/page';
+import { Page } from '../../../shared/components/layout';
 import GameHeader from '../game-header';
 import WebsocketContext from '../../../core/websocket-context';
 import AppContext from '../../../core/app-context';
@@ -27,7 +27,7 @@ export const FailedLevel: React.FC = () => {
           <FormattedMessage id={'no level found'} defaultMessage={'No level found'} />
         </Heading>
         <Text>
-          <Button onClick={() => navigate('/challenge')}></Button>
+          <Button onClick={() => navigate('/challenge')} colorPalette="primary"></Button>
         </Text>
       </Flex>
     );
@@ -50,10 +50,10 @@ export const FailedLevel: React.FC = () => {
       <Flex gap={2}>
         <FormattedMessage id={'jokers this round'} defaultMessage={'Jokers this round:'} />
         {[...Array(level.challenge_level.jokers)].map((_, i) => (
-          <Icon key={i} as={FaHeart} color="orange.600" boxSize={6} />
+          <Icon key={i} as={FaHeart} color="primary.600" boxSize={6} />
         ))}
       </Flex>
-      <Button onClick={restartLevel}>
+      <Button onClick={restartLevel} colorPalette="primary">
         <FormattedMessage id="Restart level" defaultMessage="Retart Level" />
       </Button>
     </Flex>

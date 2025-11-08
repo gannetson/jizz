@@ -13,12 +13,14 @@ const SelectLevel = () => {
         <FormattedMessage id={'level'} defaultMessage={'Level'} />
 
       </Heading>
-      <RadioGroup.Root onValueChange={(e: { value?: string }) => e.value && setLevel(e.value)} value={level} colorPalette={'orange'}>
+      <RadioGroup.Root colorPalette="primary" onValueChange={(e: { value?: string }) => e.value && setLevel(e.value)} value={level}>
         <Flex direction={'column'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value='beginner'>
+            <RadioGroup.Item value='beginner' colorPalette="primary">
               <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl cursor="pointer" />
+              <RadioGroup.ItemControl cursor="pointer">
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
               <RadioGroup.ItemText>
                 <Text>
                   <FormattedMessage id={'beginner'} defaultMessage={'Beginner'} />
@@ -30,9 +32,11 @@ const SelectLevel = () => {
             </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value='advanced'>
+            <RadioGroup.Item value='advanced' colorPalette="primary">
               <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl cursor="pointer" />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
               <RadioGroup.ItemText>
                 <Text>
                   <FormattedMessage id={'advanced'} defaultMessage={'Advanced'} />
@@ -44,9 +48,11 @@ const SelectLevel = () => {
             </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value='expert'>
+            <RadioGroup.Item value='expert' colorPalette="primary">
               <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl cursor="pointer" />
+              <RadioGroup.ItemControl cursor="pointer">
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
               <RadioGroup.ItemText>
                 <Text>
                   <FormattedMessage id={'expert'} defaultMessage={'Expert'} />

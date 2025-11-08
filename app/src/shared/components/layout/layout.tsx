@@ -16,10 +16,10 @@ import {
   useDisclosure
 } from "@chakra-ui/react";
 import {GiHamburgerMenu} from "react-icons/all";
-import SelectCountry from "../../components/select-country";
-import SelectLevel from "../../components/select-level";
+import SelectCountry from "../../../components/select-country";
+import SelectLevel from "../../../components/select-level";
 import {useContext} from "react";
-import AppContext from "../../core/app-context";
+import AppContext from "../../../core/app-context";
 import {BirdrMenu} from "./menu";
 
 const Layout = () => {
@@ -38,15 +38,15 @@ const Layout = () => {
         onOpenChange={(e: { open: boolean }) => !e.open && onClose()}
       >
         <DrawerBackdrop/>
-        <DrawerContent height="100vh" maxHeight="100vh" display="flex" flexDirection="column" position="fixed" top={0} left={0} right="auto" bottom={0}>
+        <DrawerContent height="100vh" maxHeight="100vh" display="flex" flexDirection="column" position="fixed" top={0} left={0} right="auto" bottom={0} bg="white">
           <DrawerCloseTrigger/>
-          <DrawerHeader>Menu</DrawerHeader>
+          <DrawerHeader bg="white">Menu</DrawerHeader>
 
-          <DrawerBody flex="1" overflowY="auto" minHeight={0}>
+          <DrawerBody flex="1" overflowY="auto" minHeight={0} bg="white">
             <BirdrMenu/>
           </DrawerBody>
 
-          <DrawerFooter>
+          <DrawerFooter bg="white">
             <Flex direction={'column'} gap={4}>
               <Box mb={10}>
                 All data & images
@@ -58,7 +58,7 @@ const Layout = () => {
                 Developed by <b>GoedLoek</b>
               </Box>
               <Box>
-                Contact <Link color='orange.500' href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>
+                Contact <Link color='primary.500' href={'mailto:info@goedloek.nl'}>info@goedloek.nl</Link>
               </Box>
             </Flex>
           </DrawerFooter>
@@ -69,3 +69,4 @@ const Layout = () => {
 };
 
 export default Layout;
+

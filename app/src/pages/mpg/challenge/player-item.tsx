@@ -13,10 +13,10 @@ export const PlayerItem = (
     showScore?: boolean,
     variant?: 'outline' | 'normal'
   }) => {
-  let color = 'orange.200'
+  let color = 'primary.200'
   if (showAnswer) {
-    if (player.status === 'correct') color = 'green.200'
-    if (player.status === 'incorrect') color = 'red.200'
+    if (player.status === 'correct') color = 'success.200'
+    if (player.status === 'incorrect') color = 'error.200'
   }
 
 
@@ -42,13 +42,13 @@ export const PlayerItem = (
             <Flex gap={4}>
               {showRanking && player.ranking && (
                 <Flex gap={4}>
-                  <TagRoot colorPalette={'orange'} fontSize='sm'>
+                  <TagRoot colorPalette={'primary'} fontSize='sm'>
                     #{player.ranking} <FormattedMessage id={'high score'} defaultMessage={'high score'} />
                   </TagRoot>
                 </Flex>
               )}
               {showAnswer && player.last_answer?.correct &&
-                <TagRoot colorPalette={'green'} fontSize='sm'>+{player.last_answer.score}</TagRoot>}
+                <TagRoot colorPalette={'success'} fontSize='sm'>+{player.last_answer.score}</TagRoot>}
               <TagRoot fontSize='xl'>{player.score}</TagRoot>
             </Flex>
           )}

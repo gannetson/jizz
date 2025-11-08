@@ -17,6 +17,7 @@ export default function StarRating({rating, setRating, count, size}: Props) {
 
   return (
     <RadioGroup.Root
+      colorPalette="primary"
       name="rating"
       value={rating.toString()}
       onValueChange={(e: { value?: string }) => e.value && setRating(Number(e.value))}
@@ -29,7 +30,7 @@ export default function StarRating({rating, setRating, count, size}: Props) {
               as="label"
               key={index}
               cursor="pointer"
-              color={ratingValue <= (hover || rating) ? "orange.500" : "orange.100"}
+              color={ratingValue <= (hover || rating) ? "primary.500" : "primary.100"}
               onMouseEnter={() => setHover(ratingValue)}
               onMouseLeave={() => setHover(null)}
             >

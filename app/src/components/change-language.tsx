@@ -39,9 +39,9 @@ const ChangeLanguage = () => {
             boxShadow="0 2px 4px rgba(0,0,0,0.1)"
             border="2px solid"
             p={'4px'}
-            borderColor={language === lang ? "orange.500" : "transparent"}
+            borderColor={language === lang ? "primary.500" : "transparent"}
             borderRadius="md"
-            bg={language === lang ? "orange.200" : "transparent"}
+            bg={language === lang ? "primary.200" : "transparent"}
           >
             <Flag 
               code={getFlagCode(lang)} 

@@ -10,7 +10,7 @@ const PageHeader = ({children}: {children: ReactElement | ReactNode[]} ) => {
       justifyContent='space-between'
       alignContent={'center'}
       pl={16} pr={8} py={2}
-      backgroundColor={'orange.200'}
+      backgroundColor={'primary.200'}
       position={'fixed'}
       width={'full'}
       zIndex={10}
@@ -22,3 +22,4 @@ const PageHeader = ({children}: {children: ReactElement | ReactNode[]} ) => {
 };
 
 export default PageHeader;
+

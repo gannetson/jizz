@@ -4,7 +4,7 @@ export const Loading = () => {
   return (
     <Flex justifyContent={'center'}>
       <Spinner
-        color='orange.400'
+        color='primary.400'
         size='xl'
       />
     </Flex>

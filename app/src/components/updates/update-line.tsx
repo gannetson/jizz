@@ -12,15 +12,15 @@ export const UpdateLine = ({update}: { update: Update }) => {
     <>
       <CardRoot border={'1px solid #eee'}>
         <CardHeader
-          backgroundColor={'orange.200'}
-          color={'orange.800'}
+          backgroundColor={'primary.200'}
+          color={'primary.800'}
           fontWeight={'bold'}
           py={2}
         >
           {update.title}
         </CardHeader>
         <CardBody>{update.message}</CardBody>
-        <CardFooter color={'orange.600'} justifyContent={'space-between'}>
+        <CardFooter color={'primary.600'} justifyContent={'space-between'}>
           <Box>{update.user.first_name} </Box>
           <Box fontStyle={'italic'}>{format(update.created, 'PP')}</Box>
         </CardFooter>

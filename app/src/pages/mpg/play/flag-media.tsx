@@ -35,13 +35,17 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
     if (response.status === 201) {
       toaster.create({
         render: () => (
-          <Toast.Root status="success" title={intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."})} />
+          <Toast.Root status="success">
+            <Toast.Title>{intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."})}</Toast.Title>
+          </Toast.Root>
         )
       })
     } else {
       toaster.create({
         render: () => (
-          <Toast.Root status="error" title={intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})} />
+          <Toast.Root status="error">
+            <Toast.Title>{intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})}</Toast.Title>
+          </Toast.Root>
         )
       })
     }
@@ -74,10 +78,10 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
         </Dialog.Body>
         <Dialog.Footer>
           <Flex justifyContent={'space-between'} width={'full'}>
-            <Button onClick={onClose}>
+            <Button onClick={onClose} colorPalette="primary">
               <FormattedMessage defaultMessage={'Cancel'} id='cancel'/>
             </Button>
-            <Button onClick={onSubmit}>
+            <Button onClick={onSubmit} colorPalette="primary">
               <FormattedMessage defaultMessage={'Flag'} id='flag'/>
             </Button>
           </Flex>

@@ -30,7 +30,7 @@ export const ResultsComponent = () => {
             ))}
           </ListRoot>
           <Box>
-            <Button onClick={createGame}>
+            <Button onClick={createGame} colorPalette="primary">
               <FormattedMessage id={'play again'} defaultMessage={'Play another game'}/>
             </Button>
           </Box>

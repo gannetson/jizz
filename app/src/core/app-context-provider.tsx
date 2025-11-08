@@ -230,7 +230,10 @@ const AppContextProvider: FC<Props> = ({children}) => {
     } catch (error) {
       toaster.create({
         render: () => (
-          <Toast.Root status="error" title="Error starting challenge" description="Unable to start the challenge. Please try again." />
+          <Toast.Root status="error">
+            <Toast.Title>Error starting challenge</Toast.Title>
+            <Toast.Description>Unable to start the challenge. Please try again.</Toast.Description>
+          </Toast.Root>
         )
       });
     } finally {
@@ -262,7 +265,10 @@ const AppContextProvider: FC<Props> = ({children}) => {
     } catch (error) {
       toaster.create({
         render: () => (
-          <Toast.Root status="error" title="Error loading challenge" description="Please start a new country challenge." />
+          <Toast.Root status="error">
+            <Toast.Title>Error loading challenge</Toast.Title>
+            <Toast.Description>Please start a new country challenge.</Toast.Description>
+          </Toast.Root>
         )
       });
     } finally {

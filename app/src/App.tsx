@@ -4,10 +4,16 @@ import {AppContextProvider} from "./core/app-context-provider";
 import {WebsocketContextProvider} from "./core/websocket-context-provider"
 import {MainContent} from "./main-content"
 import {registerServiceWorker} from "./core/register-service-worker"
-import { ChakraProvider } from '@chakra-ui/react'
-import { theme } from './theme'
+import { ChakraProvider, createToaster, Toaster } from '@chakra-ui/react'
+import { system } from './theme'
 
 registerServiceWorker()
+
+// Create toaster instance for v3
+export const toaster = createToaster({
+  placement: 'bottom',
+  pauseOnPageIdle: true,
+})
 
 export const App = () => {
   useEffect(() => {
@@ -15,7 +21,8 @@ export const App = () => {
   }, [])
 
   return (
-    <ChakraProvider theme={theme} resetCSS>
+    <ChakraProvider value={system}>
+      <Toaster toaster={toaster} />
       <AppContextProvider>
         <WebsocketContextProvider>
           <MainContent/>

@@ -1,23 +1,25 @@
 import AppContext, {Question} from "../../../core/app-context"
 import {
   Button, Flex,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay, ModalProps, Textarea, useToast
+  DialogRoot,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogBackdrop, Textarea, Toast
 } from "@chakra-ui/react"
 import {FormattedMessage, useIntl} from "react-intl"
 import {useContext, useState} from "react"
+import { toaster } from "../../../App"
 
 
 type Props = {
   question: Question
-} & Omit<ModalProps, 'children'>
+  isOpen: boolean
+  onClose: () => void
+}
 
 export const FlagMedia = ({question, isOpen, onClose}: Props) => {
-  const toast = useToast({})
   const [message, setMessage] = useState<string>('')
   const intl = useIntl()
   const {player} = useContext(AppContext)
@@ -35,27 +37,40 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
       })
     })
     if (response.status === 201) {
-      toast({title: intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."}), status: 'success'})
+      toaster.create({
+        render: () => (
+          <Toast.Root status="success">
+            <Toast.Title>{intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."})}</Toast.Title>
+          </Toast.Root>
+        )
+      })
     } else {
-      toast({title: intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."}), status: 'error'})
+      toaster.create({
+        render: () => (
+          <Toast.Root status="error">
+            <Toast.Title>{intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})}</Toast.Title>
+          </Toast.Root>
+        )
+      })
     }
     onClose()
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay/>
-      <ModalContent>
-        <ModalHeader>
+    <DialogRoot open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()}>
+      <DialogBackdrop/>
+      <DialogContent>
+        <DialogHeader>
           <FormattedMessage id={'flag modal title'} defaultMessage={'Flag question'}/>
-        </ModalHeader>
-        <ModalBody>
+        </DialogHeader>
+        <DialogBody>
           <Flex direction={'column'} gap={8}>
             <FormattedMessage
               id={'flag modal description'}
               defaultMessage={'Can you tell us what was wrong with this question?'}
             />
             <Textarea
+              cursor="text"
               onChange={(val) => setMessage(val.currentTarget.value)}
               placeholder={intl.formatMessage({
                 id: 'flag description',
@@ -64,8 +79,8 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
             />
           </Flex>
 
-        </ModalBody>
-        <ModalFooter>
+        </DialogBody>
+        <DialogFooter>
           <Flex justifyContent={'space-between'} width={'full'}>
             <Button onClick={onClose}>
               <FormattedMessage defaultMessage={'Cancel'} id='cancel'/>
@@ -74,9 +89,9 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
               <FormattedMessage defaultMessage={'Flag'} id='flag'/>
             </Button>
           </Flex>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </DialogRoot>
   )
 
 }

@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {FaStar} from "react-icons/fa";
-import {Radio, HStack, Box, RadioGroup, Text} from "@chakra-ui/react";
+import {RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemHiddenInput, HStack, Box, Text} from "@chakra-ui/react";
 
 
 type Props = {
@@ -16,35 +16,36 @@ export default function StarRating({rating, setRating, count, size}: Props) {
   const [hover, setHover] = useState<number | null>(null);
 
   return (
-    <RadioGroup
+    <RadioGroupRoot
       name="rating"
       value={rating.toString()}
-      onChange={(value) => setRating(Number(value))}
+      onValueChange={(e: { value?: string }) => e.value && setRating(Number(e.value))}
     >
-      <HStack spacing="4">
+      <HStack gap="4">
         {[...Array(count || 5)].map((_, index) => {
           const ratingValue = index + 1;
           return (
             <Box
               as="label"
               key={index}
+              cursor="pointer"
               color={ratingValue <= (hover || rating) ? "orange.500" : "orange.100"}
               onMouseEnter={() => setHover(ratingValue)}
               onMouseLeave={() => setHover(null)}
             >
-              <Radio
-                value={ratingValue.toString()}
-                display="none"
-              />
-              <FaStar
-                cursor="pointer"
-                size={size || 20}
-              />
+              <RadioGroupItem value={ratingValue.toString()}>
+                <RadioGroupItemHiddenInput />
+                <RadioGroupItemControl display="none" />
+                <FaStar
+                  cursor="pointer"
+                  size={size || 20}
+                />
+              </RadioGroupItem>
             </Box>
           )
         })}
       </HStack>
-    </RadioGroup>
+    </RadioGroupRoot>
 
   );
 }

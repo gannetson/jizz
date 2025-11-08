@@ -12,7 +12,7 @@ const TexelStartPage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
       </Page.Header>

@@ -1,4 +1,4 @@
-import {Button, Flex, Heading, Hide, Box, Icon, Image} from "@chakra-ui/react";
+import {Button, Flex, Heading, Box, Icon, Image} from "@chakra-ui/react";
 import { FaCertificate } from "react-icons/fa";
 import Page from "./layout/page";
 import {FormattedMessage} from "react-intl";
@@ -27,7 +27,7 @@ const HomePage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
       </Page.Header>
@@ -44,7 +44,7 @@ const HomePage = () => {
             </Button>
 
             {countryChallenge && countryChallenge.levels && countryChallenge.levels.length > 0 && (
-              <Button colorScheme="orange" onClick={() => navigate('/challenge/play')} position="relative">
+              <Button colorPalette="orange" onClick={() => navigate('/challenge/play')} position="relative">
                 <Flex gap={4}>
                   <FormattedMessage 
                     id={'continue challenge'} 

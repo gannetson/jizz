@@ -16,7 +16,7 @@ const MultiPlayerGame: React.FC = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading size={'lg'} noOfLines={1}>
+        <Heading size={'lg'}>
           {game?.ended
             ? <FormattedMessage id={'game ended'} defaultMessage={'Game ended'} />
             : <FormattedMessage

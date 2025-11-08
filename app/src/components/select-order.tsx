@@ -1,5 +1,5 @@
 import {Box, Heading} from "@chakra-ui/react";
-import {Select} from "chakra-react-select";
+import {ChakraSelect} from "./chakra-select";
 import {useContext, useEffect} from "react";
 import AppContext from "../core/app-context";
 import {FormattedMessage} from "react-intl"
@@ -36,12 +36,12 @@ const SelectTaxOrder = () => {
         <FormattedMessage id={'tax order'} defaultMessage={'Taxonomic order'} />
 
       </Heading>
-      <Select<TaxOrder>
+      <ChakraSelect<TaxOrder>
         isClearable={true}
         options={taxOrders}
         getOptionLabel={(c) => c ? `${c.tax_order} (${c.count})` : '?'}
         getOptionValue={(c) => c ? c.tax_order : '?'}
-        value={taxOrder}
+        value={taxOrder || null}
         onChange={(val) => onChange(val || undefined)}
       />
     </Box>

@@ -1,10 +1,10 @@
-import { useColorModeValue } from '@chakra-ui/react';
-
+// In Chakra UI v3, useColorModeValue is not available
+// Using light mode values as default
 export const useSliderStyles = () => {
-  const trackBg = useColorModeValue('orange.100', 'orange.700');
-  const markColor = useColorModeValue('orange.500', 'orange.600');
-  const thumbBg = useColorModeValue('orange.500', 'orange.300');
-  const thumbColor = useColorModeValue('white', 'gray.800');
+  const trackBg = 'orange.100';
+  const markColor = 'orange.500';
+  const thumbBg = 'orange.500';
+  const thumbColor = 'white';
 
   return {
     track: {

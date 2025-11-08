@@ -1,11 +1,11 @@
-import {Flex, Heading, Table, TableContainer, Tbody, Td, Th, Thead, Tr} from "@chakra-ui/react";
+import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow} from "@chakra-ui/react";
 import Page from "../layout/page";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Country, Score} from "../../core/app-context"
 import {Loading} from "../../components/loading"
 import {ScoreLine} from "../../components/score-line"
-import {Select} from "chakra-react-select"
+import {ChakraSelect} from "../../components/chakra-select"
 import {UseCountries} from "../../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 import {ScoreLineShort} from "../../components/score-line-short"
@@ -47,7 +47,7 @@ const TexelHiscorePage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           <FormattedMessage id='hiscores texel' defaultMessage={'High Scores - DBA Bird Week'}/>
         </Heading>
       </Page.Header>
@@ -57,23 +57,23 @@ const TexelHiscorePage = () => {
             <Loading/>
           ) : (
 
-            <TableContainer>
-              <Table variant='striped' colorScheme='orange' size={['sm', 'md']}>
-                <Thead>
-                  <Tr bgColor={'orange.200'}>
-                  <Th>#</Th>
-                  <Th>Player</Th>
-                  <Th>Date</Th>
-                  <Th>Score</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
+            <Box overflowX="auto">
+              <TableRoot variant='line' colorPalette='orange' size={['sm', 'md']}>
+                <TableHeader>
+                  <TableRow bgColor={'orange.200'}>
+                  <TableColumnHeader>#</TableColumnHeader>
+                  <TableColumnHeader>Player</TableColumnHeader>
+                  <TableColumnHeader>Date</TableColumnHeader>
+                  <TableColumnHeader>Score</TableColumnHeader>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {scores && scores.map((score, index) => {
                     return <ScoreLineShort key={index} score={score}/>
                   })}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                </TableBody>
+              </TableRoot>
+            </Box>
           )}
         </>
       </Page.Body>

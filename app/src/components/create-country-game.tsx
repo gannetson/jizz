@@ -1,6 +1,6 @@
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Button, Divider, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
+import {Button, Separator, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
@@ -61,7 +61,7 @@ export const CreateCountryGame = () => {
         <SelectCountry/>
         <Button onClick={()=> requestNotificationPermission()}>Request</Button>
         <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})}>Test</Button>
-        <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
+        <Button disabled={!country || !playerName} size='lg' onClick={create}>
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>
       </Flex>

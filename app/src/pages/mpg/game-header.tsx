@@ -12,7 +12,7 @@ const GameHeader: React.FC = () => {
   return (
     <Page.Header>
       <Flex justifyContent={'space-between'} width={'full'} alignItems={'center'}>
-        <Heading size={'lg'} noOfLines={1}>
+        <Heading size={'lg'}>
           {country?.name ? country.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
         <Box>

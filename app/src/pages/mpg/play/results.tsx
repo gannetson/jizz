@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Heading, List, ListItem} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, ListRoot, ListItem} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import React, {useContext} from "react"
 import WebsocketContext from "../../../core/websocket-context"
@@ -22,13 +22,13 @@ export const ResultsComponent = () => {
           <Heading>
             <FormattedMessage defaultMessage={'Final results'} id={'final results'}/>
           </Heading>
-          <List spacing={4}>
+          <ListRoot gap={4}>
             {players && players.map((player, index) => (
               <ListItem key={index}>
                 <PlayerItem showAnswer={false} player={player}/>
               </ListItem>
             ))}
-          </List>
+          </ListRoot>
           <Box>
             <Button onClick={createGame}>
               <FormattedMessage id={'play again'} defaultMessage={'Play another game'}/>

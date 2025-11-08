@@ -2,13 +2,13 @@ import {
   Box,
   Button, Flex,
   Image, Link,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
+  DialogRoot,
+  DialogBody,
+  DialogCloseTrigger,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogBackdrop,
   SimpleGrid,
   useDisclosure
 } from "@chakra-ui/react";
@@ -26,32 +26,32 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} size={"3xl"}>
-        <ModalOverlay/>
-        <ModalContent>
-          <ModalHeader>{language === 'nl' ? species.name_nl : language === 'la' ? species.name_latin : species.name}</ModalHeader>
-          <ModalCloseButton/>
-          <ModalBody>
-            <Link href={'https://ebird.org/species/' + species.code} isExternal={true}>
+      <DialogRoot open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()} size="xl">
+        <DialogBackdrop/>
+        <DialogContent>
+          <DialogHeader>{language === 'nl' ? species.name_nl : language === 'la' ? species.name_latin : species.name}</DialogHeader>
+          <DialogCloseTrigger/>
+          <DialogBody>
+            <Link href={'https://ebird.org/species/' + species.code} target="_blank" rel="noopener noreferrer">
               <Flex gap={2} mb={4} alignItems={'center'}>
                 <FormattedMessage defaultMessage={'View on eBird'} id={'view on eBird'}/>
                 <BsBoxArrowRight/>
               </Flex>
             </Link>
-            <SimpleGrid columns={{base: 1, md: 2, xl: 3}} spacing={4}>
+            <SimpleGrid columns={{base: 1, md: 2, xl: 3}} gap={4}>
               {species.images.map((img, key) => (
                 <Image width={'300px'} key={key} src={img.url} alt={species.name}/>
               ))}
             </SimpleGrid>
-          </ModalBody>
+          </DialogBody>
 
-          <ModalFooter>
+          <DialogFooter>
             <Button onClick={onClose}>
               Close
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </>
   );
 }

@@ -13,7 +13,7 @@ const GameEnded: React.FC = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading size={'lg'} noOfLines={1}>
+        <Heading size={'lg'}>
           <FormattedMessage id={'game ended'} defaultMessage={'Game ended'}/>
         </Heading>
       </Page.Header>

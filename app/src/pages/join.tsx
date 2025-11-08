@@ -41,14 +41,14 @@ const JoinPage: React.FC = () => {
     <Page>
       <GameHeader/>
       <Page.Body>
-        <Heading variant={'h3'}>Join Game</Heading>
+        <Heading size="md">Join Game</Heading>
         <Box>
           Game code
-          <Input name={'game_code'} value={code} onChange={(event) => setCode(event.target.value)}/>
+          <Input name={'game_code'} value={code} cursor="text" onChange={(event) => setCode(event.target.value)}/>
         </Box>
         <SetName/>
         <SelectLanguage/>
-        <Button onClick={handleSubmit} isLoading={loading} isDisabled={!code || !playerName}>
+        <Button onClick={handleSubmit} loading={loading} disabled={!code || !playerName}>
           Join game
         </Button>
       </Page.Body>

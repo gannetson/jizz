@@ -13,15 +13,15 @@ export const Login = () => {
   };
 
   return (
-    <VStack spacing={4}>
-      <Button colorScheme="red" onClick={() => handleSocialLogin("google-oauth2")}>
+    <VStack gap={4}>
+      <Button colorPalette="red" onClick={() => handleSocialLogin("google-oauth2")}>
         Login with Google
       </Button>
       <GoogleAuth />
-      <Button colorScheme="blackAlpha" onClick={() => handleSocialLogin("apple")}>
+      <Button colorPalette="blackAlpha" onClick={() => handleSocialLogin("apple")}>
         Login with Apple
       </Button>
-      <Button colorScheme="blue" onClick={() => handleSocialLogin("microsoft")}>
+      <Button colorPalette="blue" onClick={() => handleSocialLogin("microsoft")}>
         Login with Microsoft
       </Button>
     </VStack>

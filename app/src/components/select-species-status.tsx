@@ -1,6 +1,6 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Checkbox, Flex, Heading} from "@chakra-ui/react"
+import {Box, CheckboxRoot, CheckboxControl, CheckboxLabel, CheckboxHiddenInput, Flex, Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 
 
@@ -14,20 +14,32 @@ export const SelectSpeciesStatus = () => {
         <FormattedMessage defaultMessage={'Species status'} id={'Species status'}/>
       </Heading>
       <Flex direction={'column'} gap={4}>
-        <Checkbox
-          colorScheme={'orange'}
-          isChecked={includeRare}
-          onChange={(val) => setIncludeRare(Boolean(val.target.checked))}
-        >
-          <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
-        </Checkbox>
-        <Checkbox
-          colorScheme={'orange'}
-          isChecked={includeEscapes}
-          onChange={(val) => setIncludeEscapes(Boolean(val.target.checked))}
-        >
-          <FormattedMessage defaultMessage={'Include introduced & escaped species '} id={'include escaped species'}/>
-        </Checkbox>
+        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          <CheckboxRoot
+            colorPalette={'orange'}
+            checked={includeRare}
+            onCheckedChange={(e: { checked: boolean }) => setIncludeRare(e.checked === true)}
+          >
+            <CheckboxHiddenInput />
+            <CheckboxControl cursor="pointer" />
+            <CheckboxLabel>
+              <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
+            </CheckboxLabel>
+          </CheckboxRoot>
+        </Box>
+        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          <CheckboxRoot
+            colorPalette={'orange'}
+            checked={includeEscapes}
+            onCheckedChange={(e: { checked: boolean }) => setIncludeEscapes(e.checked === true)}
+          >
+            <CheckboxHiddenInput />
+            <CheckboxControl cursor="pointer" />
+            <CheckboxLabel>
+              <FormattedMessage defaultMessage={'Include introduced & escaped species '} id={'include escaped species'}/>
+            </CheckboxLabel>
+          </CheckboxRoot>
+        </Box>
       </Flex>
     </Box>
   )

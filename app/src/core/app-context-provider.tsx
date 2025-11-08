@@ -1,6 +1,7 @@
-import React, {FC, ReactNode, useEffect, useState} from 'react';
+import React, {FC, ReactNode, useEffect, useState, useCallback} from 'react';
 import AppContext, {Answer, Country, CountryChallenge, Game, Player, Question, Score, Species} from "./app-context";
-import { useToast } from '@chakra-ui/react';
+import { toaster } from "../App";
+import { Toast } from '@chakra-ui/react';
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
 import {TaxOrder} from "../user/use-tax-order"
 import {TaxFamily} from "../user/use-tax-family"
@@ -31,15 +32,14 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const playerToken = localStorage.getItem('player-token')
   const gameToken = localStorage.getItem('game-token')
-  const toast = useToast()
   
-  const noCacheHeaders = {
+  const noCacheHeaders = React.useMemo(() => ({
     'Accept': 'application/json',
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
     'Expires': '0'
-  }
+  }), [])
 
   const createPlayer = async () => {
     const response = await fetch('/api/player/', {
@@ -113,7 +113,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }
 
-  const updatePlayer = async (playerToken: string) => {
+  const updatePlayer = useCallback(async (playerToken: string) => {
     const response = await fetch(`/api/player/${playerToken}/`, {
       cache: 'no-store',
       method: 'PATCH',
@@ -133,14 +133,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return data as Player
     }
     return player
-
-  }
+  }, [playerName, language, noCacheHeaders]);
 
   useEffect(() => {
-    if (player && player.language !== language) {
+    if (player && player.language !== language && player.token) {
       updatePlayer(player.token)
     }
-  }, [language]);
+  }, [language, player?.token, player?.language, updatePlayer]);
 
 
   useEffect(() => {
@@ -229,10 +228,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
       const data = await response.json()
       setCountryChallenge(data as CountryChallenge)
     } catch (error) {
-      toast({
-        title: 'Error starting challenge',
-        description: 'Unable to start the challenge. Please try again.',
-        status: 'error',
+      toaster.create({
+        render: () => (
+          <Toast.Root status="error">
+            <Toast.Title>Error starting challenge</Toast.Title>
+            <Toast.Description>Unable to start the challenge. Please try again.</Toast.Description>
+          </Toast.Root>
+        )
       });
     } finally {
       setLoading(false);
@@ -261,10 +263,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
       const data = await response.json()
       setCountryChallenge(data as CountryChallenge)
     } catch (error) {
-      toast({
-        title: 'Error loading challenge',
-        description: 'Please start a new country challenge.',
-        status: 'error',
+      toaster.create({
+        render: () => (
+          <Toast.Root status="error">
+            <Toast.Title>Error loading challenge</Toast.Title>
+            <Toast.Description>Please start a new country challenge.</Toast.Description>
+          </Toast.Root>
+        )
       });
     } finally {
       setLoading(false);

@@ -14,15 +14,13 @@ export const UseTaxFamily = () => {
 
   useEffect(() => {
     const url = country ? `/api/families/?country=${country.code}` : `/api/families/`;
-    if (!taxFamilies || taxFamilies.length === 0) {
-      fetch(url)
-        .then((res) => res.json())
-        .then((data) => {
-          setTaxFamilies(data)
-        });
-
-    }
-  }, [taxFamilies, country])
+    setTaxFamilies([]) // Reset when country changes
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        setTaxFamilies(data)
+      });
+  }, [country?.code]) // Re-fetch when country changes
 
 
   return {

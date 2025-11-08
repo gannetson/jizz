@@ -1,5 +1,5 @@
 import {Box, Heading} from "@chakra-ui/react";
-import {Select} from "chakra-react-select";
+import {ChakraSelect} from "./chakra-select";
 import {useContext, useEffect} from "react";
 import AppContext from "../core/app-context";
 import {FormattedMessage} from "react-intl"
@@ -32,12 +32,12 @@ const SelectTaxFamily = () => {
         <FormattedMessage id={'tax family'} defaultMessage={'Taxonomic family'} />
 
       </Heading>
-      <Select<TaxFamily>
+      <ChakraSelect<TaxFamily>
         isClearable={true}
         options={taxFamilies}
         getOptionLabel={(c) => c ? `${c.tax_family} - ${c.tax_family_en} (${c.count})` : '?'}
         getOptionValue={(c) => c ? c.tax_family : '?'}
-        value={taxFamily}
+        value={taxFamily || null}
         onChange={(val) => onChange(val || undefined)}
       />
     </Box>

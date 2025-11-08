@@ -1,6 +1,6 @@
 import {Box, Heading} from "@chakra-ui/react";
 import {UseCountries} from "../user/use-countries";
-import {Select} from "chakra-react-select";
+import {ChakraSelect} from "./chakra-select";
 import {useContext, useEffect} from "react";
 import AppContext from "../core/app-context";
 import {FormattedMessage} from "react-intl"
@@ -31,7 +31,7 @@ const SelectCountry = () => {
         <FormattedMessage id={'country'} defaultMessage={'Country'} />
 
       </Heading>
-      <Select
+      <ChakraSelect
         options={countries}
         getOptionLabel={(c) => c ? c.name : '?'}
         getOptionValue={(c) => c ? c.name : '?'}

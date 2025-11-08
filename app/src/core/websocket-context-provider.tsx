@@ -1,7 +1,8 @@
 import React, {FC, ReactNode, useContext, useEffect, useRef, useState} from 'react';
 import AppContext, {Answer, Game, MultiPlayer, Player, Question, Species} from "./app-context";
 import WebsocketContext from "./websocket-context"
-import {useToast} from "@chakra-ui/react"
+import { toaster } from "../App"
+import { Toast } from '@chakra-ui/react'
 
 type Props = {
   children: ReactNode;
@@ -17,23 +18,23 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const maxRetries = useRef<number>(100);
   const retries = useRef<number>(0);
 
-  const toast = useToast()
-
   const {game, setGame, player, language} = useContext(AppContext)
 
   const gameToken = localStorage.getItem('game-token')
   const playerToken = localStorage.getItem('player-token')
 
 
-  const notify = (title: string, description?: string, colorScheme?: string) => {
-    toast({
-      title,
-      description,
-      isClosable: true,
-      colorScheme: colorScheme || "orange",
-      position: "bottom",
-      duration: 2000
+  const notify = (title: string, description?: string, colorPalette?: string) => {
+    description && (
+    toaster.create({
+      render: () => (
+        <Toast.Root status="info">
+          <Toast.Title>{title}</Toast.Title>
+          {description && <Toast.Description>{description}</Toast.Description>}
+        </Toast.Root>
+      )
     })
+  )
   }
 
   const connectSocket = (game?: Game, player?: Player) => {

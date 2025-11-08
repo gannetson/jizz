@@ -1,6 +1,6 @@
 import {Box, Heading} from "@chakra-ui/react";
 import {UseCountries} from "../user/use-countries";
-import {Select} from "chakra-react-select";
+// Select removed - not used in this component
 import {useContext, useEffect} from "react";
 import AppContext, {Species} from "../core/app-context";
 import {FormattedMessage} from "react-intl"

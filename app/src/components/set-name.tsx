@@ -28,6 +28,7 @@ export const SetName = () => {
         <Input
           name={'name'}
           value={playerName || player?.name}
+          cursor="text"
           onChange={(event) => {
             setPlayerName && setPlayerName(event.target.value)
           }}/>

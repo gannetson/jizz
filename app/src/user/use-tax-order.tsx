@@ -13,15 +13,13 @@ export const UseTaxOrder = () => {
 
   useEffect(() => {
     const url = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
-    if (!taxOrders || taxOrders.length === 0) {
-      fetch(url)
-        .then((res) => res.json())
-        .then((data) => {
-          setTaxOrders(data)
-        });
-
-    }
-  }, [taxOrders, country])
+    setTaxOrders([]) // Reset when country changes
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        setTaxOrders(data)
+      });
+  }, [country?.code]) // Re-fetch when country changes
 
 
   return {

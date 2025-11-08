@@ -1,6 +1,6 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Checkbox, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemText, RadioGroupItemHiddenInput} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 
 
@@ -16,25 +16,43 @@ export const SelectMediaType = () => {
       <Heading size={'md'} mb={4}>
         <FormattedMessage id={'media type'} defaultMessage={'Media type'}/>
       </Heading>
-      <RadioGroup
+      <RadioGroupRoot
         value={mediaType}
-        onChange={(val) => val && onChange(val)}
-        colorScheme={'orange'}
+        onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
+        colorPalette={'orange'}
       >
         <Flex direction={'column'} gap={4}>
-          <Radio value={'images'}>
-            <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
-          </Radio>
-          <Radio value={'audio'}>
-            <Flex gap={4}>
-              <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
-            </Flex>
-          </Radio>
-          <Radio value={'video'}>
-            <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
-          </Radio>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroupItem value={'images'}>
+              <RadioGroupItemHiddenInput />
+              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemText>
+                <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
+              </RadioGroupItemText>
+            </RadioGroupItem>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroupItem value={'audio'}>
+              <RadioGroupItemHiddenInput />
+              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemText>
+                <Flex gap={4}>
+                  <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
+                </Flex>
+              </RadioGroupItemText>
+            </RadioGroupItem>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroupItem value={'video'}>
+              <RadioGroupItemHiddenInput />
+              <RadioGroupItemControl cursor="pointer" />
+              <RadioGroupItemText>
+                <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
+              </RadioGroupItemText>
+            </RadioGroupItem>
+          </Box>
         </Flex>
-      </RadioGroup>
+      </RadioGroupRoot>
     </Box>
   )
 };

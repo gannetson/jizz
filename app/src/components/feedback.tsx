@@ -1,15 +1,14 @@
-import {Box, Button, Card, Flex, Heading, Text, Textarea, useToast} from "@chakra-ui/react"
+import {Box, Button, CardRoot, CardBody, Flex, Heading, Text, Textarea} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import StarRating from "./rating/star-rating"
 import {useState} from "react"
+import { toaster } from "../App"
 
 export const Feedback = () => {
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
-
-  const toast = useToast({});
 
   const submit = async () => {
     setSubmitted(true)
@@ -27,11 +26,11 @@ export const Feedback = () => {
   }
 
   return (
-    <Card border={"1px solid"} shadow={'lg'} borderColor={'gray.300'} backgroundColor={submitted ? 'orange.100' : undefined} borderRadius='8px' p={8}>
+    <CardRoot border={"1px solid"} shadow={'lg'} borderColor={'gray.300'} backgroundColor={submitted ? 'orange.100' : undefined} borderRadius='8px' p={8}>
       <Flex direction={'column'} gap={4}>
         {submitted ? (
           <>
-            <Heading size={'md'} textColor={'orange.500'}>
+            <Heading size={'md'} color={'orange.500'}>
               <FormattedMessage id={'thanks'} defaultMessage={'Thanks!'}/>
             </Heading>
             <FormattedMessage id={'thanks for your feedback message'} defaultMessage={'Thank you for your feedback!'}/>
@@ -45,14 +44,14 @@ export const Feedback = () => {
             <StarRating rating={rating} setRating={setRating} count={5} size={20}/>
             <Flex gap={2}>
               <FormattedMessage id={'comments'} defaultMessage={'Comments / suggestions'}/>
-              <Text as={'span'} fontStyle={'italic'} textColor={'gray.400'}>
+              <Text as={'span'} fontStyle={'italic'} color={'gray.400'}>
                 <FormattedMessage id={'optional'} defaultMessage={'optional'}/>
               </Text>
             </Flex>
 
-            <Textarea onChange={(val) => setComment(val.target.value)}/>
+            <Textarea cursor="text" onChange={(val) => setComment(val.target.value)}/>
             <Box>
-              <Button onClick={submit} isDisabled={!rating && !comment}>
+              <Button onClick={submit} disabled={!rating && !comment}>
                 <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
               </Button>
             </Box>
@@ -60,6 +59,6 @@ export const Feedback = () => {
           </>
         )}
       </Flex>
-    </Card>
+    </CardRoot>
   )
 }

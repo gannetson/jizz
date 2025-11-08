@@ -9,15 +9,14 @@ export interface Country {
 export const UseCountries = () => {
   const [countries, setCountries] = useState<Country[]>([])
   useEffect(() => {
-    if (!countries || countries.length === 0) {
+    if (countries.length === 0) {
       fetch(`/api/countries/`)
         .then((res) => res.json())
         .then((data) => {
           setCountries(data)
         });
-
     }
-  }, [countries])
+  }, []) // Only run once on mount
 
 
   return {

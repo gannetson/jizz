@@ -1,7 +1,7 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import Page from "../layout/page"
-import {Box, Button, Flex, Heading, Link, List, ListItem, Tag, VStack, Text} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Link, ListRoot, ListItem, TagRoot, VStack, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
@@ -53,14 +53,14 @@ const Lobby: React.FC = () => {
         </Flex>
         <Flex gap={4}>
           <FormattedMessage id={'link'} defaultMessage={'Link'}/>
-          <Box><Tag onClick={copyLink} fontSize='18px'>{gameLink}</Tag></Box>
+          <Box><TagRoot onClick={copyLink} fontSize='18px'>{gameLink}</TagRoot></Box>
           {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
             <Link onClick={copyLink}>
               <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
             </Link>
           )}
         </Flex>
-        <VStack spacing={4} align="start">
+        <VStack gap={4} align="start">
           <Box p={4} bg="white" borderRadius="lg" boxShadow="md" border={'1px solid orange'}>
             <QRCodeSVG 
               value={gameLink}
@@ -85,13 +85,13 @@ const Lobby: React.FC = () => {
         <Heading size={'md'} mt={6}>
           <FormattedMessage id={'players joined'} defaultMessage={'Players joined'}/>
         </Heading>
-        <List spacing={4}>
+        <ListRoot gap={4}>
           {players && players.map((player, index) => (
             <ListItem key={index}>
               <PlayerItem showAnswer={false} showScore={false} showRanking={false} player={player}/>
             </ListItem>
           ))}
-        </List>
+        </ListRoot>
         {
           isHost ? (
             <Button onClick={startGame}>

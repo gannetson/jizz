@@ -51,7 +51,7 @@ export const CreateGame = ({
   const {countries} = UseCountries()
 
   useEffect(() => {
-    if (pickCountry && countries && countries.length) {
+    if (pickCountry && countries && countries.length > 0) {
       const country = countries.find((c) => c.code === pickCountry)
       country && setCountry(country)
     }
@@ -69,9 +69,9 @@ export const CreateGame = ({
     }
 
   }, [
-    countries, pickCountry,
+    countries.length, pickCountry, // Only depend on countries.length, not countries array itself
     pickLevel, pickLength, pickMediaType, includeRare,
-    setLevel, setMediaType, setIncludeRare, setLength
+    setLevel, setMediaType, setIncludeRare, setLength, setCountry
   ]);
 
 
@@ -129,7 +129,7 @@ export const CreateGame = ({
         {!pickLength && <SelectLength/>}
         {!pickLevel && <SelectLevel/>}
         {!pickMediaType && <SelectMediaType/>}
-        <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
+        <Button disabled={!country || !playerName} size='lg' onClick={create}>
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>

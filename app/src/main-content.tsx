@@ -39,7 +39,7 @@ export const MainContent = () => {
     nl: nlMessages,
     la: laMessages
   }
-  const locale  = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
+  const locale  = language === 'nl' ? 'nl' : language === 'la' ? 'la' : language === 'en_US' ? 'en' : 'en';
 
   return (
     <IntlProvider locale={locale} messages={messages[locale]}>

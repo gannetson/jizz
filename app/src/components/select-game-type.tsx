@@ -1,7 +1,7 @@
-import {Select} from "chakra-react-select";
+// Select not used in this component
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemText, RadioGroupItemHiddenInput} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 
 
@@ -15,20 +15,32 @@ export const SelectGameType = () => {
   return (
     <Box>
       <Heading size={'md'} mb={4}>Players</Heading>
-      <RadioGroup
+      <RadioGroupRoot
         value={multiplayer}
-        onChange={(val) => val && onChange(val)}
-        colorScheme={'orange'}
+        onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
+        colorPalette={'orange'}
       >
         <Flex direction={'column'} gap={4}>
-        <Radio value={'0'}>
-          <FormattedMessage id={'single player'} defaultMessage={'Single player'} />
-        </Radio>
-        <Radio value={'1'}>
-            <FormattedMessage id={'multi player'} defaultMessage={'Multi player'} />
-        </Radio>
+        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          <RadioGroupItem value={'0'}>
+            <RadioGroupItemHiddenInput />
+            <RadioGroupItemControl cursor="pointer" />
+            <RadioGroupItemText>
+              <FormattedMessage id={'single player'} defaultMessage={'Single player'} />
+            </RadioGroupItemText>
+          </RadioGroupItem>
+        </Box>
+        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          <RadioGroupItem value={'1'}>
+            <RadioGroupItemHiddenInput />
+            <RadioGroupItemControl cursor="pointer" />
+            <RadioGroupItemText>
+              <FormattedMessage id={'multi player'} defaultMessage={'Multi player'} />
+            </RadioGroupItemText>
+          </RadioGroupItem>
+        </Box>
         </Flex>
-      </RadioGroup>
+      </RadioGroupRoot>
     </Box>
   )
 };

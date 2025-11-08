@@ -5,15 +5,14 @@ import {Language} from "../core/app-context"
 export const UseLanguages = () => {
   const [languages, setLanguages] = useState<Language[]>([])
   useEffect(() => {
-    if (!languages || languages.length === 0) {
+    if (languages.length === 0) {
       fetch(`/api/languages/`)
         .then((res) => res.json())
         .then((data) => {
           setLanguages(data)
         });
-
     }
-  }, [languages])
+  }, []) // Only run once on mount
 
 
   return {

@@ -3,17 +3,15 @@ import {
   Box,
   Button,
   Container,
-  Drawer,
+  DrawerRoot,
   DrawerBody,
-  DrawerCloseButton,
+  DrawerCloseTrigger,
   DrawerContent,
   DrawerFooter,
   DrawerHeader,
-  DrawerOverlay,
+  DrawerBackdrop,
   Flex,
   Heading, Image, Link, Menu,
-  Radio,
-  RadioGroup,
   Text,
   useDisclosure
 } from "@chakra-ui/react";
@@ -25,7 +23,7 @@ import AppContext from "../../core/app-context";
 import {BirdrMenu} from "./menu";
 
 const Layout = () => {
-  const {isOpen, onOpen, onClose} = useDisclosure()
+  const {open: isOpen, onOpen, onClose} = useDisclosure()
   const {level, setLevel} = useContext(AppContext);
 
   return (
@@ -34,17 +32,17 @@ const Layout = () => {
       <Button variant="ghost" color={'gray.800'} p={2} onClick={onOpen} position={'fixed'} zIndex={20} top={1} left={2}>
         <GiHamburgerMenu/>
       </Button>
-      <Drawer
-        isOpen={isOpen}
-        placement='left'
-        onClose={onClose}
+      <DrawerRoot
+        open={isOpen}
+        placement='start'
+        onOpenChange={(e: { open: boolean }) => !e.open && onClose()}
       >
-        <DrawerOverlay/>
-        <DrawerContent>
-          <DrawerCloseButton/>
+        <DrawerBackdrop/>
+        <DrawerContent height="100vh" maxHeight="100vh" display="flex" flexDirection="column" position="fixed" top={0} left={0} right="auto" bottom={0}>
+          <DrawerCloseTrigger/>
           <DrawerHeader>Menu</DrawerHeader>
 
-          <DrawerBody>
+          <DrawerBody flex="1" overflowY="auto" minHeight={0}>
             <BirdrMenu/>
           </DrawerBody>
 
@@ -65,7 +63,7 @@ const Layout = () => {
             </Flex>
           </DrawerFooter>
         </DrawerContent>
-      </Drawer>
+      </DrawerRoot>
     </>
   )
 };

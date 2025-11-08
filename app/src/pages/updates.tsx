@@ -22,7 +22,7 @@ const UpdatesPage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           <FormattedMessage id='updates' defaultMessage={'Updates'}/>
         </Heading>
       </Page.Header>

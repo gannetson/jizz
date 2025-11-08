@@ -1,12 +1,8 @@
 import AppContext, {Question} from "../../../core/app-context"
 import {
   Button, Flex,
-  DialogRoot,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogBackdrop, Textarea, Toast
+  Dialog,
+  Textarea, Toast
 } from "@chakra-ui/react"
 import {FormattedMessage, useIntl} from "react-intl"
 import {useContext, useState} from "react"
@@ -53,13 +49,13 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
   }
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()}>
-      <DialogBackdrop/>
-      <DialogContent>
-        <DialogHeader>
+    <Dialog.Root open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()}>
+      <Dialog.Backdrop/>
+      <Dialog.Content>
+        <Dialog.Header>
           <FormattedMessage id={'flag modal title'} defaultMessage={'Flag question'}/>
-        </DialogHeader>
-        <DialogBody>
+        </Dialog.Header>
+        <Dialog.Body>
           <Flex direction={'column'} gap={8}>
             <FormattedMessage
               id={'flag modal description'}
@@ -75,8 +71,8 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
             />
           </Flex>
 
-        </DialogBody>
-        <DialogFooter>
+        </Dialog.Body>
+        <Dialog.Footer>
           <Flex justifyContent={'space-between'} width={'full'}>
             <Button onClick={onClose}>
               <FormattedMessage defaultMessage={'Cancel'} id='cancel'/>
@@ -85,9 +81,9 @@ export const FlagMedia = ({question, isOpen, onClose}: Props) => {
               <FormattedMessage defaultMessage={'Flag'} id='flag'/>
             </Button>
           </Flex>
-        </DialogFooter>
-      </DialogContent>
-    </DialogRoot>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 
 }

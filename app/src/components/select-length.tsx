@@ -1,6 +1,6 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Flex, Heading, RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemText, RadioGroupItemHiddenInput, Text} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroup, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 
 export const SelectLength = () => {
@@ -24,50 +24,42 @@ export const SelectLength = () => {
           />
         </Text>
       )}
-      <RadioGroupRoot
+      <RadioGroup.Root
         value={length || '10'}
         onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
         colorPalette={'orange'}
       >
         <Flex direction={'row'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'10'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>10</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'10'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>10</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'20'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>20</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'20'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>20</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'50'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>50</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'50'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>50</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'100'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>100</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'100'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>100</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
         </Flex>
-      </RadioGroupRoot>
+      </RadioGroup.Root>
     </Box>
   )
 };

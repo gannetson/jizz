@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {FaStar} from "react-icons/fa";
-import {RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemHiddenInput, HStack, Box, Text} from "@chakra-ui/react";
+import {RadioGroup, HStack, Box, Text} from "@chakra-ui/react";
 
 
 type Props = {
@@ -16,7 +16,7 @@ export default function StarRating({rating, setRating, count, size}: Props) {
   const [hover, setHover] = useState<number | null>(null);
 
   return (
-    <RadioGroupRoot
+    <RadioGroup.Root
       name="rating"
       value={rating.toString()}
       onValueChange={(e: { value?: string }) => e.value && setRating(Number(e.value))}
@@ -33,19 +33,19 @@ export default function StarRating({rating, setRating, count, size}: Props) {
               onMouseEnter={() => setHover(ratingValue)}
               onMouseLeave={() => setHover(null)}
             >
-              <RadioGroupItem value={ratingValue.toString()}>
-                <RadioGroupItemHiddenInput />
-                <RadioGroupItemControl display="none" />
+              <RadioGroup.Item value={ratingValue.toString()}>
+                <RadioGroup.ItemHiddenInput />
+                <RadioGroup.ItemControl display="none" />
                 <FaStar
                   cursor="pointer"
                   size={size || 20}
                 />
-              </RadioGroupItem>
+              </RadioGroup.Item>
             </Box>
           )
         })}
       </HStack>
-    </RadioGroupRoot>
+    </RadioGroup.Root>
 
   );
 }

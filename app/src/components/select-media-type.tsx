@@ -1,6 +1,6 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Flex, Heading, RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemText, RadioGroupItemHiddenInput} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroup} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 
 
@@ -16,49 +16,43 @@ export const SelectMediaType = () => {
       <Heading size={'md'} mb={4}>
         <FormattedMessage id={'media type'} defaultMessage={'Media type'}/>
       </Heading>
-      <RadioGroupRoot
+      <RadioGroup.Root
         value={mediaType}
         onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
         colorPalette={'orange'}
       >
         <Flex direction={'column'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'images'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>
+            <RadioGroup.Item value={'images'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>
                 <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
-              </RadioGroupItemText>
-            </RadioGroupItem>
+              </RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'audio'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>
+            <RadioGroup.Item value={'audio'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>
                 <Flex gap={4}>
                   <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
                 </Flex>
-              </RadioGroupItemText>
-            </RadioGroupItem>
+              </RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            {/* @ts-expect-error - RadioGroupItem accepts children in runtime */}
-            <RadioGroupItem value={'video'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl />
-              {/* @ts-expect-error - RadioGroupItemText accepts children in runtime */}
-              <RadioGroupItemText>
+            <RadioGroup.Item value={'video'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl />
+              <RadioGroup.ItemText>
                 <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
-              </RadioGroupItemText>
-            </RadioGroupItem>
+              </RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
         </Flex>
-      </RadioGroupRoot>
+      </RadioGroup.Root>
     </Box>
   )
 };

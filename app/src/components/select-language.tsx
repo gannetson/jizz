@@ -1,6 +1,6 @@
 import {useContext} from "react";
 import AppContext, {Language} from "../core/app-context";
-import {Box, Flex, Heading, RadioGroupRoot, RadioGroupItem, RadioGroupItemControl, RadioGroupItemText, RadioGroupItemHiddenInput} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroup} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import {ChakraSelect} from "./chakra-select"
 import {UseLanguages} from "../user/use-languages"
@@ -27,35 +27,35 @@ const SelectLanguage = () => {
           id={'set language description'}
           defaultMessage={'This changes your language. Other players that join your game can pick another language.'}/>
       </Box>
-      <RadioGroupRoot
+      <RadioGroup.Root
         value={language}
         onValueChange={(e: { value?: string }) => e.value && onChange(e.value as 'en' | 'nl')}
         colorPalette={'orange'}
       >
         <Flex direction={'column'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroupItem value={'en'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
-              <RadioGroupItemText>English (UK)</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'en'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl cursor="pointer" />
+              <RadioGroup.ItemText>English (UK)</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroupItem value={'en_US'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
-              <RadioGroupItemText>English (US)</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'en_US'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl cursor="pointer" />
+              <RadioGroup.ItemText>English (US)</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroupItem value={'nl'}>
-              <RadioGroupItemHiddenInput />
-              <RadioGroupItemControl cursor="pointer" />
-              <RadioGroupItemText>Nederlands</RadioGroupItemText>
-            </RadioGroupItem>
+            <RadioGroup.Item value={'nl'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl cursor="pointer" />
+              <RadioGroup.ItemText>Nederlands</RadioGroup.ItemText>
+            </RadioGroup.Item>
           </Box>
         </Flex>
-      </RadioGroupRoot>
+      </RadioGroup.Root>
       <Box mt={4} mb={2}>
         <FormattedMessage id={'more languages'} defaultMessage={'More languages'} />
       </Box>

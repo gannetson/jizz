@@ -1,6 +1,6 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Heading, Slider, SliderTrack, SliderFilledTrack, SliderThumb, SliderMark, Text} from "@chakra-ui/react"
+import {Box, Heading, SliderRoot, SliderTrack, SliderRange, SliderThumb, SliderValueText, SliderMarks, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import { useSliderStyles } from "../base/slider.styling";
 
@@ -28,33 +28,26 @@ export const SelectLength = () => {
         </Text>
       )}
       <Box px={4} py={2}>
-        <Slider
+        <SliderRoot
           aria-label="question-slider"
-          value={parseInt(length || '10')}
+          value={[parseInt(length || '10')]}
           min={10}
           max={100}
           step={5}
-          onChange={(val) => setLength && setLength(val.toString())}
-          colorScheme="orange"
+          onValueChange={(e) => e.value && setLength && setLength(e.value[0].toString())}
+          colorPalette="orange"
         >
-          {marks.map((mark) => (
-            <SliderMark
-              key={mark.value}
-              value={mark.value}
-              {...styles.mark}
-            >
-              {mark.label}
-            </SliderMark>
-          ))}
           <SliderTrack {...styles.track}>
-            <SliderFilledTrack {...styles.filledTrack} />
+            <SliderRange {...styles.filledTrack} />
           </SliderTrack>
           <SliderThumb {...styles.thumb}>
-            <Text fontSize="sm" fontWeight="bold">
-              {length}
-            </Text>
+            <SliderValueText>
+              <Text fontSize="sm" fontWeight="bold">
+                {length}
+              </Text>
+            </SliderValueText>
           </SliderThumb>
-        </Slider>
+        </SliderRoot>
       </Box>
     </Box>
   )

@@ -5,13 +5,13 @@ import {
   Heading,
   Image,
   Link,
-  List,
+  ListRoot,
   ListItem,
   SimpleGrid,
   Text,
   useDisclosure
 } from "@chakra-ui/react"
-import {Select} from "chakra-react-select"
+import {ChakraSelect} from "../../../components/chakra-select"
 import React, {useContext, useState} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
@@ -32,9 +32,9 @@ import {useNavigate} from "react-router-dom"
 export const QuestionComponent = () => {
   const {species, player, game} = useContext(AppContext)
   const {players, nextQuestion, question, submitAnswer, answer} = useContext(WebsocketContext)
-  const {onOpen, onClose, isOpen} = useDisclosure()
+  const {onOpen, onClose, open: isOpen} = useDisclosure()
   const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
-  const {isOpen: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
+  const {open: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
@@ -93,7 +93,7 @@ export const QuestionComponent = () => {
 
 
   const flag = (
-    <Link float={'right'} onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
+    <Link float={'right'} onClick={flagMedia} fontSize={'sm'} color={'red.700'}>
       🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
     </Link>
   )
@@ -147,7 +147,7 @@ export const QuestionComponent = () => {
             {flag}
             <Text fontSize={'sm'}>
               {question.videos[question.number].contributor} {' / '}
-              <Link href={question.videos[question.number].link} isExternal>
+              <Link href={question.videos[question.number].link} target="_blank" rel="noopener noreferrer">
                 Macaulay Library
               </Link>
             </Text>
@@ -157,21 +157,14 @@ export const QuestionComponent = () => {
           <>
             <Image
               src={question.images[question.number].url.replace('/1800', '/900')}
-              fallback={
-                <Image
-                  src='/images/birdr-logo.png'
-                  animation={`${rotate} infinite 2s linear`}
-                  width={'200px'}
-                  maxHeight={'600px'}
-                  marginX={'auto'}
-                  marginY={['20px', '150px']}
-                />
-              }
+              onError={(e) => {
+                e.currentTarget.src = '/images/birdr-logo.png';
+              }}
             />
             {flag}
             <Text fontSize={'sm'}>
               {question.images[question.number].contributor} {' / '}
-              <Link onClick={skipQuestion} href={question.images[question.number].link} isExternal>
+              <Link onClick={skipQuestion} href={question.images[question.number].link} target="_blank" rel="noopener noreferrer">
                 Macaulay Library
               </Link>
             </Text>
@@ -191,7 +184,7 @@ export const QuestionComponent = () => {
               {flag}
               <Text fontSize={'sm'}>
                 {question.images[question.number].contributor} {' / '}
-                <Link href={question.images[question.number].link} isExternal>
+                <Link href={question.images[question.number].link} target="_blank" rel="noopener noreferrer">
                   Macaulay Library
                 </Link>
               </Text>
@@ -203,7 +196,7 @@ export const QuestionComponent = () => {
       </Box>
 
       {question.options && question.options.length ? (
-        <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
+        <SimpleGrid columns={{base: 1, md: 2}} gap={4}>
           {
             question.options.map((option, key) => {
               if (answer) {
@@ -212,7 +205,7 @@ export const QuestionComponent = () => {
                     key={key}
                     onClick={() => viewSpecies(option)}
                     gap={4}
-                    colorScheme={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'orange'}
+                    colorPalette={answer?.species?.id === option.id ? 'green' : answer?.answer?.id === option.id ? 'red' : 'orange'}
                   >
                     <SpeciesName species={option}/>
                     <BsImages/>
@@ -231,10 +224,10 @@ export const QuestionComponent = () => {
 
       ) : (
         answer ? (
-          <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
+          <SimpleGrid columns={{base: 1, md: 2}} gap={4}>
             <Button
               onClick={() => answer.species && viewSpecies(answer.species)}
-              colorScheme={'green'}
+              colorPalette={'green'}
               gap={4}
             >
               {answer.species?.name}
@@ -243,7 +236,7 @@ export const QuestionComponent = () => {
             {!answer?.correct && (
               <Button
                 onClick={() => answer.answer && viewSpecies(answer.answer)}
-                colorScheme={'red'}
+                colorPalette={'red'}
                 gap={4}
               >
                 {answer.answer?.name}
@@ -252,15 +245,13 @@ export const QuestionComponent = () => {
             )}
           </SimpleGrid>
         ) : (
-          <Select
+          <ChakraSelect
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
-
-            options={species?.map((q) => ({
-              label: player?.language === 'nl' ? q.name_nl : q.name,
-              value: q
-            }))}
-            onChange={(answer) => answer && selectAnswer(answer.value)}
+            options={species || []}
+            getOptionLabel={(q) => player?.language === 'nl' ? q.name_nl : q.name}
+            getOptionValue={(q) => String(q.id || q.name)}
+            onChange={(answer) => answer && selectAnswer(answer)}
             chakraStyles={{
               placeholder: (provided) => ({
                 ...provided,
@@ -281,13 +272,13 @@ export const QuestionComponent = () => {
           {nextButton}
           <Box position={'relative'} mt={8}>
             <Flex direction={'column'} gap={8}>
-              <List spacing={4}>
+              <ListRoot gap={4}>
                 {players && players.map((player, index) => (
                   <ListItem key={index}>
                     <PlayerItem showRanking={false} player={player}/>
                   </ListItem>
                 ))}
-              </List>
+              </ListRoot>
             </Flex>
           </Box>
         </>

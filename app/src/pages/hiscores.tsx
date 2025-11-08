@@ -1,11 +1,11 @@
-import {Flex, Heading, Table, TableContainer, Tbody, Td, Th, Thead, Tr} from "@chakra-ui/react";
+import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow} from "@chakra-ui/react";
 import Page from "./layout/page";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Country, Score} from "../core/app-context"
 import {Loading} from "../components/loading"
 import {ScoreLine} from "../components/score-line"
-import {Select} from "chakra-react-select"
+import {ChakraSelect} from "../components/chakra-select"
 import {UseCountries} from "../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 
@@ -70,65 +70,39 @@ const HomePage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           <FormattedMessage id='hiscores' defaultMessage={'High Scores'}/>
         </Heading>
       </Page.Header>
       <Page.Body>
         <Flex flexWrap={'wrap'} width={'full'} gap={4}>
-          <Select
-            size={'md'}
-            variant={'flushed'}
+          <ChakraSelect
             options={selectCountries}
             getOptionLabel={(c) => c ? c.name : '?'}
             getOptionValue={(c) => c ? c.name : '?'}
             value={country}
             onChange={(val) => val && setCountry(val)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
           />
-          <Select
-            size={'md'}
-            variant={'flushed'}
+          <ChakraSelect
             options={mediums}
-            value={mediums.find((l) => l.value === media)}
+            getOptionLabel={(m) => m.label}
+            getOptionValue={(m) => m.value}
+            value={mediums.find((l) => l.value === media) || null}
             onChange={(val) => val && setMedia(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
           />
-          <Select
-            size={'md'}
-            variant={'flushed'}
+          <ChakraSelect
             options={levels}
-            value={levels.find((l) => l.value === level)}
+            getOptionLabel={(l) => l.label}
+            getOptionValue={(l) => l.value}
+            value={levels.find((l) => l.value === level) || null}
             onChange={(val) => val && setLevel(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
           />
-          <Select
-            size={'md'}
-            variant={'flushed'}
+          <ChakraSelect
             options={lengths}
-            value={lengths.find((l) => l.value === length)}
+            getOptionLabel={(l) => l.label}
+            getOptionValue={(l) => l.value}
+            value={lengths.find((l) => l.value === length) || null}
             onChange={(val) => val && setLength(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
           />
         </Flex>
         <>
@@ -136,29 +110,29 @@ const HomePage = () => {
             <Loading/>
           ) : (
 
-            <TableContainer>
-              <Table variant='striped' colorScheme='orange' size={['sm', 'md']}>
-                <Thead>
-                  <Tr bgColor={'orange.200'}>
-                    <Th>Player</Th>
-                    <Th>
+            <Box overflowX="auto">
+              <TableRoot variant='line' colorPalette='orange' size={['sm', 'md']}>
+                <TableHeader>
+                  <TableRow bgColor={'orange.200'}>
+                    <TableColumnHeader>Player</TableColumnHeader>
+                    <TableColumnHeader>
                       🇿🇿
-                    </Th>
-                    <Th>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
                       🔭
-                    </Th>
-                    <Th>Lvl</Th>
-                    <Th>#</Th>
-                    <Th>Score</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
+                    </TableColumnHeader>
+                    <TableColumnHeader>Lvl</TableColumnHeader>
+                    <TableColumnHeader>#</TableColumnHeader>
+                    <TableColumnHeader>Score</TableColumnHeader>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {scores && scores.map((score, index) => {
                     return <ScoreLine key={index} score={score}/>
                   })}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                </TableBody>
+              </TableRoot>
+            </Box>
           )}
         </>
       </Page.Body>

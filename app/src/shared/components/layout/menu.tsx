@@ -1,18 +1,11 @@
-import {Box, Button, Flex, Link} from "@chakra-ui/react";
+import {Flex, Link} from "@chakra-ui/react";
 import AppContext from "../../../core/app-context";
-import {useContext, useState} from "react";
-import {IoIosMoon, IoIosSunny} from "react-icons/io";
+import {useContext} from "react";
 import {FormattedMessage} from "react-intl"
-import SelectLanguage from "../../../components/select-language";
 import ChangeLanguage from "../../../components/change-language";
 
 export const BirdrMenu = () => {
     const {game} = useContext(AppContext);
-    // In Chakra UI v3, color mode handling is different
-    const [colorMode, setColorMode] = useState<'light' | 'dark'>('light')
-    const toggleColorMode = () => {
-      setColorMode(prev => prev === 'light' ? 'dark' : 'light')
-    }
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'}>
@@ -39,15 +32,11 @@ export const BirdrMenu = () => {
             <Link href={'/about'}>
               <FormattedMessage id={'about birdr'} defaultMessage={'About Birdr'} />
             </Link>
-            <Box>
-              <Button onClick={toggleColorMode} colorPalette="primary">
-                  {colorMode === 'light' ? <IoIosMoon /> : <IoIosSunny />}
-                  {colorMode === 'light' ? 'Dark' : 'Light'}
-              </Button>
-            </Box>
 
             <ChangeLanguage />
         </Flex>
     );
 }
+
+export default BirdrMenu;
 

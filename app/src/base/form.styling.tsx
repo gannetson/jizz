@@ -1,4 +1,4 @@
-import { defineRecipe, defineSlotRecipe } from '@chakra-ui/react'
+import { defineRecipe, defineSlotRecipe, defaultConfig } from '@chakra-ui/react'
 
 // Export both radio and checkbox themes
 
@@ -46,6 +46,9 @@ export const inputTheme = defineRecipe({
     padding: '4px 8px',
     fontWeight: 'bold',
     color: 'primary.500',
+    _placeholder: {
+      color: 'primary.300',
+    },
     bg: 'white',
     _focus: {
       borderColor: 'primary.500',
@@ -75,35 +78,45 @@ export const textareaTheme = defineRecipe({
   },
 })
 
+const defaultSelectRecipe = defaultConfig.theme?.slotRecipes?.select
+const defaultSelectSlots = defaultSelectRecipe?.slots ?? [
+  'root',
+  'control',
+  'trigger',
+  'valueText',
+  'indicatorGroup',
+  'indicator',
+  'clearTrigger',
+  'positioner',
+  'content',
+  'list',
+  'item',
+  'itemText',
+  'itemIndicator',
+]
+
 /**
- * Select theme - styled dropdown select fields with primary color
- * Uses slot recipe with multiple slots for complete styling
+ * Select theme – extend Chakra's defaults with custom borders/shadow
  */
 export const selectTheme = defineSlotRecipe({
-  className: 'select',
-  slots: [
-    'root',
-    'control',
-    'trigger',
-    'valueText',
-    'indicatorGroup',
-    'indicator',
-    'clearTrigger',
-    'positioner',
-    'content',
-    'list',
-    'item',
-    'itemText',
-    'itemIndicator',
-  ],
+  className: defaultSelectRecipe?.className ?? 'select',
+  slots: defaultSelectSlots,
   base: {
-    root: {
-      width: 'full',
-    },
+    ...(defaultSelectRecipe?.base ?? {}),
     control: {
-      bg: 'white',
+      ...(defaultSelectRecipe?.base?.control ?? {}),
+      width: 'full',
+      cursor: 'pointer',
+    },
+    indicator: {
+      ...(defaultSelectRecipe?.base?.indicator ?? {}),
+      color: 'primary.500',
+      width: '24px',
+      height: '24px',
+      marginRight: '8px',
     },
     trigger: {
+      ...(defaultSelectRecipe?.base?.trigger ?? {}),
       borderWidth: '2px',
       borderColor: 'primary.500',
       borderRadius: 'md',
@@ -111,82 +124,72 @@ export const selectTheme = defineSlotRecipe({
       fontWeight: 'bold',
       color: 'primary.500',
       bg: 'white',
-      _focus: {
-        borderColor: 'primary.500',
-      },
-    },
-    indicatorGroup: {
-      gap: '2',
-    },
-    indicator: {
-      color: 'primary.500',
-    },
-    clearTrigger: {
-      color: 'primary.500',
-      _hover: {
-        color: 'primary.700',
-      },
-    },
-    positioner: {
-      zIndex: 'dropdown',
+      textAlign: 'left',
     },
     content: {
-      bg: 'transparent',
-      borderRadius: 'md',
-      boxShadow: 'xl',
-    },
-    list: {
-      bg: 'white',
-      borderRadius: 'md',
-      borderWidth: '2px',
+      ...(defaultSelectRecipe?.base?.content ?? {}),
+      borderWidth: '1px',
       borderColor: 'primary.300',
-      padding: '4px',
+      boxShadow: 'xl',
+      bg: 'white',
+      padding: '4px 8px',
+      fontWeight: 'bold',
+      color: 'primary.500',
+      gap: '2',
       display: 'flex',
       flexDirection: 'column',
-      gap: '2',
+      borderRadius: 'md',
+    },
+    list: {
+      ...(defaultSelectRecipe?.base?.list ?? {}),
+      borderRadius: 'md',
     },
     item: {
-      bg: 'white',
-      padding: '8px 12px',
-      borderRadius: 'sm',
-      cursor: 'pointer',
+      ...(defaultSelectRecipe?.base?.item ?? {}),
       transition: 'background-color 0.15s ease-in-out',
       _hover: {
-        bg: 'orange.200',
+        ...(defaultSelectRecipe?.base?.item?._hover ?? {}),
+        bg: 'primary.50',
       },
       '&[data-highlighted]': {
-        bg: 'primary.100',
+        ...(defaultSelectRecipe?.base?.item?.['&[data-highlighted]'] ?? {}),
+        bg: 'primary.50',
       },
       '&[data-state="checked"]': {
-        bg: 'primary.200',
+        ...(defaultSelectRecipe?.base?.item?.['&[data-state="checked"]'] ?? {}),
+        bg: 'primary.100',
       },
-    },
-    itemText: {
-      color: 'primary.700',
-    },
-    itemIndicator: {
-      color: 'primary.500',
-    },
-    valueText: {
-      color: 'primary.500',
     },
   },
 })
 
+const defaultRadioRecipe = defaultConfig.theme?.slotRecipes?.radioGroup
+const defaultRadioSlots = defaultRadioRecipe?.slots ?? [
+  'root',
+  'label',
+  'item',
+  'itemText',
+  'itemControl',
+  'indicator',
+  'itemAddon',
+  'itemIndicator',
+]
+
 /**
- * RadioGroup theme - styled radio buttons with primary color
- * Uses the proper slot names so the unchecked state remains visible
+ * RadioGroup theme – extend Chakra defaults with primary styling
  */
 export const radioTheme = defineSlotRecipe({
-  className: 'radio-group',
-  slots: ['root', 'item', 'itemControl', 'itemText', 'itemIndicator'],
+  className: defaultRadioRecipe?.className ?? 'radio-group',
+  slots: defaultRadioSlots,
   base: {
-    root: {},
+    ...(defaultRadioRecipe?.base ?? {}),
     item: {
+      ...(defaultRadioRecipe?.base?.item ?? {}),
       alignItems: 'center',
       gap: '8px',
     },
     itemControl: {
+      ...(defaultRadioRecipe?.base?.itemControl ?? {}),
       borderWidth: '2px',
       borderColor: 'primary.500',
       borderRadius: 'full',
@@ -197,46 +200,63 @@ export const radioTheme = defineSlotRecipe({
       alignItems: 'center',
       justifyContent: 'center',
       transition: 'all 0.2s ease-in-out',
-      _checked: {
-        borderColor: 'primary.500',
-        bg: 'primary.500',
-      },
       _focusVisible: {
+        ...(defaultRadioRecipe?.base?.itemControl?._focusVisible ?? {}),
         boxShadow: '0 0 0 2px {colors.primary.200}',
       },
       _hover: {
+        ...(defaultRadioRecipe?.base?.itemControl?._hover ?? {}),
         borderColor: 'primary.400',
+      },
+      _checked: {
+        ...(defaultRadioRecipe?.base?.itemControl?._checked ?? {}),
+        borderColor: 'primary.500',
+        bg: 'primary.500',
       },
     },
     itemIndicator: {
+      ...(defaultRadioRecipe?.base?.itemIndicator ?? {}),
       width: '8px',
       height: '8px',
       borderRadius: 'full',
       bg: 'white',
-      transform: 'scale(0)',
       transition: 'transform 0.2s ease-in-out',
+      transform: 'scale(0)',
       '&[data-state=checked]': {
         transform: 'scale(1)',
       },
     },
     itemText: {
+      ...(defaultRadioRecipe?.base?.itemText ?? {}),
       color: 'primary.700',
     },
   },
 })
 
+const defaultCheckboxRecipe = defaultConfig.theme?.slotRecipes?.checkbox
+const defaultCheckboxSlots = defaultCheckboxRecipe?.slots ?? [
+  'root',
+  'label',
+  'control',
+  'indicator',
+  'group',
+]
+
 /**
- * Checkbox theme - styled checkboxes with primary color
+ * Checkbox theme – extend Chakra defaults with primary styling
  */
 export const checkboxTheme = defineSlotRecipe({
-  className: 'checkbox',
-  slots: ['root', 'control', 'indicator', 'label'],
+  className: defaultCheckboxRecipe?.className ?? 'checkbox',
+  slots: defaultCheckboxSlots,
   base: {
+    ...(defaultCheckboxRecipe?.base ?? {}),
     root: {
+      ...(defaultCheckboxRecipe?.base?.root ?? {}),
       alignItems: 'center',
       gap: '8px',
     },
     control: {
+      ...(defaultCheckboxRecipe?.base?.control ?? {}),
       borderWidth: '2px',
       borderColor: 'primary.500',
       borderRadius: 'sm',
@@ -247,28 +267,33 @@ export const checkboxTheme = defineSlotRecipe({
       alignItems: 'center',
       justifyContent: 'center',
       transition: 'all 0.2s ease-in-out',
+      _hover: {
+        ...(defaultCheckboxRecipe?.base?.control?._hover ?? {}),
+        borderColor: 'primary.400',
+      },
+      _focusVisible: {
+        ...(defaultCheckboxRecipe?.base?.control?._focusVisible ?? {}),
+        boxShadow: '0 0 0 2px {colors.primary.200}',
+      },
       _checked: {
+        ...(defaultCheckboxRecipe?.base?.control?._checked ?? {}),
         borderColor: 'primary.500',
         bg: 'primary.500',
         color: 'white',
       },
-      _focusVisible: {
-        boxShadow: '0 0 0 2px {colors.primary.200}',
-      },
-      _hover: {
-        borderColor: 'primary.400',
-      },
     },
     indicator: {
+      ...(defaultCheckboxRecipe?.base?.indicator ?? {}),
       color: 'white',
       fontSize: '12px',
-      opacity: 0,
       transition: 'opacity 0.2s ease-in-out',
+      opacity: 0,
       '&[data-state=checked]': {
         opacity: 1,
       },
     },
     label: {
+      ...(defaultCheckboxRecipe?.base?.label ?? {}),
       fontWeight: 'medium',
       color: 'primary.700',
     },

@@ -109,7 +109,9 @@ export const system = createSystem({
       },
     },
     semanticTokens: {
+      ...defaultConfig.theme?.semanticTokens,
       colors: {
+        ...defaultConfig.theme?.semanticTokens?.colors,
         primary: {
           solid: { value: '{colors.primary.500}' },
           contrast: { value: '{colors.primary.50}' },
@@ -163,6 +165,9 @@ export const system = createSystem({
       link: linkTheme,
       input: inputTheme,
       textarea: textareaTheme,
+    },
+    slotRecipes: {
+      ...defaultConfig.theme?.slotRecipes,
       select: selectTheme,
       radioGroup: radioTheme,
       checkbox: checkboxTheme,

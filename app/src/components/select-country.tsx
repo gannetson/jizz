@@ -1,4 +1,4 @@
-import {Box, Heading, Select, Portal, createListCollection} from "@chakra-ui/react";
+import {Box, Heading, Select, Portal, createListCollection, Theme} from "@chakra-ui/react";
 import { UseCountries } from "../user/use-countries";
 import { useContext, useEffect, useMemo } from "react";
 import AppContext from "../core/app-context";
@@ -39,7 +39,7 @@ const SelectCountry = () => {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>
+      <Heading size="md" mb={4} colorPalette="primary">
         <FormattedMessage id="country" defaultMessage="Country" />
       </Heading>
 
@@ -59,7 +59,7 @@ const SelectCountry = () => {
         </Select.Control>
         <Portal>
           <Select.Positioner>
-            <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+            <Select.Content>
               {collection.items.map((item: any) => (
                 <Select.Item key={item.value} item={item}>
                   <Select.ItemIndicator />

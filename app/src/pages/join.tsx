@@ -39,9 +39,12 @@ const JoinPage: React.FC = () => {
 
   return (
     <Page>
-      <GameHeader/>
+      <Page.Header>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
+          Join Game
+        </Heading>
+      </Page.Header>
       <Page.Body>
-        <Heading size="md">Join Game</Heading>
         <Box>
           Game code
           <Input name={'game_code'} value={code} cursor="text" onChange={(event) => setCode(event.target.value)}/>

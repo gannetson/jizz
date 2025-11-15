@@ -371,6 +371,19 @@ class Player(models.Model):
         return f"{self.name} - #{self.id}"
 
 
+class UserProfile(models.Model):
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    receive_updates = models.BooleanField(default=False, help_text='Receive updates about Birdr app')
+    language = models.CharField(max_length=10, default='en', blank=True, help_text='Preferred language')
+    country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True, blank=True, help_text='Preferred country')
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s profile"
+
+
 class PlayerScore(models.Model):
     player = models.ForeignKey(Player, related_name='scores', on_delete=models.CASCADE)
     game = models.ForeignKey(Game, related_name='scores', blank=True, null=True, on_delete=models.CASCADE)

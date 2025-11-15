@@ -9,12 +9,9 @@ import {
   ListItem,
   SimpleGrid,
   Text,
-  useDisclosure,
-  Select,
-  Portal,
-  createListCollection
+  useDisclosure
 } from "@chakra-ui/react"
-import React, {useContext, useState, useMemo} from "react"
+import React, {useContext, useState} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -29,64 +26,7 @@ import {WaitingComponent} from "./waiting"
 import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
 import {useNavigate} from "react-router-dom"
-
-const SpeciesSelect = ({ species, player, onSelect, autoFocus, placeholder }: { 
-  species: Species[], 
-  player: any, 
-  onSelect: (species: Species) => void,
-  autoFocus?: boolean,
-  placeholder?: React.ReactNode
-}) => {
-  const collection = useMemo(() => {
-    const items = species.map((s, index) => ({
-      label: player?.language === 'nl' ? s.name_nl : s.name,
-      value: String(s.id || s.name),
-      original: s,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [species, player?.language]);
-
-  const handleValueChange = (details: { value: string[] }) => {
-    const selectedValue = details.value[0];
-    const selectedSpecies = species.find((s) => String(s.id || s.name) === selectedValue);
-    if (selectedSpecies) {
-      onSelect(selectedSpecies);
-    }
-  };
-
-  const placeholderText = typeof placeholder === 'string' ? placeholder : 'Start typing your answer...';
-
-  return (
-    <Select.Root
-      collection={collection}
-      value={[]}
-      onValueChange={handleValueChange}
-    >
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger autoFocus={autoFocus}>
-          <Select.ValueText placeholder={placeholderText} />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          <Select.Indicator />
-        </Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
-            {collection.items.map((item: any) => (
-              <Select.Item key={item.value} item={item}>
-                <Select.ItemIndicator />
-                <Select.ItemText>{item.label}</Select.ItemText>
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
-  );
-};
+import SpeciesCombobox from "../../../components/species-combobox"
 
 export const QuestionComponent = () => {
   const {species, player, game} = useContext(AppContext)
@@ -271,8 +211,8 @@ export const QuestionComponent = () => {
                     onClick={() => viewSpecies(option)}
                     gap={4}
                     colorPalette={
-                      answer?.species?.id === option.id 
-                      ? 'success' 
+                      answer?.species?.id === option.id
+                      ? 'success'
                       : answer?.answer?.id === option.id ? 'error' : 'warning'}
                   >
                     <SpeciesName species={option}/>
@@ -312,10 +252,10 @@ export const QuestionComponent = () => {
             )}
           </SimpleGrid>
         ) : (
-          <SpeciesSelect
+          <SpeciesCombobox
             species={species || []}
-            player={player}
-            onSelect={selectAnswer}
+            playerLanguage={player?.language}
+            onSelect={(selected) => selectAnswer(selected)}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
           />

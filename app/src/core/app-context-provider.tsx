@@ -6,6 +6,7 @@ import { assignUniqueKeysToParts } from 'react-intl/src/utils';
 import {TaxOrder} from "../user/use-tax-order"
 import {TaxFamily} from "../user/use-tax-family"
 import { useNavigate } from 'react-router-dom';
+import axios from '../api/axios-config';
 
 type Props = {
   children: ReactNode;
@@ -42,17 +43,16 @@ const AppContextProvider: FC<Props> = ({children}) => {
   }), [])
 
   const createPlayer = async () => {
-    const response = await fetch('/api/player/', {
-      method: 'POST',
+    // Use axios to automatically include JWT token via interceptors
+    const response = await axios.post('/api/player/', {
+      name: playerName,
+      language: language
+    }, {
       headers: {
         ...noCacheHeaders,
-      },
-      body: JSON.stringify({
-        name: playerName,
-        language: language
-      })
-    })
-    const data = await response.json();
+      }
+    });
+    const data = response.data;
     if (data) {
       localStorage.setItem('player-token', data.token)
       setPlayer(data)

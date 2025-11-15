@@ -8,28 +8,28 @@ export const BirdrMenu = () => {
     const {game} = useContext(AppContext);
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
-            <Link href={'/'}>
+            <Link href={'/'} textDecoration="none">
               <FormattedMessage id={'home'} defaultMessage={'Home'}/>
             </Link>
-            <Link href={'/start'}>
+            <Link href={'/start'} textDecoration="none">
               <FormattedMessage id={'new game'} defaultMessage={'New game'} />
             </Link>
-            <Link href={'/join'}>
+            <Link href={'/join'} textDecoration="none">
               <FormattedMessage id={'join game'} defaultMessage={'Join a game'} />
             </Link>
-            <Link href={'/scores'}>
+            <Link href={'/scores'} textDecoration="none">
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
             </Link>
-            <Link href={'/challenge'}>
+            <Link href={'/challenge'} textDecoration="none">
               <FormattedMessage id={'challenge'} defaultMessage={'Challenge (beta)'} />
             </Link>
-            <Link href={'/updates'}>
+            <Link href={'/updates'} textDecoration="none">
               <FormattedMessage id={'Updates'} defaultMessage={'Updates'} />
             </Link>
-            <Link href={'/privacy'}>
+            <Link href={'/privacy'} textDecoration="none">
               <FormattedMessage id={'privacy'} defaultMessage={'Privacy'} />
             </Link>
-            <Link href={'/about'}>
+            <Link href={'/about'} textDecoration="none">
               <FormattedMessage id={'about birdr'} defaultMessage={'About Birdr'} />
             </Link>
 

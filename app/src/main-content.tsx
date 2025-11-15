@@ -21,6 +21,9 @@ import Updates from "./pages/updates"
 import {Login} from "./components/auth/login"
 import {AuthCallback} from "./components/auth/auth-callback"
 import {PrivacyPage} from "./pages/privacy"
+import {ProfilePage} from "./pages/profile"
+import { ForgotPasswordPage } from "./pages/forgot-password";
+import { ResetPasswordPage } from "./pages/reset-password";
 import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
@@ -49,6 +52,9 @@ export const MainContent = () => {
             <Route index element={<HomePage/>}/>
             <Route path="/login" element={<Login />} />
             <Route path="/login/:provider" element={<AuthCallback />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>
             <Route path="/join/:gameCode" element={<JoinPage/>}/>

@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
     QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, SpeciesName
+    ChallengeLevel, Language, SpeciesName, UserProfile
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -157,7 +157,139 @@ class ReactionSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name')
+        fields = ('username', 'first_name', 'last_name', 'email')
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
+    is_superuser = serializers.BooleanField(source='user.is_superuser', read_only=True)
+    avatar_url = serializers.SerializerMethodField()
+    country_code = serializers.CharField(source='country.code', read_only=True, allow_null=True)
+    country_name = serializers.CharField(source='country.name', read_only=True, allow_null=True)
+
+    class Meta:
+        model = UserProfile
+        fields = ('username', 'email', 'avatar', 'avatar_url', 'receive_updates', 'language', 'country_code', 'country_name', 'is_staff', 'is_superuser')
+        read_only_fields = ('avatar_url', 'country_code', 'country_name', 'is_staff', 'is_superuser')
+
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+
+    def update(self, instance, validated_data):
+        # Update avatar if provided
+        if 'avatar' in validated_data:
+            instance.avatar = validated_data['avatar']
+        instance.save()
+        return instance
+
+
+class UserProfileUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False, max_length=150, allow_blank=False)
+    avatar = serializers.ImageField(required=False, allow_null=True)
+    receive_updates = serializers.BooleanField(required=False)
+    language = serializers.CharField(required=False, max_length=10, allow_blank=True)
+    country_code = serializers.CharField(required=False, max_length=10, allow_blank=True, allow_null=True)
+
+    def validate_username(self, value):
+        if value:
+            user = self.context['request'].user
+            if User.objects.filter(username=value).exclude(pk=user.pk).exists():
+                raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_country_code(self, value):
+        if value:
+            try:
+                Country.objects.get(code=value)
+            except Country.DoesNotExist:
+                raise serializers.ValidationError("Invalid country code.")
+        return value
+
+    def update(self, instance, validated_data):
+        # Update username if provided
+        if 'username' in validated_data and validated_data['username']:
+            instance.user.username = validated_data['username']
+            instance.user.save()
+        
+        # Update avatar if provided
+        if 'avatar' in validated_data:
+            if validated_data['avatar'] is None:
+                # Remove avatar
+                if instance.avatar:
+                    instance.avatar.delete()
+                instance.avatar = None
+            else:
+                # Update avatar
+                if instance.avatar:
+                    instance.avatar.delete()
+                instance.avatar = validated_data['avatar']
+        
+        # Update receive_updates if provided
+        if 'receive_updates' in validated_data:
+            instance.receive_updates = validated_data['receive_updates']
+        
+        # Update language if provided
+        if 'language' in validated_data:
+            instance.language = validated_data['language']
+        
+        # Update country if provided
+        if 'country_code' in validated_data:
+            country_code = validated_data['country_code']
+            if country_code:
+                try:
+                    instance.country = Country.objects.get(code=country_code)
+                except Country.DoesNotExist:
+                    pass
+            else:
+                instance.country = None
+        
+        instance.save()
+        return instance
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+    email = serializers.EmailField(required=True)
+    username = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password')
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
+        )
+        return user
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True)
+    uid = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)
 
 
 class UpdateSerializer(serializers.ModelSerializer):

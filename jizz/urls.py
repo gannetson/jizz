@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, re_path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
 from rest_framework.routers import DefaultRouter
@@ -8,7 +10,8 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView, AnswerDetail, PlayerScoreListView, \
     FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
-    AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView
+    AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
+    PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -20,10 +23,16 @@ urlpatterns = [
     re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),
 
     path('token/', include('rest_framework_social_oauth2.urls')),
+    path('auth/complete/<str:backend>/', OAuthCompleteView.as_view(), name='oauth-complete'),
     path('auth/', include('social_django.urls', namespace='social')),
 
     path('token/', jwt_views.TokenObtainPairView.as_view(), name ='token-obtain-pair'),
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name ='token-refresh'),
+
+    path('api/register/', RegisterView.as_view(), name='register'),
+    path('api/profile/', ProfileView.as_view(), name='profile'),
+    path('api/password-reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('api/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 
     path('api/', include(router.urls)),
 
@@ -64,3 +73,7 @@ urlpatterns = [
 ]
 
 urlpatterns += router.urls
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

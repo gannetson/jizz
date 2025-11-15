@@ -23,6 +23,9 @@ from rest_framework_social_oauth2.views import ConvertTokenView
 from social_core.backends.google import GoogleOAuth2
 from social_core.exceptions import AuthException
 from social_django.utils import load_strategy
+from django.shortcuts import redirect
+from django.contrib.auth import login
+from social_django.views import complete as social_complete
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework import generics
@@ -195,7 +198,11 @@ class PlayerCreateView(CreateAPIView):
 
     def perform_create(self, serializer):
         ip = self.get_client_ip(self.request)
-        return serializer.save(ip=ip)
+        # Connect player to authenticated user if available
+        user = None
+        if self.request.user and self.request.user.is_authenticated:
+            user = self.request.user
+        return serializer.save(ip=ip, user=user)
 
 
 class PlayerView(RetrieveUpdateAPIView):
@@ -375,9 +382,450 @@ class GoogleLoginView(APIView):
             return Response({"error": "Invalid token"}, status=400)
 
 
+class OAuthCompleteView(APIView):
+    """
+    Custom OAuth completion view that generates JWT tokens and redirects to frontend
+    This intercepts the OAuth callback and adds JWT tokens to the redirect URL
+    """
+    def get(self, request, backend):
+        from django.conf import settings
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        
+        # Get the redirect URI from session (stored during OAuth initiation) or request or use default
+        redirect_uri = request.session.get('social_auth_redirect_uri') or request.GET.get('redirect_uri') or settings.SOCIAL_AUTH_LOGIN_REDIRECT_URL
+        
+        # Call the social_django complete view to finish OAuth
+        # This will authenticate the user and create/update the social auth association
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            logger.info(f"OAuthCompleteView called for backend: {backend}")
+            logger.info(f"Before social_complete: user authenticated={request.user.is_authenticated}")
+            
+            response = social_complete(request, backend)
+            
+            user_after = request.user if request.user.is_authenticated else None
+            logger.info(f"After social_complete: user authenticated={request.user.is_authenticated}, user_id={user_after.id if user_after else None}")
+            
+        except Exception as e:
+            logger.error(f"OAuth completion failed: {e}", exc_info=True)
+            # If OAuth completion failed, redirect with error
+            parsed = urlparse(redirect_uri)
+            query_params = parse_qs(parsed.query)
+            query_params['error'] = ['authentication_failed']
+            new_query = urlencode(query_params, doseq=True)
+            new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+            return redirect(new_url)
+        
+        # If OAuth was successful, the user should now be authenticated
+        if request.user.is_authenticated:
+            logger.info(f"OAuth successful for user: {request.user.username} (ID: {request.user.id}, email: {getattr(request.user, 'email', 'N/A')})")
+            
+            # Get or create user profile
+            from .models import UserProfile
+            profile, profile_created = UserProfile.objects.get_or_create(user=request.user)
+            logger.info(f"UserProfile {'created' if profile_created else 'retrieved'} for user {request.user.id}")
+            
+            # Get social auth data - try multiple sources
+            extra_data = None
+            social_user = None
+            
+            # First, try to get from session (social_django stores it there during OAuth)
+            if 'social_auth' in request.session:
+                social_auth_data = request.session.get('social_auth', {})
+                if isinstance(social_auth_data, dict):
+                    extra_data = social_auth_data.get('user_details', {})
+                    logger.info(f"Found user data in session: {list(extra_data.keys()) if extra_data else 'None'}")
+            
+            # Also try to get from UserSocialAuth model (might be saved by now)
+            try:
+                from social_django.models import UserSocialAuth
+                # Refresh from database - might have been created by social_complete
+                social_user = UserSocialAuth.objects.filter(user=request.user, provider=backend).first()
+                if social_user and social_user.extra_data:
+                    extra_data = social_user.extra_data
+                    logger.info(f"Found user data in UserSocialAuth: {list(extra_data.keys()) if extra_data else 'None'}")
+            except Exception as e:
+                logger.warning(f"Error accessing UserSocialAuth: {e}")
+            
+            # If we have an access token but no user details, fetch them from Google API
+            if social_user and social_user.extra_data and 'access_token' in social_user.extra_data:
+                access_token = social_user.extra_data.get('access_token')
+                if access_token and not extra_data.get('name') and not extra_data.get('picture'):
+                    try:
+                        import requests
+                        google_user_info_url = 'https://www.googleapis.com/oauth2/v2/userinfo'
+                        headers = {'Authorization': f'Bearer {access_token}'}
+                        response = requests.get(google_user_info_url, headers=headers, timeout=10)
+                        if response.status_code == 200:
+                            google_data = response.json()
+                            # Merge Google data into extra_data
+                            extra_data.update(google_data)
+                            # Also update the UserSocialAuth model
+                            social_user.extra_data.update(google_data)
+                            social_user.save()
+                    except Exception as e:
+                        logger.warning(f"Error fetching user details from Google API: {e}")
+            
+            # Update user profile with Google data if available
+            if extra_data:
+                logger.info(f"Updating user profile with Google data: {list(extra_data.keys())}")
+                
+                # Update username with Google name if available
+                if 'name' in extra_data and extra_data['name']:
+                    # Use first part of name as username if username is still email
+                    if request.user.username == request.user.email or '@' in request.user.username:
+                        # Try to set username to a cleaned version of the name
+                        username = extra_data['name'].lower().replace(' ', '_')[:30]
+                        # Ensure username is unique
+                        base_username = username
+                        counter = 1
+                        while User.objects.filter(username=username).exclude(pk=request.user.pk).exists():
+                            username = f"{base_username}{counter}"
+                            counter += 1
+                        request.user.username = username
+                        request.user.save()
+                        logger.info(f"Updated username to: {username}")
+                
+                # Update first_name and last_name
+                updated = False
+                if 'given_name' in extra_data and extra_data.get('given_name'):
+                    request.user.first_name = extra_data.get('given_name', '')
+                    updated = True
+                if 'family_name' in extra_data and extra_data.get('family_name'):
+                    request.user.last_name = extra_data.get('family_name', '')
+                    updated = True
+                if 'name' in extra_data and extra_data.get('name') and not request.user.first_name:
+                    # If we have full name but no first_name, try to split it
+                    full_name = extra_data.get('name', '').split(' ', 1)
+                    if len(full_name) > 0:
+                        request.user.first_name = full_name[0]
+                        updated = True
+                    if len(full_name) > 1:
+                        request.user.last_name = full_name[1]
+                        updated = True
+                if updated:
+                    request.user.save()
+                    logger.info(f"Updated user name: {request.user.first_name} {request.user.last_name}")
+                
+                # Download and save avatar if available
+                if 'picture' in extra_data and extra_data['picture']:
+                    try:
+                        import requests
+                        from django.core.files.base import ContentFile
+                        from django.core.files.storage import default_storage
+                        import os
+                        from urllib.parse import urlparse
+                        
+                        avatar_url = extra_data['picture']
+                        response = requests.get(avatar_url, timeout=10)
+                        if response.status_code == 200:
+                            # Get file extension from URL or default to jpg
+                            parsed_url = urlparse(avatar_url)
+                            ext = os.path.splitext(parsed_url.path)[1] or '.jpg'
+                            filename = f"avatar_{request.user.id}{ext}"
+                            
+                            # Save the image
+                            profile.avatar.save(
+                                filename,
+                                ContentFile(response.content),
+                                save=True
+                            )
+                    except Exception as e:
+                        # If avatar download fails, just log it and continue
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Failed to download avatar for user {request.user.id}: {e}")
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(request.user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+            
+            # Clear the redirect URI from session
+            if 'social_auth_redirect_uri' in request.session:
+                del request.session['social_auth_redirect_uri']
+            
+            # Redirect to frontend with tokens in URL
+            parsed = urlparse(redirect_uri)
+            query_params = parse_qs(parsed.query)
+            query_params['access_token'] = [access_token]
+            query_params['refresh_token'] = [refresh_token]
+            new_query = urlencode(query_params, doseq=True)
+            new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+            
+            return redirect(new_url)
+        
+        # If authentication failed, redirect with error
+        parsed = urlparse(redirect_uri)
+        query_params = parse_qs(parsed.query)
+        query_params['error'] = ['authentication_failed']
+        new_query = urlencode(query_params, doseq=True)
+        new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+        
+        return redirect(new_url)
+
+
 class ReactionView(CreateAPIView):
     serializer_class = ReactionSerializer
     queryset = Reaction.objects.all()
+
+
+class RegisterView(APIView):
+    """
+    User registration endpoint
+    Creates a new user and returns JWT tokens
+    """
+    def post(self, request):
+        from .serializers import UserRegistrationSerializer
+        from .models import UserProfile
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        import html2text
+        
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                # Create user profile
+                UserProfile.objects.get_or_create(user=user)
+                
+                # Send welcome email
+                try:
+                    frontend_url = request.data.get('frontend_url', request.build_absolute_uri('/').rstrip('/'))
+                    if 'localhost' in frontend_url or '127.0.0.1' in frontend_url:
+                        frontend_url = 'http://localhost:3000'
+                    
+                    subject = 'Welcome to Birdr!'
+                    
+                    # Render HTML template
+                    html_content = render_to_string('emails/welcome.html', {
+                        'username': user.username,
+                        'user_email': user.email,
+                        'site_url': frontend_url,
+                    })
+                    
+                    # Convert HTML to plain text automatically
+                    h = html2text.HTML2Text()
+                    h.ignore_links = False
+                    h.body_width = 0  # Don't wrap lines
+                    text_content = h.handle(html_content)
+                    
+                    # Create email message
+                    email_message = EmailMultiAlternatives(
+                        subject=subject,
+                        body=text_content,
+                        from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'info@birdr.pro',
+                        to=[user.email],
+                    )
+                    email_message.attach_alternative(html_content, "text/html")
+                    email_message.send()
+                except Exception as e:
+                    # Don't fail registration if email sending fails
+                    pass
+                
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh)
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                # Handle duplicate username/email errors
+                if 'username' in str(e).lower() or 'unique' in str(e).lower():
+                    return Response(
+                        {"error": "Username already exists. Please choose a different username."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                elif 'email' in str(e).lower():
+                    return Response(
+                        {"error": "Email already exists. Please use a different email or login."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                return Response(
+                    {"error": "Registration failed. Please try again."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Format validation errors for frontend
+        error_messages = []
+        for field, errors in serializer.errors.items():
+            if isinstance(errors, list):
+                error_messages.extend([f"{field}: {error}" for error in errors])
+            else:
+                error_messages.append(f"{field}: {errors}")
+        
+        return Response(
+            {"error": "; ".join(error_messages) if error_messages else "Invalid registration data"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class ProfileView(APIView):
+    """
+    Get and update user profile
+    """
+    from rest_framework.permissions import IsAuthenticated
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+    
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        from .serializers import UserProfileSerializer
+        from .models import UserProfile
+        
+        # The IsAuthenticated permission will handle authentication
+        # If we reach here, the user is authenticated
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        serializer = UserProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data)
+    
+    def put(self, request):
+        from .serializers import UserProfileUpdateSerializer
+        from .models import UserProfile
+        
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        
+        # Handle avatar removal (empty string means remove)
+        data = request.data.copy()
+        if 'avatar' in data and data['avatar'] == '':
+            data['avatar'] = None
+        
+        serializer = UserProfileUpdateSerializer(profile, data=data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            # Refresh profile from database
+            profile.refresh_from_db()
+            # Return updated profile
+            from .serializers import UserProfileSerializer
+            profile_serializer = UserProfileSerializer(profile, context={'request': request})
+            return Response(profile_serializer.data)
+        
+        # Format validation errors
+        error_messages = []
+        for field, errors in serializer.errors.items():
+            if isinstance(errors, list):
+                error_messages.extend([f"{field}: {error}" for error in errors])
+            else:
+                error_messages.append(f"{field}: {errors}")
+        
+        return Response(
+            {"error": "; ".join(error_messages) if error_messages else "Invalid profile data"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Request password reset - sends email with reset link
+    """
+    def post(self, request):
+        from .serializers import PasswordResetRequestSerializer
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        import html2text
+        
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = User.objects.get(email=email)
+                # Generate token
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                # Create reset URL
+                frontend_url = request.data.get('frontend_url', 'http://localhost:3000')
+                reset_url = f"{frontend_url}/reset-password/{uid}/{token}/"
+                
+                # Send HTML email
+                try:
+                    subject = 'Reset Your Birdr Password'
+                    
+                    # Render HTML template
+                    html_content = render_to_string('emails/password_reset.html', {
+                        'reset_url': reset_url,
+                        'user_email': email,
+                        'username': user.username,
+                    })
+                    
+                    # Convert HTML to plain text automatically
+                    h = html2text.HTML2Text()
+                    h.ignore_links = False
+                    h.body_width = 0  # Don't wrap lines
+                    text_content = h.handle(html_content)
+                    
+                    # Create email message
+                    email_message = EmailMultiAlternatives(
+                        subject=subject,
+                        body=text_content,
+                        from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'info@birdr.pro',
+                        to=[email],
+                    )
+                    email_message.attach_alternative(html_content, "text/html")
+                    email_message.send()
+                except Exception as e:
+                    # If email sending fails, still return success for security (don't reveal if email exists)
+                    pass
+                
+                # Always return success to prevent email enumeration
+                return Response({
+                    "message": "If an account with this email exists, a password reset link has been sent."
+                }, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                # Don't reveal if user exists
+                return Response({
+                    "message": "If an account with this email exists, a password reset link has been sent."
+                }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Confirm password reset with token and set new password
+    """
+    def post(self, request):
+        from .serializers import PasswordResetConfirmSerializer
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_decode
+        from django.utils.encoding import force_str
+        
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            uid = serializer.validated_data['uid']
+            token = serializer.validated_data['token']
+            new_password = serializer.validated_data['new_password']
+            
+            try:
+                # Decode user ID
+                user_id = force_str(urlsafe_base64_decode(uid))
+                user = User.objects.get(pk=user_id)
+                
+                # Verify token
+                if default_token_generator.check_token(user, token):
+                    # Set new password
+                    user.set_password(new_password)
+                    user.save()
+                    return Response({
+                        "message": "Password has been reset successfully."
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        "error": "Invalid or expired reset token."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                return Response({
+                    "error": "Invalid reset link."
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):

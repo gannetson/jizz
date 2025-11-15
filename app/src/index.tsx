@@ -1,3 +1,5 @@
+// Import axios config early to set up interceptors
+import './api/axios-config';
 
 import * as React from "react"
 import * as ReactDOM from "react-dom/client"

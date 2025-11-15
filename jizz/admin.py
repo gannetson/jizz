@@ -13,7 +13,7 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
                          CountrySpecies, Feedback, FlagQuestion, Game, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
-                         Update, CountryGame, Language, SpeciesName)
+                         Update, CountryGame, Language, SpeciesName, UserProfile)
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species)
 
@@ -377,3 +377,22 @@ class ChallengeLevelAdmin(admin.ModelAdmin):
     list_filter = ['level', 'media', 'include_rare', 'include_escapes']
     search_fields = ['title', 'description']
     ordering = ['sequence']
+
+
+@register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'avatar_preview', 'receive_updates', 'language', 'country', 'created', 'updated']
+    list_filter = ['receive_updates', 'language', 'country', 'created', 'updated']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
+    readonly_fields = ['created', 'updated', 'avatar_preview']
+    fields = ['user', 'avatar', 'avatar_preview', 'receive_updates', 'language', 'country', 'created', 'updated']
+    raw_id_fields = ['user']
+    
+    def avatar_preview(self, obj):
+        if obj.avatar:
+            return format_html(
+                '<img src="{}" style="max-width: 100px; max-height: 100px;" />',
+                obj.avatar.url
+            )
+        return '-'
+    avatar_preview.short_description = 'Avatar Preview'

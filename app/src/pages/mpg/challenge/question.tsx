@@ -1,5 +1,5 @@
-import {Box, Button, Flex, Heading, Icon, Image, Link, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, CardRoot, Select, Portal, createListCollection, Spinner} from "@chakra-ui/react"
-import {useContext, useEffect, useState, useMemo} from "react"
+import {Box, Button, Flex, Heading, Icon, Image, Link, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, CardRoot} from "@chakra-ui/react"
+import {useContext, useEffect, useState} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { AnswerFeedback } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
+import SpeciesCombobox from "../../../components/species-combobox"
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
 
@@ -24,82 +25,6 @@ const iconMapping: Record<ResultType, IconType> = {
   'joker': FaHeart,
   'incorrect': FaSkull
 }
-
-const SpeciesSelect = ({ species, player, onSelect, loading, autoFocus, placeholder }: { 
-  species: Species[], 
-  player: any, 
-  onSelect: (species: Species) => void,
-  loading?: boolean,
-  autoFocus?: boolean,
-  placeholder?: React.ReactNode
-}) => {
-  const collection = useMemo(() => {
-    const items = species.map((s, index) => ({
-      label: player?.language === 'nl' ? s.name_nl : s.name,
-      value: String(s.id || s.name),
-      original: s,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [species, player?.language]);
-
-  const handleValueChange = (details: { value: string[] }) => {
-    const selectedValue = details.value[0];
-    const selectedSpecies = species.find((s) => String(s.id || s.name) === selectedValue);
-    if (selectedSpecies) {
-      onSelect(selectedSpecies);
-    }
-  };
-
-  const placeholderText = typeof placeholder === 'string' ? placeholder : 'Start typing your answer...';
-
-  return (
-    <Select.Root
-      collection={collection}
-      value={[]}
-      onValueChange={handleValueChange}
-      disabled={loading}
-    >
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger autoFocus={autoFocus}>
-          <Select.ValueText placeholder={placeholderText} />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          {loading ? (
-            <Box position="absolute" right="8px" top="50%" transform="translateY(-50%)" zIndex={1}>
-              <Spinner size="sm" />
-            </Box>
-          ) : (
-            <Select.Indicator />
-          )}
-        </Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
-            {loading ? (
-              <Box p={2} textAlign="center" color="gray.500">
-                Loading...
-              </Box>
-            ) : collection.items.length === 0 ? (
-              <Box p={2} textAlign="center" color="gray.500">
-                No options found
-              </Box>
-            ) : (
-              collection.items.map((item: any) => (
-                <Select.Item key={item.value} item={item}>
-                  <Select.ItemIndicator />
-                  <Select.ItemText>{item.label}</Select.ItemText>
-                </Select.Item>
-              ))
-            )}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
-  );
-};
 
 export const ChallengeQuestion = () => {
   const {species, player, language, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
@@ -287,14 +212,19 @@ export const ChallengeQuestion = () => {
           </SimpleGrid>
 
         ) : (
-          <SpeciesSelect
+          <>
+          <Heading size={'md'}>
+            <FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>
+          </Heading>
+          <SpeciesCombobox
             species={species || []}
-            player={player}
+            playerLanguage={player?.language}
             onSelect={giveAnswer}
             loading={loading}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
           />
+          </>
         )}
 
         <Heading size={'md'}>

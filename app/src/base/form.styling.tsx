@@ -46,6 +46,7 @@ export const inputTheme = defineRecipe({
     padding: '4px 8px',
     fontWeight: 'bold',
     color: 'primary.500',
+    width: 'full',
     _placeholder: {
       color: 'primary.300',
     },

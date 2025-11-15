@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -15,9 +15,6 @@ import {
   Spinner,
   Link,
   Checkbox,
-  Select,
-  Portal,
-  createListCollection,
 } from "@chakra-ui/react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +23,8 @@ import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
 import { UseCountries } from "../user/use-countries";
 import { UseLanguages } from "../user/use-languages";
+import { ProfileLanguageSelect } from "../components/profile-language-select";
+import { ProfileCountrySelect } from "../components/profile-country-select";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -285,7 +284,7 @@ export const ProfilePage = () => {
               <Text fontSize="sm" fontWeight="medium" mb={2}>
                 <FormattedMessage id="preferred_language" defaultMessage="Preferred Language" />
               </Text>
-              <LanguageSelect
+              <ProfileLanguageSelect
                 languages={languages}
                 value={language}
                 onChange={setLanguage}
@@ -297,7 +296,7 @@ export const ProfilePage = () => {
               <Text fontSize="sm" fontWeight="medium" mb={2}>
                 <FormattedMessage id="preferred_country" defaultMessage="Preferred Country" />
               </Text>
-              <CountrySelect
+              <ProfileCountrySelect
                 countries={countries.filter((c) => !c.code.includes('NL-NH'))}
                 value={countryCode}
                 onChange={setCountryCode}
@@ -320,116 +319,6 @@ export const ProfilePage = () => {
         </Container>
       </Page.Body>
     </Page>
-  );
-};
-
-// Language Select Component
-const LanguageSelect = ({ languages, value, onChange }: { languages: any[], value: string, onChange: (value: string) => void }) => {
-  const collection = useMemo(() => {
-    const items = languages.map((l, index) => ({
-      label: l.name,
-      value: l.name,  // Use name as value for Select component
-      original: l,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [languages]);
-
-  const selectedLanguage = languages.find((l) => l.code === value);
-  const selectedValue = selectedLanguage ? selectedLanguage.name : undefined;
-
-  const handleValueChange = (details: { value: string[] }) => {
-    const selectedName = details.value[0];
-    const selectedLang = languages.find((l) => l.name === selectedName);
-    if (selectedLang) {
-      onChange(selectedLang.code);
-    }
-  };
-
-  return (
-    <Select.Root
-      collection={collection}
-      value={selectedValue ? [selectedValue] : []}
-      onValueChange={handleValueChange}
-    >
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger>
-          <Select.ValueText placeholder="Select language..." />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          <Select.Indicator />
-        </Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content>
-            {collection.items.map((item: any) => (
-              <Select.Item key={item.value} item={item}>
-                <Select.ItemIndicator />
-                <Select.ItemText>{item.label}</Select.ItemText>
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
-  );
-};
-
-// Country Select Component
-const CountrySelect = ({ countries, value, onChange }: { countries: any[], value: string | null, onChange: (value: string | null) => void }) => {
-  const collection = useMemo(() => {
-    const items = countries.map((c, index) => ({
-      label: c.name,
-      value: c.name,  // Use name as value for Select component
-      original: c,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [countries]);
-
-  const selectedCountry = countries.find((c) => c.code === value);
-  const selectedValue = selectedCountry ? selectedCountry.name : undefined;
-
-  const handleValueChange = (details: { value: string[] }) => {
-    const selectedName = details.value[0];
-    const selectedCountry = countries.find((c) => c.name === selectedName);
-    if (selectedCountry) {
-      onChange(selectedCountry.code);
-    } else {
-      onChange(null);
-    }
-  };
-
-  return (
-    <Select.Root
-      collection={collection}
-      value={selectedValue ? [selectedValue] : []}
-      onValueChange={handleValueChange}
-    >
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger>
-          <Select.ValueText placeholder="Select country..." />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          <Select.Indicator />
-        </Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content>
-            {collection.items.map((item: any) => (
-              <Select.Item key={item.value} item={item}>
-                <Select.ItemIndicator />
-                <Select.ItemText>{item.label}</Select.ItemText>
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
   );
 };
 

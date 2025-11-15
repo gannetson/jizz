@@ -1,5 +1,6 @@
-import { useMemo, useState, ReactNode } from "react"
-import { Box, Combobox, Portal, Spinner, createListCollection } from "@chakra-ui/react"
+import React, { useMemo, ReactNode } from "react"
+import ReactSelect, { StylesConfig } from "react-select"
+import { Box } from "@chakra-ui/react"
 import { Species } from "../core/app-context"
 
 type Props = {
@@ -18,6 +19,12 @@ const defaultPlaceholder = "Start typing your answer..."
 const defaultEmptyMessage = "No options found"
 const defaultLoadingMessage = "Loading..."
 
+interface OptionType {
+  label: string
+  value: string
+  original: Species
+}
+
 export const SpeciesCombobox = ({
   species,
   playerLanguage,
@@ -29,89 +36,76 @@ export const SpeciesCombobox = ({
   loadingMessage = defaultLoadingMessage,
   resetInputOnSelect = true,
 }: Props) => {
-  const [inputValue, setInputValue] = useState("")
-
-  const items = useMemo(() => {
-    return species.map((speciesItem, index) => {
+  const options = useMemo(() => {
+    return species.map((speciesItem) => {
       const isDutch = playerLanguage === "nl"
       const label = isDutch ? speciesItem.name_nl || speciesItem.name : speciesItem.name
       return {
         label,
         value: String(speciesItem.id ?? speciesItem.name),
         original: speciesItem,
-        index,
       }
     })
   }, [species, playerLanguage])
 
-  const collection = useMemo(() => {
-    const filteredItems = items.filter((item) =>
-      item.label.toLowerCase().includes(inputValue.toLowerCase())
-    )
-    return createListCollection({ items: filteredItems })
-  }, [items, inputValue])
-
-  const handleValueChange = (details: { value: string[] }) => {
-    const selectedValue = details.value[0]
-    const selectedSpecies = species.find(
-      (item) => String(item.id ?? item.name) === selectedValue
-    )
-    if (selectedSpecies) {
-      onSelect(selectedSpecies)
-      if (resetInputOnSelect) setInputValue("")
+  const handleChange = (selectedOption: OptionType | null) => {
+    if (selectedOption && selectedOption.original) {
+      onSelect(selectedOption.original)
     }
   }
 
   const placeholderText =
     typeof placeholder === "string" ? placeholder : defaultPlaceholder
 
+  const noOptionsMessage = () => {
+    if (typeof emptyMessage === "string") {
+      return emptyMessage
+    }
+    return defaultEmptyMessage
+  }
+
+  const loadingMessageText = () => {
+    if (typeof loadingMessage === "string") {
+      return loadingMessage
+    }
+    return defaultLoadingMessage
+  }
+
+  const customStyles: StylesConfig<OptionType, false> = {
+    control: (provided, state) => ({
+      ...provided,
+      minHeight: "40px",
+      borderColor: state.isFocused ? "#3182ce" : provided.borderColor,
+      boxShadow: state.isFocused ? "0 0 0 1px #3182ce" : provided.boxShadow,
+      "&:hover": {
+        borderColor: "#3182ce",
+      },
+    }),
+    input: (provided) => ({
+      ...provided,
+      padding: "0",
+    }),
+    menuPortal: (provided) => ({
+      ...provided,
+      zIndex: 9999,
+    }),
+  }
+
   return (
-    <Combobox.Root
-      collection={collection}
-      value={[]} // keep uncontrolled selection in the popup
-      inputValue={inputValue}
-      onInputValueChange={(event: { value: string }) => setInputValue(event.value)}
-      onValueChange={handleValueChange}
-      disabled={loading}
-    >
-      <Combobox.Control position="relative">
-        <Combobox.Input autoFocus={autoFocus} placeholder={placeholderText} />
-        <Combobox.Trigger>
-          <Combobox.Indicator />
-        </Combobox.Trigger>
-
-        {loading && (
-          <Box position="absolute" right="8px" top="50%" transform="translateY(-50%)" zIndex={1}>
-            <Spinner size="sm" />
-          </Box>
-        )}
-      </Combobox.Control>
-
-      <Portal>
-        <Combobox.Positioner>
-          <Combobox.Content>
-            {loading ? (
-              <Box p={2} textAlign="center" color="gray.500">
-                {loadingMessage}
-              </Box>
-            ) : collection.items.length === 0 ? (
-              <Box p={2} textAlign="center" color="gray.500">
-                {emptyMessage}
-              </Box>
-            ) : (
-              <Combobox.ItemGroup>
-                {collection.items.map((item: any) => (
-                  <Combobox.Item key={item.value} item={item}>
-                    <Combobox.ItemText>{item.label}</Combobox.ItemText>
-                    <Combobox.ItemIndicator />
-                  </Combobox.Item>
-                ))}
-              </Combobox.ItemGroup>
-            )}
-          </Combobox.Content>
-        </Combobox.Positioner>
-      </Portal>
-    </Combobox.Root>
+    <Box>
+      <ReactSelect<OptionType>
+        options={options}
+        onChange={handleChange}
+        isLoading={loading}
+        isSearchable={true}
+        isClearable={false}
+        placeholder={placeholderText}
+        noOptionsMessage={noOptionsMessage}
+        loadingMessage={loadingMessageText}
+        autoFocus={autoFocus}
+        styles={customStyles}
+      />
+    </Box>
   )
 }
 

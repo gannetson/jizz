@@ -4,6 +4,8 @@ import { authService } from './auth.service';
 export interface UserProfile {
   username: string;
   email: string;
+  first_name: string;
+  last_name: string;
   avatar: File | null;
   avatar_url: string | null;
   receive_updates: boolean;
@@ -16,6 +18,8 @@ export interface UserProfile {
 
 export interface ProfileUpdateData {
   username?: string;
+  first_name?: string;
+  last_name?: string;
   avatar?: File | null;
   receive_updates?: boolean;
   language?: string;
@@ -55,6 +59,12 @@ class ProfileService {
       
       if (data.username) {
         formData.append('username', data.username);
+      }
+      if (data.first_name !== undefined) {
+        formData.append('first_name', data.first_name || '');
+      }
+      if (data.last_name !== undefined) {
+        formData.append('last_name', data.last_name || '');
       }
       if (data.avatar) {
         formData.append('avatar', data.avatar);

@@ -12,13 +12,39 @@ export const UseTaxOrder = () => {
   const {country} = useContext(AppContext);
 
   useEffect(() => {
-    const url = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
-    setTaxOrders([]) // Reset when country changes
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        setTaxOrders(data)
-      });
+      const fetchAllTaxOrders = async () => {
+        setTaxOrders([]) // Reset when country changes
+        try {
+          let allTaxOrders: TaxOrder[] = [];
+          let url: string | null = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
+          
+          // Fetch all pages
+          while (url) {
+            const response: Response = await fetch(url);
+            const data: any = await response.json();
+            
+            if (Array.isArray(data)) {
+              // Non-paginated response
+              allTaxOrders = data;
+              url = null;
+            } else if (data && Array.isArray(data.results)) {
+              // Paginated response
+              allTaxOrders = [...allTaxOrders, ...data.results];
+              url = data.next || null; // Get next page URL
+            } else {
+              // Unexpected format
+              break;
+            }
+          }
+        
+        setTaxOrders(allTaxOrders);
+      } catch (error) {
+        console.error('Error fetching tax orders:', error);
+        setTaxOrders([]);
+      }
+    };
+    
+    fetchAllTaxOrders();
   }, [country?.code]) // Re-fetch when country changes
 
 

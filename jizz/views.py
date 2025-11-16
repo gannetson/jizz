@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Case, When, Value
+from django.db.models import Case, When, Value, Prefetch
 from django.db.models.aggregates import Count, Min
 from django.http import Http404
 from django.views.generic import DetailView
@@ -15,6 +15,7 @@ from rest_framework.generics import (
     RetrieveUpdateAPIView,
 )
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
@@ -187,6 +188,7 @@ class OrderListView(ListAPIView):
 class PlayerCreateView(CreateAPIView):
     serializer_class = PlayerSerializer
     queryset = Player.objects.all()
+    permission_classes = [AllowAny]  # Allow anonymous users to create players
 
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
@@ -472,23 +474,7 @@ class OAuthCompleteView(APIView):
             if extra_data:
                 logger.info(f"Updating user profile with Google data: {list(extra_data.keys())}")
                 
-                # Update username with Google name if available
-                if 'name' in extra_data and extra_data['name']:
-                    # Use first part of name as username if username is still email
-                    if request.user.username == request.user.email or '@' in request.user.username:
-                        # Try to set username to a cleaned version of the name
-                        username = extra_data['name'].lower().replace(' ', '_')[:30]
-                        # Ensure username is unique
-                        base_username = username
-                        counter = 1
-                        while User.objects.filter(username=username).exclude(pk=request.user.pk).exists():
-                            username = f"{base_username}{counter}"
-                            counter += 1
-                        request.user.username = username
-                        request.user.save()
-                        logger.info(f"Updated username to: {username}")
-                
-                # Update first_name and last_name
+                # Update first_name and last_name first
                 updated = False
                 if 'given_name' in extra_data and extra_data.get('given_name'):
                     request.user.first_name = extra_data.get('given_name', '')
@@ -505,9 +491,60 @@ class OAuthCompleteView(APIView):
                     if len(full_name) > 1:
                         request.user.last_name = full_name[1]
                         updated = True
+                
+                # Set username to full name (first_name + last_name) with spaces allowed
+                # Build full name from first_name and last_name
+                full_name_parts = []
+                if request.user.first_name:
+                    full_name_parts.append(request.user.first_name.strip())
+                if request.user.last_name:
+                    full_name_parts.append(request.user.last_name.strip())
+                
+                # Fallback: if we don't have first_name/last_name but have the full name, use it
+                if not full_name_parts and 'name' in extra_data and extra_data.get('name'):
+                    full_name = extra_data.get('name', '').strip()
+                    if full_name:
+                        full_name_parts = [full_name]
+                
+                if full_name_parts:
+                    # Build the expected full name username
+                    expected_username = ' '.join(full_name_parts)
+                    
+                    # Update username if it doesn't match the full name
+                    # Check if username is email, email prefix, or doesn't match full name
+                    current_username = request.user.username
+                    should_update = (
+                        current_username == request.user.email or 
+                        '@' in current_username or
+                        current_username != expected_username
+                    )
+                    
+                    if should_update:
+                        # Use full name with spaces as username
+                        username = expected_username
+                        # Ensure it's within Django's max length (150 chars)
+                        if len(username) > 150:
+                            username = username[:150]
+                        
+                        # Ensure username is unique
+                        base_username = username
+                        counter = 1
+                        while User.objects.filter(username=username).exclude(pk=request.user.pk).exists():
+                            # If we need to add a counter, truncate base to leave room
+                            counter_str = f" {counter}"
+                            max_base_length = 150 - len(counter_str)
+                            if max_base_length < 1:
+                                max_base_length = 1
+                            username = f"{base_username[:max_base_length]}{counter_str}"
+                            counter += 1
+                        
+                        request.user.username = username
+                        updated = True
+                        logger.info(f"Updated username from '{current_username}' to '{username}' (from full name: {expected_username})")
+                
                 if updated:
                     request.user.save()
-                    logger.info(f"Updated user name: {request.user.first_name} {request.user.last_name}")
+                    logger.info(f"Updated user name: {request.user.first_name} {request.user.last_name}, username: {request.user.username}")
                 
                 # Download and save avatar if available
                 if 'picture' in extra_data and extra_data['picture']:
@@ -659,6 +696,104 @@ class RegisterView(APIView):
             {"error": "; ".join(error_messages) if error_messages else "Invalid registration data"},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class UserGamesView(ListAPIView):
+    """
+    Get paginated list of games played by the authenticated user
+    """
+    from rest_framework.permissions import IsAuthenticated
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+    from .serializers import UserGameSerializer
+    
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserGameSerializer
+    pagination_class = PageNumberPagination
+    
+    def get_queryset(self):
+        """
+        Get all games where the user has answered at least one question
+        Games are connected to users through: User -> Player -> PlayerScore -> Answer -> Question -> Game
+        """
+        # Get all players for this user
+        user_players = Player.objects.filter(user=self.request.user)
+        
+        # Get all player scores for this user's players
+        user_player_scores = PlayerScore.objects.filter(player__in=user_players)
+        
+        # Get all games where this user has at least one answer
+        # Filter games that have questions with answers from this user's player scores
+        # Prefetch related data to avoid N+1 queries
+        games = Game.objects.filter(
+            questions__answers__player_score__in=user_player_scores
+        ).distinct().select_related(
+            'country'
+        ).prefetch_related(
+            'questions'
+        ).order_by('-created')
+        
+        return games
+    
+    def get_serializer_context(self):
+        """Add request to serializer context"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+
+class UserGameDetailView(RetrieveAPIView):
+    """
+    Get game details with all questions and user's answers
+    """
+    from rest_framework.permissions import IsAuthenticated
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+    from .serializers import GameDetailWithAnswersSerializer
+    
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = GameDetailWithAnswersSerializer
+    lookup_field = "token"
+    
+    def get_queryset(self):
+        """
+        Only return games where the user has answered at least one question
+        Optimize queries by prefetching questions and answers
+        """
+        user_players = Player.objects.filter(user=self.request.user)
+        user_player_scores = PlayerScore.objects.filter(player__in=user_players)
+        
+        # Prefetch questions ordered by sequence, and answers for this user's player scores
+        # Only include games where the user has at least one answer
+        # Also prefetch species media (images, videos, sounds) for both question species and answer species
+        return Game.objects.filter(
+            questions__answers__player_score__in=user_player_scores
+        ).distinct().prefetch_related(
+            Prefetch(
+                'questions',
+                queryset=Question.objects.order_by('sequence').select_related('species').prefetch_related(
+                    'species__images',
+                    'species__videos',
+                    'species__sounds',
+                    Prefetch(
+                        'answers',
+                        queryset=Answer.objects.filter(
+                            player_score__in=user_player_scores
+                        ).select_related('answer', 'player_score', 'player_score__player', 'player_score__player__user').prefetch_related(
+                            'answer__images',
+                            'answer__videos',
+                            'answer__sounds'
+                        )
+                    )
+                )
+            )
+        )
+    
+    def get_serializer_context(self):
+        """Add request to serializer context"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 class ProfileView(APIView):

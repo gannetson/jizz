@@ -70,10 +70,37 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 class SpeciesDetailSerializer(serializers.ModelSerializer):
     images = ImageSerializer(many=True)
+    videos = VideoSerializer(many=True)
+    sounds = SoundSerializer(many=True)
+    name_translated = serializers.SerializerMethodField()
+
+    def get_name_translated(self, obj):
+        """Get translated name based on game language or request language"""
+        # Try to get language from game context first
+        game = self.context.get('game') if isinstance(self.context, dict) else None
+        language = None
+        
+        if game:
+            language = game.language
+        elif isinstance(self.context, dict) and 'request' in self.context:
+            language = self.context['request'].query_params.get('language')
+        
+        if language:
+            try:
+                species_name = SpeciesName.objects.get(
+                    species=obj,
+                    language=language
+                )
+                return species_name.name
+            except SpeciesName.DoesNotExist:
+                pass
+        
+        # Fallback to default name
+        return obj.name
 
     class Meta:
         model = Species
-        fields = ('name', 'code', 'name_latin', 'name_nl', 'id', 'images')
+        fields = ('name', 'code', 'name_latin', 'name_nl', 'name_translated', 'id', 'images', 'videos', 'sounds')
 
 class QuestionSerializer(serializers.ModelSerializer):
     images = ImageSerializer(source='species.images', many=True)
@@ -163,6 +190,8 @@ class UserSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
     is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
     is_superuser = serializers.BooleanField(source='user.is_superuser', read_only=True)
     avatar_url = serializers.SerializerMethodField()
@@ -171,7 +200,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ('username', 'email', 'avatar', 'avatar_url', 'receive_updates', 'language', 'country_code', 'country_name', 'is_staff', 'is_superuser')
+        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'country_code', 'country_name', 'is_staff', 'is_superuser')
         read_only_fields = ('avatar_url', 'country_code', 'country_name', 'is_staff', 'is_superuser')
 
     def get_avatar_url(self, obj):
@@ -192,6 +221,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserProfileUpdateSerializer(serializers.Serializer):
     username = serializers.CharField(required=False, max_length=150, allow_blank=False)
+    first_name = serializers.CharField(required=False, max_length=150, allow_blank=True)
+    last_name = serializers.CharField(required=False, max_length=150, allow_blank=True)
     avatar = serializers.ImageField(required=False, allow_null=True)
     receive_updates = serializers.BooleanField(required=False)
     language = serializers.CharField(required=False, max_length=10, allow_blank=True)
@@ -216,6 +247,17 @@ class UserProfileUpdateSerializer(serializers.Serializer):
         # Update username if provided
         if 'username' in validated_data and validated_data['username']:
             instance.user.username = validated_data['username']
+        
+        # Update first_name if provided
+        if 'first_name' in validated_data:
+            instance.user.first_name = validated_data['first_name']
+        
+        # Update last_name if provided
+        if 'last_name' in validated_data:
+            instance.user.last_name = validated_data['last_name']
+        
+        # Save user if any user fields were updated
+        if 'username' in validated_data or 'first_name' in validated_data or 'last_name' in validated_data:
             instance.user.save()
         
         # Update avatar if provided
@@ -362,6 +404,255 @@ class GameSerializer(serializers.ModelSerializer):
             'include_rare',
             'include_escapes',
             'scores'
+        )
+
+
+class UserGameSerializer(serializers.ModelSerializer):
+    """Serializer for games in user's games list, includes user's score and correct count"""
+    country = CountrySerializer()
+    user_score = serializers.SerializerMethodField()
+    correct_count = serializers.SerializerMethodField()
+    total_questions = serializers.SerializerMethodField()
+    
+    def get_user_score(self, obj):
+        """Get the user's total score for this game"""
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return 0
+        
+        user_players = Player.objects.filter(user=request.user)
+        player_score = PlayerScore.objects.filter(
+            player__in=user_players,
+            game=obj
+        ).first()
+        
+        if player_score:
+            return player_score.score
+        return 0
+    
+    def get_correct_count(self, obj):
+        """Get the number of correct answers for this user"""
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return 0
+        
+        user_players = Player.objects.filter(user=request.user)
+        user_player_scores = PlayerScore.objects.filter(player__in=user_players, game=obj)
+        
+        # Count correct answers for this user's player scores in this game
+        correct_count = Answer.objects.filter(
+            player_score__in=user_player_scores,
+            correct=True
+        ).count()
+        
+        return correct_count
+    
+    def get_total_questions(self, obj):
+        """Get the total number of questions in this game"""
+        return obj.questions.count()
+    
+    class Meta:
+        model = Game
+        fields = (
+            'token', 'country', 'level', 'language',
+            'created', 'multiplayer',
+            'length', 'progress',
+            'media', 'repeat',
+            'host', 'ended',
+            'tax_order',
+            'tax_family',
+            'include_rare',
+            'include_escapes',
+            'user_score',
+            'correct_count',
+            'total_questions'
+        )
+
+
+class QuestionWithAnswerSerializer(serializers.ModelSerializer):
+    """Serializer for question with user's answer, timing, and score"""
+    species = serializers.SerializerMethodField()
+    user_answer = serializers.SerializerMethodField()
+    time_taken_seconds = serializers.SerializerMethodField()
+    points = serializers.SerializerMethodField()
+    correct = serializers.SerializerMethodField()
+    media_item = serializers.SerializerMethodField()
+    
+    def get_species(self, obj):
+        """Get species with game language context"""
+        serializer = SpeciesDetailSerializer(
+            obj.species,
+            context={'game': obj.game, **self.context}
+        )
+        return serializer.data
+    
+    def _get_user_answer_obj(self, obj):
+        """Helper method to get the user's answer object (uses prefetched data)"""
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return None
+        
+        # Try to use prefetched answers first
+        if hasattr(obj, 'answers'):
+            # Answers are prefetched, find the one for this user
+            for answer in obj.answers.all():
+                if answer.player_score and answer.player_score.player.user == request.user:
+                    return answer
+        
+        # Fallback: query if not prefetched
+        game = obj.game
+        user_players = Player.objects.filter(user=request.user)
+        player_score = PlayerScore.objects.filter(
+            player__in=user_players,
+            game=game
+        ).first()
+        
+        if not player_score:
+            return None
+        
+        # Get the answer for this question
+        answer = Answer.objects.filter(
+            player_score=player_score,
+            question=obj
+        ).select_related('answer').first()
+        
+        return answer
+    
+    def get_user_answer(self, obj):
+        """Get the user's answer for this question"""
+        answer = self._get_user_answer_obj(obj)
+        
+        if answer:
+            # Return full species data including images, videos, sounds, and code
+            species = answer.answer
+            return {
+                'id': species.id,
+                'name': species.name,
+                'name_latin': species.name_latin,
+                'name_nl': species.name_nl if hasattr(species, 'name_nl') else '',
+                'code': species.code,
+                'images': ImageSerializer(species.images.all(), many=True).data,
+                'videos': VideoSerializer(species.videos.all(), many=True).data,
+                'sounds': SoundSerializer(species.sounds.all(), many=True).data,
+            }
+        return None
+    
+    def get_time_taken_seconds(self, obj):
+        """Calculate time taken to answer in seconds"""
+        answer = self._get_user_answer_obj(obj)
+        
+        if answer:
+            time_taken = (answer.created - obj.created).total_seconds()
+            return round(time_taken, 2)
+        return None
+    
+    def get_points(self, obj):
+        """Get points earned for this question"""
+        answer = self._get_user_answer_obj(obj)
+        
+        if answer:
+            return answer.score
+        return None
+    
+    def get_correct(self, obj):
+        """Check if the answer was correct"""
+        answer = self._get_user_answer_obj(obj)
+        
+        if answer:
+            return answer.correct
+        return None
+    
+    def get_media_item(self, obj):
+        """Get the specific media item (image, video, or sound) that was used for this question"""
+        game = obj.game
+        media_type = game.media
+        media_index = obj.number
+        
+        if media_type == 'images':
+            images = obj.species.images.all()
+            if media_index < images.count():
+                image = images[media_index]
+                return {
+                    'type': 'image',
+                    'url': image.url,
+                    'link': image.link,
+                    'contributor': image.contributor,
+                }
+        elif media_type == 'video':
+            videos = obj.species.videos.all()
+            if media_index < videos.count():
+                video = videos[media_index]
+                return {
+                    'type': 'video',
+                    'url': video.url,
+                    'link': video.link,
+                    'contributor': video.contributor,
+                }
+        elif media_type == 'audio':
+            sounds = obj.species.sounds.all()
+            if media_index < sounds.count():
+                sound = sounds[media_index]
+                return {
+                    'type': 'audio',
+                    'url': sound.url,
+                    'link': sound.link,
+                    'contributor': sound.contributor,
+                }
+        
+        return None
+    
+    class Meta:
+        model = Question
+        fields = (
+            'id', 'sequence', 'number', 'species',
+            'user_answer', 'time_taken_seconds', 'points', 'correct',
+            'created', 'media_item'
+        )
+
+
+class GameDetailWithAnswersSerializer(serializers.ModelSerializer):
+    """Serializer for game with all questions and user's answers"""
+    country = CountrySerializer()
+    questions = serializers.SerializerMethodField()
+    total_score = serializers.SerializerMethodField()
+    
+    def get_questions(self, obj):
+        """Get questions ordered by sequence"""
+        questions = obj.questions.all().order_by('sequence')
+        # Pass game context to serializer for language-based translations
+        context = {**self.context, 'game': obj}
+        return QuestionWithAnswerSerializer(questions, many=True, context=context).data
+    
+    def get_total_score(self, obj):
+        """Get total score for the user"""
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return 0
+        
+        user_players = Player.objects.filter(user=request.user)
+        player_score = PlayerScore.objects.filter(
+            player__in=user_players,
+            game=obj
+        ).first()
+        
+        if player_score:
+            return player_score.score
+        return 0
+    
+    class Meta:
+        model = Game
+        fields = (
+            'token', 'country', 'level', 'language',
+            'created', 'multiplayer',
+            'length', 'progress',
+            'media', 'repeat',
+            'ended',
+            'tax_order',
+            'tax_family',
+            'include_rare',
+            'include_escapes',
+            'questions',
+            'total_score'
         )
 
 

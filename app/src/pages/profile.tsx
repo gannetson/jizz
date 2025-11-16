@@ -36,6 +36,8 @@ export const ProfilePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [receiveUpdates, setReceiveUpdates] = useState(false);
@@ -55,6 +57,8 @@ export const ProfilePage = () => {
         const profileData = await profileService.getProfile();
         setProfile(profileData);
         setUsername(profileData.username);
+        setFirstName(profileData.first_name || "");
+        setLastName(profileData.last_name || "");
         setAvatarPreview(profileData.avatar_url);
         setReceiveUpdates(profileData.receive_updates || false);
         setLanguage(profileData.language || "en");
@@ -99,6 +103,14 @@ export const ProfilePage = () => {
         updateData.username = username;
       }
       
+      if (firstName !== (profile?.first_name || "")) {
+        updateData.first_name = firstName;
+      }
+      
+      if (lastName !== (profile?.last_name || "")) {
+        updateData.last_name = lastName;
+      }
+      
       if (avatarFile) {
         updateData.avatar = avatarFile;
       } else if (!avatarPreview && profile?.avatar_url) {
@@ -126,6 +138,9 @@ export const ProfilePage = () => {
 
       const updatedProfile = await profileService.updateProfile(updateData);
       setProfile(updatedProfile);
+      setUsername(updatedProfile.username);
+      setFirstName(updatedProfile.first_name || "");
+      setLastName(updatedProfile.last_name || "");
       setAvatarPreview(updatedProfile.avatar_url);
       setAvatarFile(null);
       setReceiveUpdates(updatedProfile.receive_updates || false);
@@ -225,17 +240,43 @@ export const ProfilePage = () => {
               </Box>
             </VStack>
 
-            {/* Username Field */}
+            {/* Player Name Field */}
             <Field.Root>
               <Field.Label>
-                <FormattedMessage id="username" defaultMessage="Username" />
+                <FormattedMessage id="player_name" defaultMessage="Player name" />
               </Field.Label>
               <Input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Enter your player name"
                 required
+              />
+            </Field.Root>
+
+            {/* First Name Field */}
+            <Field.Root>
+              <Field.Label>
+                <FormattedMessage id="first_name" defaultMessage="First Name" />
+              </Field.Label>
+              <Input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Enter your first name"
+              />
+            </Field.Root>
+
+            {/* Last Name Field */}
+            <Field.Root>
+              <Field.Label>
+                <FormattedMessage id="last_name" defaultMessage="Last Name" />
+              </Field.Label>
+              <Input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Enter your last name"
               />
             </Field.Root>
 

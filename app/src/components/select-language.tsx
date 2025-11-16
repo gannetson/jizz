@@ -13,23 +13,25 @@ const SelectLanguage = () => {
     setLanguage && setLanguage(lang)
   }
 
-  const selectedLanguage = languages.find((l) => l.code === language);
+  // Ensure languages is always an array
+  const languagesArray = Array.isArray(languages) ? languages : [];
+  const selectedLanguage = languagesArray.find((l) => l.code === language);
 
   const collection = useMemo(() => {
-    const items = languages.map((l, index) => ({
+    const items = languagesArray.map((l, index) => ({
       label: l.name,
       value: l.name,
       original: l,
       index,
     }));
     return createListCollection({ items });
-  }, [languages]);
+  }, [languagesArray]);
 
   const selectedValue = selectedLanguage ? selectedLanguage.name : undefined;
 
   const handleValueChange = (details: { value: string[] }) => {
     const selectedValue = details.value[0];
-    const selectedLang = languages.find((l) => l.name === selectedValue);
+    const selectedLang = languagesArray.find((l) => l.name === selectedValue);
     if (selectedLang) {
       onChange(selectedLang.code);
     }
@@ -44,7 +46,7 @@ const SelectLanguage = () => {
       <Box mb={4}>
         <FormattedMessage
           id={'set language description'}
-          defaultMessage={'This changes your language. Other players that join your game can pick another language.'}/>
+          defaultMessage={'This changes the species names in the game. Other players that join your game can pick another language.'}/>
       </Box>
       <RadioGroup.Root
         colorPalette="primary"
@@ -53,7 +55,7 @@ const SelectLanguage = () => {
       >
         <Flex direction={'column'} gap={4}>
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'en'}>
+            <RadioGroup.Item value={'en_UK'}>
               <RadioGroup.ItemHiddenInput />
               <RadioGroup.ItemControl cursor="pointer">
                 <RadioGroup.ItemIndicator />

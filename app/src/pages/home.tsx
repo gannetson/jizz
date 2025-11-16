@@ -39,9 +39,6 @@ const HomePage = () => {
             <Button onClick={() => navigate('/start')} colorPalette="primary">
               <FormattedMessage id={'start game'} defaultMessage={'Start a new game'}/>
             </Button>
-            <Button onClick={() => navigate('/texel/start')} colorPalette="primary">
-              <FormattedMessage id={'start texel game'} defaultMessage={'Texel Big Day Game'}/>
-            </Button>
 
             {countryChallenge && countryChallenge.levels && countryChallenge.levels.length > 0 && (
               <Button colorPalette="primary" onClick={() => navigate('/challenge/play')} position="relative">

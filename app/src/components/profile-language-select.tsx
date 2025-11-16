@@ -8,22 +8,25 @@ interface LanguageSelectProps {
 }
 
 export const ProfileLanguageSelect = ({ languages, value, onChange }: LanguageSelectProps) => {
+  // Ensure languages is always an array
+  const languagesArray = Array.isArray(languages) ? languages : [];
+  
   const collection = useMemo(() => {
-    const items = languages.map((l, index) => ({
+    const items = languagesArray.map((l, index) => ({
       label: l.name,
       value: l.name,
       original: l,
       index,
     }));
     return createListCollection({ items });
-  }, [languages]);
+  }, [languagesArray]);
 
-  const selectedLanguage = languages.find((l) => l.code === value);
+  const selectedLanguage = languagesArray.find((l) => l.code === value);
   const selectedValue = selectedLanguage ? selectedLanguage.name : undefined;
 
   const handleValueChange = (details: { value: string[] }) => {
     const selectedName = details.value[0];
-    const selectedLang = languages.find((l) => l.name === selectedName);
+    const selectedLang = languagesArray.find((l) => l.name === selectedName);
     if (selectedLang) {
       onChange(selectedLang.code);
     }

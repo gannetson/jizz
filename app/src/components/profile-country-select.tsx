@@ -8,22 +8,25 @@ interface CountrySelectProps {
 }
 
 export const ProfileCountrySelect = ({ countries, value, onChange }: CountrySelectProps) => {
+  // Ensure countries is always an array
+  const countriesArray = Array.isArray(countries) ? countries : [];
+  
   const collection = useMemo(() => {
-    const items = countries.map((c, index) => ({
+    const items = countriesArray.map((c, index) => ({
       label: c.name,
       value: c.name,
       original: c,
       index,
     }));
     return createListCollection({ items });
-  }, [countries]);
+  }, [countriesArray]);
 
-  const selectedCountry = countries.find((c) => c.code === value);
+  const selectedCountry = countriesArray.find((c) => c.code === value);
   const selectedValue = selectedCountry ? selectedCountry.name : undefined;
 
   const handleValueChange = (details: { value: string[] }) => {
     const selectedName = details.value[0];
-    const selectedCountry = countries.find((c) => c.name === selectedName);
+    const selectedCountry = countriesArray.find((c) => c.name === selectedName);
     if (selectedCountry) {
       onChange(selectedCountry.code);
     } else {

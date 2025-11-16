@@ -14,6 +14,9 @@ import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
 import {requestNotificationPermission, sendNotification} from "../core/notifications"
+import {profileService} from "../api/services/profile.service"
+import {authService} from "../api/services/auth.service"
+import {UseCountries} from "../user/use-countries"
 
 
 export const CreateCountryGame = () => {
@@ -22,13 +25,53 @@ export const CreateCountryGame = () => {
     player,
     createPlayer,
     country,
+    setCountry,
     createGame,
     game,
-    playerName
+    playerName,
+    setPlayerName,
+    language,
+    setLanguage
   } = useContext(AppContext);
   const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const {countries} = UseCountries()
+
+  // Load user profile to prefill player name, country, and language
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (authService.getAccessToken()) {
+        try {
+          const profile = await profileService.getProfile();
+          
+          // Prefill player name with username if not already set
+          if (!playerName && profile.username) {
+            setPlayerName && setPlayerName(profile.username);
+          }
+          
+          // Set language from profile if not already set
+          if (profile.language && (!language || language === 'en')) {
+            setLanguage && setLanguage(profile.language);
+          }
+          
+          // Set country from profile if not already set
+          if (profile.country_code && (!country || country.code !== profile.country_code)) {
+            const profileCountry = countries.find((c) => c.code === profile.country_code);
+            if (profileCountry) {
+              setCountry && setCountry(profileCountry);
+            }
+          }
+        } catch (error) {
+          // User might not be authenticated or profile might not exist, ignore
+        }
+      }
+    };
+    
+    if (countries && countries.length > 0) {
+      loadUserProfile();
+    }
+  }, [countries.length, playerName, language, country, setPlayerName, setLanguage, setCountry]);
 
 
   const create = async () => {

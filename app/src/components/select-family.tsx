@@ -10,7 +10,9 @@ const SelectTaxFamily = () => {
   const {taxFamily, setTaxFamily, game} = useContext(AppContext);
 
   const collection = useMemo(() => {
-    const items = taxFamilies.map((t, index) => ({
+    // Ensure taxFamilies is always an array
+    const families = Array.isArray(taxFamilies) ? taxFamilies : [];
+    const items = families.map((t, index) => ({
       label: `${t.tax_family} - ${t.tax_family_en} (${t.count})`,
       value: t.tax_family,
       original: t,
@@ -23,8 +25,9 @@ const SelectTaxFamily = () => {
 
   const handleValueChange = (details: { value: string[] }) => {
     const selectedValue = details.value[0];
+    const families = Array.isArray(taxFamilies) ? taxFamilies : [];
     if (selectedValue) {
-      const selectedFamily = taxFamilies.find((t) => t.tax_family === selectedValue);
+      const selectedFamily = families.find((t) => t.tax_family === selectedValue);
       if (selectedFamily && setTaxFamily) {
         setTaxFamily(selectedFamily);
       }
@@ -38,13 +41,14 @@ const SelectTaxFamily = () => {
   useEffect(() => {
     if (!taxFamily && game?.tax_family) {
       if (game?.tax_family) {
-      const taxFamily = taxFamilies.filter((t => t.tax_family === game.tax_family))[0]
-      setTaxFamily && setTaxFamily(taxFamily)
-
+        const families = Array.isArray(taxFamilies) ? taxFamilies : [];
+        const foundTaxFamily = families.filter((t => t.tax_family === game.tax_family))[0];
+        if (foundTaxFamily && setTaxFamily) {
+          setTaxFamily(foundTaxFamily);
+        }
       }
     }
-
-  }, [game?.tax_family, setTaxFamily]);
+  }, [game?.tax_family, taxFamily, taxFamilies, setTaxFamily]);
 
 
   return (

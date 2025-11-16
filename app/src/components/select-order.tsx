@@ -14,7 +14,9 @@ const SelectTaxOrder = () => {
   const {taxOrder, setTaxOrder, game} = useContext(AppContext);
 
   const collection = useMemo(() => {
-    const items = taxOrders.map((t, index) => ({
+    // Ensure taxOrders is always an array
+    const orders = Array.isArray(taxOrders) ? taxOrders : [];
+    const items = orders.map((t, index) => ({
       label: `${t.tax_order} (${t.count})`,
       value: t.tax_order,
       original: t,
@@ -27,8 +29,9 @@ const SelectTaxOrder = () => {
 
   const handleValueChange = (details: { value: string[] }) => {
     const selectedValue = details.value[0];
+    const orders = Array.isArray(taxOrders) ? taxOrders : [];
     if (selectedValue) {
-      const selectedOrder = taxOrders.find((t) => t.tax_order === selectedValue);
+      const selectedOrder = orders.find((t) => t.tax_order === selectedValue);
       if (selectedOrder && setTaxOrder) {
         setTaxOrder(selectedOrder);
       }
@@ -42,13 +45,14 @@ const SelectTaxOrder = () => {
   useEffect(() => {
     if (!taxOrder && game?.tax_order) {
       if (game?.tax_order) {
-      const taxOrder = taxOrders.filter((t => t.tax_order === game.tax_order))[0]
-      setTaxOrder && setTaxOrder(taxOrder)
-
+        const orders = Array.isArray(taxOrders) ? taxOrders : [];
+        const foundTaxOrder = orders.filter((t => t.tax_order === game.tax_order))[0];
+        if (foundTaxOrder && setTaxOrder) {
+          setTaxOrder(foundTaxOrder);
+        }
       }
     }
-
-  }, [game?.tax_order, setTaxOrder]);
+  }, [game?.tax_order, taxOrder, taxOrders, setTaxOrder]);
 
 
   return (

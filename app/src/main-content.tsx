@@ -27,6 +27,8 @@ import { ResetPasswordPage } from "./pages/reset-password";
 import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
+import { MyGamesPage } from "./pages/my-games"
+import { GameDetailPage } from "./pages/game-detail"
 
 
 export const MainContent = () => {
@@ -55,6 +57,8 @@ export const MainContent = () => {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/my-games" element={<MyGamesPage />} />
+            <Route path="/my-games/:token" element={<GameDetailPage />} />
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>
             <Route path="/join/:gameCode" element={<JoinPage/>}/>

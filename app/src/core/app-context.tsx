@@ -34,6 +34,9 @@ export type Game = {
   include_rare: boolean
   include_escapes: boolean
   scores: Player[]
+  user_score?: number
+  correct_count?: number
+  total_questions?: number
 }
 
 export type SpeciesImage = {

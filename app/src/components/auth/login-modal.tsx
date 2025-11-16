@@ -330,7 +330,6 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                   </Text>
                 </HStack>
               </Button>
-=
             </VStack>
             </>
             )}

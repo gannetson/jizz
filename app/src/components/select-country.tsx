@@ -8,7 +8,9 @@ const SelectCountry = () => {
   const { countries: countryList } = UseCountries();
   const { country, setCountry, game } = useContext(AppContext);
 
-  const countries = countryList.filter((c) => (!c.code.includes('NL-NH')))
+  // Ensure countryList is always an array
+  const countriesList = Array.isArray(countryList) ? countryList : [];
+  const countries = countriesList.filter((c) => (!c.code.includes('NL-NH')))
 
   const collection = useMemo(() => {
     const items = countries.map((c, index) => ({

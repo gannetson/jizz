@@ -106,7 +106,7 @@ export const QuestionComponent = () => {
       ) : (
         isHost ? (
           answer ? (
-          <Button onClick={getNextQuestion} width='full' colorPalette={'primary'}>
+          <Button onClick={getNextQuestion} width='full' colorPalette={'primary'} autoFocus>
             <FormattedMessage id={'next question'} defaultMessage={'Hext question'}/>
           </Button>
           ) : (
@@ -238,7 +238,6 @@ export const QuestionComponent = () => {
               gap={4}
             >
               {answer.species?.name}
-              <BsImages/>
             </Button>
             {!answer?.correct && (
               <Button
@@ -247,7 +246,6 @@ export const QuestionComponent = () => {
                 gap={4}
               >
                 {answer.answer?.name}
-                <BsImages/>
               </Button>
             )}
           </SimpleGrid>

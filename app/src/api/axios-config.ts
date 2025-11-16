@@ -26,6 +26,18 @@ const processQueue = (error: any, token: string | null = null) => {
 // Request interceptor: Add Bearer token to all requests
 axios.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // For player creation endpoint, only add token if we have a valid refresh token
+    // This allows anonymous users to create players, but still links authenticated users
+    if (config.url?.includes('/api/player/') && config.method === 'post') {
+      const refreshToken = authService.getRefreshToken();
+      // Only add Authorization header if we have a refresh token (indicating valid auth)
+      if (!refreshToken) {
+        // No refresh token means user is anonymous, don't add Authorization header
+        return config;
+      }
+      // User is authenticated, proceed to add token below
+    }
+    
     // Always get fresh token from storage (in case it was updated)
     // Only add token if not already set (allows manual override)
     if (config.headers && !config.headers.Authorization) {

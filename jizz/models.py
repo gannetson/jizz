@@ -243,21 +243,21 @@ class Game(models.Model):
         if self.media == 'audio':
             if self.tax_family:
                 all_species = Species.objects.filter(
-                    sounds__isnull=False,
+                    audio__isnull=False,
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country,
                     tax_family=self.tax_family
                 ).distinct().order_by('id')
             elif self.tax_order:
                 all_species = Species.objects.filter(
-                    sounds__isnull=False,
+                    audio__isnull=False,
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country,
                     tax_order=self.tax_order
                 ).distinct().order_by('id')
             else:
                 all_species = Species.objects.filter(
-                    sounds__isnull=False,
+                    audio__isnull=False,
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country
                 ).distinct().order_by('id')
@@ -269,11 +269,42 @@ class Game(models.Model):
             species = all_species.order_by('?').first()
 
         sequence = self.questions.count() + 1
-        number = randint(1, species.images.count()) - 1
-        if self.media == 'video':
-            number = randint(1, species.videos.count()) - 1
-        if self.media == 'audio':
-            number = randint(1, species.sounds.count()) - 1
+        
+        # Get available media count using old models (SpeciesImage, SpeciesVideo, SpeciesSound)
+        # Retry with another species if selected one has no media
+        max_retries = 10
+        retry_count = 0
+        media_count = 0
+        while retry_count < max_retries:
+            if self.media == 'video':
+                media_count = species.videos.count()
+            elif self.media == 'audio':
+                media_count = species.sounds.count()
+            else:
+                media_count = species.images.count()
+            
+            # If we have media, break out of retry loop
+            if media_count > 0:
+                break
+            
+            # Try another species
+            retry_count += 1
+            remaining = all_species.exclude(id=species.id).exclude(id__in=self.questions.values_list('species_id', flat=True))
+            if remaining.exists():
+                species = remaining.order_by('?').first()
+            else:
+                # Fall back to any species (even if already used)
+                remaining = all_species.exclude(id=species.id)
+                if remaining.exists():
+                    species = remaining.order_by('?').first()
+                else:
+                    # No more species available
+                    raise ValueError(f"No species with {self.media} media available for game {self.id}")
+        
+        if media_count == 0:
+            raise ValueError(f"Species {species.id} ({species.name}) has no {self.media} media after {max_retries} retries")
+        
+        number = randint(1, media_count) - 1
 
         if self.level == 'advanced':
             options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
@@ -491,11 +522,12 @@ class SpeciesImage(models.Model):
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
-        related_name='images'
+        related_name='old_images'
     )
 
     class Meta:
         unique_together = ('species', 'url')
+
 
 
 class SpeciesSound(models.Model):
@@ -537,6 +569,7 @@ class FlagQuestion(models.Model):
         on_delete=models.CASCADE,
         related_name='flags'
     )
+    media_url = models.URLField(null=True, blank=True)
     description = models.CharField(max_length=200, null=True, blank=True)
     created = models.DateTimeField(auto_now=True)
 

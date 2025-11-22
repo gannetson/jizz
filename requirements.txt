@@ -2,7 +2,7 @@ appnope==0.1.3
 asgiref==3.7.2
 asttokens==2.2.1
 backcall==0.2.0
-certifi==2023.5.7
+certifi==2025.11.12
 channels==4.1.0
 charset-normalizer==3.2.0
 daphne==4.1.2
@@ -41,3 +41,6 @@ django-oauth-toolkit==3.0.1
 django-rest-framework-social-oauth2==1.2.0
 Pillow==10.4.0
 html2text==2024.2.26
+beautifulsoup4==4.12.2
+openai==1.3.0
+markdown==3.5.1

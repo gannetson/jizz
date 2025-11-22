@@ -136,6 +136,7 @@ class SpeciesAdmin(admin.ModelAdmin):
     readonly_fields = ['sync_media', 'pic_count']
     list_display = ['name', 'name_nl', 'pic_count']
     list_filter = ['tax_order']
+    actions = ['scrape_traits', 'generate_comparison']
 
     def pic_count(self, obj):
         return obj.images.count()
@@ -155,6 +156,11 @@ class SpeciesAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.get_media),
                 name="get-media"
             ),
+            re_path(
+                r"^species/compare/$",
+                self.admin_site.admin_view(self.compare_species),
+                name="compare-species"
+            ),
         ]
         return custom_urls + urls
 
@@ -170,6 +176,226 @@ class SpeciesAdmin(admin.ModelAdmin):
         species_url = reverse('admin:jizz_species_change', args=(species.pk,))
         response = HttpResponseRedirect(species_url)
         return response
+
+    def scrape_traits(self, request, queryset):
+        """Admin action to scrape traits for selected species."""
+        from compare.scraper import BirdsOfTheWorldScraper
+        from compare.models import SpeciesTrait
+        from django.db import transaction
+        
+        scraper = BirdsOfTheWorldScraper()
+        total_created = 0
+        total_updated = 0
+        errors = []
+        
+        for species in queryset:
+            try:
+                # Pass species name and scientific name to help find correct Birds of the World code
+                scraped_data = scraper.scrape_species(
+                    species.code,
+                    species_name=species.name,
+                    scientific_name=species.name_latin
+                )
+                
+                if not scraped_data or 'traits' not in scraped_data:
+                    errors.append(f"{species.name}: No data found")
+                    continue
+                
+                with transaction.atomic():
+                    for category, trait_data in scraped_data['traits'].items():
+                        trait, created = SpeciesTrait.objects.get_or_create(
+                            species=species,
+                            category=category,
+                            title=trait_data['title'],
+                            defaults={
+                                'content': trait_data['content'],
+                                'source_url': scraped_data.get('source_url'),
+                                'section': trait_data.get('section')
+                            }
+                        )
+                        
+                        if created:
+                            total_created += 1
+                        else:
+                            # Update existing trait
+                            trait.content = trait_data['content']
+                            trait.source_url = scraped_data.get('source_url')
+                            trait.section = trait_data.get('section')
+                            trait.save()
+                            total_updated += 1
+            except Exception as e:
+                errors.append(f"{species.name}: {str(e)}")
+        
+        # Show results
+        if total_created > 0 or total_updated > 0:
+            self.message_user(
+                request,
+                f'Successfully scraped {queryset.count()} species: '
+                f'{total_created} traits created, {total_updated} traits updated.',
+                messages.SUCCESS
+            )
+        if errors:
+            self.message_user(
+                request,
+                f'Errors: {"; ".join(errors)}',
+                messages.ERROR
+            )
+    scrape_traits.short_description = 'Scrape traits from Birds of the World'
+
+    def generate_comparison(self, request, queryset):
+        """Admin action to generate comparison between two species."""
+        if queryset.count() != 2:
+            self.message_user(
+                request,
+                'Please select exactly 2 species to compare.',
+                messages.ERROR
+            )
+            return
+        
+        species_1, species_2 = queryset[0], queryset[1]
+        
+        # Check if comparison already exists
+        from compare.models import SpeciesComparison
+        existing = SpeciesComparison.objects.filter(
+            comparison_type='species',
+            species_1=species_1,
+            species_2=species_2
+        ).first()
+        
+        if existing:
+            # Redirect to existing comparison
+            comparison_url = reverse('admin:compare_speciescomparison_change', args=(existing.pk,))
+            messages.add_message(request, messages.INFO, 'Comparison already exists.')
+            return HttpResponseRedirect(comparison_url)
+        
+        # Generate new comparison
+        from compare.ai_service import AIComparisonService
+        from compare.models import SpeciesTrait
+        
+        # Get traits for both species
+        traits_1 = {}
+        traits_2 = {}
+        
+        for trait in SpeciesTrait.objects.filter(species=species_1):
+            if trait.category not in traits_1:
+                traits_1[trait.category] = []
+            traits_1[trait.category].append({
+                'title': trait.title,
+                'content': trait.content
+            })
+        
+        for trait in SpeciesTrait.objects.filter(species=species_2):
+            if trait.category not in traits_2:
+                traits_2[trait.category] = []
+            traits_2[trait.category].append({
+                'title': trait.title,
+                'content': trait.content
+            })
+        
+        # Format traits for AI service
+        def format_traits(traits_dict):
+            formatted = {}
+            for category, trait_list in traits_dict.items():
+                formatted[category] = {
+                    'title': category.replace('_', ' ').title(),
+                    'content': '\n\n'.join([t['content'] for t in trait_list])
+                }
+            return formatted
+        
+        traits_1_formatted = format_traits(traits_1)
+        traits_2_formatted = format_traits(traits_2)
+        
+        if not traits_1_formatted:
+            self.message_user(
+                request,
+                f'No traits found for {species_1.name}. Please scrape traits first.',
+                messages.ERROR
+            )
+            return
+        
+        if not traits_2_formatted:
+            self.message_user(
+                request,
+                f'No traits found for {species_2.name}. Please scrape traits first.',
+                messages.ERROR
+            )
+            return
+        
+        # Generate comparison
+        try:
+            ai_service = AIComparisonService()
+            # Add scientific names to traits for better name matching
+            traits_1_formatted['name_latin'] = species_1.name_latin
+            traits_2_formatted['name_latin'] = species_2.name_latin
+            comparison_data = ai_service.generate_species_comparison(
+                traits_1_formatted, traits_2_formatted, species_1.name, species_2.name
+            )
+            
+            # Create comparison object
+            comparison = SpeciesComparison.objects.create(
+                comparison_type='species',
+                species_1=species_1,
+                species_2=species_2,
+                **comparison_data
+            )
+            
+            # Redirect to the new comparison
+            comparison_url = reverse('admin:compare_speciescomparison_change', args=(comparison.pk,))
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                f'Successfully generated comparison between {species_1.name} and {species_2.name}.'
+            )
+            return HttpResponseRedirect(comparison_url)
+            
+        except Exception as e:
+            self.message_user(
+                request,
+                f'Error generating comparison: {str(e)}',
+                messages.ERROR
+            )
+    generate_comparison.short_description = 'Generate comparison between two selected species'
+
+    def compare_species(self, request):
+        """Custom view for comparing species (alternative to action)."""
+        from django.shortcuts import render
+        from compare.models import SpeciesComparison
+        from compare.ai_service import AIComparisonService
+        from compare.models import SpeciesTrait
+        
+        if request.method == 'POST':
+            species_1_id = request.POST.get('species_1')
+            species_2_id = request.POST.get('species_2')
+            
+            if not species_1_id or not species_2_id:
+                messages.add_message(request, messages.ERROR, 'Please select both species.')
+                return HttpResponseRedirect(reverse('admin:jizz_species_changelist'))
+            
+            species_1 = Species.objects.get(id=species_1_id)
+            species_2 = Species.objects.get(id=species_2_id)
+            
+            # Check if comparison exists
+            existing = SpeciesComparison.objects.filter(
+                comparison_type='species',
+                species_1=species_1,
+                species_2=species_2
+            ).first()
+            
+            if existing:
+                comparison_url = reverse('admin:compare_speciescomparison_change', args=(existing.pk,))
+                return HttpResponseRedirect(comparison_url)
+            
+            # Generate comparison (same logic as action)
+            # ... (implementation similar to generate_comparison action)
+        
+        # Show form
+        species_list = Species.objects.all().order_by('name')
+        context = {
+            'species_list': species_list,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        }
+        return render(request, 'admin/jizz/species/compare_form.html', context)
 
 
 @register(Language)

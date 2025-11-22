@@ -27,11 +27,19 @@ import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
 import {useNavigate} from "react-router-dom"
 import SpeciesCombobox from "../../../components/species-combobox"
+import { ComparisonButton } from "../../../components/comparison-button"
 
 export const QuestionComponent = () => {
   const {species, player, game} = useContext(AppContext)
   const {players, nextQuestion, question, submitAnswer, answer} = useContext(WebsocketContext)
   const {onOpen, onClose, open: isOpen} = useDisclosure()
+  const [flagMediaInfo, setFlagMediaInfo] = useState<{
+    type: 'image' | 'video' | 'audio'
+    url: string
+    link?: string | null
+    contributor?: string | null
+    index: number
+  } | null>(null)
   const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
   const {open: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
@@ -73,6 +81,52 @@ export const QuestionComponent = () => {
   if (!question || !game) return <></>
 
   const flagMedia = () => {
+    if (!question || !game) return
+    const mediaIndex = question.number ?? 0
+    let mediaData: {
+      type: 'image' | 'video' | 'audio'
+      url: string
+      link?: string | null
+      contributor?: string | null
+      index: number
+    } | null = null
+
+    if (game.media === 'images' && question.images?.length) {
+      const item = question.images[mediaIndex]
+      if (item) {
+        mediaData = {
+          type: 'image',
+          url: item.url,
+          link: item.link,
+          contributor: item.contributor,
+          index: mediaIndex,
+        }
+      }
+    } else if (game.media === 'video' && question.videos?.length) {
+      const item = question.videos[mediaIndex]
+      if (item) {
+        mediaData = {
+          type: 'video',
+          url: item.url,
+          link: item.link,
+          contributor: item.contributor,
+          index: mediaIndex,
+        }
+      }
+    } else if (game.media === 'audio' && question.sounds?.length) {
+      const item = question.sounds[mediaIndex]
+      if (item) {
+        mediaData = {
+          type: 'audio',
+          url: item.url,
+          link: item.link,
+          contributor: item.contributor,
+          index: mediaIndex,
+        }
+      }
+    }
+
+    setFlagMediaInfo(mediaData)
     onOpen()
   }
 
@@ -129,7 +183,15 @@ export const QuestionComponent = () => {
   return (
     <>
       <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen}/>
-      <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
+      <FlagMedia
+        question={question}
+        isOpen={isOpen}
+        onClose={() => {
+          setFlagMediaInfo(null)
+          onClose()
+        }}
+        media={flagMediaInfo}
+      />
       {nextButton}
       <>
         {showFeedback && (
@@ -260,6 +322,14 @@ export const QuestionComponent = () => {
         )
       )}
       {nextButton}
+      {answer && answer.correct === false && answer.species && answer.answer && (
+        <ComparisonButton
+          species1Id={answer.species.id}
+          species2Id={answer.answer.id}
+          buttonLabel={<FormattedMessage id="view_comparison" defaultMessage="Comparison" />}
+          buttonProps={{ colorPalette: "info" }}
+        />
+      )}
       {answer && (
           <Box position={'relative'} mt={8}>
             <Flex direction={'column'} gap={8}>

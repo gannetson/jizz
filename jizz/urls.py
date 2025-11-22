@@ -72,6 +72,9 @@ urlpatterns = [
         AddChallengeLevelView.as_view(),
         name='add_challenge_level'
     ),
+    
+    # Compare app URLs
+    path('api/compare/', include('compare.urls')),
 ]
 
 urlpatterns += router.urls

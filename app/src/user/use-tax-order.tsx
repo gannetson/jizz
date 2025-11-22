@@ -12,39 +12,26 @@ export const UseTaxOrder = () => {
   const {country} = useContext(AppContext);
 
   useEffect(() => {
-      const fetchAllTaxOrders = async () => {
+      const fetchTaxOrders = async () => {
         setTaxOrders([]) // Reset when country changes
         try {
-          let allTaxOrders: TaxOrder[] = [];
-          let url: string | null = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
+          const url: string = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
+          const response: Response = await fetch(url);
+          const data: any = await response.json();
           
-          // Fetch all pages
-          while (url) {
-            const response: Response = await fetch(url);
-            const data: any = await response.json();
-            
-            if (Array.isArray(data)) {
-              // Non-paginated response
-              allTaxOrders = data;
-              url = null;
-            } else if (data && Array.isArray(data.results)) {
-              // Paginated response
-              allTaxOrders = [...allTaxOrders, ...data.results];
-              url = data.next || null; // Get next page URL
-            } else {
-              // Unexpected format
-              break;
-            }
+          if (Array.isArray(data)) {
+            setTaxOrders(data);
+          } else {
+            console.error('Unexpected response format:', data);
+            setTaxOrders([]);
           }
-        
-        setTaxOrders(allTaxOrders);
-      } catch (error) {
-        console.error('Error fetching tax orders:', error);
-        setTaxOrders([]);
-      }
-    };
+        } catch (error) {
+          console.error('Error fetching tax orders:', error);
+          setTaxOrders([]);
+        }
+      };
     
-    fetchAllTaxOrders();
+      fetchTaxOrders();
   }, [country?.code]) // Re-fetch when country changes
 
 

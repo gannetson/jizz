@@ -1,17 +1,16 @@
 import {Box, Button, CardRoot, CardBody, Flex, Heading, Text, Textarea} from "@chakra-ui/react"
-import {FormattedMessage} from "react-intl"
+import {FormattedMessage, useIntl} from "react-intl"
 import StarRating from "./rating/star-rating"
 import {useState} from "react"
-import { toaster } from "../App"
+import { toaster } from "@/components/ui/toaster"
 
 export const Feedback = () => {
-
+  const intl = useIntl()
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
   const submit = async () => {
-    setSubmitted(true)
     const player_token = localStorage.getItem('player-token');
     const response = await fetch('/api/feedback/', {
       method: 'POST',
@@ -20,9 +19,28 @@ export const Feedback = () => {
       },
       body: JSON.stringify({rating, comment, player_token})
     })
-    setTimeout(() => {
-      setSubmitted(false)
-    }, 3000)
+    
+    if (response.ok) {
+      setSubmitted(true)
+      toaster.create({
+        title: intl.formatMessage({id: 'thanks', defaultMessage: 'Thanks!'}),
+        description: intl.formatMessage({id: 'thanks for your feedback message', defaultMessage: 'Thank you for your feedback!'}),
+        colorPalette: "success",
+        duration: 3000,
+        isClosable: true,
+      })
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 3000)
+    } else {
+      toaster.create({
+        title: intl.formatMessage({id: 'error', defaultMessage: 'Error'}),
+        description: intl.formatMessage({id: 'error submitting feedback', defaultMessage: 'Failed to submit feedback. Please try again.'}),
+        colorPalette: "error",
+        duration: 4000,
+        isClosable: true,
+      })
+    }
   }
 
   return (

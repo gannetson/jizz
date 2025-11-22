@@ -116,6 +116,7 @@ class CountryDetailView(DetailView):
 class CountryViewSet(viewsets.ModelViewSet):
     serializer_class = CountrySerializer
     queryset = Country.objects.exclude(countryspecies__isnull=True).all()
+    pagination_class = None
 
     queryset = (
         Country.objects.annotate(
@@ -144,10 +145,12 @@ class SpeciesDetailView(RetrieveAPIView):
 class LanguageListView(ListAPIView):
     serializer_class = LanguageSerializer
     queryset = Language.objects.all()
+    pagination_class = None
 
 
 class FamilyListView(ListAPIView):
     serializer_class = FamilyListSerializer
+    pagination_class = None
 
     def get_queryset(self):
         country_id = self.request.query_params.get("country", None)
@@ -168,6 +171,7 @@ class FamilyListView(ListAPIView):
 
 class OrderListView(ListAPIView):
     serializer_class = OrderListSerializer
+    pagination_class = None
 
     def get_queryset(self):
         country_id = self.request.query_params.get("country", None)

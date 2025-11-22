@@ -15,8 +15,6 @@ import {SelectSpeciesStatus} from "./select-species-status"
 import {UseCountries} from "../user/use-countries"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
-import {profileService} from "../api/services/profile.service"
-import {authService} from "../api/services/auth.service"
 
 
 type GameProps = {
@@ -55,50 +53,7 @@ export const CreateGame = ({
   const navigate = useNavigate()
   const {countries} = UseCountries()
 
-  // Load user profile to prefill player name, country, and language
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      // Check if we have both access token and refresh token to ensure valid authentication
-      const accessToken = authService.getAccessToken();
-      const refreshToken = authService.getRefreshToken();
-      
-      if (accessToken && refreshToken) {
-        try {
-          const profile = await profileService.getProfile();
-          
-          // Prefill player name with username if not already set
-          if (!playerName && profile.username) {
-            setPlayerName && setPlayerName(profile.username);
-          }
-          
-          // Set language from profile if not already set
-          if (profile.language && (!language || language === 'en')) {
-            setLanguage && setLanguage(profile.language);
-          }
-          
-          // Set country from profile if not already set and not overridden by pickCountry
-          if (profile.country_code && !pickCountry && (!country || country.code !== profile.country_code)) {
-            const profileCountry = countries.find((c) => c.code === profile.country_code);
-            if (profileCountry) {
-              setCountry && setCountry(profileCountry);
-            }
-          }
-        } catch (error: any) {
-          // User might not be authenticated, token expired, or profile might not exist
-          // Silently ignore authentication errors - this is expected for anonymous users
-          if (error?.response?.status === 401 || error?.response?.status === 403) {
-            // Clear invalid tokens to prevent further errors
-            authService.clearTokens();
-          }
-          // Ignore all other errors silently
-        }
-      }
-    };
-    
-    if (countries && countries.length > 0) {
-      loadUserProfile();
-    }
-  }, [countries.length, pickCountry, playerName, language, country, setPlayerName, setLanguage, setCountry]);
+  // Don't auto-load user profile preferences - let users set their own preferences for each game
 
   useEffect(() => {
     if (pickCountry && countries && countries.length > 0) {

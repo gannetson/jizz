@@ -26,13 +26,20 @@ const processQueue = (error: any, token: string | null = null) => {
 // Request interceptor: Add Bearer token to all requests
 axios.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // For player creation endpoint, only add token if we have a valid refresh token
-    // This allows anonymous users to create players, but still links authenticated users
-    if (config.url?.includes('/api/player/') && config.method === 'post') {
+    // For endpoints that allow anonymous access, only add token if we have a valid refresh token
+    // This allows anonymous users to use these endpoints, but still links authenticated users
+    const anonymousEndpoints = ['/api/player/', '/api/compare/'];
+    const isAnonymousEndpoint = anonymousEndpoints.some(endpoint => config.url?.includes(endpoint));
+    
+    if (isAnonymousEndpoint && (config.method === 'post' || config.method === 'get')) {
       const refreshToken = authService.getRefreshToken();
       // Only add Authorization header if we have a refresh token (indicating valid auth)
       if (!refreshToken) {
         // No refresh token means user is anonymous, don't add Authorization header
+        // Also explicitly remove any existing Authorization header to be safe
+        if (config.headers) {
+          delete config.headers.Authorization;
+        }
         return config;
       }
       // User is authenticated, proceed to add token below
@@ -51,6 +58,9 @@ axios.interceptors.request.use(
       const currentToken = authService.getAccessToken();
       if (currentToken && config.headers.Authorization !== `Bearer ${currentToken}`) {
         config.headers.Authorization = `Bearer ${currentToken}`;
+      } else if (!currentToken && isAnonymousEndpoint) {
+        // If we're on an anonymous endpoint and no token exists, remove the header
+        delete config.headers.Authorization;
       }
     }
     return config;

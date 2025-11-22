@@ -46,11 +46,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "craco start",
+    "build": "craco build",
     "deploy": "scp -r build birdr.pro:/var/www/jizz/jizz/app",
     "release": "npm run build && npm run deploy",
-    "test": "react-scripts test",
+    "test": "craco test",
     "eject": "react-scripts eject",
     "extract-messages": "formatjs extract 'src/**/*.ts*' --ignore='**/*.d.ts' --out-file translations/en.json --id-interpolation-pattern '[sha512:contenthash:base64:6]' --format simple"
   },
@@ -71,6 +71,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-typescript": "^7.25.7",
+    "@craco/craco": "^7.1.0",
     "@formatjs/cli": "^6.7.1",
     "extract-react-intl-messages": "^4.1.1",
     "react-router-dom": "^6.14.2"

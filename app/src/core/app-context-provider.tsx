@@ -1,7 +1,6 @@
 import React, {FC, ReactNode, useEffect, useState, useCallback} from 'react';
 import AppContext, {Answer, Country, CountryChallenge, Game, Player, Question, Score, Species} from "./app-context";
-import { toaster } from "../App";
-import { Toast } from '@chakra-ui/react';
+import { toaster } from "@/components/ui/toaster";
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
 import {TaxOrder} from "../user/use-tax-order"
 import {TaxFamily} from "../user/use-tax-family"
@@ -229,12 +228,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setCountryChallenge(data as CountryChallenge)
     } catch (error) {
       toaster.create({
-        render: () => (
-          <Toast.Root status="error">
-            <Toast.Title>Error starting challenge</Toast.Title>
-            <Toast.Description>Unable to start the challenge. Please try again.</Toast.Description>
-          </Toast.Root>
-        )
+        title: "Error starting challenge",
+        description: "Unable to start the challenge. Please try again.",
+        colorPalette: "error"
       });
     } finally {
       setLoading(false);
@@ -264,12 +260,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setCountryChallenge(data as CountryChallenge)
     } catch (error) {
       toaster.create({
-        render: () => (
-          <Toast.Root status="error">
-            <Toast.Title>Error loading challenge</Toast.Title>
-            <Toast.Description>Please start a new country challenge.</Toast.Description>
-          </Toast.Root>
-        )
+        title: "Error loading challenge",
+        description: "Please start a new country challenge.",
+        colorPalette: "error"
       });
     } finally {
       setLoading(false);

@@ -21,6 +21,18 @@ import { format } from "date-fns";
 import ReactPlayer from "react-player";
 import { Species } from "../core/app-context";
 import { SpeciesButton } from "./species-button";
+import { ComparisonButton } from "./comparison-button";
+
+const {
+  Root: DialogRoot,
+  Backdrop: DialogBackdrop,
+  Positioner: DialogPositioner,
+  Content: DialogContent,
+  Header: DialogHeader,
+  Body: DialogBody,
+  Footer: DialogFooter,
+  CloseTrigger: DialogCloseTrigger,
+} = Dialog;
 
 type GameDetailModalProps = {
   isOpen: boolean;
@@ -162,16 +174,16 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
 
   return (
     <>
-      <Dialog.Root open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()} size="xl">
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <FormattedMessage id="game_details" defaultMessage="Game Details" />
-            </Dialog.Header>
-            <Dialog.CloseTrigger />
-            <Dialog.Body>
-              <Box maxH="70vh" overflowY="auto">
+      <DialogRoot open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()} size="xl">
+        <DialogBackdrop />
+        <DialogPositioner>
+          <DialogContent>
+            <DialogHeader>
+                <FormattedMessage id="game_details" defaultMessage="Game Details" />
+            </DialogHeader>
+            <DialogCloseTrigger />
+            <DialogBody>
+                <Box maxH="70vh" overflowY="auto">
               {loading ? (
                 <VStack gap={4} py={8}>
                   <Spinner size="xl" colorPalette="primary" />
@@ -374,11 +386,23 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                                     />
                                     {/* Button to view all media for the incorrect answer species */}
                                     {question.user_answer && question.correct === false && (
-                                      <SpeciesButton
-                                        species={convertAnswerToSpecies(question.user_answer)!}
-                                        colorPalette="error"
-                                        size="sm"
-                                      />
+                                      <>
+                                        <SpeciesButton
+                                          species={convertAnswerToSpecies(question.user_answer)!}
+                                          colorPalette="error"
+                                          size="sm"
+                                        />
+                                        <ComparisonButton
+                                          species1Id={question.species.id}
+                                          species2Id={question.user_answer.id}
+                                          stopPropagation
+                                          buttonProps={{
+                                            colorPalette: "info",
+                                            variant: "outline",
+                                            size: "sm",
+                                          }}
+                                        />
+                                      </>
                                     )}
                                   </HStack>
 
@@ -440,16 +464,16 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                   </VStack>
                 </VStack>
               ) : null}
-              </Box>
-            </Dialog.Body>
-            <Dialog.Footer>
+                </Box>
+            </DialogBody>
+            <DialogFooter>
               <Button onClick={onClose} colorPalette="primary">
                 <FormattedMessage id="close" defaultMessage="Close" />
               </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+            </DialogFooter>
+          </DialogContent>
+        </DialogPositioner>
+      </DialogRoot>
     </>
   );
 };

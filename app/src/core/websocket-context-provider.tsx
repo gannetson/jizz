@@ -1,8 +1,7 @@
 import React, {FC, ReactNode, useContext, useEffect, useRef, useState} from 'react';
 import AppContext, {Answer, Game, MultiPlayer, Player, Question, Species} from "./app-context";
 import WebsocketContext from "./websocket-context"
-import { toaster } from "../App"
-import { Toast } from '@chakra-ui/react'
+import { toaster } from "@/components/ui/toaster"
 
 type Props = {
   children: ReactNode;
@@ -25,23 +24,22 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
 
   const notify = (title: string, description?: string, colorPalette?: string) => {
-    description && (
     toaster.create({
-      render: () => (
-        <Toast.Root status="info">
-          <Toast.Title>{title}</Toast.Title>
-          {description && <Toast.Description>{description}</Toast.Description>}
-        </Toast.Root>
-      )
+      title: title,
+      description: description,
+      colorPalette: colorPalette || "primary"
     })
-  )}
+  }
 
   const connectSocket = (game?: Game, player?: Player) => {
-    if (!player) {
+    // Try to get player from context or localStorage
+    const activePlayer = player || (playerToken ? { token: playerToken } as Player : null)
+    
+    if (!activePlayer || !activePlayer.token) {
       console.log("Couldn't connect to game. No player token")
       return
     }
-    if (!game) {
+    if (!game || !game.token) {
       console.log("Couldn't connect to game. No game token")
       return
     }
@@ -57,7 +55,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       console.log('Joining game')
       ws.send(JSON.stringify({
         action: 'join_game', 
-        player_token: player.token,
+        player_token: activePlayer.token,
         language_code: language
       }))
     };
@@ -96,26 +94,18 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
     ws.onclose = () => {
       console.log('WebSocket connection closed');
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
 
       if (retries.current < maxRetries.current) {
         retries.current++;
         console.log(`Reconnecting... (${retries.current}/${maxRetries.current})`);
-        setTimeout(connectSocket, retryInterval.current);
+        setTimeout(() => connectSocket(game, activePlayer as Player), retryInterval.current);
       } else {
         console.log('Max retries reached. Could not reconnect.');
       }
     };
 
     setSocket(ws);
-    return ws
-
-    return () => {
-      ws.close();
-    };
+    return ws;
   }
 
   const sendAction = (data: {}) => {
@@ -154,10 +144,11 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     })
   }
   useEffect(() => {
+    // Wait for both game and player to be loaded before connecting
     if (game?.token && !socket && player?.token) {
       joinGame(game, player)
     }
-  }, [game?.token]);
+  }, [game?.token, player?.token]);
 
   return (
     <WebsocketContext.Provider value={{

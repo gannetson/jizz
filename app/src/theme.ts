@@ -1,6 +1,7 @@
 import { createSystem, defaultConfig, defineGlobalStyles } from '@chakra-ui/react'
 import { buttonTheme } from './base/button.styling'
 import { linkTheme, inputTheme, selectTheme, textareaTheme, radioTheme, checkboxTheme } from './base/form.styling'
+import { dialogTheme } from './base/dialog.styling'
 
 const globalStyles = defineGlobalStyles({
   body: {
@@ -170,7 +171,8 @@ export const system = createSystem({
       ...defaultConfig.theme?.slotRecipes,
       select: selectTheme,
       radioGroup: radioTheme,
-      checkbox: checkboxTheme,
+      checkbox: checkboxTheme,    
+      dialog: dialogTheme,
     },
   },
   globalCss: globalStyles,

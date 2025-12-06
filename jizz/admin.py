@@ -16,6 +16,7 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
                          Update, CountryGame, Language, SpeciesName, UserProfile)
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species)
+from media.models import Media
 
 
 class CountrySpeciesInline(admin.TabularInline):
@@ -90,48 +91,67 @@ class CountryAdmin(admin.ModelAdmin):
         return response
 
 
-class SpeciesSoundInline(admin.TabularInline):
-    model = SpeciesSound
-
-    readonly_fields = ['snd']
-    fields = ['snd']
-
-    def snd(self, obj):
-        return format_html('<audio controls> <source src="{url}" type="audio/mp3" /></audio>', url=obj.url)
-
+class MediaInline(admin.TabularInline):
+    model = Media
+    extra = 0
+    ordering = ['type', '-created']
+    readonly_fields = ['media_preview', 'media_link', 'type', 'source']
+    fields = ['media_preview', 'type', 'source', 'media_link']
+    
+    def get_queryset(self, request):
+        """Order by type, then by created date (newest first within each type). Exclude hidden media."""
+        qs = super().get_queryset(request)
+        return qs.filter(hide=False).order_by('type', '-created')
+    
+    def media_preview(self, obj):
+        """Display media based on type: large preview for images, inline player for video/audio."""
+        if not obj or not obj.url:
+            return "No media URL available"
+        
+        if obj.type == 'image':
+            # Large preview for images
+            return format_html(
+                '<img src="{url}" style="max-width: 200px; max-height: 150px; width: auto; height: auto;" />',
+                url=obj.url
+            )
+        elif obj.type == 'video':
+            # Inline video player
+            return format_html(
+                '<video controls style="max-width: 200px; max-height: 150px;">'
+                '<source src="{url}" type="video/mp4" />'
+                'Your browser does not support the video tag.'
+                '</video>',
+                url=obj.url
+            )
+        elif obj.type == 'audio':
+            # Inline audio player
+            return format_html(
+                '<audio controls style="width: 200px;">'
+                '<source src="{url}" type="audio/mpeg" />'
+                'Your browser does not support the audio tag.'
+                '</audio>',
+                url=obj.url
+            )
+        return "-"
+    
+    media_preview.short_description = 'Media'
+    
+    def media_link(self, obj):
+        """Link to media detail admin page."""
+        if not obj or not obj.pk:
+            return "-"
+        url = reverse('admin:media_media_change', args=(obj.pk,))
+        return format_html('<a href="{}">View Details</a>', url)
+    
+    media_link.short_description = 'Details'
+    
     def has_add_permission(self, request, obj):
-        return False
-
-
-class SpeciesImageInline(admin.TabularInline):
-    model = SpeciesImage
-
-    readonly_fields = ['img', 'link', 'contributor']
-    fields = readonly_fields
-
-    def img(self, obj):
-        return format_html("<img src='{url}' width='400px' />", url=obj.url)
-
-    def has_add_permission(self, request, obj):
-        return False
-
-
-class SpeciesVideoInline(admin.TabularInline):
-    model = SpeciesVideo
-
-    readonly_fields = ['vid', 'url', 'contributor']
-    fields = readonly_fields
-
-    def vid(self, obj):
-        return format_html('<video controls> <source src="{url}" type="video/mp4" /></video>', url=obj.url)
-
-    def has_add_permission(self, request, obj):
-        return False
+        return True
 
 
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
-    inlines = [SpeciesSoundInline, SpeciesImageInline, SpeciesVideoInline]
+    inlines = [MediaInline]
     search_fields = ['name', 'name_nl', 'name_latin']
     readonly_fields = ['sync_media', 'pic_count']
     list_display = ['name', 'name_nl', 'pic_count']
@@ -492,9 +512,10 @@ class AnswerAdmin(admin.ModelAdmin):
 
 @register(FlagQuestion)
 class FlagQuestionAdmin(admin.ModelAdmin):
-    readonly_fields = ['created', 'question', 'player', 'description']
+    readonly_fields = ['created', 'question', 'player', 'description', 'media_url']
     fields = readonly_fields
     list_display = ['created', 'question', 'player', 'description']
+
 
 
 class QuestionOptionInline(admin.TabularInline):

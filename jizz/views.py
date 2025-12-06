@@ -53,11 +53,14 @@ from jizz.models import (
     Update,
     Reaction,
 )
+from media.models import Media, MediaReview
 from jizz.serializers import (
     AnswerSerializer,
     CountryChallengeSerializer,
     CountrySerializer,
     FeedbackSerializer,
+    MediaSerializer,
+    ReviewMediaSerializer,
     FlagQuestionSerializer,
     GameSerializer,
     PlayerScoreSerializer,
@@ -226,6 +229,49 @@ class PlayerStatsView(RetrieveAPIView):
 class FlagQuestionView(ListCreateAPIView):
     serializer_class = FlagQuestionSerializer
     queryset = FlagQuestion.objects.all()
+
+
+class MediaPagination(PageNumberPagination):
+    """Custom pagination for media list with 50 items per page."""
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class MediaListView(ListAPIView):
+    """List all unreviewed media items, filtered by type (default: image) and optionally by country."""
+    serializer_class = MediaSerializer
+    pagination_class = MediaPagination
+    
+    def get_queryset(self):
+        from jizz.models import CountrySpecies
+        
+        # Get all media that haven't been reviewed yet
+        reviewed_media_ids = MediaReview.objects.values_list('media_id', flat=True).distinct()
+        queryset = Media.objects.filter(hide=False).exclude(id__in=reviewed_media_ids)
+        
+        # Filter by country if provided
+        country_code = self.request.query_params.get('country')
+        if country_code:
+            # Get all species for this country (ordered by species id)
+            # Pagination will handle loading species progressively
+            country_species_ids = CountrySpecies.objects.filter(
+                country__code=country_code
+            ).values_list('species_id', flat=True).order_by('species_id')
+            queryset = queryset.filter(species_id__in=country_species_ids)
+        
+        # Filter by media type
+        media_type = self.request.query_params.get('type', 'image')
+        if media_type:
+            queryset = queryset.filter(type=media_type)
+        
+        return queryset.order_by('species__id', '-created')
+
+
+class ReviewMediaView(ListCreateAPIView):
+    """View for reviewing media items (positive or negative)."""
+    serializer_class = ReviewMediaSerializer
+    queryset = MediaReview.objects.all()
 
 
 class GameListView(ListCreateAPIView, GetPlayerMixin):

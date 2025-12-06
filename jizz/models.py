@@ -572,7 +572,7 @@ class FlagQuestion(models.Model):
     media_url = models.URLField(null=True, blank=True)
     description = models.CharField(max_length=200, null=True, blank=True)
     created = models.DateTimeField(auto_now=True)
-
+    
 
 class CountrySpecies(models.Model):
     country = models.ForeignKey(

@@ -11,7 +11,8 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
     AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
-    PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView
+    PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
+    MediaListView, ReviewMediaView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -59,6 +60,8 @@ urlpatterns = [
 
 
     re_path(r"^api/flag/$", FlagQuestionView.as_view(), name="flag-question-create"),
+    re_path(r"^api/media/$", MediaListView.as_view(), name="media-list"),
+    re_path(r"^api/review-media/$", ReviewMediaView.as_view(), name="review-media-create"),
 
     re_path(r"^api/questions/(?P<pk>\w+)/$", QuestionDetailView.as_view(), name="question-detail"),
     re_path(r"^api/scores/$", PlayerScoreListView.as_view(), name="scores"),

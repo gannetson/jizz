@@ -29,6 +29,7 @@ import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
 import { MyGamesPage } from "./pages/my-games"
 import { GameDetailPage } from "./pages/game-detail"
+import { MediaReviewPage } from "./pages/media-review"
 
 
 export const MainContent = () => {
@@ -76,6 +77,7 @@ export const MainContent = () => {
 
             <Route path='/scores/' element={<Hiscores />}/>
             <Route path='/updates/' element={<Updates />}/>
+            <Route path='/media-review/' element={<MediaReviewPage />}/>
 
           </Route>
         </Routes>

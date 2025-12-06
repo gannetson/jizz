@@ -8,19 +8,14 @@ IMAGE_SOURCES = [
     ('wikimedia', 'Wikimedia'),
     ('gbif', 'GBIF'),
     ('flickr', 'Flickr CC'),
-    ('eol', 'EOL'),
     ('observation', 'Observation.org'),
-]
-
-VIDEO_SOURCES = [
-    ('wikimedia', 'Wikimedia'),
-    ('inaturalist', 'iNaturalist'),
-    ('youtube', 'YouTube CC'),
-    ('eol', 'EOL'),
-]
-
-AUDIO_SOURCES = [
     ('xeno_canto', 'Xeno-Canto'),
+]
+
+MEDIA_TYPES = [
+    ('image', 'Image'),
+    ('video', 'Video'),
+    ('audio', 'Audio'),
 ]
 
 
@@ -33,18 +28,15 @@ class Media(models.Model):
     )
     source = models.CharField(max_length=200, choices=IMAGE_SOURCES, blank=True, default='')
     contributor = models.CharField(max_length=500, blank=True, default='')
-    copyright = models.CharField(max_length=500, blank=True, default='')
+    copyright_text = models.CharField(max_length=500, blank=True, default='', help_text='Copyright text as received from scraper')
+    copyright_standardized = models.CharField(max_length=100, blank=True, default='', help_text='Standardized copyright notation (e.g., CC BY, CC BY-NC, etc.)')
+    non_commercial_only = models.BooleanField(default=False, help_text='If checked, media is for non-commercial use only. If unchecked, media is free to use with attribution.')
     url = models.URLField(blank=True, null=True, max_length=2000)
     link = models.URLField(blank=True, null=True, max_length=2000)  
-    media = models.ImageField(
-        upload_to='media/images/',
-        blank=True,
-        null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])]
-    )
     hide = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    type = models.CharField(max_length=200, choices=MEDIA_TYPES, blank=True, default='image')
 
     class Meta:
         verbose_name = 'Media'
@@ -52,98 +44,46 @@ class Media(models.Model):
         ordering = ['-created']
 
     def __str__(self):
-        return f"{self.species.name} - Media ({self.id})"
+        return f"{self.species.name} - {self.type} ({self.id})"
 
 
-class Image(models.Model):
-    """Model for storing image files related to species."""
-    species = models.ForeignKey(
-        'jizz.Species',
-        related_name='images',
-        on_delete=models.CASCADE
+class MediaReview(models.Model):
+    """Model for reviewing media items (positive, negative, or neutral)."""
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+    NOT_SURE = 'not_sure'
+    REVIEW_CHOICES = [
+        (APPROVED, 'Approved'),
+        (REJECTED, 'Rejected'),
+        (NOT_SURE, 'Not Sure'),
+    ]
+    
+    media = models.ForeignKey(
+        Media,
+        on_delete=models.CASCADE,
+        related_name='reviews'
     )
-    source = models.CharField(max_length=200, choices=IMAGE_SOURCES, blank=True, default='')
-    contributor = models.CharField(max_length=500, blank=True, default='')
-    copyright = models.CharField(max_length=500, blank=True, default='')
-    url = models.URLField(blank=True, null=True, max_length=2000)
-    link = models.URLField(blank=True, null=True, max_length=2000)  
-    media = models.ImageField(
-        upload_to='media/images/',
-        blank=True,
-        null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])]
+    player = models.ForeignKey(
+        'jizz.Player',
+        on_delete=models.CASCADE,
+        related_name='media_reviews'
     )
-    hide = models.BooleanField(default=False)
+    review_type = models.CharField(max_length=20, choices=REVIEW_CHOICES)
+    description = models.CharField(max_length=500, null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Image'
-        verbose_name_plural = 'Images'
+        verbose_name = 'Media Review'
+        verbose_name_plural = 'Media Reviews'
         ordering = ['-created']
+        unique_together = ('media', 'player')  # One review per player per media
+
+    def save(self, *args, **kwargs):
+        # Set media to hidden when rejected
+        if self.review_type == self.REJECTED:
+            self.media.hide = True
+        self.media.save()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.species.name} - Image ({self.id})"
-
-
-class Video(models.Model):
-    """Model for storing video files related to species."""
-    species = models.ForeignKey(
-        'jizz.Species',
-        related_name='media_videos',
-        on_delete=models.CASCADE
-    )
-    source = models.CharField(max_length=50, choices=VIDEO_SOURCES, blank=True, default='')
-    contributor = models.CharField(max_length=500, blank=True, default='')
-    copyright = models.CharField(max_length=500, blank=True, default='')
-    url = models.URLField(blank=True, null=True, max_length=2000)
-    link = models.URLField(blank=True, null=True, max_length=2000)
-    media = models.FileField(
-        upload_to='media/videos/',
-        blank=True,
-        null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['mp4', 'mov', 'avi', 'webm', 'mkv'])]
-    )
-    hide = models.BooleanField(default=False)
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Video'
-        verbose_name_plural = 'Videos'
-        ordering = ['-created']
-
-    def __str__(self):
-        return f"{self.species.name} - Video ({self.id})"
-
-
-class Audio(models.Model):
-    """Model for storing audio files related to species."""
-    species = models.ForeignKey(
-        'jizz.Species',
-        related_name='media_audio',
-        on_delete=models.CASCADE
-    )
-    source = models.CharField(max_length=50, choices=AUDIO_SOURCES, blank=True, default='')
-    contributor = models.CharField(max_length=500, blank=True, default='')
-    copyright = models.CharField(max_length=500, blank=True, default='')
-    url = models.URLField(blank=True, null=True, max_length=2000)
-    link = models.URLField(blank=True, null=True, max_length=2000)
-    media = models.FileField(
-        upload_to='media/audio/',
-        blank=True,
-        null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['mp3', 'wav', 'ogg', 'm4a', 'flac'])]
-    )
-    hide = models.BooleanField(default=False)
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Audio'
-        verbose_name_plural = 'Audio'
-        ordering = ['-created']
-
-    def __str__(self):
-        return f"{self.species.name} - Audio ({self.id})"
-
+        return f"{self.get_review_type_display()} for {self.media} by {self.player}"

@@ -5,6 +5,7 @@ API Documentation: https://techdocs.gbif.org/en/
 from typing import List, Dict, Optional
 from .base import BaseMediaScraper
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,12 @@ class GBIFScraper(BaseMediaScraper):
     """Scraper for GBIF media."""
     
     API_BASE = "https://api.gbif.org/v1"
+    
+    # Keywords that indicate the image should be excluded
+    EXCLUDE_KEYWORDS = [
+        'spectrogram', 'spectrograms',
+        'xeno-canto', 'xenocanto', 'xeno canto',
+    ]
     
     def _get_taxon_key(self, name: str) -> Optional[int]:
         """
@@ -62,24 +69,34 @@ class GBIFScraper(BaseMediaScraper):
         # Get images from occurrence records
         results.extend(self._get_species_images(taxon_key, limit=100))
         
-        # Remove duplicates based on URL
+        # Remove duplicates based on URL - only keep one image per unique link
         seen_urls = set()
+        seen_links = set()
         unique_results = []
         for item in results:
             url = item.get('url', '')
-            if url and url not in seen_urls:
-                seen_urls.add(url)
+            link = item.get('link', '')
+            
+            # Check both URL and link to ensure uniqueness
+            # If link exists, use it as the unique identifier; otherwise use URL
+            unique_key = link if link else url
+            
+            if unique_key and unique_key not in seen_urls:
+                seen_urls.add(unique_key)
+                if link:
+                    seen_links.add(link)
                 unique_results.append(item)
         
         # Sort by quality score (highest first)
         unique_results.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
         
-        logger.info(f"Found {len(unique_results)} GBIF images for {scientific_name}")
+        logger.info(f"Found {len(unique_results)} unique GBIF images for {scientific_name}")
         return unique_results
     
     def _get_species_images(self, taxon_key: int, limit: int = 100) -> List[Dict]:
         """
         Get species images from occurrence records.
+        Only one image per unique link is added.
         
         Args:
             taxon_key: Taxon key (usageKey) from species match
@@ -89,6 +106,7 @@ class GBIFScraper(BaseMediaScraper):
             List of image media items
         """
         images = []
+        seen_links = set()  # Track links we've already seen
         offset = 0
         page_size = 100
         
@@ -96,6 +114,7 @@ class GBIFScraper(BaseMediaScraper):
             params = {
                 "taxonKey": taxon_key,
                 "mediaType": "StillImage",
+                "basisOfRecord": "HUMAN_OBSERVATION",  # Only human observations (photos of live birds)
                 "limit": page_size,
                 "offset": offset,
             }
@@ -113,6 +132,15 @@ class GBIFScraper(BaseMediaScraper):
                         # Process the media item
                         photo_item = self._process_media_item(m, gbif_id)
                         if photo_item:
+                            # Check if we've already seen this link
+                            link = photo_item.get('link', '')
+                            if link and link in seen_links:
+                                # Skip if we already have an image for this link
+                                continue
+                            
+                            # Add to seen links and results
+                            if link:
+                                seen_links.add(link)
                             images.append(photo_item)
                             
                             if len(images) >= limit:
@@ -175,6 +203,11 @@ class GBIFScraper(BaseMediaScraper):
                 ''
             )
             
+            # Check if this should be excluded based on keywords
+            combined_text = f"{title} {url}".lower()
+            if self._should_exclude(combined_text):
+                return None
+            
             # Calculate quality score
             quality_score = self._calculate_quality_score(media_item)
             
@@ -182,7 +215,7 @@ class GBIFScraper(BaseMediaScraper):
                 'url': url,
                 'link': page_url,
                 'contributor': creator,
-                'copyright': copyright_text,
+                'copyright_text': copyright_text,
                 'title': title,
                 'source': 'gbif',
                 'quality_score': quality_score
@@ -190,6 +223,30 @@ class GBIFScraper(BaseMediaScraper):
         except Exception as e:
             logger.debug(f"Error processing GBIF media item: {e}")
             return None
+    
+    def _should_exclude(self, text: str) -> bool:
+        """
+        Check if the text contains keywords that indicate this should be excluded.
+        
+        Args:
+            text: Combined title, description, and URL text (lowercase)
+        
+        Returns:
+            True if should be excluded, False otherwise
+        """
+        if not text:
+            return False
+        
+        # Check for exclude keywords (case-insensitive)
+        text_lower = text.lower()
+        for keyword in self.EXCLUDE_KEYWORDS:
+            # Use word boundaries to avoid partial matches
+            pattern = r'\b' + re.escape(keyword.lower()) + r'\b'
+            if re.search(pattern, text_lower):
+                logger.debug(f"Excluding GBIF image due to keyword: {keyword}")
+                return True
+        
+        return False
     
     def _calculate_quality_score(self, media_item: Dict) -> float:
         """Calculate quality score for GBIF media."""

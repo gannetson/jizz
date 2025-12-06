@@ -9,6 +9,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
+MAX_RESULTS = 50
 
 class iNaturalistScraper(BaseMediaScraper):
     """Scraper for iNaturalist observations (images and videos)."""
@@ -74,7 +75,7 @@ class iNaturalistScraper(BaseMediaScraper):
                 add_result(item)
         
         results.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
-        return results[:10]
+        return results[:MAX_RESULTS]
     
     def _calculate_quality_score(self, media_item: Dict, observation: Dict) -> float:
         """Calculate quality score for iNaturalist media."""
@@ -201,7 +202,7 @@ class iNaturalistScraper(BaseMediaScraper):
             'url': url,
             'link': page_url,
             'contributor': contributor,
-            'copyright': copyright_text,
+            'copyright_text': copyright_text,
             'title': taxon.get('name', ''),
             'source': 'inaturalist',
             'quality_score': min(1.0, quality_score),
@@ -233,7 +234,7 @@ class iNaturalistScraper(BaseMediaScraper):
             'url': url,
             'link': page_url,
             'contributor': contributor,
-            'copyright': copyright_text,
+            'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',
             'quality_score': quality_score,
@@ -260,7 +261,7 @@ class iNaturalistScraper(BaseMediaScraper):
             'url': url,
             'link': page_url,
             'contributor': contributor,
-            'copyright': copyright_text,
+            'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',
             'quality_score': quality_score
@@ -286,7 +287,7 @@ class iNaturalistScraper(BaseMediaScraper):
             'url': url,
             'link': page_url,
             'contributor': contributor,
-            'copyright': copyright_text,
+            'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',
             'quality_score': quality_score

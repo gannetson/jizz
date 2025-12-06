@@ -5,7 +5,7 @@ Limits to 10 items per media type per species and reports success rates.
 from django.core.management.base import BaseCommand
 from django.db.models import Q, Count
 from jizz.models import Species, Country
-from media.models import Image, Video, Audio
+from media.models import Media
 from media.scrapers.xeno_canto import XenoCantoScraper
 from media.scrapers.inaturalist import iNaturalistScraper
 from media.scrapers.wikimedia import WikimediaScraper
@@ -19,7 +19,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Maximum items per media type per species
-MAX_ITEMS_PER_TYPE = 20
+MAX_ITEMS_PER_TYPE = 50
 
 
 def safe_truncate(value, max_length=200):
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             '--media-types',
             type=str,
             nargs='+',
-            choices=['images', 'videos', 'audio'],
+            choices=['image', 'video', 'audio'],
             help='Media types to scrape (default: all)'
         )
         parser.add_argument(
@@ -127,7 +127,7 @@ class Command(BaseCommand):
             'xeno_canto': XenoCantoScraper(),
             'inaturalist': iNaturalistScraper(),
             'wikimedia': WikimediaScraper(),
-            'gbif': GBIFScraper(),
+            # 'gbif': GBIFScraper(),
             'flickr': FlickrScraper(),
             'eol': EOLScraper(),
             'observation': ObservationScraper(),
@@ -136,7 +136,7 @@ class Command(BaseCommand):
         
         # Determine which sources to use
         sources_to_use = options.get('sources') or list(scrapers.keys())
-        media_types = options.get('media_types') or ['images', 'videos', 'audio']
+        media_types = options.get('media_types') or ['image', 'video', 'audio']
         
         # Statistics tracking
         stats = {
@@ -163,9 +163,9 @@ class Command(BaseCommand):
             
             # Check if we should skip
             if options.get('skip_existing'):
-                has_enough_images = Image.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE if 'images' in media_types else True
-                has_enough_videos = Video.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE if 'videos' in media_types else True
-                has_enough_audio = Audio.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE if 'audio' in media_types else True
+                has_enough_images = Media.objects.filter(species=species, type='image').count() >= MAX_ITEMS_PER_TYPE if 'image' in media_types else True
+                has_enough_videos = Media.objects.filter(species=species, type='video').count() >= MAX_ITEMS_PER_TYPE if 'video' in media_types else True
+                has_enough_audio = Media.objects.filter(species=species, type='audio').count() >= MAX_ITEMS_PER_TYPE if 'audio' in media_types else True
                 
                 if has_enough_images and has_enough_videos and has_enough_audio:
                     self.stdout.write(self.style.WARNING(f'  Skipping - already has enough media'))
@@ -186,7 +186,7 @@ class Command(BaseCommand):
                         stats['audio_by_source']['xeno_canto'] = stats['audio_by_source'].get('xeno_canto', 0) + added
                 
                 # Scrape images from all sources, then combine and sort by quality
-                if 'images' in media_types:
+                if 'image' in media_types:
                     all_image_items = []
                     for source_key in ['inaturalist', 'wikimedia', 'gbif', 'flickr', 'eol', 'observation']:
                         if source_key in sources_to_use:
@@ -219,7 +219,7 @@ class Command(BaseCommand):
                         stats['total_images_added'] += added
                 
                 # Scrape videos from all sources, then combine and sort by quality
-                if 'videos' in media_types:
+                if 'video' in media_types:
                     all_video_items = []
                     for source_key in ['wikimedia', 'inaturalist', 'youtube', 'eol']:
                         if source_key in sources_to_use:
@@ -272,7 +272,7 @@ class Command(BaseCommand):
         self.stdout.write(f'  Scraping audio from {scraper.__class__.__name__}...')
         
         # Check how many we already have
-        existing_count = Audio.objects.filter(species=species).count()
+        existing_count = Media.objects.filter(species=species, type='audio').count()
         if existing_count >= MAX_ITEMS_PER_TYPE:
             self.stdout.write(f'    Already have {existing_count} audio items (limit: {MAX_ITEMS_PER_TYPE})')
             return 0
@@ -284,14 +284,15 @@ class Command(BaseCommand):
         created_count = 0
         for item in media_items[:needed]:
             # Check if already exists (by link)
-            if Audio.objects.filter(species=species, link=item.get('link')).exists():
+            if Media.objects.filter(species=species, link=item.get('link'), type='audio').exists():
                 continue
             
-            Audio.objects.create(
+            Media.objects.create(
                 species=species,
+                type='audio',
                 source='xeno_canto',
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright=safe_truncate(item.get('copyright'), 500),
+                copyright_text=safe_truncate(item.get('copyright_text'), 500),
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -306,7 +307,7 @@ class Command(BaseCommand):
     
     def _add_images_from_items(self, species, media_items, stats):
         """Add images from a sorted list of items, tracking by source."""
-        existing_count = Image.objects.filter(species=species).count()
+        existing_count = Media.objects.filter(species=species, type='image').count()
         if existing_count >= MAX_ITEMS_PER_TYPE:
             return 0
         
@@ -317,14 +318,15 @@ class Command(BaseCommand):
             source = item.get('source', 'unknown')
             
             # Check if already exists (by link and source)
-            if Image.objects.filter(species=species, link=item.get('link'), source=source).exists():
+            if Media.objects.filter(species=species, link=item.get('link'), source=source, type='image').exists():
                 continue
             
-            Image.objects.create(
+            Media.objects.create(
                 species=species,
+                type='image',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright=safe_truncate(item.get('copyright'), 500),
+                copyright_text=safe_truncate(item.get('copyright_text'), 500),
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -332,7 +334,7 @@ class Command(BaseCommand):
             stats['images_by_source'][source] = stats['images_by_source'].get(source, 0) + 1
             
             # Stop if we've reached the limit
-            if Image.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE:
+            if Media.objects.filter(species=species, type='image').count() >= MAX_ITEMS_PER_TYPE:
                 break
         
         if created_count > 0:
@@ -344,7 +346,7 @@ class Command(BaseCommand):
     
     def _add_videos_from_items(self, species, media_items, stats):
         """Add videos from a sorted list of items, tracking by source."""
-        existing_count = Video.objects.filter(species=species).count()
+        existing_count = Media.objects.filter(species=species, type='video').count()
         if existing_count >= MAX_ITEMS_PER_TYPE:
             return 0
         
@@ -355,14 +357,15 @@ class Command(BaseCommand):
             source = item.get('source', 'unknown')
             
             # Check if already exists (by link and source)
-            if Video.objects.filter(species=species, link=item.get('link'), source=source).exists():
+            if Media.objects.filter(species=species, link=item.get('link'), source=source, type='video').exists():
                 continue
             
-            Video.objects.create(
+            Media.objects.create(
                 species=species,
+                type='video',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright=safe_truncate(item.get('copyright'), 500),
+                copyright_text=safe_truncate(item.get('copyright_text'), 500),
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -370,7 +373,7 @@ class Command(BaseCommand):
             stats['videos_by_source'][source] = stats['videos_by_source'].get(source, 0) + 1
             
             # Stop if we've reached the limit
-            if Video.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE:
+            if Media.objects.filter(species=species, type='video').count() >= MAX_ITEMS_PER_TYPE:
                 break
         
         if created_count > 0:
@@ -385,7 +388,7 @@ class Command(BaseCommand):
         self.stdout.write(f'  Scraping images from {scraper.__class__.__name__}...')
         
         # Check how many we already have
-        existing_count = Image.objects.filter(species=species).count()
+        existing_count = Media.objects.filter(species=species, type='image').count()
         if existing_count >= MAX_ITEMS_PER_TYPE:
             self.stdout.write(f'    Already have {existing_count} images (limit: {MAX_ITEMS_PER_TYPE})')
             return 0
@@ -404,21 +407,22 @@ class Command(BaseCommand):
         created_count = 0
         for item in media_items[:needed]:
             # Check if already exists (by link and source)
-            if Image.objects.filter(species=species, link=item.get('link'), source=source).exists():
+            if Media.objects.filter(species=species, link=item.get('link'), source=source, type='image').exists():
                 continue
             
-            Image.objects.create(
+            Media.objects.create(
                 species=species,
+                type='image',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright=safe_truncate(item.get('copyright'), 500),
+                copyright_text=safe_truncate(item.get('copyright_text'), 500),
                 url=item.get('url'),
                 link=item.get('link')
             )
             created_count += 1
             
             # Stop if we've reached the limit
-            if Image.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE:
+            if Media.objects.filter(species=species, type='image').count() >= MAX_ITEMS_PER_TYPE:
                 break
         
         if created_count > 0:
@@ -433,7 +437,7 @@ class Command(BaseCommand):
         self.stdout.write(f'  Scraping videos from {scraper.__class__.__name__}...')
         
         # Check how many we already have
-        existing_count = Video.objects.filter(species=species).count()
+        existing_count = Media.objects.filter(species=species, type='video').count()
         if existing_count >= MAX_ITEMS_PER_TYPE:
             self.stdout.write(f'    Already have {existing_count} videos (limit: {MAX_ITEMS_PER_TYPE})')
             return 0
@@ -452,21 +456,22 @@ class Command(BaseCommand):
         created_count = 0
         for item in media_items[:needed]:
             # Check if already exists (by link and source)
-            if Video.objects.filter(species=species, link=item.get('link'), source=source).exists():
+            if Media.objects.filter(species=species, link=item.get('link'), source=source, type='video').exists():
                 continue
             
-            Video.objects.create(
+            Media.objects.create(
                 species=species,
+                type='video',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright=safe_truncate(item.get('copyright'), 500),
+                copyright_text=safe_truncate(item.get('copyright_text'), 500),
                 url=item.get('url'),
                 link=item.get('link')
             )
             created_count += 1
             
             # Stop if we've reached the limit
-            if Video.objects.filter(species=species).count() >= MAX_ITEMS_PER_TYPE:
+            if Media.objects.filter(species=species, type='video').count() >= MAX_ITEMS_PER_TYPE:
                 break
         
         if created_count > 0:

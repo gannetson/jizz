@@ -98,7 +98,7 @@ class EOLScraper(BaseMediaScraper):
                                 'url': media_url,
                                 'link': page_url,
                                 'contributor': contributor,
-                                'copyright': copyright_text,
+                                'copyright_text': copyright_text,
                                 'title': title,
                                 'source': 'eol',
                                 'quality_score': quality_score
@@ -134,7 +134,7 @@ class EOLScraper(BaseMediaScraper):
                                 'url': media_url,
                                 'link': page_url,
                                 'contributor': contributor,
-                                'copyright': copyright_text,
+                                'copyright_text': copyright_text,
                                 'title': title,
                                 'source': 'eol',
                                 'quality_score': quality_score

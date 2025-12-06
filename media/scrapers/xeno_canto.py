@@ -126,7 +126,7 @@ class XenoCantoScraper(BaseMediaScraper):
                             'url': file_url,
                             'link': page_url,
                             'contributor': contributor,
-                            'copyright': copyright_text,
+                            'copyright_text': copyright_text,
                             'title': title,
                             'source': 'xeno_canto',
                             'quality_score': quality_score

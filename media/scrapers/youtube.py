@@ -113,7 +113,7 @@ class YouTubeScraper(BaseMediaScraper):
                                 'url': embed_url,  # Embed URL for playback
                                 'link': page_url,
                                 'contributor': channel_title,
-                                'copyright': copyright_text,
+                                'copyright_text': copyright_text,
                                 'title': title,
                                 'source': 'youtube',
                                 'quality_score': quality_score

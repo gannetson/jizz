@@ -116,7 +116,7 @@ class FlickrScraper(BaseMediaScraper):
                             'url': url,
                             'link': page_url,
                             'contributor': contributor,
-                            'copyright': copyright_text,
+                            'copyright_text': copyright_text,
                             'title': title or description,
                             'source': 'flickr',
                             'quality_score': quality_score

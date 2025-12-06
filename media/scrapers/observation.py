@@ -21,24 +21,18 @@ class ObservationScraper(BaseMediaScraper):
         """
         Search Observation.org for images.
         
+        NOTE: Observation.org does not allow deeplinking, so this scraper is disabled.
+        
         Args:
             scientific_name: Scientific name
             common_name: Common name (optional)
         
         Returns:
-            List of image media items
+            List of image media items (always empty - scraper disabled)
         """
-        results = []
-        
-        # Normalize scientific name
-        normalized_name = self.normalize_scientific_name(scientific_name)
-        
-        # First, find the species ID
-        species_id = self._find_species_id(normalized_name)
-        
-        if not species_id:
-            logger.warning(f"Could not find species ID for {scientific_name} on Observation.org")
-            return results
+        # Observation.org doesn't allow deeplinking, so we don't use their media
+        logger.info(f"Observation.org scraper disabled - deeplinking not allowed")
+        return []
         
         # Use the photos endpoint with species ID
         page = 1
@@ -187,7 +181,7 @@ class ObservationScraper(BaseMediaScraper):
                 'url': img_url,
                 'link': page_url,
                 'contributor': contributor,
-                'copyright': copyright_text,
+                'copyright_text': copyright_text,
                 'title': '',
                 'source': 'observation',
                 'quality_score': quality_score
@@ -237,7 +231,7 @@ class ObservationScraper(BaseMediaScraper):
                 'url': img_url,
                 'link': page_url,
                 'contributor': contributor,
-                'copyright': copyright_text,
+                'copyright_text': copyright_text,
                 'title': '',
                 'source': 'observation',
                 'quality_score': quality_score

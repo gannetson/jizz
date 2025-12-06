@@ -3,6 +3,7 @@ from rest_framework import serializers
 from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
     QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction, CountryChallenge, CountryGame, \
     ChallengeLevel, Language, SpeciesName, UserProfile
+from media.models import Media, MediaReview
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -31,6 +32,21 @@ class SoundSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpeciesSound
         fields = ('url', 'link', 'contributor')
+
+
+class MediaSerializer(serializers.ModelSerializer):
+    """Serializer for Media model (images, videos, audio)."""
+    species_name = serializers.CharField(source='species.name', read_only=True)
+    species_code = serializers.CharField(source='species.code', read_only=True)
+    species_id = serializers.IntegerField(source='species.id', read_only=True)
+    
+    class Meta:
+        model = Media
+        fields = (
+            'id', 'type', 'source', 'url', 'link', 'contributor', 'copyright_text',
+            'copyright_standardized', 'non_commercial_only',
+            'species_name', 'species_code', 'species_id', 'hide', 'created'
+        )
 
 
 class SpeciesListSerializer(serializers.ModelSerializer):
@@ -162,6 +178,35 @@ class FlagQuestionSerializer(serializers.ModelSerializer):
         question = Question.objects.get(id=validated_data.pop('question_id'))
         description = validated_data.pop('description')
         return FlagQuestion.objects.create(description=description, player=player, question=question)
+
+
+class ReviewMediaSerializer(serializers.ModelSerializer):
+    """Serializer for reviewing media items (positive or negative)."""
+    player_token = serializers.CharField(write_only=True)
+    media_id = serializers.IntegerField(write_only=True)
+    review_type = serializers.ChoiceField(choices=MediaReview.REVIEW_CHOICES, write_only=True)
+
+    class Meta:
+        model = MediaReview
+        fields = ('player_token', 'description', 'media_id', 'review_type')
+
+    def create(self, validated_data):
+        player = Player.objects.get(token=validated_data.pop('player_token'))
+        media = Media.objects.get(id=validated_data.pop('media_id'))
+        review_type = validated_data.pop('review_type')
+        description = validated_data.pop('description', '')
+        # Use get_or_create to handle unique_together constraint
+        review, created = MediaReview.objects.get_or_create(
+            media=media,
+            player=player,
+            defaults={'review_type': review_type, 'description': description}
+        )
+        if not created:
+            # Update existing review
+            review.review_type = review_type
+            review.description = description
+            review.save()
+        return review
 
 
 class ReactionSerializer(serializers.ModelSerializer):

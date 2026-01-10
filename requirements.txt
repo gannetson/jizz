@@ -42,5 +42,5 @@ django-rest-framework-social-oauth2==1.2.0
 Pillow==10.4.0
 html2text==2024.2.26
 beautifulsoup4==4.12.2
-openai==1.3.0
+openai>=1.12.0
 markdown==3.5.1

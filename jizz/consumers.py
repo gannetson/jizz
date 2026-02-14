@@ -1,6 +1,7 @@
 import json
 
 from asgiref.sync import sync_to_async
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 class QuizConsumer(AsyncWebsocketConsumer):
@@ -255,9 +256,16 @@ class QuizConsumer(AsyncWebsocketConsumer):
         elif data['action'] == 'rematch':
             # Host requests a rematch - create new game with same specs and notify all players
             try:
+                player_token = data.get('player_token')
+                if not player_token:
+                    await self.send(text_data=json.dumps({
+                        'action': 'error',
+                        'message': 'player_token is required for rematch',
+                    }))
+                    return
                 from jizz.models import PlayerScore
                 
-                # Helper function to create rematch game synchronously
+                # Helper function to create rematch game synchronously (runs in DB thread)
                 def create_rematch_game_sync(game_token, player_token):
                     player = Player.objects.get(token=player_token)
                     old_game = Game.objects.get(token=game_token)
@@ -297,10 +305,10 @@ class QuizConsumer(AsyncWebsocketConsumer):
                     
                     return new_game, player
                 
-                # Call the sync function in async context
-                new_game, player = await sync_to_async(create_rematch_game_sync)(
+                # Use database_sync_to_async so DB runs in Channels' DB context (visible in tests)
+                new_game, player = await database_sync_to_async(create_rematch_game_sync)(
                     self.game_token,
-                    data['player_token']
+                    player_token,
                 )
                 
                 print(f"Rematch: Created new game {new_game.token} for host {player.name}")

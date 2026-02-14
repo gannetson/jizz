@@ -168,7 +168,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
 
         asyncio.run(async_test())
 
-    @unittest.skip("rematch uses sync_to_async; test DB visibility in thread can cause no message in CI")
     def test_websocket_rematch_as_host_returns_invitation(self):
         """Test that rematch action by host sends rematch_invitation with new_game_token."""
         game = Game.objects.create(
@@ -201,25 +200,16 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                 'action': 'rematch',
                 'player_token': str(host.token),
             })
-            messages = []
-            try:
-                for _ in range(5):
-                    msg = await communicator.receive_json_from(timeout=3.0)
-                    messages.append(msg)
-                    if msg.get('action') == 'rematch_invitation':
-                        break
-            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
-                pass
-            invitation = next((m for m in messages if m.get('action') == 'rematch_invitation'), None)
-            self.assertIsNotNone(invitation, f"Expected rematch_invitation, got {messages}")
-            self.assertIn('new_game_token', invitation)
-            self.assertIn('host_name', invitation)
-            self.assertNotEqual(invitation['new_game_token'], game.token)
+            # Wait for rematch response (direct send or group delivery); one long timeout
+            msg = await communicator.receive_json_from(timeout=10.0)
+            self.assertEqual(msg.get('action'), 'rematch_invitation', f"Expected rematch_invitation, got {msg}")
+            self.assertIn('new_game_token', msg)
+            self.assertIn('host_name', msg)
+            self.assertNotEqual(msg['new_game_token'], game.token)
             await communicator.disconnect()
 
         asyncio.run(async_test())
 
-    @unittest.skip("rematch uses sync_to_async; test DB visibility in thread can cause no message in CI")
     def test_websocket_rematch_as_non_host_returns_error(self):
         """Test that rematch action by non-host sends error action."""
         game = Game.objects.create(
@@ -251,18 +241,34 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                 'action': 'rematch',
                 'player_token': str(self.player2.token),
             })
-            messages = []
-            try:
-                for _ in range(5):
-                    msg = await communicator.receive_json_from(timeout=3.0)
-                    messages.append(msg)
-                    if msg.get('action') == 'error':
-                        break
-            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
-                pass
-            err = next((m for m in messages if m.get('action') == 'error'), None)
-            self.assertIsNotNone(err, f"Expected error action, got {messages}")
-            self.assertIn('message', err)
+            msg = await communicator.receive_json_from(timeout=10.0)
+            self.assertEqual(msg.get('action'), 'error', f"Expected error, got {msg}")
+            self.assertIn('message', msg)
+            self.assertIn('host', msg['message'].lower())
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_rematch_without_player_token_returns_error(self):
+        """Test that rematch without player_token sends error."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({'action': 'rematch'})
+            msg = await communicator.receive_json_from(timeout=5.0)
+            self.assertEqual(msg.get('action'), 'error')
+            self.assertIn('player_token', msg.get('message', ''))
             await communicator.disconnect()
 
         asyncio.run(async_test())

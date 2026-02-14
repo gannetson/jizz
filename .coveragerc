@@ -12,6 +12,7 @@ omit =
     *scraper*.py
     */management/commands/*scrape*.py
     *standardize_copyright*
+    *generate_comparison*
     *ai_service*
     */media/utils*
 

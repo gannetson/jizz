@@ -2,6 +2,7 @@ import { createSystem, defaultConfig, defineGlobalStyles } from '@chakra-ui/reac
 import { buttonTheme } from './base/button.styling'
 import { linkTheme, inputTheme, selectTheme, textareaTheme, radioTheme, checkboxTheme } from './base/form.styling'
 import { dialogTheme } from './base/dialog.styling'
+import { sliderTheme } from './base/slider.styling'
 
 const globalStyles = defineGlobalStyles({
   body: {
@@ -171,8 +172,9 @@ export const system = createSystem({
       ...defaultConfig.theme?.slotRecipes,
       select: selectTheme,
       radioGroup: radioTheme,
-      checkbox: checkboxTheme,    
+      checkbox: checkboxTheme,
       dialog: dialogTheme,
+      slider: sliderTheme,
     },
   },
   globalCss: globalStyles,

@@ -1,6 +1,8 @@
 import React, {useState} from "react";
 import {FaStar} from "react-icons/fa";
-import {RadioGroup, HStack, Box, Text} from "@chakra-ui/react";
+import {RadioGroup, HStack, chakra} from "@chakra-ui/react";
+
+const Label = chakra("label");
 
 
 type Props = {
@@ -26,8 +28,7 @@ export default function StarRating({rating, setRating, count, size}: Props) {
         {[...Array(count || 5)].map((_, index) => {
           const ratingValue = index + 1;
           return (
-            <Box
-              as="label"
+            <Label
               key={index}
               cursor="pointer"
               color={ratingValue <= (hover || rating) ? "primary.500" : "primary.100"}
@@ -42,7 +43,7 @@ export default function StarRating({rating, setRating, count, size}: Props) {
                   size={size || 20}
                 />
               </RadioGroup.Item>
-            </Box>
+            </Label>
           )
         })}
       </HStack>

@@ -17,9 +17,9 @@ settings_module = os.environ.get('DJANGO_SETTINGS_MODULE', 'jizz.settings.testin
 if settings_module == 'jizz.settings.local':
     from .local import *
 elif settings_module == 'jizz.settings.production':
-    from .testing import *
-elif settings_module == 'jizz.settings.testing':
     from .production import *
+elif settings_module == 'jizz.settings.testing':
+    from .testing import *
 else:
     # Default to local for development
     from .local import *

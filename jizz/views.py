@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Case, When, Value, Prefetch
+from django.db.models import Case, When, Value, Prefetch, F
 from django.db.models.aggregates import Count, Min
+from django.db.models.functions import RowNumber
+from django.db.models.expressions import Window
 from django.http import Http404
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -64,6 +66,7 @@ from jizz.serializers import (
     FlagMediaSerializer,
     FlagQuestionSerializer,
     GameSerializer,
+    PlayerScoreListSerializer,
     PlayerScoreSerializer,
     PlayerSerializer,
     QuestionSerializer,
@@ -346,18 +349,29 @@ class QuestionDetailView(RetrieveUpdateAPIView):
 
 
 class PlayerScorePagination(PageNumberPagination):
-    page_size = 50
+    page_size = 100
 
 
 class PlayerScoreListView(ListAPIView):
-    serializer_class = PlayerScoreSerializer
-    queryset = PlayerScore.objects.all()
+    serializer_class = PlayerScoreListSerializer
     pagination_class = PlayerScorePagination
 
     filterset_fields = ["game__media", "game__length", "game__level", "game__country"]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
     ordering = ["-score"]
+
+    def get_queryset(self):
+        return (
+            PlayerScore.objects
+            .select_related("player", "game", "game__country")
+            .annotate(
+                score_rank=Window(
+                    expression=RowNumber(),
+                    order_by=F("score").desc(),
+                )
+            )
+        )
 
 
 class FeedbackListView(ListCreateAPIView):

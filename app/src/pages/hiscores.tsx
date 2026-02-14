@@ -1,4 +1,4 @@
-import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection} from "@chakra-ui/react";
+import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection, useBreakpoint} from "@chakra-ui/react";
 import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState, useMemo} from "react"
@@ -36,6 +36,9 @@ const HomePage = () => {
     }
     setLoading(false)
   }
+
+  const breakpoint = useBreakpoint({ breakpoints: ['base', 'sm', 'md', 'lg', 'xl', '2xl'] })
+  const isMobile = breakpoint === 'base' || breakpoint === 'sm' 
 
   useEffect(() => {
     loadScores()
@@ -171,7 +174,7 @@ const HomePage = () => {
         </Heading>
       </Page.Header>
       <Page.Body>
-        <Flex flexWrap={'wrap'} width={'full'} gap={4}>
+        <Flex width={'full'} gap={4} flexDirection={isMobile ? 'column' : 'row'}>
           {renderSelect(countryCollection, countryValue, handleCountryChange, 'Select country...')}
           {renderSelect(mediaCollection, mediaValue, handleMediaChange, 'Select media...')}
           {renderSelect(levelCollection, levelValue, handleLevelChange, 'Select level...')}
@@ -186,15 +189,16 @@ const HomePage = () => {
               <TableRoot variant='line' colorPalette='primary' size={['sm', 'md']}>
                 <TableHeader>
                   <TableRow bgColor={'primary.200'}>
-                    <TableColumnHeader>Player</TableColumnHeader>
+                  <TableColumnHeader>#</TableColumnHeader>
+                  <TableColumnHeader>Player</TableColumnHeader>
                     <TableColumnHeader>
-                      🇿🇿
+                      flag
                     </TableColumnHeader>
                     <TableColumnHeader>
                       🔭
                     </TableColumnHeader>
                     <TableColumnHeader>Lvl</TableColumnHeader>
-                    <TableColumnHeader>#</TableColumnHeader>
+                    <TableColumnHeader>n</TableColumnHeader>
                     <TableColumnHeader>Score</TableColumnHeader>
                   </TableRow>
                 </TableHeader>

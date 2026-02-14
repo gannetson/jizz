@@ -486,6 +486,25 @@ class PlayerScoreSerializer(serializers.ModelSerializer):
         )
 
 
+class PlayerScoreListSerializer(serializers.ModelSerializer):
+    """Minimal serializer for hiscores list: player name, country code, media, length, score (+ ranking, level for table)."""
+    name = serializers.CharField(source='player.name', read_only=True)
+    country = serializers.SerializerMethodField()
+    media = serializers.CharField(source='game.media', read_only=True)
+    level = serializers.CharField(source='game.level', read_only=True)
+    length = serializers.IntegerField(source='game.length', read_only=True)
+    ranking = serializers.IntegerField(source='score_rank', read_only=True)
+
+    def get_country(self, obj):
+        if obj.game and obj.game.country_id:
+            return {'code': obj.game.country.code, 'name': obj.game.country.name}
+        return {'code': '', 'name': ''}
+
+    class Meta:
+        model = PlayerScore
+        fields = ('id', 'name', 'country', 'media', 'level', 'length', 'score', 'ranking')
+
+
 class GameSerializer(serializers.ModelSerializer):
     country = serializers.CharField(write_only=True, required=False)
     country_data = CountrySerializer(source='country', read_only=True)

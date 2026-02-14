@@ -27,38 +27,22 @@ export const ResultsComponent = () => {
     navigate('/start')
   }
 
-  const handleRematch = async () => {
+  const handleRematch = () => {
     if (!game || !player || !socket) {
       console.log('Cannot rematch: missing game, player, or socket', { game: !!game, player: !!player, socket: !!socket })
       return
     }
-    
-    console.log('Sending rematch request...')
-    
-    // CRITICAL: Clear state BEFORE sending rematch request to prevent reconnection
-    // Close socket first to prevent any reconnection attempts
-    if (socket) {
-      socket.close()
-    }
-    clearQuestion()
-    setGame(undefined)
-    localStorage.removeItem('game-token')
-    
-    // Small delay to ensure state is cleared before sending request
-    await new Promise(resolve => setTimeout(resolve, 50))
-    
-    // Send rematch action via WebSocket (socket might be closed, but that's ok - 
-    // the backend will send the invitation via the group message which we'll receive
-    // when we reconnect to the new game)
-    // Note: If socket is closed, this will fail silently, but the backend
-    // will still send the invitation to all players via group message
+    // Send rematch action while socket is still open - backend must receive this to create the new game.
+    // The host will then receive rematch_invitation (via WebSocket) and handleRematchInvitationForHost
+    // will close the socket, clear state, load the new game, and navigate to lobby.
     try {
       socket.send(JSON.stringify({
         action: 'rematch',
         player_token: player.token
       }))
+      console.log('Rematch request sent')
     } catch (e) {
-      console.log('Socket already closed, rematch request sent via backend group message')
+      console.error('Failed to send rematch request:', e)
     }
   }
   

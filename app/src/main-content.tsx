@@ -57,8 +57,8 @@ export const MainContent = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/login/:provider" element={<AuthCallback />} />
             {/* Backend OAuth start - if SPA is served here (e.g. wrong server config), redirect to backend */}
-            <Route path="/auth/login/:provider" element={<AuthLoginRedirect />} />
-            <Route path="/auth/login/:provider/" element={<AuthLoginRedirect />} />
+            {/*<Route path="/auth/login/:provider" element={<AuthLoginRedirect />} />*/}
+            {/*<Route path="/auth/login/:provider/" element={<AuthLoginRedirect />} />*/}
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/profile" element={<ProfilePage />} />

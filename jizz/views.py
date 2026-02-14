@@ -339,7 +339,7 @@ class AnswerDetail(RetrieveAPIView):
 
     def get_object(self):
         return self.queryset.filter(
-            player__token=self.kwargs["token"], question=self.kwargs["question"]
+            player_score__player__token=self.kwargs["token"], question=self.kwargs["question"]
         ).first()
 
 

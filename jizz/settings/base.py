@@ -178,6 +178,7 @@ SOCIAL_AUTH_AZUREAD_TENANT_ID = os.environ.get('SOCIAL_AUTH_AZUREAD_TENANT_ID', 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'jizz.authentication.PlayerTokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
         # Removed SocialAuthentication from default - it causes issues with anonymous requests

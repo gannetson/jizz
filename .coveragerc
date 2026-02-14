@@ -13,6 +13,7 @@ omit =
     */management/commands/*scrape*.py
     *standardize_copyright*
     *ai_service*
+    */media/utils*
 
 [report]
 exclude_lines =

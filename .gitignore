@@ -13,3 +13,7 @@ build
 
 jizz/media
 jizz/static
+
+# Coverage
+.coverage
+htmlcov/

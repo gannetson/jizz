@@ -263,62 +263,42 @@ class QuizConsumer(AsyncWebsocketConsumer):
                         'message': 'player_token is required for rematch',
                     }))
                     return
-                from jizz.models import PlayerScore
-                
-                # Helper function to create rematch game synchronously (runs in DB thread)
-                def create_rematch_game_sync(game_token, player_token):
-                    player = Player.objects.get(token=player_token)
-                    old_game = Game.objects.get(token=game_token)
-                    
-                    # Verify player is the host
-                    if old_game.host_id != player.id:
-                        raise ValueError('Only the host can start a rematch')
-                    
-                    # Extract all values before creating (to avoid async context issues)
-                    country = old_game.country
-                    level = old_game.level
-                    length = old_game.length
-                    media = old_game.media
-                    multiplayer = old_game.multiplayer
-                    include_rare = old_game.include_rare
-                    include_escapes = old_game.include_escapes
-                    tax_order = old_game.tax_order
-                    tax_family = old_game.tax_family
-                    language = old_game.language
-                    repeat = old_game.repeat
-                    
-                    # Create new game with same specifications
-                    new_game = Game.objects.create(
-                        country=country,
-                        level=level,
-                        length=length,
-                        media=media,
+                # Do DB work in short steps to avoid long-held connections / deadlocks in tests
+                player = await database_sync_to_async(Player.objects.get)(token=player_token)
+                old_game = await database_sync_to_async(Game.objects.get)(token=self.game_token)
+                if old_game.host_id != player.id:
+                    await self.send(text_data=json.dumps({
+                        'action': 'error',
+                        'message': 'Only the host can start a rematch',
+                    }))
+                    return
+                # Create new game with same specs (single sync block for create)
+                def create_rematch_game():
+                    return Game.objects.create(
+                        country=old_game.country,
+                        level=old_game.level,
+                        length=old_game.length,
+                        media=old_game.media,
                         host=player,
-                        multiplayer=multiplayer,
-                        include_rare=include_rare,
-                        include_escapes=include_escapes,
-                        tax_order=tax_order,
-                        tax_family=tax_family,
-                        language=language,
-                        repeat=repeat
+                        multiplayer=old_game.multiplayer,
+                        include_rare=old_game.include_rare,
+                        include_escapes=old_game.include_escapes,
+                        tax_order=old_game.tax_order or '',
+                        tax_family=old_game.tax_family or '',
+                        language=old_game.language or 'en',
+                        repeat=old_game.repeat,
                     )
-                    
-                    return new_game, player
+                new_game = await database_sync_to_async(create_rematch_game)()
+                player_name = await database_sync_to_async(lambda: player.name)()
                 
-                # Use database_sync_to_async so DB runs in Channels' DB context (visible in tests)
-                new_game, player = await database_sync_to_async(create_rematch_game_sync)(
-                    self.game_token,
-                    player_token,
-                )
-                
-                print(f"Rematch: Created new game {new_game.token} for host {player.name}")
+                print(f"Rematch: Created new game {new_game.token} for host {player_name}")
                 
                 # Send rematch invitation to all players in the game group
                 # This includes the host who will auto-join, and other players who will see the join button
                 invitation_data = {
                     'type': 'rematch_invitation',
                     'new_game_token': new_game.token,
-                    'host_name': player.name
+                    'host_name': player_name
                 }
                 print(f"Rematch: Sending group message to {self.game_group_name}: {invitation_data}")
                 await self.channel_layer.group_send(
@@ -330,7 +310,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 direct_message = {
                     'action': 'rematch_invitation',
                     'new_game_token': new_game.token,
-                    'host_name': player.name
+                    'host_name': player_name
                 }
                 print(f"Rematch: Sending direct message: {direct_message}")
                 await self.send(text_data=json.dumps(direct_message))

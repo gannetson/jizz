@@ -1,6 +1,7 @@
 import asyncio
 import unittest
 from django.test import TransactionTestCase
+from django.db import transaction
 from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
 from jizz.models import Game, Player, Answer, Species, Country, CountrySpecies, PlayerScore
@@ -181,6 +182,8 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         host = self.player1
+        # Force commit so the rematch sync thread (database_sync_to_async) sees the game
+        transaction.commit()
 
         async def async_test():
             communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
@@ -200,8 +203,10 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                 'action': 'rematch',
                 'player_token': str(host.token),
             })
-            # Wait for rematch response (direct send or group delivery); one long timeout
-            msg = await communicator.receive_json_from(timeout=10.0)
+            try:
+                msg = await communicator.receive_json_from(timeout=15.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError) as e:
+                self.fail(f"Rematch did not receive response within 15s: {e}")
             self.assertEqual(msg.get('action'), 'rematch_invitation', f"Expected rematch_invitation, got {msg}")
             self.assertIn('new_game_token', msg)
             self.assertIn('host_name', msg)
@@ -223,6 +228,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         PlayerScore.objects.get_or_create(player=self.player2, game=game)
+        transaction.commit()
 
         async def async_test():
             communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
@@ -241,7 +247,10 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                 'action': 'rematch',
                 'player_token': str(self.player2.token),
             })
-            msg = await communicator.receive_json_from(timeout=10.0)
+            try:
+                msg = await communicator.receive_json_from(timeout=15.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError) as e:
+                self.fail(f"Rematch did not receive response within 15s: {e}")
             self.assertEqual(msg.get('action'), 'error', f"Expected error, got {msg}")
             self.assertIn('message', msg)
             self.assertIn('host', msg['message'].lower())

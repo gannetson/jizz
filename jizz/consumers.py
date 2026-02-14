@@ -49,11 +49,15 @@ class QuizConsumer(AsyncWebsocketConsumer):
         return players_data
 
     async def send_game_update(self):
+        """Fetch game and serialize in one sync block so DB connection is consistent."""
         from .models import Game
         from .serializers import GameSerializer
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        serializer = GameSerializer(game)
-        game_data = await sync_to_async(lambda: serializer.data)()
+
+        def get_game_data():
+            game = Game.objects.get(token=self.game_token)
+            return GameSerializer(game).data
+
+        game_data = await sync_to_async(get_game_data)()
         await self.send(text_data=json.dumps({
             'action': 'game_updated',
             'game': game_data
@@ -201,8 +205,11 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
         elif data['action'] == 'start_game':
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
-            game.started = True
-            await sync_to_async(game.save)()
+            if hasattr(Game, 'started'):
+                game.started = True
+                await sync_to_async(game.save)()
+            # Send to this connection first so we don't block on group_send while next_question runs
+            await self.send(text_data=json.dumps({'action': 'game_started'}))
             await self.channel_layer.group_send(
                 self.game_group_name, {
                     'type': 'game_started',

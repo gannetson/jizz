@@ -12,6 +12,7 @@ export const ScoreLine = ({score} : {score: Score}) => {
 
   return (
     <TableRow>
+      <TableCell>{score.ranking}</TableCell>
       <TableCell>{score.name}</TableCell>
       <TableCell>{getUnicodeFlagIcon(score.country.code)}</TableCell>
       <TableCell>{mediaIcon[score.media]}</TableCell>

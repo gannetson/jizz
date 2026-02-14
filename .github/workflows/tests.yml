@@ -64,10 +64,10 @@ jobs:
           files: coverage.xml
           fail_ci_if_error: false
 
-      - name: Upload coverage report (HTML)
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage-report
           path: htmlcov/
           retention-days: 7

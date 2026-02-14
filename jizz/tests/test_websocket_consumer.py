@@ -104,6 +104,167 @@ class WebSocketConsumerTestCase(TransactionTestCase):
 
         asyncio.run(async_test())
 
+    def test_websocket_disconnect(self):
+        """Test that connect then disconnect runs without error."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_receive_invalid_json_no_crash(self):
+        """Test that invalid JSON in receive() does not raise."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_to(text_data="not valid json")
+            # Consumer should not raise; no response expected for invalid JSON
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_receive_unknown_action_no_crash(self):
+        """Test that unknown action in receive() does not raise."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({"action": "unknown_action"})
+            # Consumer should not raise
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_rematch_as_host_returns_invitation(self):
+        """Test that rematch action by host sends rematch_invitation with new_game_token."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+        PlayerScore.objects.get_or_create(player=self.player1, game=game)
+        host = self.player1
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({
+                'action': 'join_game',
+                'player_token': str(host.token),
+            })
+            # Drain join messages
+            try:
+                while True:
+                    await communicator.receive_json_from(timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
+                pass
+            await communicator.send_json_to({
+                'action': 'rematch',
+                'player_token': str(host.token),
+            })
+            messages = []
+            try:
+                for _ in range(5):
+                    msg = await communicator.receive_json_from(timeout=3.0)
+                    messages.append(msg)
+                    if msg.get('action') == 'rematch_invitation':
+                        break
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
+                pass
+            invitation = next((m for m in messages if m.get('action') == 'rematch_invitation'), None)
+            self.assertIsNotNone(invitation, f"Expected rematch_invitation, got {messages}")
+            self.assertIn('new_game_token', invitation)
+            self.assertIn('host_name', invitation)
+            self.assertNotEqual(invitation['new_game_token'], game.token)
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_rematch_as_non_host_returns_error(self):
+        """Test that rematch action by non-host sends error action."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+        PlayerScore.objects.get_or_create(player=self.player1, game=game)
+        PlayerScore.objects.get_or_create(player=self.player2, game=game)
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({
+                'action': 'join_game',
+                'player_token': str(self.player2.token),
+            })
+            try:
+                while True:
+                    await communicator.receive_json_from(timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
+                pass
+            await communicator.send_json_to({
+                'action': 'rematch',
+                'player_token': str(self.player2.token),
+            })
+            messages = []
+            try:
+                for _ in range(5):
+                    msg = await communicator.receive_json_from(timeout=3.0)
+                    messages.append(msg)
+                    if msg.get('action') == 'error':
+                        break
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
+                pass
+            err = next((m for m in messages if m.get('action') == 'error'), None)
+            self.assertIsNotNone(err, f"Expected error action, got {messages}")
+            self.assertIn('message', err)
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
     @unittest.skip("start_game/add_question in consumer run in thread pool; test DB visibility can cause timeouts")
     def test_websocket_start_game_sends_question(self):
         """Test that start_game action sends a question to all players."""

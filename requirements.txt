@@ -2,7 +2,7 @@ appnope==0.1.3
 asgiref==3.7.2
 asttokens==2.2.1
 backcall==0.2.0
-certifi==2023.5.7
+certifi==2025.11.12
 channels==4.1.0
 charset-normalizer==3.2.0
 daphne==4.1.2
@@ -14,6 +14,7 @@ ebird-api==3.0.6
 executing==1.2.0
 idna==3.4
 ipdb==0.13.13
+markdown==3.5.2
 ipython==8.12.2
 jedi==0.18.2
 matplotlib-inline==0.1.6
@@ -31,7 +32,7 @@ sqlparse==0.4.4
 stack-data==0.6.2
 tomli==2.0.1
 traitlets==5.9.0
-typing_extensions==4.7.1
+typing_extensions==4.12.0
 urllib3==2.0.3
 django-cors-headers==4.4.0
 djangorestframework-simplejwt==5.3.1
@@ -39,3 +40,8 @@ shortuuid==1.0.13
 oauthlib==3.2.2
 django-oauth-toolkit==3.0.1
 django-rest-framework-social-oauth2==1.2.0
+Pillow==10.4.0
+html2text==2024.2.26
+beautifulsoup4==4.12.2
+openai==2.2.0
+coverage==7.6.0

@@ -1,5 +1,5 @@
 import {Heading} from "@chakra-ui/react";
-import Page from "./layout/page";
+import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {CreateGame} from "../components/create-game"
 import {useContext} from "react"
@@ -12,7 +12,7 @@ const StartPage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
       </Page.Header>

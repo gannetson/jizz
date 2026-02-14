@@ -1,4 +1,4 @@
-import {Box, Card, CardBody, CardFooter, CardHeader, Flex, Text} from "@chakra-ui/react"
+import {Box, CardRoot, CardBody, CardFooter, CardHeader, Flex, Text} from "@chakra-ui/react"
 import AppContext, {Update} from "../../core/app-context"
 import {format} from "date-fns"
 import {ReactionLine} from "./reaction-line"
@@ -10,21 +10,21 @@ export const UpdateLine = ({update}: { update: Update }) => {
 
   return (
     <>
-      <Card border={'1px solid #eee'}>
+      <CardRoot border={'1px solid #eee'}>
         <CardHeader
-          backgroundColor={'orange.200'}
-          textColor={'orange.800'}
+          backgroundColor={'primary.200'}
+          color={'primary.800'}
           fontWeight={'bold'}
           py={2}
         >
           {update.title}
         </CardHeader>
         <CardBody>{update.message}</CardBody>
-        <CardFooter textColor={'orange.600'} justifyContent={'space-between'}>
+        <CardFooter color={'primary.600'} justifyContent={'space-between'}>
           <Box>{update.user.first_name} </Box>
           <Box fontStyle={'italic'}>{format(update.created, 'PP')}</Box>
         </CardFooter>
-      </Card>
+      </CardRoot>
       <Flex direction={'column'} gap={6}>
         {update.reactions && update.reactions.map(
           (reaction, index) => <ReactionLine key={index} reaction={reaction}/>

@@ -1,11 +1,10 @@
-import {Flex, Heading, Table, TableContainer, Tbody, Td, Th, Thead, Tr} from "@chakra-ui/react";
-import Page from "./layout/page";
+import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection, useBreakpoint} from "@chakra-ui/react";
+import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
-import {useContext, useEffect, useState} from "react"
+import {useContext, useEffect, useState, useMemo} from "react"
 import AppContext, {Country, Score} from "../core/app-context"
 import {Loading} from "../components/loading"
 import {ScoreLine} from "../components/score-line"
-import {Select} from "chakra-react-select"
 import {UseCountries} from "../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 
@@ -38,6 +37,9 @@ const HomePage = () => {
     setLoading(false)
   }
 
+  const breakpoint = useBreakpoint({ breakpoints: ['base', 'sm', 'md', 'lg', 'xl', '2xl'] })
+  const isMobile = breakpoint === 'base' || breakpoint === 'sm' 
+
   useEffect(() => {
     loadScores()
   }, [level, length, media, country]);
@@ -66,99 +68,147 @@ const HomePage = () => {
 
   const selectCountries = [{code: '', name: 'All countries'}].concat(countries)
 
+  const countryCollection = useMemo(() => {
+    const items = selectCountries.map((c, index) => ({
+      label: c.name,
+      value: c.name,
+      original: c,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [selectCountries]);
+
+  const mediaCollection = useMemo(() => {
+    const items = mediums.map((m, index) => ({
+      label: m.label,
+      value: m.value,
+      original: m,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [mediums]);
+
+  const levelCollection = useMemo(() => {
+    const items = levels.map((l, index) => ({
+      label: l.label,
+      value: l.value,
+      original: l,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [levels]);
+
+  const lengthCollection = useMemo(() => {
+    const items = lengths.map((l, index) => ({
+      label: l.label,
+      value: l.value,
+      original: l,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [lengths]);
+
+  const countryValue = country ? country.name : undefined;
+  const mediaValue = media || '';
+  const levelValue = level || '';
+  const lengthValue = length || '';
+
+  const handleCountryChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0];
+    const selectedCountry = selectCountries.find((c) => c.name === selectedValue);
+    if (selectedCountry) {
+      setCountry(selectedCountry);
+    }
+  };
+
+  const handleMediaChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setMedia(selectedValue);
+  };
+
+  const handleLevelChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setLevel(selectedValue);
+  };
+
+  const handleLengthChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setLength(selectedValue);
+  };
+
+  const renderSelect = (collection: any, value: string | undefined, onValueChange: (details: { value: string[] }) => void, placeholder: string) => (
+    <Select.Root
+      collection={collection}
+      value={value ? [value] : []}
+      onValueChange={onValueChange}
+    >
+      <Select.HiddenSelect />
+      <Select.Control>
+        <Select.Trigger>
+          <Select.ValueText placeholder={placeholder} />
+        </Select.Trigger>
+        <Select.IndicatorGroup>
+          <Select.Indicator />
+        </Select.IndicatorGroup>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+            {collection.items.map((item: any) => (
+              <Select.Item key={item.value} item={item}>
+                <Select.ItemIndicator />
+                <Select.ItemText>{item.label}</Select.ItemText>
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
 
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           <FormattedMessage id='hiscores' defaultMessage={'High Scores'}/>
         </Heading>
       </Page.Header>
       <Page.Body>
-        <Flex flexWrap={'wrap'} width={'full'} gap={4}>
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={selectCountries}
-            getOptionLabel={(c) => c ? c.name : '?'}
-            getOptionValue={(c) => c ? c.name : '?'}
-            value={country}
-            onChange={(val) => val && setCountry(val)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={mediums}
-            value={mediums.find((l) => l.value === media)}
-            onChange={(val) => val && setMedia(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={levels}
-            value={levels.find((l) => l.value === level)}
-            onChange={(val) => val && setLevel(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
-          <Select
-            size={'md'}
-            variant={'flushed'}
-            options={lengths}
-            value={lengths.find((l) => l.value === length)}
-            onChange={(val) => val && setLength(val.value)}
-            chakraStyles={{
-              menu: (provided) => ({
-                ...provided,
-                width: "300px",
-              }),
-            }}
-          />
+        <Flex width={'full'} gap={4} flexDirection={isMobile ? 'column' : 'row'}>
+          {renderSelect(countryCollection, countryValue, handleCountryChange, 'Select country...')}
+          {renderSelect(mediaCollection, mediaValue, handleMediaChange, 'Select media...')}
+          {renderSelect(levelCollection, levelValue, handleLevelChange, 'Select level...')}
+          {renderSelect(lengthCollection, lengthValue, handleLengthChange, 'Select length...')}
         </Flex>
         <>
           {loading ? (
             <Loading/>
           ) : (
 
-            <TableContainer>
-              <Table variant='striped' colorScheme='orange' size={['sm', 'md']}>
-                <Thead>
-                  <Tr bgColor={'orange.200'}>
-                    <Th>Player</Th>
-                    <Th>
-                      🇿🇿
-                    </Th>
-                    <Th>
+            <Box overflowX="auto">
+              <TableRoot variant='line' colorPalette='primary' size={['sm', 'md']}>
+                <TableHeader>
+                  <TableRow bgColor={'primary.200'}>
+                  <TableColumnHeader>#</TableColumnHeader>
+                  <TableColumnHeader>Player</TableColumnHeader>
+                    <TableColumnHeader>
+                      flag
+                    </TableColumnHeader>
+                    <TableColumnHeader>
                       🔭
-                    </Th>
-                    <Th>Lvl</Th>
-                    <Th>#</Th>
-                    <Th>Score</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
+                    </TableColumnHeader>
+                    <TableColumnHeader>Lvl</TableColumnHeader>
+                    <TableColumnHeader>n</TableColumnHeader>
+                    <TableColumnHeader>Score</TableColumnHeader>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {scores && scores.map((score, index) => {
                     return <ScoreLine key={index} score={score}/>
                   })}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                </TableBody>
+              </TableRoot>
+            </Box>
           )}
         </>
       </Page.Body>

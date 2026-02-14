@@ -45,7 +45,7 @@ export const ButtonBadge = ({text}: { text: string }) => {
         <Icon
           as={FaCertificate}
           boxSize="100px"
-          color="orange.700"
+          color="primary.700"
           position="absolute"
           top="0"
           left="0"

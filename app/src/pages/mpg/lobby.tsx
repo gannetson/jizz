@@ -1,7 +1,7 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
-import Page from "../layout/page"
-import {Box, Button, Flex, Heading, Link, List, ListItem, Tag, VStack, Text} from "@chakra-ui/react"
+import { Page } from "../../shared/components/layout"
+import {Box, Button, Flex, Heading, Link, ListRoot, ListItem, TagRoot, VStack, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import copy from "copy-to-clipboard"
 import WebsocketContext from "../../core/websocket-context"
@@ -9,6 +9,7 @@ import AppContext from "../../core/app-context"
 import {PlayerItem} from "./play/player-item"
 import GameHeader from "./game-header"
 import { QRCodeSVG } from 'qrcode.react'
+import { validateQuestionForGame, getCurrentGameToken } from '../../core/game-token-validator'
 
 const Lobby: React.FC = () => {
 
@@ -33,10 +34,27 @@ const Lobby: React.FC = () => {
   }
 
   useEffect(() => {
-    if (question) {
-      navigate('/game/play')
+    // Only navigate if question exists AND it belongs to the current game
+    // Use centralized validator to ensure question belongs to current game
+    if (question && game) {
+      const currentGameToken = getCurrentGameToken(game, gameToken || null)
+      
+      if (validateQuestionForGame(question, currentGameToken || undefined)) {
+        console.log('Navigating to play screen - question belongs to current game:', currentGameToken)
+        navigate('/game/play')
+      } else {
+        // Question doesn't belong to current game - ignore it
+        // This could be an old question from a previous game
+        console.log('Ignoring navigation - question validation failed:', {
+          questionToken: question.game?.token,
+          currentGameToken
+        })
+      }
+    } else if (question && !game) {
+      // Question exists but no game - this shouldn't happen, but ignore it
+      console.log('Question exists but no game - ignoring')
     }
-  }, [question]);
+  }, [question, game, gameToken, navigate]);
 
   const isHost = player?.name === game?.host?.name
 
@@ -53,14 +71,14 @@ const Lobby: React.FC = () => {
         </Flex>
         <Flex gap={4}>
           <FormattedMessage id={'link'} defaultMessage={'Link'}/>
-          <Box><Tag onClick={copyLink} fontSize='18px'>{gameLink}</Tag></Box>
+          <Box><TagRoot onClick={copyLink} fontSize='18px'>{gameLink}</TagRoot></Box>
           {copied2 ? <FormattedMessage id={'copied'} defaultMessage={'copied!'}/> : (
             <Link onClick={copyLink}>
               <FormattedMessage id={'copy'} defaultMessage={'copy'}/>
             </Link>
           )}
         </Flex>
-        <VStack spacing={4} align="start">
+        <VStack gap={4} align="start">
           <Box p={4} bg="white" borderRadius="lg" boxShadow="md" border={'1px solid orange'}>
             <QRCodeSVG 
               value={gameLink}
@@ -85,16 +103,16 @@ const Lobby: React.FC = () => {
         <Heading size={'md'} mt={6}>
           <FormattedMessage id={'players joined'} defaultMessage={'Players joined'}/>
         </Heading>
-        <List spacing={4}>
+        <ListRoot gap={4}>
           {players && players.map((player, index) => (
             <ListItem key={index}>
               <PlayerItem showAnswer={false} showScore={false} showRanking={false} player={player}/>
             </ListItem>
           ))}
-        </List>
+        </ListRoot>
         {
           isHost ? (
-            <Button onClick={startGame}>
+            <Button onClick={startGame} colorPalette="primary">
               Start game
             </Button>
 

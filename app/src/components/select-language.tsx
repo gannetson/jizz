@@ -1,8 +1,7 @@
-import {useContext} from "react";
+import {useContext, useMemo} from "react";
 import AppContext, {Language} from "../core/app-context";
-import {Box, Flex, Heading, Radio, RadioGroup} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroup, Select, Portal, createListCollection} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import {Select} from "chakra-react-select"
 import {UseLanguages} from "../user/use-languages"
 
 
@@ -14,7 +13,29 @@ const SelectLanguage = () => {
     setLanguage && setLanguage(lang)
   }
 
-  const selectedLanguage = languages.find((l) => l.code === language);
+  // Ensure languages is always an array
+  const languagesArray = Array.isArray(languages) ? languages : [];
+  const selectedLanguage = languagesArray.find((l) => l.code === language);
+
+  const collection = useMemo(() => {
+    const items = languagesArray.map((l, index) => ({
+      label: l.name,
+      value: l.name,
+      original: l,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [languagesArray]);
+
+  const selectedValue = selectedLanguage ? selectedLanguage.name : undefined;
+
+  const handleValueChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0];
+    const selectedLang = languagesArray.find((l) => l.name === selectedValue);
+    if (selectedLang) {
+      onChange(selectedLang.code);
+    }
+  };
 
 
   return (
@@ -25,29 +46,73 @@ const SelectLanguage = () => {
       <Box mb={4}>
         <FormattedMessage
           id={'set language description'}
-          defaultMessage={'This changes your language. Other players that join your game can pick another language.'}/>
+          defaultMessage={'This changes the species names in the game. Other players that join your game can pick another language.'}/>
       </Box>
-      <RadioGroup
+      <RadioGroup.Root
+        colorPalette="primary"
         value={language}
-        onChange={(val: 'en' | 'nl') => val && onChange(val)}
-        colorScheme={'orange'}
+        onValueChange={(e: { value?: string }) => e.value && onChange(e.value as 'en' | 'nl')}
       >
         <Flex direction={'column'} gap={4}>
-          <Radio value={'en'}>English (UK)</Radio>
-          <Radio value={'en_US'}>English (US)</Radio>
-          <Radio value={'nl'}>Nederlands</Radio>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'en_UK'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl cursor="pointer">
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>English (UK)</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'en_US'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl cursor="pointer">
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>English (US)</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'nl'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl cursor="pointer">
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>Nederlands</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
         </Flex>
-      </RadioGroup>
+      </RadioGroup.Root>
       <Box mt={4} mb={2}>
         <FormattedMessage id={'more languages'} defaultMessage={'More languages'} />
       </Box>
-      <Select<Language>
-        options={languages}
-        getOptionLabel={(c) => c ? c.name : '?'}
-        getOptionValue={(c) => c ? c.name : '?'}
-        value={selectedLanguage}
-        onChange={(val) => val && onChange(val.code)}
-      />
+      <Select.Root
+        collection={collection}
+        value={selectedValue ? [selectedValue] : []}
+        onValueChange={handleValueChange}
+      >
+        <Select.HiddenSelect />
+        <Select.Control>
+          <Select.Trigger>
+            <Select.ValueText placeholder="Select language..." />
+          </Select.Trigger>
+          <Select.IndicatorGroup>
+            <Select.Indicator />
+          </Select.IndicatorGroup>
+        </Select.Control>
+        <Portal>
+          <Select.Positioner>
+            <Select.Content bg="white" borderRadius="md" borderWidth="2px" borderColor="primary.300" boxShadow="xl" p={1}>
+              {collection.items.map((item: any) => (
+                <Select.Item key={item.value} item={item}>
+                  <Select.ItemIndicator />
+                  <Select.ItemText>{item.label}</Select.ItemText>
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Positioner>
+        </Portal>
+      </Select.Root>
     </Box>
   )
 };

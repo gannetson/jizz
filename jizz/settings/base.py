@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 from datetime import timedelta
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +37,9 @@ ALLOWED_HOSTS = [
 INSTALLED_APPS = [
     'daphne',
     'channels',
+    'jizz',  # Put jizz before django.contrib.admin so our templates are found first
+    'compare',  # Species comparison app
+    'media',  # Media files app (Image, Video, Audio)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,7 +53,6 @@ INSTALLED_APPS = [
     'oauth2_provider',
     'social_django',
     'rest_framework_social_oauth2',
-    'jizz'
 ]
 
 MIDDLEWARE = [
@@ -68,7 +71,7 @@ ROOT_URLCONF = 'jizz.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'jizz' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -135,10 +138,18 @@ USE_TZ = True
 
 STATIC_URL = 'django/'
 
+# Media files (user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email configuration (can be overridden in local.py or production.py)
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'info@birdr.pro')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', 'info@birdr.pro')
 
 
 AUTHENTICATION_BACKENDS = (
@@ -148,32 +159,44 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # Social OAuth2 settings
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<YOUR_GOOGLE_CLIENT_ID>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<YOUR_GOOGLE_CLIENT_SECRET>'
+# Get from environment variables or set directly
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '<YOUR_GOOGLE_CLIENT_ID>')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '<YOUR_GOOGLE_CLIENT_SECRET>')
+# Request profile and email scopes to get user name and avatar
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+]
 
-SOCIAL_AUTH_APPLE_ID_CLIENT = '<YOUR_APPLE_CLIENT_ID>'
-SOCIAL_AUTH_APPLE_ID_SECRET = '<YOUR_APPLE_SECRET>'
+SOCIAL_AUTH_APPLE_ID_CLIENT = os.environ.get('SOCIAL_AUTH_APPLE_ID_CLIENT', '<YOUR_APPLE_CLIENT_ID>')
+SOCIAL_AUTH_APPLE_ID_SECRET = os.environ.get('SOCIAL_AUTH_APPLE_ID_SECRET', '<YOUR_APPLE_SECRET>')
 
-SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = '<YOUR_MICROSOFT_CLIENT_ID>'
-SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = '<YOUR_MICROSOFT_SECRET>'
-SOCIAL_AUTH_AZUREAD_TENANT_ID = '<YOUR_MICROSOFT_TENANT_ID>'
+SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_AZUREAD_OAUTH2_KEY', '<YOUR_MICROSOFT_CLIENT_ID>')
+SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET', '<YOUR_MICROSOFT_SECRET>')
+SOCIAL_AUTH_AZUREAD_TENANT_ID = os.environ.get('SOCIAL_AUTH_AZUREAD_TENANT_ID', '<YOUR_MICROSOFT_TENANT_ID>')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-        'rest_framework_social_oauth2.authentication.SocialAuthentication',
+        'jizz.authentication.PlayerTokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        # Removed SocialAuthentication from default - it causes issues with anonymous requests
+        # It can be added to specific views that need it
+        # 'rest_framework_social_oauth2.authentication.SocialAuthentication',
     ],
    'DEFAULT_FILTER_BACKENDS': [
        'rest_framework.filters.OrderingFilter'
    ],
+   'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+   'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=4),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1000),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True
+    'BLACKLIST_AFTER_ROTATION': False,  # Temporarily disable to test if blacklisting is the issue
 }
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<YOUR_GOOGLE_CLIENT_ID>'
@@ -201,3 +224,9 @@ CORS_ALLOW_HEADERS = ["*"]
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
 # SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'your-actual-google-client-id'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'your-actual-google-client-secret'
+SOCIAL_AUTH_APPLE_ID_CLIENT = 'your-actual-apple-client-id'
+SOCIAL_AUTH_APPLE_ID_SECRET = 'your-actual-apple-secret'

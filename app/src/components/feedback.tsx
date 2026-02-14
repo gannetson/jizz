@@ -1,18 +1,16 @@
-import {Box, Button, Card, Flex, Heading, Text, Textarea, useToast} from "@chakra-ui/react"
-import {FormattedMessage} from "react-intl"
+import {Box, Button, CardRoot, CardBody, Flex, Heading, Text, Textarea} from "@chakra-ui/react"
+import {FormattedMessage, useIntl} from "react-intl"
 import StarRating from "./rating/star-rating"
 import {useState} from "react"
+import { toaster } from "@/components/ui/toaster"
 
 export const Feedback = () => {
-
+  const intl = useIntl()
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const toast = useToast({});
-
   const submit = async () => {
-    setSubmitted(true)
     const player_token = localStorage.getItem('player-token');
     const response = await fetch('/api/feedback/', {
       method: 'POST',
@@ -21,17 +19,36 @@ export const Feedback = () => {
       },
       body: JSON.stringify({rating, comment, player_token})
     })
-    setTimeout(() => {
-      setSubmitted(false)
-    }, 3000)
+    
+    if (response.ok) {
+      setSubmitted(true)
+      toaster.create({
+        title: intl.formatMessage({id: 'thanks', defaultMessage: 'Thanks!'}),
+        description: intl.formatMessage({id: 'thanks for your feedback message', defaultMessage: 'Thank you for your feedback!'}),
+        colorPalette: "success",
+        duration: 3000,
+        isClosable: true,
+      })
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 3000)
+    } else {
+      toaster.create({
+        title: intl.formatMessage({id: 'error', defaultMessage: 'Error'}),
+        description: intl.formatMessage({id: 'error submitting feedback', defaultMessage: 'Failed to submit feedback. Please try again.'}),
+        colorPalette: "error",
+        duration: 4000,
+        isClosable: true,
+      })
+    }
   }
 
   return (
-    <Card border={"1px solid"} shadow={'lg'} borderColor={'gray.300'} backgroundColor={submitted ? 'orange.100' : undefined} borderRadius='8px' p={8}>
+    <CardRoot border={"1px solid"} shadow={'lg'} borderColor={'gray.300'} backgroundColor={submitted ? 'primary.100' : undefined} borderRadius='8px' p={8}>
       <Flex direction={'column'} gap={4}>
         {submitted ? (
           <>
-            <Heading size={'md'} textColor={'orange.500'}>
+            <Heading size={'md'} color={'primary.500'}>
               <FormattedMessage id={'thanks'} defaultMessage={'Thanks!'}/>
             </Heading>
             <FormattedMessage id={'thanks for your feedback message'} defaultMessage={'Thank you for your feedback!'}/>
@@ -45,14 +62,14 @@ export const Feedback = () => {
             <StarRating rating={rating} setRating={setRating} count={5} size={20}/>
             <Flex gap={2}>
               <FormattedMessage id={'comments'} defaultMessage={'Comments / suggestions'}/>
-              <Text as={'span'} fontStyle={'italic'} textColor={'gray.400'}>
+              <Text as={'span'} fontStyle={'italic'} color={'gray.400'}>
                 <FormattedMessage id={'optional'} defaultMessage={'optional'}/>
               </Text>
             </Flex>
 
-            <Textarea onChange={(val) => setComment(val.target.value)}/>
+            <Textarea cursor="text" onChange={(val) => setComment(val.target.value)}/>
             <Box>
-              <Button onClick={submit} isDisabled={!rating && !comment}>
+              <Button onClick={submit} disabled={!rating && !comment} colorPalette="primary">
                 <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
               </Button>
             </Box>
@@ -60,6 +77,6 @@ export const Feedback = () => {
           </>
         )}
       </Flex>
-    </Card>
+    </CardRoot>
   )
 }

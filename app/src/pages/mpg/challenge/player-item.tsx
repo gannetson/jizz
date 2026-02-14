@@ -1,4 +1,4 @@
-import {Card, CardBody, Flex, Tag} from "@chakra-ui/react"
+import {CardRoot, CardBody, Flex, TagRoot} from "@chakra-ui/react"
 import {FaCheckCircle, FaClock, FaMinusCircle, FaCrown} from "react-icons/fa";
 import {MultiPlayer} from "../../../core/app-context"
 import {FormattedMessage} from "react-intl"
@@ -13,15 +13,15 @@ export const PlayerItem = (
     showScore?: boolean,
     variant?: 'outline' | 'normal'
   }) => {
-  let color = 'orange.200'
+  let color = 'primary.200'
   if (showAnswer) {
-    if (player.status === 'correct') color = 'green.200'
-    if (player.status === 'incorrect') color = 'red.200'
+    if (player.status === 'correct') color = 'success.200'
+    if (player.status === 'incorrect') color = 'error.200'
   }
 
 
   return (
-    <Card backgroundColor={variant === 'outline' ? undefined : color} border={variant === 'outline' ? '2px solid #eee' : undefined}>
+    <CardRoot backgroundColor={variant === 'outline' ? undefined : color} border={variant === 'outline' ? '2px solid #eee' : undefined}>
       <CardBody py={2}>
         <Flex gap={4} alignItems={'center'} justifyContent={'space-between'}>
           <Flex gap={4} alignItems={'center'}>
@@ -42,19 +42,19 @@ export const PlayerItem = (
             <Flex gap={4}>
               {showRanking && player.ranking && (
                 <Flex gap={4}>
-                  <Tag colorScheme={'orange'} fontSize='sm'>
+                  <TagRoot colorPalette={'primary'} fontSize='sm'>
                     #{player.ranking} <FormattedMessage id={'high score'} defaultMessage={'high score'} />
-                  </Tag>
+                  </TagRoot>
                 </Flex>
               )}
               {showAnswer && player.last_answer?.correct &&
-                <Tag colorScheme={'green'} fontSize='sm'>+{player.last_answer.score}</Tag>}
-              <Tag fontSize='xl'>{player.score}</Tag>
+                <TagRoot colorPalette={'success'} fontSize='sm'>+{player.last_answer.score}</TagRoot>}
+              <TagRoot fontSize='xl'>{player.score}</TagRoot>
             </Flex>
           )}
         </Flex>
 
       </CardBody>
-    </Card>
+    </CardRoot>
   )
 }

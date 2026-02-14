@@ -9,15 +9,27 @@ export interface Country {
 export const UseCountries = () => {
   const [countries, setCountries] = useState<Country[]>([])
   useEffect(() => {
-    if (!countries || countries.length === 0) {
-      fetch(`/api/countries/`)
-        .then((res) => res.json())
-        .then((data) => {
-          setCountries(data)
-        });
-
+    if (countries.length === 0) {
+      const fetchCountries = async () => {
+        try {
+          const response: Response = await fetch(`/api/countries/`);
+          const data: any = await response.json();
+          
+          if (Array.isArray(data)) {
+            setCountries(data);
+          } else {
+            console.error('Unexpected response format:', data);
+            setCountries([]);
+          }
+        } catch (error) {
+          console.error('Error fetching countries:', error);
+          setCountries([]);
+        }
+      };
+      
+      fetchCountries();
     }
-  }, [countries])
+  }, []) // Only run once on mount
 
 
   return {

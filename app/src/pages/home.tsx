@@ -1,6 +1,6 @@
-import {Button, Flex, Heading, Hide, Box, Icon, Image} from "@chakra-ui/react";
+import {Button, Flex, Heading, Box, Icon, Image} from "@chakra-ui/react";
 import { FaCertificate } from "react-icons/fa";
-import Page from "./layout/page";
+import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Update} from "../core/app-context"
@@ -27,7 +27,7 @@ const HomePage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
           {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
         </Heading>
       </Page.Header>
@@ -36,15 +36,12 @@ const HomePage = () => {
           <Loading/>
         ) : (
           <Flex direction={'column'} gap={10}>
-            <Button onClick={() => navigate('/start')}>
+            <Button onClick={() => navigate('/start')} colorPalette="primary">
               <FormattedMessage id={'start game'} defaultMessage={'Start a new game'}/>
-            </Button>
-            <Button onClick={() => navigate('/texel/start')}>
-              <FormattedMessage id={'start texel game'} defaultMessage={'Texel Big Day Game'}/>
             </Button>
 
             {countryChallenge && countryChallenge.levels && countryChallenge.levels.length > 0 && (
-              <Button colorScheme="orange" onClick={() => navigate('/challenge/play')} position="relative">
+              <Button colorPalette="primary" onClick={() => navigate('/challenge/play')} position="relative">
                 <Flex gap={4}>
                   <FormattedMessage 
                     id={'continue challenge'} 
@@ -58,7 +55,7 @@ const HomePage = () => {
               </Button>
             )}
             
-            <Button onClick={() => navigate('/challenge')} position="relative">
+            <Button onClick={() => navigate('/challenge')} position="relative" colorPalette="primary">
               <Flex gap={4}>
                 {countryChallenge ? (
                   <FormattedMessage id={'new country challenge'} defaultMessage={'New country challenge'}/>
@@ -68,12 +65,12 @@ const HomePage = () => {
               </Flex>
 
             </Button>
-            <Button variant='ghost' onClick={() => navigate('/scores')}>
+            <Button variant='ghost' colorPalette="primary" onClick={() => navigate('/scores')}>
               <FormattedMessage id={'high scores'} defaultMessage={'High scores'}/>
             </Button>
             <Feedback/>
             {updates && updates.length > 0 &&  <UpdateLine update={updates[0]} />}
-              <Button variant='ghost' onClick={() => navigate('/updates')}>
+              <Button variant='ghost' colorPalette="primary" onClick={() => navigate('/updates')}>
                 <FormattedMessage id={'more updates'} defaultMessage={'More updates'}/>
               </Button>
 

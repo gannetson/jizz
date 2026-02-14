@@ -1,7 +1,7 @@
 import * as React from "react"
 import {useContext, useEffect} from "react"
 import {BrowserRouter, Route, Routes} from "react-router-dom";
-import Layout from "./pages/layout/layout";
+import { Layout } from "./shared/components/layout";
 import HomePage from "./pages/home";
 import Lobby from "./pages/mpg/lobby"
 import {AboutPage} from "./pages/about";
@@ -21,9 +21,15 @@ import Updates from "./pages/updates"
 import {Login} from "./components/auth/login"
 import {AuthCallback} from "./components/auth/auth-callback"
 import {PrivacyPage} from "./pages/privacy"
+import {ProfilePage} from "./pages/profile"
+import { ForgotPasswordPage } from "./pages/forgot-password";
+import { ResetPasswordPage } from "./pages/reset-password";
 import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
+import { MyGamesPage } from "./pages/my-games"
+import { GameDetailPage } from "./pages/game-detail"
+import { MediaReviewPage } from "./pages/media-review"
 
 
 export const MainContent = () => {
@@ -39,7 +45,7 @@ export const MainContent = () => {
     nl: nlMessages,
     la: laMessages
   }
-  const locale  = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
+  const locale  = language === 'nl' ? 'nl' : language === 'la' ? 'la' : language === 'en_US' ? 'en' : 'en';
 
   return (
     <IntlProvider locale={locale} messages={messages[locale]}>
@@ -49,6 +55,11 @@ export const MainContent = () => {
             <Route index element={<HomePage/>}/>
             <Route path="/login" element={<Login />} />
             <Route path="/login/:provider" element={<AuthCallback />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/my-games" element={<MyGamesPage />} />
+            <Route path="/my-games/:token" element={<GameDetailPage />} />
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>
             <Route path="/join/:gameCode" element={<JoinPage/>}/>
@@ -66,6 +77,7 @@ export const MainContent = () => {
 
             <Route path='/scores/' element={<Hiscores />}/>
             <Route path='/updates/' element={<Updates />}/>
+            <Route path='/media-review/' element={<MediaReviewPage />}/>
 
           </Route>
         </Routes>

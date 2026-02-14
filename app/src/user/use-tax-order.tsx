@@ -12,16 +12,27 @@ export const UseTaxOrder = () => {
   const {country} = useContext(AppContext);
 
   useEffect(() => {
-    const url = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
-    if (!taxOrders || taxOrders.length === 0) {
-      fetch(url)
-        .then((res) => res.json())
-        .then((data) => {
-          setTaxOrders(data)
-        });
-
-    }
-  }, [taxOrders, country])
+      const fetchTaxOrders = async () => {
+        setTaxOrders([]) // Reset when country changes
+        try {
+          const url: string = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
+          const response: Response = await fetch(url);
+          const data: any = await response.json();
+          
+          if (Array.isArray(data)) {
+            setTaxOrders(data);
+          } else {
+            console.error('Unexpected response format:', data);
+            setTaxOrders([]);
+          }
+        } catch (error) {
+          console.error('Error fetching tax orders:', error);
+          setTaxOrders([]);
+        }
+      };
+    
+      fetchTaxOrders();
+  }, [country?.code]) // Re-fetch when country changes
 
 
   return {

@@ -43,15 +43,20 @@ export const CreateGame = ({
     createGame,
     setIncludeRare,
     setMediaType,
-    playerName
+    playerName,
+    setPlayerName,
+    language,
+    setLanguage
   } = useContext(AppContext);
   const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const {countries} = UseCountries()
 
+  // Don't auto-load user profile preferences - let users set their own preferences for each game
+
   useEffect(() => {
-    if (pickCountry && countries && countries.length) {
+    if (pickCountry && countries && countries.length > 0) {
       const country = countries.find((c) => c.code === pickCountry)
       country && setCountry(country)
     }
@@ -69,9 +74,9 @@ export const CreateGame = ({
     }
 
   }, [
-    countries, pickCountry,
+    countries.length, pickCountry, // Only depend on countries.length, not countries array itself
     pickLevel, pickLength, pickMediaType, includeRare,
-    setLevel, setMediaType, setIncludeRare, setLength
+    setLevel, setMediaType, setIncludeRare, setLength, setCountry
   ]);
 
 
@@ -112,24 +117,12 @@ export const CreateGame = ({
           id={'game info'}/>
         <SetName/>
         <SelectLanguage/>
-        {!pickCountry && (
-          <>
-            <SelectCountry/>
-            <Flex gap={4}>
-              <Box flex={1}>
-                <SelectTaxOrder/>
-              </Box>
-              <Box flex={1}>
-                <SelectTaxFamily/>
-              </Box>
-            </Flex>
-          </>
-        )}
+        {!pickCountry &&  <SelectCountry/>}
         {includeRare === undefined && <SelectSpeciesStatus/>}
         {!pickLength && <SelectLength/>}
         {!pickLevel && <SelectLevel/>}
         {!pickMediaType && <SelectMediaType/>}
-        <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
+        <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>

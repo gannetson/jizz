@@ -23,7 +23,7 @@ export const PassedLevel: React.FC = () => {
           <FormattedMessage id={'no level found'} defaultMessage={'No level found'} />
         </Heading>
         <Text>
-          <Button onClick={() => navigate('/challenge')}>
+          <Button onClick={() => navigate('/challenge')} colorPalette="primary">
             <FormattedMessage id="back to challenges" defaultMessage="Back to Challenges" />
           </Button>
         </Text>
@@ -53,7 +53,7 @@ export const PassedLevel: React.FC = () => {
       </Text>
 
       <Flex gap={4}>
-        <Button onClick={nextLevel}>
+        <Button onClick={nextLevel} colorPalette="primary">
           <FormattedMessage id="next level" defaultMessage="Next Level" />
         </Button>
       </Flex>

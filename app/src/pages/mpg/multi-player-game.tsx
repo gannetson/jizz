@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import Page from "../layout/page"
+import { Page } from "../../shared/components/layout"
 import { Heading } from "@chakra-ui/react"
 import { FormattedMessage } from "react-intl"
 import WebsocketContext from "../../core/websocket-context"
@@ -13,10 +13,15 @@ const MultiPlayerGame: React.FC = () => {
   const { question, answer } = useContext(WebsocketContext)
   const { game } = useContext(AppContext)
 
+  // If no game, redirect to start page (shouldn't happen, but safety check)
+  if (!game) {
+    return null
+  }
+
   return (
     <Page>
       <Page.Header>
-        <Heading size={'lg'} noOfLines={1}>
+        <Heading size={'lg'}>
           {game?.ended
             ? <FormattedMessage id={'game ended'} defaultMessage={'Game ended'} />
             : <FormattedMessage

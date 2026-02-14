@@ -14,20 +14,36 @@ export const SelectSpeciesStatus = () => {
         <FormattedMessage defaultMessage={'Species status'} id={'Species status'}/>
       </Heading>
       <Flex direction={'column'} gap={4}>
-        <Checkbox
-          colorScheme={'orange'}
-          isChecked={includeRare}
-          onChange={(val) => setIncludeRare(Boolean(val.target.checked))}
-        >
-          <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
-        </Checkbox>
-        <Checkbox
-          colorScheme={'orange'}
-          isChecked={includeEscapes}
-          onChange={(val) => setIncludeEscapes(Boolean(val.target.checked))}
-        >
-          <FormattedMessage defaultMessage={'Include introduced & escaped species '} id={'include escaped species'}/>
-        </Checkbox>
+        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          <Checkbox.Root
+            colorPalette="primary"
+            checked={includeRare}
+            onCheckedChange={(e: { checked: boolean }) => setIncludeRare(e.checked === true)}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control cursor="pointer">
+              <Checkbox.Indicator />
+            </Checkbox.Control>
+            <Checkbox.Label>
+              <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
+            </Checkbox.Label>
+          </Checkbox.Root>
+        </Box>
+        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+          <Checkbox.Root
+            colorPalette="primary"
+            checked={includeEscapes}
+            onCheckedChange={(e: { checked: boolean }) => setIncludeEscapes(e.checked === true)}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control cursor="pointer">
+              <Checkbox.Indicator />
+            </Checkbox.Control>
+            <Checkbox.Label>
+              <FormattedMessage defaultMessage={'Include introduced & escaped species '} id={'include escaped species'}/>
+            </Checkbox.Label>
+          </Checkbox.Root>
+        </Box>
       </Flex>
     </Box>
   )

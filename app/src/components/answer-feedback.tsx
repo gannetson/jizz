@@ -86,7 +86,7 @@ export const AnswerFeedback = ({ correct, onAnimationComplete }: AnswerFeedbackP
             <Icon
               as={FaCheckCircle}
               boxSize={32}
-              color="orange.600"
+              color="primary.600"
               position="relative"
               zIndex={2}
             />
@@ -129,7 +129,7 @@ export const AnswerFeedback = ({ correct, onAnimationComplete }: AnswerFeedbackP
             <Icon
               as={heartState === 'whole' ? FaHeart : FaHeartBroken}
               boxSize={32}
-              color="orange.600"
+              color="primary.600"
               position="relative"
               zIndex={2}
             />

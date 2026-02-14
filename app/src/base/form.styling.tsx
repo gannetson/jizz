@@ -1,204 +1,303 @@
-import { defineStyle, defineStyleConfig } from '@chakra-ui/react'
+import { defineRecipe, defineSlotRecipe, defaultConfig } from '@chakra-ui/react'
 
-const baseInput = defineStyle({
-  field: {
-    borderRadius: '20px',
-    borderColor: 'orange.300',
-    borderWidth: '2px',
-    fontSize: 'lg',
+// Export both radio and checkbox themes
+
+/**
+ * Link theme - styled anchor links with primary color
+ * Uses simple recipe (no slots) like Button
+ */
+export const linkTheme = defineRecipe({
+  className: 'link',
+  base: {
+    color: 'primary.500',
+    textDecoration: 'underline',
+    transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
     fontWeight: 'bold',
-    textColor: 'orange.500',
-    transition: 'all 0.2s ease-in-out',
     _hover: {
-      transform: 'scale(1.02)',
-      boxShadow: 'md',
+      color: 'primary.600',
+      textDecoration: 'underline',
+      transform: 'translateY(-2px) scale(1.02)',
+      textShadow: '0 2px 4px rgba(139, 100, 25, 0.3)',
+    },
+    _active: {
+      transform: 'none',
+      textShadow: 'none',
     },
     _focus: {
-      transform: 'scale(1.02)',
-      boxShadow: 'lg',
-      borderColor: 'orange.500',
-      textColor: 'orange.600',
+      color: 'primary.600',
+      textDecoration: 'underline',
+      outline: '2px solid',
+      outlineColor: 'primary.500',
+      outlineOffset: '2px',
     },
-    _invalid: {
-      borderColor: 'red.400',
-      boxShadow: '0 0 0 1px red.400',
-    }
-  }
+  },
 })
 
-const baseSelect = defineStyle({
-  field: {
-    borderColor: 'orange.300',
+/**
+ * Input theme - styled text input fields with primary color
+ * Uses simple recipe (no slots) like Button
+ */
+export const inputTheme = defineRecipe({
+  className: 'input',
+  base: {
     borderWidth: '2px',
-    fontSize: 'lg',
+    borderColor: 'primary.300',
+    borderRadius: 'md',
+    padding: '4px 8px',
     fontWeight: 'bold',
-    textColor: 'orange.500',
-    transition: 'all 0.2s ease-in-out',
-    _hover: {
-      transform: 'scale(1.02)',
-      boxShadow: 'md',
+    color: 'primary.500',
+    width: 'full',
+    _placeholder: {
+      color: 'primary.300',
     },
+    bg: 'white',
     _focus: {
-      transform: 'scale(1.02)',
-      boxShadow: 'lg',
-      borderColor: 'orange.500',
-      textColor: 'orange.600',
-    }
-  },
-  icon: {
-    color: 'orange.500',
-  },
-  placeholder: {
-    color: 'orange.400',
-    fontWeight: 'normal',
-  }
-})
-
-const baseCheckbox = defineStyle({
-  control: {
-    borderRadius: 'full',
-    borderColor: 'orange.300',
-    borderWidth: '2px',
-    transition: 'all 0.2s ease-in-out',
-    w: '1.5em',
-    h: '1.5em',
-    _hover: {
-      transform: 'scale(1.1)',
-      borderColor: 'orange.400',
+      borderColor: 'primary.500',
+      boxShadow: '0 0 0 1px {colors.primary.500}',
     },
-    _checked: {
-      bg: 'orange.500',
-      borderColor: 'orange.500',
-      _hover: {
-        bg: 'orange.600',
-        borderColor: 'orange.600',
-      }
-    }
   },
-  icon: {
-    fontSize: '0.8em',
-    color: 'white',
-  },
-  label: {
-    fontSize: 'lg',
-    fontWeight: 'bold',
-    color: 'orange.500',
-  },
-  
 })
 
-const baseRadio = defineStyle({
-  control: {
-    borderRadius: 'full',
-    borderColor: 'orange.300',
+/**
+ * Textarea theme - styled textarea fields with primary color
+ * Same styling as input for consistency
+ */
+export const textareaTheme = defineRecipe({
+  className: 'textarea',
+  base: {
     borderWidth: '2px',
-    transition: 'all 0.2s ease-in-out',
-    w: '1.5em',
-    h: '1.5em',
-    _hover: {
-      transform: 'scale(1.1)',
-      borderColor: 'orange.400',
-    },
-    _checked: {
-      bg: 'orange.500',
-      borderColor: 'orange.500',
-      _hover: {
-        bg: 'orange.600',
-        borderColor: 'orange.600',
-      }
-    }
-  },
-  label: {
-    fontSize: 'lg',
+    borderColor: 'primary.300',
+    borderRadius: 'md',
+    padding: '4px 8px',
     fontWeight: 'bold',
-    color: 'orange.500',
-  }
-})
-
-const baseLink = defineStyle({
-  color: 'orange.500',
-  textDecoration: 'underline',
-  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  fontWeight: 'bold',
-  _hover: {
-    color: 'orange.600',
-    textDecoration: 'underline',
-    transform: 'translateY(-2px) scale(1.02)',
-    textShadow: '0 2px 4px rgba(237, 137, 54, 0.3)',
-  },
-  _active: {
-    transform: 'none',
-    textShadow: 'none',
-  },
-  _focus: {
-    color: 'orange.600',
-    textDecoration: 'underline',
-  }
-})
-
-const menuLink = defineStyle({
-  color: 'orange.500',
-  textDecoration: 'none',
-  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  fontWeight: 'bold',
-  _hover: {
-    color: 'orange.600',
-    textDecoration: 'none',
-    transform: 'translateY(-2px) scale(1.02)',
-    textShadow: '0 2px 4px rgba(237, 137, 54, 0.3)',
-  },
-  _active: {
-    transform: 'none',
-    textShadow: 'none',
-  },
-  _focus: {
-    color: 'orange.600',
-    textDecoration: 'none',
-  }
-})
-
-export const inputTheme = defineStyleConfig({
-  defaultProps: {
-    variant: 'base',
-  },
-  variants: {
-    base: baseInput,
+    color: 'primary.500',
+    bg: 'white',
+    _focus: {
+      borderColor: 'primary.500',
+      boxShadow: '0 0 0 1px {colors.primary.500}',
+    },
   },
 })
 
-export const selectTheme = defineStyleConfig({
-  defaultProps: {
-    variant: 'base',
-  },
-  variants: {
-    base: baseSelect,
+const defaultSelectRecipe = defaultConfig.theme?.slotRecipes?.select
+const defaultSelectSlots = defaultSelectRecipe?.slots ?? [
+  'root',
+  'control',
+  'trigger',
+  'valueText',
+  'indicatorGroup',
+  'indicator',
+  'clearTrigger',
+  'positioner',
+  'content',
+  'list',
+  'item',
+  'itemText',
+  'itemIndicator',
+]
+
+/**
+ * Select theme – extend Chakra's defaults with custom borders/shadow
+ */
+export const selectTheme = defineSlotRecipe({
+  className: defaultSelectRecipe?.className ?? 'select',
+  slots: defaultSelectSlots,
+  base: {
+    ...(defaultSelectRecipe?.base ?? {}),
+    control: {
+      ...(defaultSelectRecipe?.base?.control ?? {}),
+      width: 'full',
+      cursor: 'pointer',
+    },
+    indicator: {
+      ...(defaultSelectRecipe?.base?.indicator ?? {}),
+      color: 'primary.500',
+      width: '24px',
+      height: '24px',
+      marginRight: '8px',
+    },
+    trigger: {
+      ...(defaultSelectRecipe?.base?.trigger ?? {}),
+      borderWidth: '2px',
+      borderColor: 'primary.500',
+      borderRadius: 'md',
+      padding: '4px 8px',
+      fontWeight: 'bold',
+      color: 'primary.500',
+      bg: 'white',
+      textAlign: 'left',
+    },
+    content: {
+      ...(defaultSelectRecipe?.base?.content ?? {}),
+      borderWidth: '1px',
+      borderColor: 'primary.300',
+      boxShadow: 'xl',
+      bg: 'white',
+      padding: '4px 8px',
+      fontWeight: 'bold',
+      color: 'primary.500',
+      gap: '2',
+      display: 'flex',
+      flexDirection: 'column',
+      borderRadius: 'md',
+    },
+    list: {
+      ...(defaultSelectRecipe?.base?.list ?? {}),
+      borderRadius: 'md',
+    },
+    item: {
+      ...(defaultSelectRecipe?.base?.item ?? {}),
+      transition: 'background-color 0.15s ease-in-out',
+      _hover: {
+        ...(defaultSelectRecipe?.base?.item?._hover ?? {}),
+        bg: 'primary.50',
+      },
+      '&[data-highlighted]': {
+        ...(defaultSelectRecipe?.base?.item?.['&[data-highlighted]'] ?? {}),
+        bg: 'primary.50',
+      },
+      '&[data-state="checked"]': {
+        ...(defaultSelectRecipe?.base?.item?.['&[data-state="checked"]'] ?? {}),
+        bg: 'primary.100',
+      },
+    },
   },
 })
 
-export const checkboxTheme = defineStyleConfig({
-  defaultProps: {
-    variant: 'base',
-  },
-  variants: {
-    base: baseCheckbox,
+const defaultRadioRecipe = defaultConfig.theme?.slotRecipes?.radioGroup
+const defaultRadioSlots = defaultRadioRecipe?.slots ?? [
+  'root',
+  'label',
+  'item',
+  'itemText',
+  'itemControl',
+  'indicator',
+  'itemAddon',
+  'itemIndicator',
+]
+
+/**
+ * RadioGroup theme – extend Chakra defaults with primary styling
+ */
+export const radioTheme = defineSlotRecipe({
+  className: defaultRadioRecipe?.className ?? 'radio-group',
+  slots: defaultRadioSlots,
+  base: {
+    ...(defaultRadioRecipe?.base ?? {}),
+    item: {
+      ...(defaultRadioRecipe?.base?.item ?? {}),
+      alignItems: 'center',
+      gap: '8px',
+    },
+    itemControl: {
+      ...(defaultRadioRecipe?.base?.itemControl ?? {}),
+      borderWidth: '2px',
+      borderColor: 'primary.500',
+      borderRadius: 'full',
+      width: '20px',
+      height: '20px',
+      bg: 'white',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.2s ease-in-out',
+      _focusVisible: {
+        ...(defaultRadioRecipe?.base?.itemControl?._focusVisible ?? {}),
+        boxShadow: '0 0 0 2px {colors.primary.200}',
+      },
+      _hover: {
+        ...(defaultRadioRecipe?.base?.itemControl?._hover ?? {}),
+        borderColor: 'primary.400',
+      },
+      _checked: {
+        ...(defaultRadioRecipe?.base?.itemControl?._checked ?? {}),
+        borderColor: 'primary.500',
+        bg: 'primary.500',
+      },
+    },
+    itemIndicator: {
+      ...(defaultRadioRecipe?.base?.itemIndicator ?? {}),
+      width: '8px',
+      height: '8px',
+      borderRadius: 'full',
+      bg: 'white',
+      transition: 'transform 0.2s ease-in-out',
+      transform: 'scale(0)',
+      '&[data-state=checked]': {
+        transform: 'scale(1)',
+      },
+    },
+    itemText: {
+      ...(defaultRadioRecipe?.base?.itemText ?? {}),
+      color: 'primary.700',
+    },
   },
 })
 
-export const radioTheme = defineStyleConfig({
-  defaultProps: {
-    variant: 'base',
-  },
-  variants: {
-    base: baseRadio,
+const defaultCheckboxRecipe = defaultConfig.theme?.slotRecipes?.checkbox
+const defaultCheckboxSlots = defaultCheckboxRecipe?.slots ?? [
+  'root',
+  'label',
+  'control',
+  'indicator',
+  'group',
+]
+
+/**
+ * Checkbox theme – extend Chakra defaults with primary styling
+ */
+export const checkboxTheme = defineSlotRecipe({
+  className: defaultCheckboxRecipe?.className ?? 'checkbox',
+  slots: defaultCheckboxSlots,
+  base: {
+    ...(defaultCheckboxRecipe?.base ?? {}),
+    root: {
+      ...(defaultCheckboxRecipe?.base?.root ?? {}),
+      alignItems: 'center',
+      gap: '8px',
+    },
+    control: {
+      ...(defaultCheckboxRecipe?.base?.control ?? {}),
+      borderWidth: '2px',
+      borderColor: 'primary.500',
+      borderRadius: 'sm',
+      width: '20px',
+      height: '20px',
+      bg: 'white',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.2s ease-in-out',
+      _hover: {
+        ...(defaultCheckboxRecipe?.base?.control?._hover ?? {}),
+        borderColor: 'primary.400',
+      },
+      _focusVisible: {
+        ...(defaultCheckboxRecipe?.base?.control?._focusVisible ?? {}),
+        boxShadow: '0 0 0 2px {colors.primary.200}',
+      },
+      _checked: {
+        ...(defaultCheckboxRecipe?.base?.control?._checked ?? {}),
+        borderColor: 'primary.500',
+        bg: 'primary.500',
+        color: 'white',
+      },
+    },
+    indicator: {
+      ...(defaultCheckboxRecipe?.base?.indicator ?? {}),
+      color: 'white',
+      fontSize: '12px',
+      transition: 'opacity 0.2s ease-in-out',
+      opacity: 0,
+      '&[data-state=checked]': {
+        opacity: 1,
+      },
+    },
+    label: {
+      ...(defaultCheckboxRecipe?.base?.label ?? {}),
+      fontWeight: 'medium',
+      color: 'primary.700',
+    },
   },
 })
 
-export const linkTheme = defineStyleConfig({
-  defaultProps: {
-    variant: 'base',
-  },
-  variants: {
-    base: baseLink,
-    menu: menuLink,
-  },
-}) 

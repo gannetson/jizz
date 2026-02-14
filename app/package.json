@@ -7,7 +7,7 @@
     "@capacitor/cli": "^6.2.1",
     "@capacitor/core": "^7.2.0",
     "@capacitor/ios": "^7.2.0",
-    "@chakra-ui/react": "^2.8.2",
+    "@chakra-ui/react": "^3.29.0",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
     "@react-oauth/google": "^0.12.1",
@@ -24,7 +24,6 @@
     "@types/react-intl": "^3.0.0",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.7.9",
-    "chakra-react-select": "^4.6.0",
     "copy-to-clipboard": "^3.3.3",
     "country-flag-icons": "^1.5.13",
     "date-fns": "^3.6.0",
@@ -33,24 +32,25 @@
     "http-proxy-middleware": "^2.0.7",
     "keyframes": "^2.3.0",
     "qrcode.react": "^4.2.0",
-    "react": "^18.2.0",
+    "react": "18.3.1",
     "react-confetti": "^6.1.0",
-    "react-dom": "^18.2.0",
+    "react-dom": "18.3.1",
     "react-dom-confetti": "^0.2.0",
     "react-icons": "^3.11.0",
     "react-intl": "^6.7.0",
     "react-player": "^2.16.0",
     "react-scripts": "5.0.1",
+    "react-select": "^5.10.2",
     "react-world-flags": "^1.6.0",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "craco start",
+    "build": "craco build",
     "deploy": "scp -r build birdr.pro:/var/www/jizz/jizz/app",
     "release": "npm run build && npm run deploy",
-    "test": "react-scripts test",
+    "test": "craco test",
     "eject": "react-scripts eject",
     "extract-messages": "formatjs extract 'src/**/*.ts*' --ignore='**/*.d.ts' --out-file translations/en.json --id-interpolation-pattern '[sha512:contenthash:base64:6]' --format simple"
   },
@@ -71,8 +71,13 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-typescript": "^7.25.7",
+    "@craco/craco": "^7.1.0",
     "@formatjs/cli": "^6.7.1",
     "extract-react-intl-messages": "^4.1.1",
     "react-router-dom": "^6.14.2"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }

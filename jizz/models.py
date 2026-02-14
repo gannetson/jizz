@@ -65,6 +65,18 @@ class Species(models.Model):
     tax_order = models.CharField('Order', max_length=200, null=True, blank=True)
     code = models.CharField(max_length=10)
 
+    @property
+    def images(self):
+        return self.media.filter(type='image')
+
+    @property
+    def videos(self):
+        return self.media.filter(type='video')
+
+    @property
+    def sounds(self):
+        return self.media.filter(type='audio')
+
     class Meta:
         verbose_name = 'species'
         verbose_name_plural = 'species'
@@ -132,6 +144,23 @@ def get_tax_family_choices(country=None):
 
 
 class Game(models.Model):
+    """
+    Represents a game session in the Birdr application.
+    
+    A game contains:
+    - Configuration: country, level, length, media type, filters
+    - Questions: Generated on-demand as the game progresses
+    - Player scores: Tracked for multiplayer games
+    - State: ended flag indicates completion
+    
+    Game Lifecycle:
+    1. Created via POST /api/games/ with configuration
+    2. Questions generated lazily via add_question() method
+    3. Progresses through questions until sequence > length
+    4. Marked as ended when all questions completed
+    
+    See docs/GAME_LIFECYCLE.md for complete documentation.
+    """
     MEDIA_CHOICES = [
         ('images', 'Images'),
         ('video', 'Video'),
@@ -189,6 +218,25 @@ class Game(models.Model):
         return self.questions.last()
 
     def add_question(self):
+        """
+        Generate a new question for this game.
+        
+        Process:
+        1. Mark all previous undone questions as done
+        2. Check if game should end (sequence > length)
+        3. Select random species based on game filters
+        4. Select random media item for the species
+        5. Generate answer options based on game level
+        6. Create Question and QuestionOption instances
+        
+        Returns:
+            Question instance or None if game has ended
+            
+        Note: Questions are generated lazily (on-demand) rather than
+        all at once. This allows for dynamic game progression.
+        
+        See docs/GAME_LIFECYCLE.md for detailed documentation.
+        """
         self.questions.filter(done=False).update(done=True)
         statuses = ['native', 'endemic']
         if self.include_rare:
@@ -201,63 +249,72 @@ class Game(models.Model):
 
         if self.tax_family:
             all_species = Species.objects.filter(
-                images__isnull=False,
+                media__isnull=False,
+                media__type='image',
                 countryspecies__status__in=statuses,
                 countryspecies__country=self.country,
                 tax_family=self.tax_family
             ).distinct().order_by('id')
         elif self.tax_order:
             all_species = Species.objects.filter(
-                images__isnull=False,
+                media__isnull=False,
+                media__type='image',
                 countryspecies__status__in=statuses,
                 countryspecies__country=self.country,
                 tax_order=self.tax_order
             ).distinct().order_by('id')
         else:
             all_species = Species.objects.filter(
-                images__isnull=False,
+                media__isnull=False,
+                media__type='image',
                 countryspecies__status__in=statuses,
                 countryspecies__country=self.country
             ).distinct().order_by('id')
         if self.media == 'video':
             if self.tax_family:
                 all_species = Species.objects.filter(
-                    videos__isnull=False,
+                    media__isnull=False,
+                    media__type='video',
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country,
                     tax_family=self.tax_family
                 ).distinct().order_by('id')
             elif self.tax_order:
                 all_species = Species.objects.filter(
-                    videos__isnull=False,
+                    media__isnull=False,
+                    media__type='video',
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country,
                     tax_order=self.tax_order
                 ).distinct().order_by('id')
             else:
                 all_species = Species.objects.filter(
-                    videos__isnull=False,
+                    media__isnull=False,
+                    media__type='video',
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country
                 ).distinct().order_by('id')
         if self.media == 'audio':
             if self.tax_family:
                 all_species = Species.objects.filter(
-                    sounds__isnull=False,
+                    media__isnull=False,
+                    media__type='audio',
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country,
                     tax_family=self.tax_family
                 ).distinct().order_by('id')
             elif self.tax_order:
                 all_species = Species.objects.filter(
-                    sounds__isnull=False,
+                    media__isnull=False,
+                    media__type='audio',
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country,
                     tax_order=self.tax_order
                 ).distinct().order_by('id')
             else:
                 all_species = Species.objects.filter(
-                    sounds__isnull=False,
+                    media__isnull=False,
+                    media__type='audio',
                     countryspecies__status__in=statuses,
                     countryspecies__country=self.country
                 ).distinct().order_by('id')
@@ -269,11 +326,42 @@ class Game(models.Model):
             species = all_species.order_by('?').first()
 
         sequence = self.questions.count() + 1
-        number = randint(1, species.images.count()) - 1
-        if self.media == 'video':
-            number = randint(1, species.videos.count()) - 1
-        if self.media == 'audio':
-            number = randint(1, species.sounds.count()) - 1
+        
+        # Get available media count using old models (SpeciesImage, SpeciesVideo, SpeciesSound)
+        # Retry with another species if selected one has no media
+        max_retries = 10
+        retry_count = 0
+        media_count = 0
+        while retry_count < max_retries:
+            if self.media == 'video':
+                media_count = species.media.filter(type='video').count()
+            elif self.media == 'audio':
+                media_count = species.media.filter(type='audio').count()
+            else:
+                media_count = species.media.filter(type='image').count()
+            
+            # If we have media, break out of retry loop
+            if media_count > 0:
+                break
+            
+            # Try another species
+            retry_count += 1
+            remaining = all_species.exclude(id=species.id).exclude(id__in=self.questions.values_list('species_id', flat=True))
+            if remaining.exists():
+                species = remaining.order_by('?').first()
+            else:
+                # Fall back to any species (even if already used)
+                remaining = all_species.exclude(id=species.id)
+                if remaining.exists():
+                    species = remaining.order_by('?').first()
+                else:
+                    # No more species available
+                    raise ValueError(f"No species with {self.media} media available for game {self.id}")
+        
+        if media_count == 0:
+            raise ValueError(f"Species {species.id} ({species.name}) has no {self.media} media after {max_retries} retries")
+        
+        number = randint(1, media_count) - 1
 
         if self.level == 'advanced':
             options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
@@ -317,6 +405,18 @@ class Game(models.Model):
 
     @property
     def question(self):
+        """
+        Get the current active (undone) question.
+        
+        Returns the first question where done=False, ensuring players
+        always get the current question, not a completed one.
+        
+        This is the authoritative way to get the current question.
+        Do not use game.questions.last() as it may return a completed question.
+        
+        Returns:
+            Question instance or None if no active question exists
+        """
         return self.questions.filter(done=False).first()
 
     @property
@@ -369,6 +469,19 @@ class Player(models.Model):
 
     def __str__(self):
         return f"{self.name} - #{self.id}"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    receive_updates = models.BooleanField(default=False, help_text='Receive updates about Birdr app')
+    language = models.CharField(max_length=10, default='en', blank=True, help_text='Preferred language')
+    country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True, blank=True, help_text='Preferred country')
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s profile"
 
 
 class PlayerScore(models.Model):
@@ -478,11 +591,12 @@ class SpeciesImage(models.Model):
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
-        related_name='images'
+        related_name='old_images'
     )
 
     class Meta:
         unique_together = ('species', 'url')
+
 
 
 class SpeciesSound(models.Model):
@@ -492,7 +606,7 @@ class SpeciesSound(models.Model):
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
-        related_name='sounds'
+        related_name='old_sounds'
     )
 
     class Meta:
@@ -506,7 +620,7 @@ class SpeciesVideo(models.Model):
     species = models.ForeignKey(
         Species,
         on_delete=models.CASCADE,
-        related_name='videos'
+        related_name='old_videos'
     )
 
     class Meta:
@@ -517,16 +631,19 @@ class FlagQuestion(models.Model):
     question = models.ForeignKey(
         Question,
         on_delete=models.CASCADE,
-        related_name='flags'
+        related_name='flags',
+        null=True,
+        blank=True
     )
     player = models.ForeignKey(
         Player,
         on_delete=models.CASCADE,
         related_name='flags'
     )
+    media_url = models.URLField(null=True, blank=True)
     description = models.CharField(max_length=200, null=True, blank=True)
     created = models.DateTimeField(auto_now=True)
-
+    
 
 class CountrySpecies(models.Model):
     country = models.ForeignKey(

@@ -5,7 +5,8 @@ import {WebsocketContextProvider} from "./core/websocket-context-provider"
 import {MainContent} from "./main-content"
 import {registerServiceWorker} from "./core/register-service-worker"
 import { ChakraProvider } from '@chakra-ui/react'
-import { theme } from './theme'
+import { system } from './theme'
+import { Toaster } from "@/components/ui/toaster";
 
 registerServiceWorker()
 
@@ -15,7 +16,8 @@ export const App = () => {
   }, [])
 
   return (
-    <ChakraProvider theme={theme} resetCSS>
+    <ChakraProvider value={system}>
+      <Toaster />
       <AppContextProvider>
         <WebsocketContextProvider>
           <MainContent/>

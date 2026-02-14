@@ -10,7 +10,8 @@ export const SpeciesName = ({species}: { species?: Species }) => {
     return <></>
   }
 
-  const name = names && names.find(s => s.id === species.id)
+  // Ensure names is an array before calling .find()
+  const name = Array.isArray(names) ? names.find(s => s.id === species.id) : null
 
   return (
     <>

@@ -1,21 +1,21 @@
-import {Box, Button, Flex, Heading, Icon, Image, Link, Popover, PopoverArrow,PopoverCloseButton,  PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, Card, useColorModeValue, Show} from "@chakra-ui/react"
-import {Select} from "chakra-react-select"
+import {Box, Button, Flex, Heading, Icon, Image, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, CardRoot} from "@chakra-ui/react"
 import {useContext, useEffect, useState} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
 import {FormattedMessage} from "react-intl"
-import {FlagMedia} from "../play/flag-media"
+import {FlagMediaButton} from "../../../components/flag-media-button"
 import {keyframes} from "@emotion/react"
 import { Loading } from "../../../components/loading"
-import Page from "../../layout/page"
+import { Page } from "../../../shared/components/layout"
 import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaQuestion, FaSkull } from "react-icons/fa"
 import { IconType } from "react-icons"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { AnswerFeedback } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
+import SpeciesCombobox from "../../../components/species-combobox"
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
 
@@ -28,7 +28,6 @@ const iconMapping: Record<ResultType, IconType> = {
 
 export const ChallengeQuestion = () => {
   const {species, player, language, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
-  const {onOpen, onClose, isOpen} = useDisclosure()
   const navigate = useNavigate()
   const [showFeedback, setShowFeedback] = useState(false)
   const [isCorrect, setIsCorrect] = useState<boolean>(false)
@@ -42,10 +41,6 @@ export const ChallengeQuestion = () => {
       transform: rotate(0deg)
     }
   `
-
-  const flagMedia = () => {
-    onOpen()
-  }
 
   const level = countryChallenge?.levels[0];
 
@@ -118,10 +113,10 @@ export const ChallengeQuestion = () => {
         </>
 
         <Page.Header>
-          <Heading textColor={'gray.800'} size={'lg'} m={0} noOfLines={1}>
+          <Heading color={'gray.800'} size={'lg'} m={0}>
             {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
           </Heading>
-          <Show above="md">
+          <Box display={{ base: 'none', md: 'block' }}>
             <Heading size={'md'}>
               <Flex align="center" gap={2}>
                 <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
@@ -132,15 +127,15 @@ export const ChallengeQuestion = () => {
                   {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
               </Flex>
             </Heading>
-          </Show>
+          </Box>
           <Flex gap={2} alignItems={'center'}>
             {[...Array(level.challenge_level.jokers)].map((_, i) => (
-              <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "orange.600" : "orange.300"} boxSize={6} />
+              <Icon key={i} as={i < level.remaining_jokers ? FaHeart : FaHeartBroken} color={i < level.remaining_jokers ?  "primary.600" : "primary.300"} boxSize={6} />
             ))}
           </Flex>
         </Page.Header>
         <Page.Body>
-        <Show below="md">
+        <Box display={{ base: 'block', md: 'none' }}>
             <Heading size={'md'}>
               <Flex align="center" gap={2}>
                 <FormattedMessage id={"Level"} defaultMessage={"Level {level}"} values={{level: level.challenge_level.sequence + 1}}/>
@@ -151,9 +146,8 @@ export const ChallengeQuestion = () => {
                 {language === 'nl' ? level.challenge_level.title_nl : level.challenge_level.title}
               </Flex>
             </Heading>
-          </Show>
+          </Box>
 
-        <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
         <Box position={'relative'}>
           {game.media === 'video' && (
             <>
@@ -169,16 +163,9 @@ export const ChallengeQuestion = () => {
           {game.media === 'images' && (
             <Image
               src={question.images[question.number].url.replace('/1800', '/900')}
-              fallback={
-                <Image
-                  src='/images/birdr-logo.png'
-                  animation={`${rotate} infinite 2s linear`}
-                  width={'200px'}
-                  maxHeight={'600px'}
-                  marginX={'auto'}
-                  marginY={['20px', '150px']}
-                />
-              }
+              onError={(e) => {
+                e.currentTarget.src = '/images/birdr-logo.png';
+              }}
             />
 
           )}
@@ -195,21 +182,27 @@ export const ChallengeQuestion = () => {
 
           )}
           <Flex justifyContent={'end'}>
-            <Link onClick={flagMedia} fontSize={'sm'} textColor={'red.700'}>
-              🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
-            </Link>
+            {game.media === 'video' && question.videos[question.number] && (
+              <FlagMediaButton media={question.videos[question.number]} />
+            )}
+            {game.media === 'images' && question.images[question.number] && (
+              <FlagMediaButton media={question.images[question.number]} />
+            )}
+            {game.media === 'audio' && question.sounds[question.number] && (
+              <FlagMediaButton media={question.sounds[question.number]} />
+            )}
           </Flex>
         </Box>
         {question.options && question.options.length ? (
-          <SimpleGrid columns={{base: 1, md: 2}} spacing={4}>
+          <SimpleGrid columns={{base: 1, md: 2}} gap={4}>
             {
               question.options.map((option, key) => {
                 return (
                   <Button 
                     key={key} 
                     onClick={() => giveAnswer(option)} 
-                    isDisabled={loading} 
-                    colorScheme={response?.species?.id === option.id ? 'green' : response?.answer?.id === option.id ? 'red' : 'orange'}
+                    disabled={loading} 
+                    colorPalette={response?.species?.id === option.id ? 'success' : response?.answer?.id === option.id ? 'error' : 'primary'}
                   >
                     <SpeciesName species={option}/>
                   </Button>
@@ -219,40 +212,31 @@ export const ChallengeQuestion = () => {
           </SimpleGrid>
 
         ) : (
-          <Select
+          <>
+          <Heading size={'md'}>
+            <FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>
+          </Heading>
+          <SpeciesCombobox
+            species={species || []}
+            playerLanguage={player?.language}
+            onSelect={giveAnswer}
+            loading={loading}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
-            options={species?.map((q) => ({
-              label: player?.language === 'nl' ? q.name_nl : q.name,
-              value: q
-            }))}
-            isLoading={loading}
-            onChange={(answer) => answer && giveAnswer(answer.value)}
-            chakraStyles={{
-              placeholder: (provided) => ({
-                ...provided,
-                color: 'orange.300',
-                fontWeight: 'normal',
-              }),
-              input: (provided) => ({
-                ...provided,
-                color: 'orange.500',
-                fontWeight: 'bold',
-              })
-            }}
           />
+          </>
         )}
 
         <Heading size={'md'}>
           <FormattedMessage id={"progress"} defaultMessage={"Progress"}/>
         </Heading>
-        <Card bgColor={'orange.100'} p={4}>
+        <CardRoot bgColor={'primary.100'} p={4}>
           <Box>
             {results.map((result, i) => (
-              <Icon p={1} key={i} as={iconMapping[result]} color={result === 'open' ? "orange.300" : "orange.600"} boxSize={8} />
+              <Icon p={1} key={i} as={iconMapping[result]} color={result === 'open' ? "primary.300" : "primary.600"} boxSize={8} />
             ))}
             </Box>
-        </Card>
+        </CardRoot>
 
         </Page.Body>
 

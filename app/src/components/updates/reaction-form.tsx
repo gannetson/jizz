@@ -1,4 +1,4 @@
-import {Box, Button, Card, CardBody, CardFooter, Textarea, useDisclosure} from "@chakra-ui/react"
+import {Box, Button, CardRoot, CardBody, CardFooter, Textarea, useDisclosure} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import {useContext, useState} from "react"
 import AppContext, {Reaction, Update} from "../../core/app-context"
@@ -6,7 +6,7 @@ import {ReactionLine} from "./reaction-line"
 
 export const ReactionForm = ({update}: { update: Update }) => {
 
-  const {isOpen, onOpen, onClose} = useDisclosure()
+  const {open: isOpen, onOpen, onClose} = useDisclosure()
   const [message, setMessage] = useState('')
   const {player} = useContext(AppContext)
   const [reaction, setReaction] = useState<Reaction | null>(null)
@@ -46,19 +46,19 @@ export const ReactionForm = ({update}: { update: Update }) => {
         <ReactionLine reaction={reaction}/>
       )}
       {isOpen ? (
-        <Card border={'1px solid #eee'} backgroundColor={'orange.50'}>
+        <CardRoot border={'1px solid #eee'} backgroundColor={'primary.50'}>
           <CardBody>
-            <Textarea backgroundColor='white' onChange={(value) => setMessage(value.target.value)}/>
+            <Textarea backgroundColor='white' cursor="text" onChange={(value) => setMessage(value.target.value)}/>
           </CardBody>
-          <CardFooter py={2} textColor={'orange.600'} justifyContent={'space-between'}>
+          <CardFooter py={2} color={'primary.600'} justifyContent={'space-between'}>
             <Button variant={'outline'} onClick={onClose}>
               <FormattedMessage defaultMessage={'Cancel'} id={'cancel'}/>
             </Button>
-            <Button onClick={postReaction}>
+            <Button onClick={postReaction} colorPalette="primary">
               <FormattedMessage defaultMessage={'Post'} id={'post'}/>
             </Button>
           </CardFooter>
-        </Card>
+        </CardRoot>
 
       ) : (
         <Box>

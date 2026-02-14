@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import Page from "../layout/page"
+import { Page } from "../../shared/components/layout"
 import {Heading} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import WebsocketContext from "../../core/websocket-context"
@@ -13,7 +13,7 @@ const GameEnded: React.FC = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading size={'lg'} noOfLines={1}>
+        <Heading size={'lg'}>
           <FormattedMessage id={'game ended'} defaultMessage={'Game ended'}/>
         </Heading>
       </Page.Header>

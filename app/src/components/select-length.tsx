@@ -1,25 +1,22 @@
 import {useContext} from "react";
 import AppContext from "../core/app-context";
-import {Box, Heading, Slider, SliderTrack, SliderFilledTrack, SliderThumb, SliderMark, Text} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioGroup, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import { useSliderStyles } from "../base/slider.styling";
 
 export const SelectLength = () => {
   const {length, setLength, country} = useContext(AppContext);
-  const styles = useSliderStyles();
 
-  const marks = [
-    { value: 10, label: '10' },
-    { value: 100, label: '100' }
-  ];
+  const onChange = (value: string) => {
+    setLength && setLength(value)
+  }
 
   return (
     <Box>
-      <Heading size={'md'} mb={2}>
+      <Heading size={'md'} mb={4}>
         <FormattedMessage id={'question'} defaultMessage={'Questions'}/>
       </Heading>
       {country && (
-        <Text mb={3}>
+        <Text mb={4}>
           <FormattedMessage
             id={'how many questions'}
             defaultMessage={'How many questions do you want to answer?'}
@@ -27,35 +24,50 @@ export const SelectLength = () => {
           />
         </Text>
       )}
-      <Box px={4} py={2}>
-        <Slider
-          aria-label="question-slider"
-          value={parseInt(length || '10')}
-          min={10}
-          max={100}
-          step={5}
-          onChange={(val) => setLength && setLength(val.toString())}
-          colorScheme="orange"
-        >
-          {marks.map((mark) => (
-            <SliderMark
-              key={mark.value}
-              value={mark.value}
-              {...styles.mark}
-            >
-              {mark.label}
-            </SliderMark>
-          ))}
-          <SliderTrack {...styles.track}>
-            <SliderFilledTrack {...styles.filledTrack} />
-          </SliderTrack>
-          <SliderThumb {...styles.thumb}>
-            <Text fontSize="sm" fontWeight="bold">
-              {length}
-            </Text>
-          </SliderThumb>
-        </Slider>
-      </Box>
+      <RadioGroup.Root
+        colorPalette="primary"
+        value={length || '10'}
+        onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
+      >
+        <Flex direction={'row'} gap={4}>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'10'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>10</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'20'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>20</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'50'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>50</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <RadioGroup.Item value={'100'}>
+              <RadioGroup.ItemHiddenInput />
+              <RadioGroup.ItemControl>
+                <RadioGroup.ItemIndicator />
+              </RadioGroup.ItemControl>
+              <RadioGroup.ItemText>100</RadioGroup.ItemText>
+            </RadioGroup.Item>
+          </Box>
+        </Flex>
+      </RadioGroup.Root>
     </Box>
   )
 };

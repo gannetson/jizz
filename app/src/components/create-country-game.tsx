@@ -1,6 +1,6 @@
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Button, Divider, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
+import {Button, Separator, Flex, Heading, Spinner, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
@@ -14,6 +14,7 @@ import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
 import {requestNotificationPermission, sendNotification} from "../core/notifications"
+import {UseCountries} from "../user/use-countries"
 
 
 export const CreateCountryGame = () => {
@@ -22,13 +23,20 @@ export const CreateCountryGame = () => {
     player,
     createPlayer,
     country,
+    setCountry,
     createGame,
     game,
-    playerName
+    playerName,
+    setPlayerName,
+    language,
+    setLanguage
   } = useContext(AppContext);
   const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const {countries} = UseCountries()
+
+  // Don't auto-load user profile preferences - let users set their own preferences for each game
 
 
   const create = async () => {
@@ -59,9 +67,9 @@ export const CreateCountryGame = () => {
         <SetName/>
         <SelectLanguage/>
         <SelectCountry/>
-        <Button onClick={()=> requestNotificationPermission()}>Request</Button>
-        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})}>Test</Button>
-        <Button isDisabled={!country || !playerName} size='lg' onClick={create}>
+        <Button onClick={()=> requestNotificationPermission()} colorPalette="primary">Request</Button>
+        <Button onClick={()=> sendNotification({title: 'Hey you!', body: 'Come on and spot some birds!'})} colorPalette="primary">Test</Button>
+        <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
           <FormattedMessage id={'start challenge'} defaultMessage={"Start challenge"}/>
         </Button>
       </Flex>

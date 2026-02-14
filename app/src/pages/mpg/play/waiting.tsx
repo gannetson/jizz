@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Kbd, List, ListItem, Show, SimpleGrid, Text} from "@chakra-ui/react"
+import {Box, Button, Flex, Kbd, ListRoot, ListItem, Show, SimpleGrid, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import React, {useCallback, useContext, useEffect} from "react"
 import WebsocketContext from "../../../core/websocket-context"
@@ -26,21 +26,21 @@ export const WaitingComponent = () => {
     <>
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
-          <List spacing={4}>
+          <ListRoot>
             {players && players.map((player, index) => (
               <ListItem key={index}>
                 <PlayerItem showRanking={false} player={player}/>
               </ListItem>
             ))}
-          </List>
+          </ListRoot>
           <Box>
             {done ? (
-              <Button onClick={endGame} width='full'>
+              <Button onClick={endGame} width='full' colorPalette="primary">
                 <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
               </Button>
             ) : (
               isHost ? (
-                <Button onClick={nextQuestion} width='full'>
+                <Button onClick={nextQuestion} width='full' colorPalette="primary">
                   <FormattedMessage id={'next question'} defaultMessage={'Next question'} />
                 </Button>
               ) : (

@@ -1,5 +1,6 @@
+// Import axios config early to set up interceptors
+import './api/axios-config';
 
-import { ColorModeScript } from "@chakra-ui/react"
 import * as React from "react"
 import * as ReactDOM from "react-dom/client"
 import { App } from "./App"
@@ -13,7 +14,6 @@ const root = ReactDOM.createRoot(container)
 
 root.render(
   <>
-    <ColorModeScript />
     <App />
   </>,
 )
@@ -23,4 +23,5 @@ root.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals()
+
 

@@ -3,20 +3,47 @@ import {Box, Button, Flex, Heading, Input} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import WebsocketContext from "../core/websocket-context"
 import {useNavigate, useParams} from "react-router-dom"
-import Page from "./layout/page"
+import { Page } from "../shared/components/layout"
 import AppContext from "../core/app-context"
 import GameHeader from "./mpg/game-header"
 import {SetName} from "../components/set-name"
 import SelectLanguage from "../components/select-language"
+import {profileService} from "../api/services/profile.service"
+import {authService} from "../api/services/auth.service"
 
 
 const JoinPage: React.FC = () => {
   const {joinGame} = useContext(WebsocketContext)
-  const {createPlayer, player, loadGame, playerName} = useContext(AppContext)
+  const {createPlayer, player, loadGame, playerName, setPlayerName, language, setLanguage} = useContext(AppContext)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const {gameCode} = useParams<{ gameCode: string }>();
   const [code, setCode] = useState<string | undefined>(gameCode)
+
+  // Load user profile to prefill player name and language
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (authService.getAccessToken()) {
+        try {
+          const profile = await profileService.getProfile();
+          
+          // Prefill player name with username if not already set
+          if (!playerName && profile.username) {
+            setPlayerName && setPlayerName(profile.username);
+          }
+          
+          // Set language from profile if not already set
+          if (profile.language && (!language || language === 'en')) {
+            setLanguage && setLanguage(profile.language);
+          }
+        } catch (error) {
+          // User might not be authenticated or profile might not exist, ignore
+        }
+      }
+    };
+    
+    loadUserProfile();
+  }, [playerName, language, setPlayerName, setLanguage]);
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -39,16 +66,19 @@ const JoinPage: React.FC = () => {
 
   return (
     <Page>
-      <GameHeader/>
+      <Page.Header>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
+          Join Game
+        </Heading>
+      </Page.Header>
       <Page.Body>
-        <Heading variant={'h3'}>Join Game</Heading>
         <Box>
           Game code
-          <Input name={'game_code'} value={code} onChange={(event) => setCode(event.target.value)}/>
+          <Input name={'game_code'} value={code} cursor="text" onChange={(event) => setCode(event.target.value)}/>
         </Box>
         <SetName/>
         <SelectLanguage/>
-        <Button onClick={handleSubmit} isLoading={loading} isDisabled={!code || !playerName}>
+        <Button onClick={handleSubmit} loading={loading} disabled={!code || !playerName} colorPalette="primary">
           Join game
         </Button>
       </Page.Body>

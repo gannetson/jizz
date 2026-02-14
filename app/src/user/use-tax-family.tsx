@@ -13,16 +13,27 @@ export const UseTaxFamily = () => {
   const {country} = useContext(AppContext);
 
   useEffect(() => {
-    const url = country ? `/api/families/?country=${country.code}` : `/api/families/`;
-    if (!taxFamilies || taxFamilies.length === 0) {
-      fetch(url)
-        .then((res) => res.json())
-        .then((data) => {
-          setTaxFamilies(data)
-        });
-
-    }
-  }, [taxFamilies, country])
+      const fetchTaxFamilies = async () => {
+        setTaxFamilies([]) // Reset when country changes
+        try {
+          const url: string = country ? `/api/families/?country=${country.code}` : `/api/families/`;
+          const response: Response = await fetch(url);
+          const data: any = await response.json();
+          
+          if (Array.isArray(data)) {
+            setTaxFamilies(data);
+          } else {
+            console.error('Unexpected response format:', data);
+            setTaxFamilies([]);
+          }
+        } catch (error) {
+          console.error('Error fetching tax families:', error);
+          setTaxFamilies([]);
+        }
+      };
+    
+      fetchTaxFamilies();
+  }, [country?.code]) // Re-fetch when country changes
 
 
   return {

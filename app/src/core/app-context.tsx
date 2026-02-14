@@ -34,24 +34,33 @@ export type Game = {
   include_rare: boolean
   include_escapes: boolean
   scores: Player[]
+  user_score?: number
+  correct_count?: number
+  total_questions?: number
 }
 
 export type SpeciesImage = {
+  id?: number;
   url: string;
   link?: string
   contributor?: string
+  source?: string
 }
 
 export type SpeciesVideo = {
+  id?: number;
   url: string;
   link?: string
   contributor?: string
+  source?: string
 }
 
 export type SpeciesSound = {
+  id?: number;
   url: string;
   link?: string
   contributor?: string
+  source?: string
 }
 
 export type Species = {
@@ -198,6 +207,7 @@ type SharedState = {
   setIncludeEscapes: Dispatch<SetStateAction<boolean>>
   game?: Game
   createGame: (player?: Player) => Promise<Game | undefined>
+  createRematchGame: (oldGame: Game, player?: Player) => Promise<Game | undefined>
   startCountryChallenge: (country: Country, player: Player) => Promise<void>
   countryChallenge?: CountryChallenge
   loadCountryChallenge: () => Promise<void>
@@ -231,6 +241,7 @@ type SharedState = {
 const AppContext = createContext<SharedState>({
   createPlayer: async () => undefined,
   createGame: async () => undefined,
+  createRematchGame: async () => undefined,
   loading: false,
   setLoading: () => false,
   loadGame: async () => undefined,

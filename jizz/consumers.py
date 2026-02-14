@@ -1,9 +1,40 @@
 import json
 
 from asgiref.sync import sync_to_async
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 class QuizConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for multiplayer game communication.
+    
+    Handles real-time communication for multiplayer games including:
+    - Player joining/leaving
+    - Game start/stop
+    - Question broadcasting
+    - Answer submission
+    - Score updates
+    - Rematch invitations
+    
+    WebSocket URL: /mpg/{game_token}/
+    
+    Actions:
+    - join_game: Player joins the game
+    - start_game: Host starts the game (generates first question)
+    - submit_answer: Player submits answer to current question
+    - next_question: Advance to next question (when all players answered)
+    - rematch: Host creates a rematch game
+    
+    Events:
+    - update_players: Player list updated
+    - new_question: New question available
+    - answer_checked: Answer processed
+    - game_started: Game has started
+    - game_updated: Game state changed
+    - rematch_invitation: Rematch game created
+    
+    See docs/GAME_LIFECYCLE.md for complete documentation.
+    """
     game_token = ''
     game_group_name = ''
     game = None
@@ -19,11 +50,15 @@ class QuizConsumer(AsyncWebsocketConsumer):
         return players_data
 
     async def send_game_update(self):
+        """Fetch game and serialize in one sync block so DB connection is consistent."""
         from .models import Game
         from .serializers import GameSerializer
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        serializer = GameSerializer(game)
-        game_data = await sync_to_async(lambda: serializer.data)()
+
+        def get_game_data():
+            game = Game.objects.get(token=self.game_token)
+            return GameSerializer(game).data
+
+        game_data = await sync_to_async(get_game_data)()
         await self.send(text_data=json.dumps({
             'action': 'game_updated',
             'game': game_data
@@ -48,7 +83,9 @@ class QuizConsumer(AsyncWebsocketConsumer):
     async def get_current_question(self):
         from .models import Game
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        return await sync_to_async(game.questions.last)()
+        # Use game.question property which returns the current undone question
+        # This ensures players joining after game start get the active question
+        return await sync_to_async(lambda: game.question)()
 
     async def get_current_answer(self):
         question = await self.get_current_question()
@@ -73,12 +110,27 @@ class QuizConsumer(AsyncWebsocketConsumer):
         )
 
     async def send_current_question(self, everyone):
+        """
+        Send the current question to player(s).
+        
+        Args:
+            everyone: If True, broadcast to all players in game group.
+                     If False, send only to this connection.
+        
+        The question data includes the game token so the frontend can
+        validate that the question belongs to the current game.
+        This prevents old questions from previous games from being displayed.
+        """
         from .serializers import QuestionSerializer
+        from .models import Game
         question = await self.get_current_question()
         if not question:
             return None
         serializer = QuestionSerializer(question)
         question_data = await sync_to_async(lambda: serializer.data)()
+        # Add game token to question data so frontend can verify it belongs to current game
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        question_data['game'] = {'token': game.token}
         if everyone:
             await self.channel_layer.group_send(
                 self.game_group_name,
@@ -113,7 +165,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         from .serializers import AnswerSerializer
         from .models import Game, Player, Question, Answer
-        data = json.loads(text_data)
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON in receive: {e}, text_data: {text_data}")
+            return
+        
+        print(f"Received action: {data.get('action')}")
 
         # if data['action'] == 'create_game':
         #     game = await sync_to_async(Game.objects.create)(token=self.game_token, multiplayer=True)
@@ -148,8 +206,11 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
         elif data['action'] == 'start_game':
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
-            game.started = True
-            await sync_to_async(game.save)()
+            if hasattr(Game, 'started'):
+                game.started = True
+                await sync_to_async(game.save)()
+            # Send to this connection first so we don't block on group_send while next_question runs
+            await self.send(text_data=json.dumps({'action': 'game_started'}))
             await self.channel_layer.group_send(
                 self.game_group_name, {
                     'type': 'game_started',
@@ -192,6 +253,55 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 }
             )
 
+        elif data['action'] == 'rematch':
+            # Host requests a rematch - create new game with same specs and notify all players
+            try:
+                player_token = data.get('player_token')
+                if not player_token:
+                    await self.send(text_data=json.dumps({
+                        'action': 'error',
+                        'message': 'player_token is required for rematch',
+                    }))
+                    return
+                from jizz.rematch import create_rematch_game as do_create_rematch
+                new_game, player = await database_sync_to_async(do_create_rematch)(
+                    self.game_token, player_token
+                )
+                player_name = player.name
+                
+                print(f"Rematch: Created new game {new_game.token} for host {player_name}")
+                
+                # Send rematch invitation to all players in the game group
+                # This includes the host who will auto-join, and other players who will see the join button
+                invitation_data = {
+                    'type': 'rematch_invitation',
+                    'new_game_token': new_game.token,
+                    'host_name': player_name
+                }
+                print(f"Rematch: Sending group message to {self.game_group_name}: {invitation_data}")
+                await self.channel_layer.group_send(
+                    self.game_group_name,
+                    invitation_data
+                )
+                
+                # Also send directly to the requester to ensure they receive it
+                direct_message = {
+                    'action': 'rematch_invitation',
+                    'new_game_token': new_game.token,
+                    'host_name': player_name
+                }
+                print(f"Rematch: Sending direct message: {direct_message}")
+                await self.send(text_data=json.dumps(direct_message))
+                print(f"Rematch: Messages sent successfully")
+            except Exception as e:
+                import traceback
+                error_msg = f"Error in rematch action: {str(e)}\n{traceback.format_exc()}"
+                print(error_msg)
+                await self.send(text_data=json.dumps({
+                    'action': 'error',
+                    'message': f'Failed to create rematch: {str(e)}'
+                }))
+
     async def update_players(self, event):
         message = {
             'action': 'update_players',
@@ -224,3 +334,19 @@ class QuizConsumer(AsyncWebsocketConsumer):
             'action': 'player_answered',
             'player': event['player']
         }))
+
+    async def rematch_invitation(self, event):
+        print(f"rematch_invitation handler called with event: {event}")
+        try:
+            message = {
+                'action': 'rematch_invitation',
+                'new_game_token': event['new_game_token'],
+                'host_name': event['host_name']
+            }
+            print(f"Sending rematch_invitation message: {message}")
+            await self.send(text_data=json.dumps(message))
+            print(f"rematch_invitation message sent successfully")
+        except Exception as e:
+            import traceback
+            error_msg = f"Error in rematch_invitation handler: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)

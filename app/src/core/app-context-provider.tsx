@@ -72,11 +72,19 @@ const AppContextProvider: FC<Props> = ({children}) => {
       .then(response => {
         if (response.status === 200) {
           response.json().then(data => {
-            setSpecies(data)
+            // Ensure data is always an array (handle paginated responses or other formats)
+            const speciesArray = Array.isArray(data) ? data : (data?.results || data?.data || [])
+            setSpecies(speciesArray)
           })
         } else {
           console.log('Could not load country species.')
+          setSpecies([]) // Ensure it's always an array even on error
         }
+        setLoading(false)
+      })
+      .catch(error => {
+        console.error('Error loading species:', error)
+        setSpecies([]) // Ensure it's always an array on error
         setLoading(false)
       })
 
@@ -155,6 +163,20 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return
     }
 
+    // Clear old game state before creating a new game
+    // This prevents issues with old game data persisting
+    const oldGameToken = localStorage.getItem('game-token')
+    if (oldGameToken) {
+      // Remove old game token from localStorage
+      localStorage.removeItem('game-token')
+    }
+    // Clear game state - this will trigger WebSocket disconnection
+    // Use a small delay to ensure state clears before creating new game
+    setGame(undefined)
+    
+    // Wait a tick to ensure state is cleared and WebSocket disconnects
+    await new Promise(resolve => setTimeout(resolve, 0))
+
     const response = await fetch('/api/games/', {
         cache: 'no-store',
         method: 'POST',
@@ -184,6 +206,51 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   }
 
+  const createRematchGame = async (oldGame: Game, myPlayer?: Player) => {
+    myPlayer = myPlayer ?? player
+    if (!myPlayer) {
+      console.log("Can't create rematch game, player is not set.")
+      return
+    }
+
+    // Clear old game state
+    const oldGameToken = localStorage.getItem('game-token')
+    if (oldGameToken) {
+      localStorage.removeItem('game-token')
+    }
+    setGame(undefined)
+    
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // Create new game with same specifications as old game
+    const response = await fetch('/api/games/', {
+        cache: 'no-store',
+        method: 'POST',
+        headers: {
+          ...noCacheHeaders,
+          'Authorization': `Token ${myPlayer.token}`
+        },
+        body: JSON.stringify({
+          multiplayer: oldGame.host ? true : (multiplayer === '1'),
+          country: oldGame.country.code,
+          language: oldGame.language,
+          level: oldGame.level,
+          length: oldGame.length.toString(),
+          media: oldGame.media,
+          tax_order: oldGame.tax_order,
+          tax_family: oldGame.tax_family,
+          include_rare: oldGame.include_rare,
+          include_escapes: oldGame.include_escapes
+        })
+      })
+      const data = await response.json();
+      if (data) {
+        localStorage.setItem('game-token', data.token)
+        setGame(data)
+        return data as Game
+      }
+  }
+
   const loadGame = async (gameCode: string) => {
     setLoading(true)
     const response = await fetch(`/api/games/${gameCode}/`, {
@@ -206,10 +273,22 @@ const AppContextProvider: FC<Props> = ({children}) => {
   }
 
   useEffect(() => {
+    // Only load game from localStorage if:
+    // 1. gameToken exists in localStorage
+    // 2. No game is currently set in state
+    // 3. The gameToken doesn't match the current game (to prevent reloading same game)
     if (gameToken && !game) {
       loadGame(gameToken)
+    } else if (gameToken && game && gameToken !== game.token) {
+      // Game token in localStorage doesn't match current game - clear it
+      // This prevents loading old games after rematch
+      console.log('Game token mismatch, clearing localStorage:', {
+        localStorageToken: gameToken,
+        currentGameToken: game.token
+      })
+      localStorage.removeItem('game-token')
     }
-  }, [gameToken]);
+  }, [gameToken, game]);
 
   const startCountryChallenge = async (country: Country, player: Player) => {
     setLoading(true);
@@ -332,6 +411,10 @@ const AppContextProvider: FC<Props> = ({children}) => {
       }
     }
     const gameToken = countryChallenge?.levels[0].game.token
+    if (!gameToken) {
+      console.log('No game token found.')
+      return
+    }
     const hash = new Date().getTime()
 
     const response = await fetch(`/api/games/${gameToken}/question?${hash}`, {
@@ -344,7 +427,17 @@ const AppContextProvider: FC<Props> = ({children}) => {
     console.log('response', response)
     const data = await response.json()
     if (response.status === 200) {
-      setChallengeQuestion(data as Question)
+      // Validate that the question belongs to the game we requested using centralized validator
+      const question = data as Question
+      const { validateQuestionForGame } = await import('./game-token-validator')
+      if (validateQuestionForGame(question, gameToken)) {
+        setChallengeQuestion(question)
+      } else {
+        console.error('Question validation failed:', {
+          questionToken: question.game?.token,
+          expectedToken: gameToken
+        })
+      }
     } else (
       console.log(response)
     ) 
@@ -376,6 +469,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       player,
       createPlayer,
       createGame,
+      createRematchGame,
       loadGame,
       game,
       setGame,

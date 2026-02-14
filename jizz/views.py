@@ -53,7 +53,7 @@ from jizz.models import (
     Update,
     Reaction,
 )
-from media.models import Media, MediaReview
+from media.models import Media, MediaReview, FlagMedia
 from jizz.serializers import (
     AnswerSerializer,
     CountryChallengeSerializer,
@@ -61,6 +61,7 @@ from jizz.serializers import (
     FeedbackSerializer,
     MediaSerializer,
     ReviewMediaSerializer,
+    FlagMediaSerializer,
     FlagQuestionSerializer,
     GameSerializer,
     PlayerScoreSerializer,
@@ -120,6 +121,8 @@ class CountryViewSet(viewsets.ModelViewSet):
     serializer_class = CountrySerializer
     queryset = Country.objects.exclude(countryspecies__isnull=True).all()
     pagination_class = None
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
     queryset = (
         Country.objects.annotate(
@@ -138,11 +141,16 @@ class SpeciesListView(ListAPIView):
     queryset = Species.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["countryspecies__country"]
+    permission_classes = [AllowAny]
+    authentication_classes = []  # No authentication required for public species data
+    pagination_class = None  # Disable pagination - we need all species for the combobox
 
 
 class SpeciesDetailView(RetrieveAPIView):
     serializer_class = SpeciesDetailSerializer
     queryset = Species.objects.all()
+    permission_classes = [AllowAny]
+    authentication_classes = []  # No authentication required for public species data
 
 
 class LanguageListView(ListAPIView):
@@ -272,6 +280,12 @@ class ReviewMediaView(ListCreateAPIView):
     """View for reviewing media items (positive or negative)."""
     serializer_class = ReviewMediaSerializer
     queryset = MediaReview.objects.all()
+
+
+class FlagMediaView(ListCreateAPIView):
+    """View for flagging media items."""
+    serializer_class = FlagMediaSerializer
+    queryset = FlagMedia.objects.all()
 
 
 class GameListView(ListCreateAPIView, GetPlayerMixin):
@@ -762,19 +776,8 @@ class UserGamesView(ListAPIView):
     pagination_class = PageNumberPagination
     
     def get_queryset(self):
-        """
-        Get all games where the user has answered at least one question
-        Games are connected to users through: User -> Player -> PlayerScore -> Answer -> Question -> Game
-        """
-        # Get all players for this user
         user_players = Player.objects.filter(user=self.request.user)
-        
-        # Get all player scores for this user's players
         user_player_scores = PlayerScore.objects.filter(player__in=user_players)
-        
-        # Get all games where this user has at least one answer
-        # Filter games that have questions with answers from this user's player scores
-        # Prefetch related data to avoid N+1 queries
         games = Game.objects.filter(
             questions__answers__player_score__in=user_player_scores
         ).distinct().select_related(
@@ -806,38 +809,27 @@ class UserGameDetailView(RetrieveAPIView):
     lookup_field = "token"
     
     def get_queryset(self):
-        """
-        Only return games where the user has answered at least one question
-        Optimize queries by prefetching questions and answers
-        """
         user_players = Player.objects.filter(user=self.request.user)
         user_player_scores = PlayerScore.objects.filter(player__in=user_players)
-        
-        # Prefetch questions ordered by sequence, and answers for this user's player scores
-        # Only include games where the user has at least one answer
-        # Also prefetch species media (images, videos, sounds) for both question species and answer species
-        return Game.objects.filter(
+        game =  Game.objects.filter(
             questions__answers__player_score__in=user_player_scores
         ).distinct().prefetch_related(
             Prefetch(
                 'questions',
                 queryset=Question.objects.order_by('sequence').select_related('species').prefetch_related(
-                    'species__images',
-                    'species__videos',
-                    'species__sounds',
+                    'species__media',
                     Prefetch(
                         'answers',
                         queryset=Answer.objects.filter(
                             player_score__in=user_player_scores
                         ).select_related('answer', 'player_score', 'player_score__player', 'player_score__player__user').prefetch_related(
-                            'answer__images',
-                            'answer__videos',
-                            'answer__sounds'
+                            'answer__media'
                         )
                     )
                 )
             )
         )
+        return game
     
     def get_serializer_context(self):
         """Add request to serializer context"""

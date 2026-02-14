@@ -1,9 +1,12 @@
+from urllib.parse import urlparse
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from jizz.models import Country, Species, SpeciesImage, Game, Question, Answer, Player, SpeciesVideo, SpeciesSound, \
-    QuestionOption, PlayerScore, FlagQuestion, Feedback, Update, Reaction, CountryChallenge, CountryGame, \
+
+from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, FlagQuestion, \
+    Feedback, Update, Reaction, CountryChallenge, CountryGame, \
     ChallengeLevel, Language, SpeciesName, UserProfile
-from media.models import Media, MediaReview
+from media.models import Media, MediaReview, FlagMedia
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -16,22 +19,22 @@ class CountrySerializer(serializers.ModelSerializer):
         fields = ('code', 'name', 'count')
 
 
-class ImageSerializer(serializers.ModelSerializer):
+
+class QuestionMediaSerializer(serializers.ModelSerializer):
+    link = serializers.SerializerMethodField()
+
+    def get_link(self, obj):
+        if not obj.link:
+            return None
+        try:
+            parsed = urlparse(obj.link)
+            return f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else obj.link
+        except Exception:
+            return obj.link
+
     class Meta:
-        model = SpeciesImage
-        fields = ('url', 'link', 'contributor')
-
-
-class VideoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SpeciesVideo
-        fields = ('url', 'link', 'contributor')
-
-
-class SoundSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SpeciesSound
-        fields = ('url', 'link', 'contributor')
+        model = Media
+        fields = ('id', 'url', 'link', 'contributor', 'source')
 
 
 class MediaSerializer(serializers.ModelSerializer):
@@ -85,9 +88,9 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 
 class SpeciesDetailSerializer(serializers.ModelSerializer):
-    images = ImageSerializer(many=True)
-    videos = VideoSerializer(many=True)
-    sounds = SoundSerializer(many=True)
+    images = QuestionMediaSerializer(many=True)
+    videos = QuestionMediaSerializer(many=True)
+    sounds = QuestionMediaSerializer(many=True)
     name_translated = serializers.SerializerMethodField()
 
     def get_name_translated(self, obj):
@@ -110,8 +113,7 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
                 return species_name.name
             except SpeciesName.DoesNotExist:
                 pass
-        
-        # Fallback to default name
+
         return obj.name
 
     class Meta:
@@ -119,18 +121,23 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
         fields = ('name', 'code', 'name_latin', 'name_nl', 'name_translated', 'id', 'images', 'videos', 'sounds')
 
 class QuestionSerializer(serializers.ModelSerializer):
-    images = ImageSerializer(source='species.images', many=True)
-    videos = VideoSerializer(source='species.videos', many=True)
-    sounds = SoundSerializer(source='species.sounds', many=True)
+    images = QuestionMediaSerializer(source='species.images', many=True)
+    videos = QuestionMediaSerializer(source='species.videos', many=True)
+    sounds = QuestionMediaSerializer(source='species.sounds', many=True)
     options = serializers.SerializerMethodField()
+    game = serializers.SerializerMethodField()
 
     def get_options(self, obj):
         option_orders = QuestionOption.objects.filter(question=obj).order_by('order')
         return SpeciesDetailSerializer([op.species for op in option_orders], many=True).data
 
+    def get_game(self, obj):
+        # Include game token so frontend can verify question belongs to current game
+        return {'token': obj.game.token}
+
     class Meta:
         model = Question
-        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number', 'sequence')
+        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number', 'sequence', 'game')
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -167,17 +174,40 @@ class AnswerSerializer(serializers.ModelSerializer):
 class FlagQuestionSerializer(serializers.ModelSerializer):
 
     player_token = serializers.CharField(write_only=True)
-    question_id = serializers.IntegerField(write_only=True)
+    question_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    media_url = serializers.URLField(write_only=True, required=False, allow_null=True)
+    media_type = serializers.CharField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = FlagQuestion
-        fields = ('player_token', 'description', 'question_id')
+        fields = ('player_token', 'description', 'question_id', 'media_url', 'media_type')
 
     def create(self, validated_data):
         player = Player.objects.get(token=validated_data.pop('player_token'))
-        question = Question.objects.get(id=validated_data.pop('question_id'))
-        description = validated_data.pop('description')
-        return FlagQuestion.objects.create(description=description, player=player, question=question)
+        question_id = validated_data.pop('question_id', None)
+        media_url = validated_data.pop('media_url', None)
+        description = validated_data.pop('description', '')
+        media_type = validated_data.pop('media_type', None)
+        
+        # If question_id is provided, use it; otherwise create with null question
+        if question_id:
+            question = Question.objects.get(id=question_id)
+            return FlagQuestion.objects.create(
+                description=description, 
+                player=player, 
+                question=question,
+                media_url=media_url
+            )
+        else:
+            # For media-only flags, create with null question
+            if not media_url:
+                raise serializers.ValidationError("Either question_id or media_url must be provided")
+            return FlagQuestion.objects.create(
+                description=description,
+                player=player,
+                question=None,
+                media_url=media_url
+            )
 
 
 class ReviewMediaSerializer(serializers.ModelSerializer):
@@ -207,6 +237,32 @@ class ReviewMediaSerializer(serializers.ModelSerializer):
             review.description = description
             review.save()
         return review
+
+
+class FlagMediaSerializer(serializers.ModelSerializer):
+    """Serializer for flagging media items."""
+    player_token = serializers.CharField(write_only=True)
+    media_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = FlagMedia
+        fields = ('player_token', 'description', 'media_id')
+
+    def create(self, validated_data):
+        player = Player.objects.get(token=validated_data.pop('player_token'))
+        media = Media.objects.get(id=validated_data.pop('media_id'))
+        description = validated_data.pop('description', '')
+        # Use get_or_create to handle unique_together constraint
+        flag, created = FlagMedia.objects.get_or_create(
+            media=media,
+            player=player,
+            defaults={'description': description}
+        )
+        if not created:
+            # Update existing flag
+            flag.description = description
+            flag.save()
+        return flag
 
 
 class ReactionSerializer(serializers.ModelSerializer):
@@ -414,6 +470,11 @@ class PlayerScoreSerializer(serializers.ModelSerializer):
     created = serializers.DateTimeField(source='game.created')
     ranking = serializers.IntegerField(read_only=True)
     answers = AnswerSerializer(read_only=True, many=True)
+    is_host = serializers.SerializerMethodField()
+
+    def get_is_host(self, obj):
+        """Check if this player is the host of the game"""
+        return obj.game.host_id == obj.player_id
 
     class Meta:
         model = PlayerScore
@@ -421,12 +482,13 @@ class PlayerScoreSerializer(serializers.ModelSerializer):
             'id', 'name', 'status', 'language', 'created',
             'score', 'last_answer', 'answers',
             'media', 'level', 'length',
-            'country', 'ranking'
+            'country', 'ranking', 'is_host'
         )
 
 
 class GameSerializer(serializers.ModelSerializer):
-    country = CountrySerializer()
+    country = serializers.CharField(write_only=True, required=False)
+    country_data = CountrySerializer(source='country', read_only=True)
     host = MultiPlayerSerializer(read_only=True)
     current_highscore = PlayerScoreSerializer(read_only=True)
     scores = PlayerScoreSerializer(
@@ -434,11 +496,24 @@ class GameSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    def create(self, validated_data):
+        # Handle country field - convert code to Country object
+        country_code = validated_data.pop('country', None)
+        if country_code:
+            validated_data['country'] = Country.objects.get(code=country_code)
+        return super().create(validated_data)
+    
+    def to_representation(self, instance):
+        # Use country_data for read operations
+        representation = super().to_representation(instance)
+        if 'country_data' in representation:
+            representation['country'] = representation.pop('country_data')
+        return representation
 
     class Meta:
         model = Game
         fields = (
-            'token', 'country', 'level', 'language',
+            'token', 'country', 'country_data', 'level', 'language',
             'created', 'multiplayer',
             'length', 'progress',
             'media', 'repeat',
@@ -576,9 +651,9 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
                 'name_latin': species.name_latin,
                 'name_nl': species.name_nl if hasattr(species, 'name_nl') else '',
                 'code': species.code,
-                'images': ImageSerializer(species.images.all(), many=True).data,
-                'videos': VideoSerializer(species.videos.all(), many=True).data,
-                'sounds': SoundSerializer(species.sounds.all(), many=True).data,
+                'images': QuestionMediaSerializer(species.images.all(), many=True).data,
+                'videos': QuestionMediaSerializer(species.videos.all(), many=True).data,
+                'sounds': QuestionMediaSerializer(species.sounds.all(), many=True).data,
             }
         return None
     

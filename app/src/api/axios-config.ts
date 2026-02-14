@@ -120,7 +120,7 @@ axios.interceptors.response.use(
         // Attempt to refresh the token
         // Use a separate axios instance to avoid interceptors for the refresh call
         const baseURL = process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:8050' 
+          ? 'http://127.0.0.1:8050' 
           : 'https://birdr.pro';
         
         const refreshResponse = await refreshAxios.post(

@@ -23,7 +23,7 @@ class Media(models.Model):
     """Model for storing image files related to species."""
     species = models.ForeignKey(
         'jizz.Species',
-        related_name='images',
+        related_name='media',
         on_delete=models.CASCADE
     )
     source = models.CharField(max_length=200, choices=IMAGE_SOURCES, blank=True, default='')
@@ -87,3 +87,28 @@ class MediaReview(models.Model):
 
     def __str__(self):
         return f"{self.get_review_type_display()} for {self.media} by {self.player}"
+
+
+class FlagMedia(models.Model):
+    """Model for flagging problematic media items."""
+    media = models.ForeignKey(
+        Media,
+        on_delete=models.CASCADE,
+        related_name='flags'
+    )
+    player = models.ForeignKey(
+        'jizz.Player',
+        on_delete=models.CASCADE,
+        related_name='media_flags'
+    )
+    description = models.CharField(max_length=500, null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Flagged Media'
+        verbose_name_plural = 'Flagged Media'
+        ordering = ['-created']
+        unique_together = ('media', 'player')  # One flag per player per media
+
+    def __str__(self):
+        return f"Flag for {self.media} by {self.player}"

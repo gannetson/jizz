@@ -28,7 +28,7 @@ export interface ProfileUpdateData {
 
 class ProfileService {
   private baseURL = process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:8050' 
+    ? 'http://127.0.0.1:8050' 
     : 'https://birdr.pro';
 
   /**

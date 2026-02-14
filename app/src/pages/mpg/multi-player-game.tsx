@@ -13,6 +13,11 @@ const MultiPlayerGame: React.FC = () => {
   const { question, answer } = useContext(WebsocketContext)
   const { game } = useContext(AppContext)
 
+  // If no game, redirect to start page (shouldn't happen, but safety check)
+  if (!game) {
+    return null
+  }
+
   return (
     <Page>
       <Page.Header>

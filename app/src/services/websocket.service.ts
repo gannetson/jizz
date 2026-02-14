@@ -111,7 +111,7 @@ export class WebSocketServiceImpl implements WebSocketService {
 
   private getSocketUrl(gameToken: string): string {
     if (window.location.host === 'localhost:3000') {
-      return `ws://localhost:8050/mpg/${gameToken}`;
+      return `ws://127.0.0.1:8050/mpg/${gameToken}`;
     }
     return `wss://birdr.pro/mpg/${gameToken}`;
   }

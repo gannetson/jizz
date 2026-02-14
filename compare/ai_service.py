@@ -43,7 +43,44 @@ class AIComparisonService:
         
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            import openai
+            import os
+            
+            # Check OpenAI library version for compatibility
+            try:
+                openai_version = openai.__version__
+                version_parts = [int(x) for x in openai_version.split('.')[:2]]
+                if version_parts[0] < 1 or (version_parts[0] == 1 and version_parts[1] < 12):
+                    print(f"Warning: OpenAI library version {openai_version} may be incompatible. Recommended: >=1.12.0")
+            except (AttributeError, ValueError):
+                pass  # Version check failed, continue anyway
+            
+            # Temporarily remove proxy environment variables if they exist
+            # Some versions of the OpenAI library try to use these and pass them incorrectly
+            original_proxy_vars = {}
+            proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+            for var in proxy_vars:
+                if var in os.environ:
+                    original_proxy_vars[var] = os.environ[var]
+                    del os.environ[var]
+            
+            try:
+                # Try to use httpx directly to avoid proxy issues
+                try:
+                    import httpx
+                    # Create an httpx client without any proxy configuration
+                    # httpx doesn't use proxies parameter in Client constructor
+                    http_client = httpx.Client(timeout=60.0)
+                    client = OpenAI(api_key=self.api_key, http_client=http_client)
+                except ImportError:
+                    # httpx not available, fall back to standard initialization
+                    # Initialize client with only the api_key parameter
+                    # Explicitly avoid passing proxies or other parameters that might cause issues
+                    client = OpenAI(api_key=self.api_key)
+            finally:
+                # Restore proxy environment variables
+                for var, value in original_proxy_vars.items():
+                    os.environ[var] = value
             
             response = client.chat.completions.create(
                 model=self.model,
@@ -59,6 +96,26 @@ class AIComparisonService:
         except ImportError:
             print("Error: openai package not installed. Install with: pip install openai")
             return None
+        except TypeError as e:
+            # Handle case where proxies or other unsupported arguments are being passed
+            error_msg = str(e)
+            if 'proxies' in error_msg or '__init__' in error_msg:
+                import traceback
+                print(f"Error: OpenAI client initialization failed. This may be due to an incompatible library version or configuration.")
+                print(f"Details: {error_msg}")
+                print(f"Full traceback:")
+                traceback.print_exc()
+                print("\nTroubleshooting:")
+                print("1. Check OpenAI library version: pip show openai")
+                print("2. Upgrade if needed: pip install --upgrade 'openai>=1.12.0'")
+                print("3. Check for proxy environment variables: echo $HTTP_PROXY $HTTPS_PROXY")
+                print("4. If proxies are set, they may need to be unset for OpenAI API calls")
+                return None
+            else:
+                print(f"TypeError calling OpenAI API: {e}")
+                import traceback
+                traceback.print_exc()
+                return None
         except Exception as e:
             print(f"Error calling OpenAI API: {e}")
             return None

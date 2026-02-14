@@ -15,7 +15,7 @@ import {
   Text,
   useDisclosure,
   Avatar,
-  HStack
+  HStack, ListItem, List, ListRoot
 } from "@chakra-ui/react";
 import {GiHamburgerMenu} from "react-icons/all";
 import {FaUserCircle} from "react-icons/fa";
@@ -100,19 +100,52 @@ const Layout = () => {
         <DrawerBackdrop/>
         <DrawerContent height="100vh" maxHeight="100vh" display="flex" flexDirection="column" position="fixed" top={0} left={0} right="auto" bottom={0} bg="white">
           <DrawerCloseTrigger/>
-          <DrawerHeader bg="white">Menu</DrawerHeader>
-
-          <DrawerBody flex="1" overflowY="auto" minHeight={0} bg="white">
+          <DrawerBody flex="1" overflowY="auto" mt={4} minHeight={0} bg="white">
             <BirdrMenu/>
           </DrawerBody>
 
           <DrawerFooter bg="white">
             <Flex direction={'column'} gap={4}>
               <Box mb={10}>
-                All data & images
+                Data
                 <Link href='https://ebird.org'>
                   <Image _dark={{filter: 'invert(100%)'}} width='80px' src={'/images/ebird.svg'}/>
                 </Link>
+              </Box>
+              <Box mb={10}>
+                Media from
+                <ListRoot>
+                  <ListItem>
+                    <Link href='https://www.inaturalist.org' target="_blank" rel="noopener noreferrer">
+                      iNaturalist
+                    </Link>
+                  </ListItem>
+                  <ListItem>
+                    <Link href='https://commons.wikimedia.org' target="_blank" rel="noopener noreferrer">
+                      Wikimedia Commons
+                    </Link>
+                  </ListItem>
+                  <ListItem>
+                    <Link href='https://www.gbif.org' target="_blank" rel="noopener noreferrer">
+                      GBIF
+                    </Link>
+                  </ListItem>
+                  <ListItem>
+                    <Link href='https://eol.org' target="_blank" rel="noopener noreferrer">
+                      Encyclopedia of Life
+                    </Link>
+                  </ListItem>
+                  <ListItem>
+                    <Link href='https://observation.org' target="_blank" rel="noopener noreferrer">
+                      Observation.org
+                    </Link>
+                  </ListItem>
+                  <ListItem>
+                    <Link href='https://xeno-canto.org' target="_blank" rel="noopener noreferrer">
+                      Xeno-Canto
+                    </Link>
+                  </ListItem>
+                </ListRoot>
               </Box>
               <Box>
                 Developed by <b>GoedLoek</b>
@@ -134,10 +167,6 @@ const Layout = () => {
         <DrawerBackdrop/>
         <DrawerContent height="100vh" maxHeight="100vh" display="flex" flexDirection="column" position="fixed" top={0} right={0} left="auto" bottom={0} bg="white">
           <DrawerCloseTrigger/>
-          <DrawerHeader bg="white">
-            <FormattedMessage id="account" defaultMessage="Account" />
-          </DrawerHeader>
-
           <DrawerBody flex="1" overflowY="auto" minHeight={0} bg="white" p={6}>
             <UserMenu 
               onOpenLoginModal={(mode) => {

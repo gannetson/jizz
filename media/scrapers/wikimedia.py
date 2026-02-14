@@ -57,18 +57,22 @@ class WikimediaScraper(BaseMediaScraper):
             page = 1
             max_pages = 5
             
+            # Quote the search term to make it a phrase search (prevents matching on individual words)
+            # This prevents "Greater Flamingo" from matching "Greater Manchester"
+            quoted_search = f'"{search_term}"' if ' ' in search_term else search_term
+            
             while page <= max_pages:
                 params = {
                     'action': 'query',
                     'format': 'json',
                     'generator': 'search',
-                    'gsrsearch': f'filetype:{"bitmap" if media_type == "images" else "video"} {search_term}',
-                    'gsrnamespace': 6,  # File namespace
+                    'gsrsearch': f'filetype:{"bitmap" if media_type == "images" else "video"} {quoted_search}',
+                    'gsrnamespace': 6,
                     'gsrlimit': 50,
                     'gsroffset': (page - 1) * 50,
                     'prop': 'imageinfo|info',
                     'iiprop': 'url|extmetadata',
-                    'iiurlwidth': 800,  # Get medium-sized image
+                    'iiurlwidth': 800,
                 }
                 
                 data = self._fetch_json(self.API_BASE, params)
@@ -112,6 +116,12 @@ class WikimediaScraper(BaseMediaScraper):
                         # Check if this is a wild bird photo (exclude unwanted content)
                         combined_text = f"{title_text} {description_text}"
                         if self._should_exclude(combined_text):
+                            continue
+                        
+                        # Validate that the file actually relates to the species being searched
+                        # Check if title/description contains the scientific name or common name
+                        if not self._is_related_to_species(combined_text, normalized_name, common_name):
+                            logger.debug(f"Excluding file - not related to species: {title}")
                             continue
                         
                         # Calculate quality score
@@ -165,6 +175,57 @@ class WikimediaScraper(BaseMediaScraper):
                 return True
         
         return False
+    
+    def _is_related_to_species(self, text: str, scientific_name: str, common_name: Optional[str] = None) -> bool:
+        """
+        Check if the text actually relates to the species being searched.
+        This prevents false matches like "Greater Manchester" when searching for "Greater Flamingo".
+        
+        Args:
+            text: Combined title and description text (lowercase)
+            scientific_name: Normalized scientific name (e.g., "phoenicopterus roseus")
+            common_name: Common name (e.g., "Greater Flamingo")
+        
+        Returns:
+            True if the text appears to be related to the species, False otherwise
+        """
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        scientific_lower = scientific_name.lower()
+        
+        # Check if scientific name appears (at least the genus)
+        scientific_parts = scientific_lower.split()
+        if scientific_parts:
+            genus = scientific_parts[0]
+            # Check if genus appears in text
+            if genus not in text_lower:
+                # If common name exists, check if it's mentioned as a phrase
+                if common_name:
+                    # For multi-word common names, require the full phrase or key identifying words
+                    common_lower = common_name.lower()
+                    common_parts = common_lower.split()
+                    
+                    # For names like "Greater Flamingo", require "flamingo" to be present
+                    # This prevents "Greater Manchester" from matching
+                    if len(common_parts) > 1:
+                        # Require the last word (usually the species identifier) to be present
+                        species_identifier = common_parts[-1]
+                        if species_identifier not in text_lower:
+                            return False
+                        # Also check if the full phrase appears (more reliable)
+                        if common_lower in text_lower:
+                            return True
+                    else:
+                        # Single word common name - must appear
+                        if common_lower not in text_lower:
+                            return False
+                else:
+                    # No common name and no genus match - likely not related
+                    return False
+        
+        return True
     
     def _calculate_quality_score(self, imageinfo: Dict, extmetadata: Dict, title: str = '', description: str = '') -> float:
         """

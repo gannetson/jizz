@@ -15,8 +15,9 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
                          Update, CountryGame, Language, SpeciesName, UserProfile)
 from jizz.utils import (get_country_images, get_images, get_media_citation,
-                        get_sounds, get_videos, sync_country, sync_species)
+                        get_sounds, get_videos, sync_country, sync_species, get_media)
 from media.models import Media
+from media.utils import get_species_media
 
 
 class CountrySpeciesInline(admin.TabularInline):
@@ -186,13 +187,12 @@ class SpeciesAdmin(admin.ModelAdmin):
 
     def get_media(self, request, pk=None):
         species = Species.objects.get(pk=pk)
-        # get_images(species.id)
-        # get_sounds(species.id)
-        # get_videos(species.id)
-        for image in species.images.all():
-            if not image.contributor:
-                get_media_citation(image)
-        messages.add_message(request, messages.INFO, f'Found {species.images.count()} images.')
+        species.media.all().delete()
+        get_species_media(species)
+        image_count = species.media.filter(type='image').count()
+        video_count = species.media.filter(type='video').count()
+        audio_count = species.media.filter(type='audio').count()
+        messages.add_message(request, messages.INFO, f'Found {image_count} images, {video_count} videos, and {audio_count} sound files.')
         species_url = reverse('admin:jizz_species_change', args=(species.pk,))
         response = HttpResponseRedirect(species_url)
         return response

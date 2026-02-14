@@ -1,11 +1,11 @@
-import {Box, Button, Flex, Heading, Icon, Image, Link, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, useDisclosure, CardRoot} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Icon, Image, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, CardRoot} from "@chakra-ui/react"
 import {useContext, useEffect, useState} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
 import {FormattedMessage} from "react-intl"
-import {FlagMedia} from "../play/flag-media"
+import {FlagMediaButton} from "../../../components/flag-media-button"
 import {keyframes} from "@emotion/react"
 import { Loading } from "../../../components/loading"
 import { Page } from "../../../shared/components/layout"
@@ -28,7 +28,6 @@ const iconMapping: Record<ResultType, IconType> = {
 
 export const ChallengeQuestion = () => {
   const {species, player, language, countryChallenge, challengeQuestion: question, getNewChallengeQuestion, selectChallengeAnswer: selectAnswer} = useContext(AppContext)
-  const {onOpen, onClose, open: isOpen} = useDisclosure()
   const navigate = useNavigate()
   const [showFeedback, setShowFeedback] = useState(false)
   const [isCorrect, setIsCorrect] = useState<boolean>(false)
@@ -42,10 +41,6 @@ export const ChallengeQuestion = () => {
       transform: rotate(0deg)
     }
   `
-
-  const flagMedia = () => {
-    onOpen()
-  }
 
   const level = countryChallenge?.levels[0];
 
@@ -153,7 +148,6 @@ export const ChallengeQuestion = () => {
             </Heading>
           </Box>
 
-        <FlagMedia question={question} isOpen={isOpen} onClose={onClose}/>
         <Box position={'relative'}>
           {game.media === 'video' && (
             <>
@@ -188,9 +182,15 @@ export const ChallengeQuestion = () => {
 
           )}
           <Flex justifyContent={'end'}>
-            <Link onClick={flagMedia} fontSize={'sm'} color={'error.700'}>
-              🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
-            </Link>
+            {game.media === 'video' && question.videos[question.number] && (
+              <FlagMediaButton media={question.videos[question.number]} />
+            )}
+            {game.media === 'images' && question.images[question.number] && (
+              <FlagMediaButton media={question.images[question.number]} />
+            )}
+            {game.media === 'audio' && question.sounds[question.number] && (
+              <FlagMediaButton media={question.sounds[question.number]} />
+            )}
           </Flex>
         </Box>
         {question.options && question.options.length ? (

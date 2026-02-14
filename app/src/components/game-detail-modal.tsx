@@ -22,6 +22,7 @@ import ReactPlayer from "react-player";
 import { Species } from "../core/app-context";
 import { SpeciesButton } from "./species-button";
 import { ComparisonButton } from "./comparison-button";
+import { MediaCredits } from "./media-credits";
 
 const {
   Root: DialogRoot,
@@ -312,19 +313,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                                           e.currentTarget.src = '/images/birdr-logo.png';
                                         }}
                                       />
-                                      {question.media_item.contributor && (
-                                        <Text fontSize="sm" color="gray.600">
-                                          {question.media_item.contributor}
-                                          {question.media_item.link && (
-                                            <>
-                                              {' / '}
-                                              <Link href={question.media_item.link} target="_blank" rel="noopener noreferrer" color="primary.600">
-                                                Macaulay Library
-                                              </Link>
-                                            </>
-                                          )}
-                                        </Text>
-                                      )}
+                                      <MediaCredits media={question.media_item} />
                                     </VStack>
                                   )}
                                   
@@ -338,19 +327,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                                           height="100%"
                                         />
                                       </AspectRatio>
-                                      {question.media_item.contributor && (
-                                        <Text fontSize="sm" color="gray.600">
-                                          {question.media_item.contributor}
-                                          {question.media_item.link && (
-                                            <>
-                                              {' / '}
-                                              <Link href={question.media_item.link} target="_blank" rel="noopener noreferrer" color="primary.600">
-                                                Macaulay Library
-                                              </Link>
-                                            </>
-                                          )}
-                                        </Text>
-                                      )}
+                                      <MediaCredits media={question.media_item} />
                                     </VStack>
                                   )}
                                   
@@ -362,19 +339,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                                           Your browser does not support the audio element.
                                         </audio>
                                       </Box>
-                                      {question.media_item.contributor && (
-                                        <Text fontSize="sm" color="gray.600">
-                                          {question.media_item.contributor}
-                                          {question.media_item.link && (
-                                            <>
-                                              {' / '}
-                                              <Link href={question.media_item.link} target="_blank" rel="noopener noreferrer" color="primary.600">
-                                                Macaulay Library
-                                              </Link>
-                                            </>
-                                          )}
-                                        </Text>
-                                      )}
+                                      <MediaCredits media={question.media_item} />
                                     </VStack>
                                   )}
                                   

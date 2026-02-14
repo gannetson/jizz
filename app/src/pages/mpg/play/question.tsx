@@ -11,13 +11,14 @@ import {
   Text,
   useDisclosure
 } from "@chakra-ui/react"
-import React, {useContext, useState} from "react"
+import React, {useContext, useState, useEffect} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
 import {FormattedMessage} from "react-intl"
 import {FlagMedia} from "./flag-media"
+import { MediaCredits } from "../../../components/media-credits"
 import {keyframes} from "@emotion/react"
 import {ViewSpecies} from "../../../components/view-species"
 import {SpeciesModal} from "../../../components/species-modal"
@@ -43,6 +44,8 @@ export const QuestionComponent = () => {
   const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
   const {open: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
+  // Local state to track media index (for changing media after flagging)
+  const [mediaIndex, setMediaIndex] = useState<number | null>(null)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
   const navigate = useNavigate()
@@ -55,6 +58,13 @@ export const QuestionComponent = () => {
     setShowSpecies(species)
     onSpeciesOpen()
   }
+
+  // Initialize or reset mediaIndex when question changes
+  useEffect(() => {
+    if (question) {
+      setMediaIndex(question.number ?? 0)
+    }
+  }, [question?.id]) // Reset when question ID changes
 
   const selectAnswer = async (species?: Species) => {
     setShowFeedback(false)
@@ -78,12 +88,27 @@ export const QuestionComponent = () => {
       }
   `
 
-  if (!question || !game) return <></>
+  if (!game) return <></>
+  
+  // Show loading state when question is being fetched (cleared during game transition)
+  if (!question) {
+    return (
+      <Box textAlign="center" py={8}>
+        <Text fontSize="lg">
+          <FormattedMessage id="loading question" defaultMessage="Loading question..." />
+        </Text>
+      </Box>
+    )
+  }
+
+  // Use local mediaIndex if set, otherwise use question.number
+  const currentMediaIndex = mediaIndex !== null ? mediaIndex : (question.number ?? 0)
 
   const flagMedia = () => {
     if (!question || !game) return
-    const mediaIndex = question.number ?? 0
+    const currentIndex = mediaIndex !== null ? mediaIndex : (question.number ?? 0)
     let mediaData: {
+      id?: number
       type: 'image' | 'video' | 'audio'
       url: string
       link?: string | null
@@ -92,36 +117,39 @@ export const QuestionComponent = () => {
     } | null = null
 
     if (game.media === 'images' && question.images?.length) {
-      const item = question.images[mediaIndex]
+      const item = question.images[currentIndex]
       if (item) {
         mediaData = {
+          id: item.id,
           type: 'image',
           url: item.url,
           link: item.link,
           contributor: item.contributor,
-          index: mediaIndex,
+          index: currentIndex,
         }
       }
     } else if (game.media === 'video' && question.videos?.length) {
-      const item = question.videos[mediaIndex]
+      const item = question.videos[currentIndex]
       if (item) {
         mediaData = {
+          id: item.id,
           type: 'video',
           url: item.url,
           link: item.link,
           contributor: item.contributor,
-          index: mediaIndex,
+          index: currentIndex,
         }
       }
     } else if (game.media === 'audio' && question.sounds?.length) {
-      const item = question.sounds[mediaIndex]
+      const item = question.sounds[currentIndex]
       if (item) {
         mediaData = {
+          id: item.id,
           type: 'audio',
           url: item.url,
           link: item.link,
           contributor: item.contributor,
-          index: mediaIndex,
+          index: currentIndex,
         }
       }
     }
@@ -184,13 +212,29 @@ export const QuestionComponent = () => {
     <>
       <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen}/>
       <FlagMedia
-        question={question}
         isOpen={isOpen}
         onClose={() => {
           setFlagMediaInfo(null)
           onClose()
         }}
         media={flagMediaInfo}
+        onSuccess={() => {
+          // After successful flagging, change to next media item in the sequence
+          if (question && game) {
+            let maxIndex = 0
+            if (game.media === 'images' && question.images?.length) {
+              maxIndex = question.images.length - 1
+            } else if (game.media === 'video' && question.videos?.length) {
+              maxIndex = question.videos.length - 1
+            } else if (game.media === 'audio' && question.sounds?.length) {
+              maxIndex = question.sounds.length - 1
+            }
+            
+            // Increment media index, wrap around if at the end
+            const nextIndex = currentMediaIndex >= maxIndex ? 0 : currentMediaIndex + 1
+            setMediaIndex(nextIndex)
+          }
+        }}
       />
       {nextButton}
       <>
@@ -202,59 +246,47 @@ export const QuestionComponent = () => {
         )}
       </>
       <Box position={'relative'}>
-        {game.media === 'video' && (
+        {game.media === 'video' && question.videos[currentMediaIndex] && (
           <>
             <ReactPlayer
               width={'100%'}
               height={'50%'}
-              url={question.videos[question.number].url}
+              url={question.videos[currentMediaIndex].url}
               controls={true}
               playing={true}
             />
             {flag}
-            <Text fontSize={'sm'}>
-              {question.videos[question.number].contributor} {' / '}
-              <Link href={question.videos[question.number].link} target="_blank" rel="noopener noreferrer">
-                Macaulay Library
-              </Link>
-            </Text>
+            <MediaCredits media={question.videos[currentMediaIndex]} />
           </>
         )}
-        {game.media === 'images' && (
+        {game.media === 'images' && question.images[currentMediaIndex] && (
           <>
             <Image
-              src={question.images[question.number].url.replace('/1800', '/900')}
+              src={question.images[currentMediaIndex].url.replace('/1800', '/900')}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
               }}
             />
             {flag}
-            <Text fontSize={'sm'}>
-              {question.images[question.number].contributor} {' / '}
-              <Link onClick={skipQuestion} href={question.images[question.number].link} target="_blank" rel="noopener noreferrer">
-                Macaulay Library
-              </Link>
-            </Text>
+            <MediaCredits 
+              media={question.images[currentMediaIndex]} 
+              onClick={skipQuestion}
+            />
           </>
 
         )}
-        {game.media === 'audio' && (
+        {game.media === 'audio' && question.sounds[currentMediaIndex] && (
           <Box py={8}>
             <>
               <ReactPlayer
                 width={'100%'}
                 height={'50px'}
-                url={question.sounds[question.number].url}
+                url={question.sounds[currentMediaIndex].url}
                 controls={true}
                 playing={true}
               />
               {flag}
-              <Text fontSize={'sm'}>
-                {question.images[question.number].contributor} {' / '}
-                <Link href={question.images[question.number].link} target="_blank" rel="noopener noreferrer">
-                  Macaulay Library
-                </Link>
-              </Text>
+              <MediaCredits media={question.sounds[currentMediaIndex]} />
             </>
           </Box>
 
@@ -299,7 +331,7 @@ export const QuestionComponent = () => {
               colorPalette={'success'}
               gap={4}
             >
-              {answer.species?.name}
+              <SpeciesName species={answer.species}/>
             </Button>
             {!answer?.correct && (
               <Button
@@ -307,7 +339,7 @@ export const QuestionComponent = () => {
                 colorPalette={'error'}
                 gap={4}
               >
-                {answer.answer?.name}
+                <SpeciesName species={answer.answer}/>
               </Button>
             )}
           </SimpleGrid>

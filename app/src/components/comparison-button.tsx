@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Box,
   Button,
@@ -10,6 +11,7 @@ import {
   Heading,
   Alert,
   AlertIndicator,
+  IconButton,
 } from "@chakra-ui/react";
 import { format } from "date-fns";
 import { compareService, SpeciesComparison } from "../api/services/compare.service";
@@ -117,18 +119,23 @@ export const ComparisonButton = ({
         )}
       </Button>
 
-      {isOpen && (
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <Box className="comparison-dialog-wrapper">
           <Dialog.Root open={isOpen} onOpenChange={handleClose} modal={true}>
             <Dialog.Backdrop />
             <DialogPositionerComponent>
               <DialogContentComponent maxW="4xl" maxH="90vh" overflowY="auto">
-              <DialogCloseTriggerComponent position="absolute" top={3} right={3} />
-              <Dialog.Header pr={10}>
-                {comparison
-                  ? `Comparison: ${comparison.species_1_name} vs ${comparison.species_2_name}`
-                  : "Species Comparison"}
-              </Dialog.Header>
+                <Dialog.Header pr={10}>
+                  {comparison
+                    ? `Comparison: ${comparison.species_1_name} vs ${comparison.species_2_name}`
+                    : "Species Comparison"}
+                </Dialog.Header>
+                <DialogCloseTriggerComponent 
+                  position="absolute" 
+                  top={3} 
+                  right={3}
+                  onClick={() => handleClose(false)}
+                />
               <Dialog.Body>
                 {loading ? (
                   <VStack gap={4} py={8}>
@@ -255,12 +262,15 @@ export const ComparisonButton = ({
                 ) : null}
               </Dialog.Body>
               <Dialog.Footer>
-                <Button onClick={() => handleClose(false)}>Close</Button>
+                <Button onClick={() => handleClose(false)} colorPalette="primary">
+                  Close
+                </Button>
               </Dialog.Footer>
             </DialogContentComponent>
           </DialogPositionerComponent>
         </Dialog.Root>
-        </Box>
+        </Box>,
+        document.body
       )}
     </>
   );

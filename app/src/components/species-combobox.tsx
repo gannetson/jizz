@@ -36,17 +36,18 @@ export const SpeciesCombobox = ({
   loadingMessage = defaultLoadingMessage,
   resetInputOnSelect = true,
 }: Props) => {
+  const speciesArray = Array.isArray(species) ? species : []
+  
   const options = useMemo(() => {
-    return species.map((speciesItem) => {
-      const isDutch = playerLanguage === "nl"
-      const label = isDutch ? speciesItem.name_nl || speciesItem.name : speciesItem.name
+    return speciesArray.map((speciesItem) => {
+      const label = speciesItem.name_translated
       return {
         label,
         value: String(speciesItem.id ?? speciesItem.name),
         original: speciesItem,
       }
     })
-  }, [species, playerLanguage])
+  }, [speciesArray, playerLanguage])
 
   const handleChange = (selectedOption: OptionType | null) => {
     if (selectedOption && selectedOption.original) {

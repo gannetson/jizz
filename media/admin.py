@@ -44,8 +44,8 @@ class HideableAdminMixin:
 @admin.register(Media)
 class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
     list_display = ['id', 'species', 'type', 'source', 'hide', 'image_thumbnail', 'created']
-    list_filter = [VisibilityFilter, 'type', 'created', 'source', 'species', 'copyright_standardized', 'non_commercial_only']
-    search_fields = ['species__name', 'contributor', 'copyright_text', 'copyright_standardized']
+    list_filter = [VisibilityFilter, 'type', 'created', 'source', 'copyright_standardized', 'non_commercial_only', 'species']
+    search_fields = ['species__name', 'contributor', 'copyright_text', 'copyright_standardized', 'url']
     raw_id_fields = ['species']
     readonly_fields = ['created', 'updated', 'image_preview']
     date_hierarchy = 'created'

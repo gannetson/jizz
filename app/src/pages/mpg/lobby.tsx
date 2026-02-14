@@ -9,6 +9,7 @@ import AppContext from "../../core/app-context"
 import {PlayerItem} from "./play/player-item"
 import GameHeader from "./game-header"
 import { QRCodeSVG } from 'qrcode.react'
+import { validateQuestionForGame, getCurrentGameToken } from '../../core/game-token-validator'
 
 const Lobby: React.FC = () => {
 
@@ -33,10 +34,27 @@ const Lobby: React.FC = () => {
   }
 
   useEffect(() => {
-    if (question) {
-      navigate('/game/play')
+    // Only navigate if question exists AND it belongs to the current game
+    // Use centralized validator to ensure question belongs to current game
+    if (question && game) {
+      const currentGameToken = getCurrentGameToken(game, gameToken || null)
+      
+      if (validateQuestionForGame(question, currentGameToken || undefined)) {
+        console.log('Navigating to play screen - question belongs to current game:', currentGameToken)
+        navigate('/game/play')
+      } else {
+        // Question doesn't belong to current game - ignore it
+        // This could be an old question from a previous game
+        console.log('Ignoring navigation - question validation failed:', {
+          questionToken: question.game?.token,
+          currentGameToken
+        })
+      }
+    } else if (question && !game) {
+      // Question exists but no game - this shouldn't happen, but ignore it
+      console.log('Question exists but no game - ignoring')
     }
-  }, [question]);
+  }, [question, game, gameToken, navigate]);
 
   const isHost = player?.name === game?.host?.name
 

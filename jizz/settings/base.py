@@ -178,9 +178,11 @@ SOCIAL_AUTH_AZUREAD_TENANT_ID = os.environ.get('SOCIAL_AUTH_AZUREAD_TENANT_ID', 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-        'rest_framework_social_oauth2.authentication.SocialAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        # Removed SocialAuthentication from default - it causes issues with anonymous requests
+        # It can be added to specific views that need it
+        # 'rest_framework_social_oauth2.authentication.SocialAuthentication',
     ],
    'DEFAULT_FILTER_BACKENDS': [
        'rest_framework.filters.OrderingFilter'

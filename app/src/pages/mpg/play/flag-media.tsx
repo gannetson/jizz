@@ -1,4 +1,4 @@
-import AppContext, {Question} from "../../../core/app-context"
+import AppContext from "../../../core/app-context"
 import {
   Button, Flex,
   Dialog,
@@ -22,18 +22,19 @@ const {
 
 
 type MediaInfo = {
-  type: 'image' | 'video' | 'audio'
-  url: string
+  id?: number
+  type?: 'image' | 'video' | 'audio' // Made optional since type doesn't matter for the API
+  url?: string
   link?: string | null
   contributor?: string | null
-  index: number
+  index?: number
 }
 
 type Props = {
-  question: Question
   isOpen: boolean
   onClose: () => void
   media?: MediaInfo | null
+  onSuccess?: () => void // Callback to execute after successful flagging
 }
 
 type CheckboxOption = {
@@ -46,12 +47,12 @@ const CHECKBOX_OPTIONS: CheckboxOption[] = [
   { id: 'wrong species', defaultMessage: "This is not the right species", key: 'wrongSpecies' },
   { id: 'no bird visible', defaultMessage: "I can't see a bird in this picture", key: 'noBirdVisible' },
   { id: 'multiple species', defaultMessage: "There are multiple species in this picture", key: 'multipleSpecies' },
-  { id: 'chick egg nest corpse', defaultMessage: "It's a chick, egg, nest or a dead bird", key: 'chickEggNestCorpse' },
+  { id: 'chick egg nest corpse', defaultMessage: "It's a chick, egg, nest, feather or a dead bird", key: 'chickEggNestCorpse' },
   { id: 'poor quality', defaultMessage: "The quality of the image is very poor", key: 'poorQuality' },
 
 ]
 
-export const FlagMedia = ({question, isOpen, onClose, media}: Props) => {
+export const FlagMedia = ({isOpen, onClose, media, onSuccess}: Props) => {
   const [message, setMessage] = useState<string>('')
   const [checkboxStates, setCheckboxStates] = useState<Record<string, boolean>>(
     CHECKBOX_OPTIONS.reduce((acc, option) => ({ ...acc, [option.key]: false }), {})
@@ -95,20 +96,30 @@ export const FlagMedia = ({question, isOpen, onClose, media}: Props) => {
     
     const combinedDescription = descriptionParts.join('\n\n')
     
-    const response = await fetch('/api/flag/', {
+    if (!media?.id) {
+      toaster.create({
+        title: intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."}),
+        description: "Media ID is required to flag media.",
+        colorPalette: "error",
+        duration: 4000,
+        isClosable: true,
+      })
+      onClose()
+      return
+    }
+    
+    const response = await fetch('/api/flag-media/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        question_id: question.id,
+        media_id: media.id,
         player_token: player?.token,
-        media_url: media?.url,
-        media_type: media?.type,
         description: combinedDescription,
       })
     })
-    const successMessage = intl.formatMessage({id:"question flagged", defaultMessage: "Question flagged. We'll look into this."})
+    const successMessage = intl.formatMessage({id:"media flagged", defaultMessage: "Media flagged. We'll look into this."})
     const errorMessage = intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})
     
     if (response.status === 201) {
@@ -118,6 +129,10 @@ export const FlagMedia = ({question, isOpen, onClose, media}: Props) => {
         duration: 4000,
         isClosable: true,
       });
+      // Call onSuccess callback if provided (e.g., to advance to next question)
+      if (onSuccess) {
+        onSuccess();
+      }
     } else {
       toaster.create({
         title: errorMessage,
@@ -146,7 +161,7 @@ export const FlagMedia = ({question, isOpen, onClose, media}: Props) => {
             <VStack gap={6} align="stretch">
               <FormattedMessage
                 id={'flag modal description'}
-                defaultMessage={'Can you tell us what was wrong with this question?'}
+                defaultMessage={'Can you tell us what was wrong with this media?'}
               />
               
               <VStack gap={4} align="stretch">

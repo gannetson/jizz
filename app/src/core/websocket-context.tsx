@@ -10,6 +10,8 @@ type SharedState = {
   submitAnswer: (answer: Answer)=>void
   nextQuestion: ()=>void
   answer?: Answer
+  socket?: WebSocket
+  clearQuestion: ()=>void
 };
 
 const WebsocketContext = createContext<SharedState>({
@@ -17,6 +19,7 @@ const WebsocketContext = createContext<SharedState>({
   joinGame: (game?: Game, player?: Player) => {},
   submitAnswer: () => {},
   nextQuestion: () => {},
+  clearQuestion: () => {},
 });
 
 export default WebsocketContext;

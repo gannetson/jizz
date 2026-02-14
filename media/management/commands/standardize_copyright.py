@@ -18,9 +18,15 @@ class Command(BaseCommand):
             default=None,
             help='Limit the number of media items to process',
         )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='Show detailed output for each item',
+        )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
+        verbose = options.get('verbose', False)
         limit = options.get('limit')
         
         # Get all media that has copyright_text but no copyright_standardized
@@ -37,24 +43,44 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN MODE - No changes will be saved'))
         
+        # Show sample copyright_text values for debugging
+        if verbose or dry_run:
+            sample_count = min(10, total)
+            self.stdout.write(f'\nSample copyright_text values (first {sample_count}):')
+            for media in queryset[:sample_count]:
+                self.stdout.write(f'  ID {media.id}: "{media.copyright_text}"')
+            self.stdout.write('')
+        
         updated_count = 0
         skipped_count = 0
+        empty_result_count = 0
         
         for media in queryset:
             standardized, non_commercial = parse_copyright(media.copyright_text)
+            
+            # Track items that couldn't be parsed
+            if not standardized:
+                empty_result_count += 1
+                if verbose:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'Could not parse Media {media.id}: "{media.copyright_text}"'
+                        )
+                    )
             
             # Skip if already set and matches
             if media.copyright_standardized == standardized and media.non_commercial_only == non_commercial:
                 skipped_count += 1
                 continue
             
-            if dry_run:
+            if dry_run or verbose:
                 self.stdout.write(
-                    f'Would update Media {media.id}: '
-                    f'"{media.copyright_text[:50]}..." -> '
+                    f'Media {media.id}: '
+                    f'"{media.copyright_text[:60]}" -> '
                     f'standardized="{standardized}", non_commercial={non_commercial}'
                 )
-            else:
+            
+            if not dry_run:
                 media.copyright_standardized = standardized
                 media.non_commercial_only = non_commercial
                 media.save(update_fields=['copyright_standardized', 'non_commercial_only'])
@@ -67,14 +93,16 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     f'\nWould update {total - skipped_count} items '
-                    f'(skipped {skipped_count} already correct)'
+                    f'(skipped {skipped_count} already correct, '
+                    f'{empty_result_count} could not be parsed)'
                 )
             )
         else:
             self.stdout.write(
                 self.style.SUCCESS(
                     f'\nUpdated {updated_count} items '
-                    f'(skipped {skipped_count} already correct)'
+                    f'(skipped {skipped_count} already correct, '
+                    f'{empty_result_count} could not be parsed)'
                 )
             )
 

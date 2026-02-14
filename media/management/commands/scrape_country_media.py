@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q, Count
 from jizz.models import Species, Country
 from media.models import Media
+from media.utils import parse_copyright
 from media.scrapers.xeno_canto import XenoCantoScraper
 from media.scrapers.inaturalist import iNaturalistScraper
 from media.scrapers.wikimedia import WikimediaScraper
@@ -287,12 +288,17 @@ class Command(BaseCommand):
             if Media.objects.filter(species=species, link=item.get('link'), type='audio').exists():
                 continue
             
+            copyright_text = safe_truncate(item.get('copyright_text'), 500)
+            copyright_standardized, non_commercial_only = parse_copyright(copyright_text)
+            
             Media.objects.create(
                 species=species,
                 type='audio',
                 source='xeno_canto',
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright_text=safe_truncate(item.get('copyright_text'), 500),
+                copyright_text=copyright_text,
+                copyright_standardized=copyright_standardized,
+                non_commercial_only=non_commercial_only,
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -321,12 +327,17 @@ class Command(BaseCommand):
             if Media.objects.filter(species=species, link=item.get('link'), source=source, type='image').exists():
                 continue
             
+            copyright_text = safe_truncate(item.get('copyright_text'), 500)
+            copyright_standardized, non_commercial_only = parse_copyright(copyright_text)
+            
             Media.objects.create(
                 species=species,
                 type='image',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright_text=safe_truncate(item.get('copyright_text'), 500),
+                copyright_text=copyright_text,
+                copyright_standardized=copyright_standardized,
+                non_commercial_only=non_commercial_only,
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -360,12 +371,17 @@ class Command(BaseCommand):
             if Media.objects.filter(species=species, link=item.get('link'), source=source, type='video').exists():
                 continue
             
+            copyright_text = safe_truncate(item.get('copyright_text'), 500)
+            copyright_standardized, non_commercial_only = parse_copyright(copyright_text)
+            
             Media.objects.create(
                 species=species,
                 type='video',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright_text=safe_truncate(item.get('copyright_text'), 500),
+                copyright_text=copyright_text,
+                copyright_standardized=copyright_standardized,
+                non_commercial_only=non_commercial_only,
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -410,12 +426,17 @@ class Command(BaseCommand):
             if Media.objects.filter(species=species, link=item.get('link'), source=source, type='image').exists():
                 continue
             
+            copyright_text = safe_truncate(item.get('copyright_text'), 500)
+            copyright_standardized, non_commercial_only = parse_copyright(copyright_text)
+            
             Media.objects.create(
                 species=species,
                 type='image',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright_text=safe_truncate(item.get('copyright_text'), 500),
+                copyright_text=copyright_text,
+                copyright_standardized=copyright_standardized,
+                non_commercial_only=non_commercial_only,
                 url=item.get('url'),
                 link=item.get('link')
             )
@@ -459,12 +480,17 @@ class Command(BaseCommand):
             if Media.objects.filter(species=species, link=item.get('link'), source=source, type='video').exists():
                 continue
             
+            copyright_text = safe_truncate(item.get('copyright_text'), 500)
+            copyright_standardized, non_commercial_only = parse_copyright(copyright_text)
+            
             Media.objects.create(
                 species=species,
                 type='video',
                 source=source,
                 contributor=safe_truncate(item.get('contributor'), 500),
-                copyright_text=safe_truncate(item.get('copyright_text'), 500),
+                copyright_text=copyright_text,
+                copyright_standardized=copyright_standardized,
+                non_commercial_only=non_commercial_only,
                 url=item.get('url'),
                 link=item.get('link')
             )

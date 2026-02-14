@@ -10,7 +10,6 @@ import {
   Spinner,
   Alert,
   AlertIndicator,
-  Link,
 } from "@chakra-ui/react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -18,8 +17,7 @@ import { gamesService, PaginatedGamesResponse } from "../api/services/games.serv
 import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
 import { Game } from "../core/app-context";
-import { format } from "date-fns";
-import { GameDetailModal } from "../components/game-detail-modal";
+import { GameRow } from "../components/game-row";
 
 export const MyGamesPage = () => {
   const navigate = useNavigate();
@@ -32,8 +30,6 @@ export const MyGamesPage = () => {
     next: string | null;
     previous: string | null;
   } | null>(null);
-  const [selectedGameToken, setSelectedGameToken] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const loadGames = async () => {
@@ -71,31 +67,6 @@ export const MyGamesPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'PPp');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getLevelLabel = (level: string) => {
-    const levels: { [key: string]: string } = {
-      beginner: 'Beginner',
-      advanced: 'Advanced',
-      expert: 'Expert',
-    };
-    return levels[level] || level;
-  };
-
-  const getMediaLabel = (media: string) => {
-    const mediaTypes: { [key: string]: string } = {
-      images: 'Images',
-      audio: 'Sounds',
-      video: 'Videos',
-    };
-    return mediaTypes[media] || media;
-  };
 
   if (loading && games.length === 0) {
     return (
@@ -161,70 +132,7 @@ export const MyGamesPage = () => {
               )}
 
               {games.map((game) => (
-                <Box
-                  key={game.token}
-                  p={4}
-                  borderWidth="1px"
-                  borderRadius="md"
-                  bg="white"
-                  _hover={{ shadow: "md", cursor: "pointer" }}
-                  transition="all 0.2s"
-                  onClick={() => {
-                    setSelectedGameToken(game.token);
-                    setIsModalOpen(true);
-                  }}
-                >
-                  <VStack align="stretch" gap={2}>
-                    <HStack justify="space-between" align="start">
-                      <VStack align="start" gap={1}>
-                        <Text fontWeight="bold" fontSize="lg">
-                          {game.country?.name || 'Unknown Country'}
-                        </Text>
-                        <Text fontSize="sm" color="gray.600">
-                          {formatDate(game.created)}
-                        </Text>
-                      </VStack>
-                      <VStack align="end" gap={1}>
-                        {game.user_score !== undefined && (
-                          <Text fontSize="md" fontWeight="bold" color="primary.600">
-                            {game.user_score} <FormattedMessage id="points" defaultMessage="points" />
-                          </Text>
-                        )}
-                        {game.correct_count !== undefined && game.total_questions !== undefined && (
-                          <Text fontSize="sm" color="gray.600">
-                            <FormattedMessage 
-                              id="correct_out_of" 
-                              defaultMessage="{correct} / {total} correct" 
-                              values={{ 
-                                correct: game.correct_count,
-                                total: game.total_questions
-                              }}
-                            />
-                          </Text>
-                        )}
-                        {game.ended && (
-                          <Text fontSize="xs" color="gray.500">
-                            <FormattedMessage id="completed" defaultMessage="Completed" />
-                          </Text>
-                        )}
-                      </VStack>
-                    </HStack>
-
-                    <HStack gap={4} fontSize="sm" color="gray.600">
-                      <Text>
-                        <FormattedMessage id="level" defaultMessage="Level" />: {getLevelLabel(game.level)}
-                      </Text>
-                      <Text>•</Text>
-                      <Text>
-                        <FormattedMessage id="length" defaultMessage="Length" />: {game.length}
-                      </Text>
-                      <Text>•</Text>
-                      <Text>
-                        <FormattedMessage id="media" defaultMessage="Media" />: {getMediaLabel(game.media)}
-                      </Text>
-                    </HStack>
-                  </VStack>
-                </Box>
+                <GameRow key={game.token} game={game} />
               ))}
 
               {/* Pagination */}
@@ -260,16 +168,6 @@ export const MyGamesPage = () => {
           )}
         </Container>
       </Page.Body>
-      
-      {/* Game Detail Modal */}
-      <GameDetailModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedGameToken(null);
-        }}
-        gameToken={selectedGameToken}
-      />
     </Page>
   );
 };

@@ -111,7 +111,7 @@ class Command(BaseCommand):
         elif options.get('species_code'):
             species_list = Species.objects.filter(code=options['species_code'])
         elif options.get('all'):
-            species_list = Species.objects.all()
+            species_list = Species.objects.filter(media__isnull=True).all()
         else:
             species_list = Species.objects.all()[:options.get('limit', 10)]
         
@@ -156,12 +156,12 @@ class Command(BaseCommand):
                         self._scrape_image(species, scrapers['wikimedia'], 'wikimedia')
                     if 'gbif' in sources_to_use:
                         self._scrape_image(species, scrapers['gbif'], 'gbif')
-                    if 'flickr' in sources_to_use:
-                        self._scrape_image(species, scrapers['flickr'], 'flickr')
-                    if 'eol' in sources_to_use:
-                        self._scrape_image(species, scrapers['eol'], 'eol')
-                    if 'observation' in sources_to_use:
-                        self._scrape_image(species, scrapers['observation'], 'observation')
+                    # if 'flickr' in sources_to_use:
+                    #     self._scrape_image(species, scrapers['flickr'], 'flickr')
+                    # if 'eol' in sources_to_use:
+                    #     self._scrape_image(species, scrapers['eol'], 'eol')
+                    # if 'observation' in sources_to_use:
+                    #     self._scrape_image(species, scrapers['observation'], 'observation')
                 
                 # Scrape video
                 if 'video' in media_types:
@@ -169,11 +169,11 @@ class Command(BaseCommand):
                         self._scrape_video(species, scrapers['wikimedia'], 'wikimedia')
                     if 'inaturalist' in sources_to_use:
                         self._scrape_video(species, scrapers['inaturalist'], 'inaturalist')
-                    if 'youtube' in sources_to_use:
-                        self._scrape_video(species, scrapers['youtube'], 'youtube')
-                    if 'eol' in sources_to_use:
-                        self._scrape_video(species, scrapers['eol'], 'eol')
-            
+                    # if 'youtube' in sources_to_use:
+                    #     self._scrape_video(species, scrapers['youtube'], 'youtube')
+                    # if 'eol' in sources_to_use:
+                    #     self._scrape_video(species, scrapers['eol'], 'eol')
+
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'  Error processing {species.name}: {e}'))
                 logger.exception(f"Error processing species {species.id}: {e}")

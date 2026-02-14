@@ -45,4 +45,4 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: jizz
         run: |
-          python manage.py test jizz.tests -v 2 --noinput --settings jizz.settings.testing
+          python manage.py test jizz.tests -v 2 --noinput --keepdb --settings jizz.settings.testing

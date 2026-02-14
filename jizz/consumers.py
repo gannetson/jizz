@@ -263,33 +263,11 @@ class QuizConsumer(AsyncWebsocketConsumer):
                         'message': 'player_token is required for rematch',
                     }))
                     return
-                # Do DB work in short steps to avoid long-held connections / deadlocks in tests
-                player = await database_sync_to_async(Player.objects.get)(token=player_token)
-                old_game = await database_sync_to_async(Game.objects.get)(token=self.game_token)
-                if old_game.host_id != player.id:
-                    await self.send(text_data=json.dumps({
-                        'action': 'error',
-                        'message': 'Only the host can start a rematch',
-                    }))
-                    return
-                # Create new game with same specs (single sync block for create)
-                def create_rematch_game():
-                    return Game.objects.create(
-                        country=old_game.country,
-                        level=old_game.level,
-                        length=old_game.length,
-                        media=old_game.media,
-                        host=player,
-                        multiplayer=old_game.multiplayer,
-                        include_rare=old_game.include_rare,
-                        include_escapes=old_game.include_escapes,
-                        tax_order=old_game.tax_order or '',
-                        tax_family=old_game.tax_family or '',
-                        language=old_game.language or 'en',
-                        repeat=old_game.repeat,
-                    )
-                new_game = await database_sync_to_async(create_rematch_game)()
-                player_name = await database_sync_to_async(lambda: player.name)()
+                from jizz.rematch import create_rematch_game as do_create_rematch
+                new_game, player = await database_sync_to_async(do_create_rematch)(
+                    self.game_token, player_token
+                )
+                player_name = player.name
                 
                 print(f"Rematch: Created new game {new_game.token} for host {player_name}")
                 

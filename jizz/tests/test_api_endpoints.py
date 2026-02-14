@@ -40,10 +40,13 @@ class ApiCountriesTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.country = Country.objects.create(code='NL', name='Netherlands')
-        CountrySpecies.objects.create(country=self.country, species=Species.objects.create(
-            name='Test', name_latin='Test', code='T001'
-        ), status='native')
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        species, _ = Species.objects.get_or_create(
+            code='T001', defaults={'name': 'Test', 'name_latin': 'Test'}
+        )
+        CountrySpecies.objects.get_or_create(
+            country=self.country, species=species, defaults={'status': 'native'}
+        )
 
     def test_countries_list_returns_200(self):
         response = self.client.get('/api/countries/')

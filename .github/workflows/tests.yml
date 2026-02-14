@@ -48,6 +48,21 @@ jobs:
           coverage run --source=jizz,compare,media manage.py test jizz.tests -v 2 --noinput --keepdb --settings jizz.settings.testing
           coverage report
           coverage html
+          coverage xml -o coverage.xml
+
+      - name: Coverage in job summary
+        run: |
+          echo "## Coverage report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          coverage report >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
 
       - name: Upload coverage report (HTML)
         uses: actions/upload-artifact@v4

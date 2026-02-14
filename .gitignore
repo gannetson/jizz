@@ -16,4 +16,5 @@ jizz/static
 
 # Coverage
 .coverage
+coverage.xml
 htmlcov/

@@ -20,6 +20,7 @@ import {ChallengePage} from "./pages/challenge"
 import Updates from "./pages/updates"
 import {Login} from "./components/auth/login"
 import {AuthCallback} from "./components/auth/auth-callback"
+import {AuthLoginRedirect} from "./components/auth/auth-login-redirect"
 import {PrivacyPage} from "./pages/privacy"
 import {ProfilePage} from "./pages/profile"
 import { ForgotPasswordPage } from "./pages/forgot-password";
@@ -55,6 +56,9 @@ export const MainContent = () => {
             <Route index element={<HomePage/>}/>
             <Route path="/login" element={<Login />} />
             <Route path="/login/:provider" element={<AuthCallback />} />
+            {/* Backend OAuth start - if SPA is served here (e.g. wrong server config), redirect to backend */}
+            <Route path="/auth/login/:provider" element={<AuthLoginRedirect />} />
+            <Route path="/auth/login/:provider/" element={<AuthLoginRedirect />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/profile" element={<ProfilePage />} />

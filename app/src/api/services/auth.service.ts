@@ -24,9 +24,11 @@ export interface AuthError {
 }
 
 class AuthService {
-  private baseURL = process.env.NODE_ENV === 'development' 
-    ? 'http://127.0.0.1:8050' 
-    : 'https://birdr.pro';
+  // Use REACT_APP_API_URL in production so OAuth start URL hits the backend (not the SPA).
+  // If unset in production, defaults to same origin (requires server to proxy /auth/ to Django).
+  private baseURL = process.env.NODE_ENV === 'development'
+    ? 'http://127.0.0.1:8050'
+    : (process.env.REACT_APP_API_URL || 'https://birdr.pro');
 
   /**
    * Login with email and password using Django JWT

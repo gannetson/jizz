@@ -11,6 +11,8 @@ omit =
     */scrapers/*
     *scraper*.py
     */management/commands/*scrape*.py
+    *standardize_copyright*
+    *ai_service*
 
 [report]
 exclude_lines =

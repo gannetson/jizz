@@ -45,7 +45,7 @@ export const QuestionComponent = () => {
   const {open: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
   // Local state to track media index (for changing media after flagging)
-  const [mediaIndex, setMediaIndex] = useState<number | null>(null)
+  const [mediaIndex, setMediaIndex] = useState<number | null>(0)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
   const navigate = useNavigate()
@@ -62,7 +62,7 @@ export const QuestionComponent = () => {
   // Initialize or reset mediaIndex when question changes
   useEffect(() => {
     if (question) {
-      setMediaIndex(question.number ?? 0)
+      setMediaIndex(question.sequence ?? 0)
     }
   }, [question?.id]) // Reset when question ID changes
 
@@ -102,11 +102,13 @@ export const QuestionComponent = () => {
   }
 
   // Use local mediaIndex if set, otherwise use question.number
-  const currentMediaIndex = mediaIndex !== null ? mediaIndex : (question.number ?? 0)
+  const currentMediaIndex = mediaIndex !== null ? mediaIndex : (question.sequence ?? 0)
+    console.log(question.sequence)
+    console.log(currentMediaIndex)
 
   const flagMedia = () => {
     if (!question || !game) return
-    const currentIndex = mediaIndex !== null ? mediaIndex : (question.number ?? 0)
+    const currentIndex = mediaIndex !== null ? mediaIndex : (question.sequence ?? 0)
     let mediaData: {
       id?: number
       type: 'image' | 'video' | 'audio'

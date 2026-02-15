@@ -24,6 +24,7 @@ import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
 import {useParams} from "react-router-dom"
 import { FaArrowAltCircleRight } from "react-icons/fa";
+import { FaQuestion } from "react-icons/fa";
 
 const {
   Root: DialogRoot,
@@ -303,6 +304,7 @@ export const MediaReviewPage = () => {
               </ListItem>
               <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
                 <FaArrowAltCircleRight />
+                <Box>
                 <FormattedMessage
                   id={'media review instructions 4'}
                   defaultMessage={"Click {ok} if the picture is ok, {question} if you don't know or {bad} if it should be removed."}
@@ -311,13 +313,14 @@ export const MediaReviewPage = () => {
                       <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
                     ),
                     question: (
-                      <Text as="span" color="orange.500" fontWeight="bold" mx={0.5}>?</Text>
+                      <Icon as={FaQuestion} boxSize={5} color="orange.600" display="inline" verticalAlign="middle" mx={0.5} />
                     ),
                     bad: (
                       <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
                     ),
                   }}
                 />
+                </Box>
               </ListItem>
             </ListRoot>
           </Box>
@@ -417,7 +420,7 @@ export const MediaReviewPage = () => {
                             pointerEvents="none"
                           />
                         )}
-                        {/* Buttons overlay - only visible on hover */}
+                        {/* Buttons overlay - desktop only, visible on hover */}
                         {!isReviewed && (
                           <Flex
                             data-buttons-overlay
@@ -432,6 +435,7 @@ export const MediaReviewPage = () => {
                             opacity={0}
                             transition="opacity 0.2s"
                             onClick={(e) => e.stopPropagation()}
+                            display={{ base: 'none', md: 'flex' }}
                           >
                             <Button
                               size="sm"
@@ -461,7 +465,7 @@ export const MediaReviewPage = () => {
                               alignItems="center"
                               justifyContent="center"
                             >
-                              {intl.formatMessage({ id: 'not sure', defaultMessage: '?' })}
+                              <Icon as={FaQuestion} boxSize={5} />
                             </Button>
                             <Button
                               size="sm"
@@ -482,6 +486,65 @@ export const MediaReviewPage = () => {
                         )}
                       </Box>
                     </Box>
+                    {/* Buttons below image - mobile only */}
+                    {!isReviewed && (
+                      <Flex
+                        gap={2}
+                        p={2}
+                        justifyContent="center"
+                        bg="gray.100"
+                        borderTopWidth="1px"
+                        borderColor="gray.200"
+                        onClick={(e) => e.stopPropagation()}
+                        display={{ base: 'flex', md: 'none' }}
+                      >
+                        <Button
+                          size="sm"
+                          colorPalette="success"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReview(item.id, 'approved');
+                          }}
+                          minW="40px"
+                          h="40px"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          <Icon as={BsCheckCircle} boxSize={5} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorPalette="warning"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReview(item.id, 'not_sure');
+                          }}
+                          minW="40px"
+                          h="40px"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          <Icon as={FaQuestion} boxSize={5} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorPalette="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReview(item.id, 'rejected');
+                          }}
+                          minW="40px"
+                          h="40px"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          <Icon as={BsXCircle} boxSize={5} />
+                        </Button>
+                      </Flex>
+                    )}
                   </Box>
                 );
                     })}

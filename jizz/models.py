@@ -4,7 +4,7 @@ from datetime import timedelta
 from random import randint, shuffle, random
 
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.functional import lazy
@@ -66,16 +66,20 @@ class Species(models.Model):
     code = models.CharField(max_length=10)
 
     @property
+    def filtered_media(self):
+        return self.media.exclude(reviews__review_type='rejected')
+
+    @property
     def images(self):
-        return self.media.filter(type='image')
+        return self.filtered_media.filter(type='image')
 
     @property
     def videos(self):
-        return self.media.filter(type='video')
+        return self.filtered_media.filter(type='video')
 
     @property
     def sounds(self):
-        return self.media.filter(type='audio')
+        return self.filtered_media.filter(type='audio')
 
     class Meta:
         verbose_name = 'species'

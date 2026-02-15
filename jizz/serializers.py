@@ -39,10 +39,27 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
 
 class MediaSerializer(serializers.ModelSerializer):
     """Serializer for Media model (images, videos, audio)."""
-    species_name = serializers.CharField(source='species.name', read_only=True)
+    species_name = serializers.SerializerMethodField()
     species_code = serializers.CharField(source='species.code', read_only=True)
     species_id = serializers.IntegerField(source='species.id', read_only=True)
-    
+
+    def get_species_name(self, obj):
+        """Return species name in the requested language if available."""
+        language = None
+        request = self.context.get('request')
+        if request:
+            language = request.query_params.get('language')
+        if language:
+            try:
+                species_name = SpeciesName.objects.get(
+                    species=obj.species,
+                    language_id=language
+                )
+                return species_name.name
+            except SpeciesName.DoesNotExist:
+                pass
+        return obj.species.name
+
     class Meta:
         model = Media
         fields = (

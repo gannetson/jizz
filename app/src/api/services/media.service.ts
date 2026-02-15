@@ -25,17 +25,20 @@ export interface PaginatedMediaResponse {
 }
 
 export interface MediaService {
-  getMedia(type?: string, page?: number, countryCode?: string): Promise<PaginatedMediaResponse>;
+  getMedia(type?: string, page?: number, countryCode?: string, language?: string): Promise<PaginatedMediaResponse>;
   reviewMedia(mediaId: number, playerToken: string, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
 }
 
 export class MediaServiceImpl implements MediaService {
   constructor(private client: ApiClient) {}
 
-  async getMedia(type: string = 'image', page: number = 1, countryCode?: string): Promise<PaginatedMediaResponse> {
+  async getMedia(type: string = 'image', page: number = 1, countryCode?: string, language?: string): Promise<PaginatedMediaResponse> {
     let url = `/api/media/?type=${type}&page=${page}`;
     if (countryCode) {
       url += `&country=${countryCode}`;
+    }
+    if (language) {
+      url += `&language=${encodeURIComponent(language)}`;
     }
     const response = await this.client.get<PaginatedMediaResponse>(url);
     return response;

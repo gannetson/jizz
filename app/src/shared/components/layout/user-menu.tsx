@@ -129,8 +129,17 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
         <FormattedMessage id="settings" defaultMessage="Profile" />
       </Link>
       <Link href="/media-review" textDecoration="none">
-        <FormattedMessage id="settings" defaultMessage="Review media" />
+        <FormattedMessage id="review_media" defaultMessage="Review media" />
       </Link>
+      {profile?.country_code && (
+        <Link href={`/media-review/${profile.country_code.toUpperCase()}`} textDecoration="none">
+          <FormattedMessage
+            id="review_country"
+            defaultMessage="Review {country}"
+            values={{ country: profile.country_name || profile.country_code }}
+          />
+        </Link>
+      )}
 
       {(profile?.is_staff || profile?.is_superuser) && (
         <>

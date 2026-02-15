@@ -1,5 +1,19 @@
 import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { Box, Flex, Heading, Image, Button, Dialog, Text, SimpleGrid, Icon, Select, Portal, createListCollection } from '@chakra-ui/react';
+import {
+  Box,
+  Flex,
+  Heading,
+  Image,
+  Button,
+  Dialog,
+  Text,
+  SimpleGrid,
+  Icon,
+  Select,
+  Portal,
+  createListCollection,
+  ListRoot, ListItem
+} from '@chakra-ui/react';
 import { Page } from '../shared/components/layout';
 import { FormattedMessage, useIntl } from 'react-intl';
 import AppContext from '../core/app-context';
@@ -9,6 +23,7 @@ import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
 import {useParams} from "react-router-dom"
+import { FaArrowAltCircleRight } from "react-icons/fa";
 
 const {
   Root: DialogRoot,
@@ -42,8 +57,9 @@ export const MediaReviewPage = () => {
     }
   }, [countryCode]);
   const { countries } = UseCountries();
-  const { player } = useContext(AppContext);
+  const { player, language } = useContext(AppContext);
   const intl = useIntl();
+  const languageParam = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
 
   const countryCollection = useMemo(() => {
     const items = countries.map((c, index) => ({
@@ -65,7 +81,7 @@ export const MediaReviewPage = () => {
         setLoadingMore(true);
       }
       
-      const data = await mediaService.getMedia('image', page, countryCode);
+      const data = await mediaService.getMedia('image', page, countryCode, languageParam);
       
       // Use functional updates to access current state
       setLoadedItemIds(currentLoadedIds => {
@@ -103,11 +119,11 @@ export const MediaReviewPage = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [intl]);
+  }, [intl, languageParam]);
 
   useEffect(() => {
     loadMedia(1, true, selectedCountry || undefined);
-  }, [selectedCountry, loadMedia]);
+  }, [selectedCountry, languageParam, loadMedia]);
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasNextPage) {
@@ -253,6 +269,58 @@ export const MediaReviewPage = () => {
         </Flex>
       </Page.Header>
       <Page.Body>
+          <Box backgroundColor={'blue.100'} borderColor={'blue.700'} color={'blue.700'} border={'2px solid'} padding={4}>
+            <Text fontWeight={'bold'}>
+              <FormattedMessage id={'media review intro'} defaultMessage={"Great that you are here and thank you for helping out improving the Birdr app!"} />
+            </Text>
+            <Text pt={2}>
+              <FormattedMessage
+                id={'media review more'}
+                defaultMessage={"To collect over one million images of birds I used and automated script. I tried to make it really smart, so it will collect the right pictures. Unfortunately it is not smart enough :-(. There are pictures of low quality, that have multiple species, nests, feathers or even just something completely different. Appears we still need that 'human touch'! That's were you come in. Here's how you can help."} />
+            </Text>
+
+            <Text fontWeight={'bold'} pt={4}>
+              <FormattedMessage id={'media review instruction title'} defaultMessage={"Instructions"} />
+            </Text>
+            <ListRoot pt={2} as='ol' listStyle={'cirlce'} gap={2}>
+              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                <FaArrowAltCircleRight />
+                <FormattedMessage
+                  id={'media review instructions 1'}
+                  defaultMessage={"Select a country in top right corner"} />
+                </ListItem>
+              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                <FaArrowAltCircleRight />
+                <FormattedMessage
+                  id={'media review instructions 2'}
+                  defaultMessage={"Scroll trough the list"} />
+              </ListItem>
+              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                <FaArrowAltCircleRight />
+                <FormattedMessage
+                  id={'media review instructions 3'}
+                  defaultMessage={"For each picture, hover over. Optional: Click it if you want to see the full image."} />
+              </ListItem>
+              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                <FaArrowAltCircleRight />
+                <FormattedMessage
+                  id={'media review instructions 4'}
+                  defaultMessage={"Click {ok} if the picture is ok, {question} if you don't know or {bad} if it should be removed."}
+                  values={{
+                    ok: (
+                      <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
+                    ),
+                    question: (
+                      <Text as="span" color="orange.500" fontWeight="bold" mx={0.5}>?</Text>
+                    ),
+                    bad: (
+                      <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
+                    ),
+                  }}
+                />
+              </ListItem>
+            </ListRoot>
+          </Box>
         {loading ? (
           <Text>Loading...</Text>
         ) : (

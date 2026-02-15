@@ -189,7 +189,7 @@ export const QuestionComponent = () => {
         isHost ? (
           answer ? (
           <Button onClick={getNextQuestion} width='full' colorPalette={'primary'} autoFocus>
-            <FormattedMessage id={'next question'} defaultMessage={'Hext question'}/>
+            <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
           </Button>
           ) : (
             <Button disabled={true} width='full' colorPalette={'primary'}>

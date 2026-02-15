@@ -190,5 +190,19 @@
   "waiting for host to click next question": "Waiting for {host} to continue to the next question",
   "welcome": "Welcome",
   "your name": "What's your name. You can pick any name you want.",
-  "your_answer": "Your answer:"
+  "your_answer": "Your answer:",
+  "media review instructions 1": "Pick a country to review images from that country.",
+  "media review instructions 2": "You will see pictures of birds. Your job is to indicate if the picture is ok, if you are not sure, or if it should be removed.",
+  "media review instructions 3": "For each picture, hover over. Optional: Click it if you want to see the full image.",
+  "media review instructions 4": "Click ✓ if the picture is ok, ? if you don't know or ✗ if it should be removed.",
+  "media review intro": "Great that you are here and thank you for helping out improving the Birdr app!",
+  "media review more": "By reviewing images you help us improve the quality of the media in the app. You can focus on one country or browse all.",
+  "media review instruction title": "Instructions",
+  "review_media": "Review media",
+  "forgot_password_link": "Forgot password?",
+  "wrong species": "This is not the right species",
+  "no bird visible": "I can't see a bird in this picture",
+  "multiple species": "There are multiple species in this picture",
+  "chick egg nest corpse": "It's a chick, egg, nest, feather or a dead bird",
+  "poor quality": "The quality of the image is very poor"
 }

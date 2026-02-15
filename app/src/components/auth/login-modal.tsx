@@ -245,7 +245,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                           setError(null);
                         }}
                       >
-                        <FormattedMessage id="forgot_password" defaultMessage="Forgot password?" />
+                        <FormattedMessage id="forgot_password_link" defaultMessage="Forgot password?" />
                       </Link>
                     </Box>
                   )}

@@ -49,7 +49,6 @@ const CHECKBOX_OPTIONS: CheckboxOption[] = [
   { id: 'multiple species', defaultMessage: "There are multiple species in this picture", key: 'multipleSpecies' },
   { id: 'chick egg nest corpse', defaultMessage: "It's a chick, egg, nest, feather or a dead bird", key: 'chickEggNestCorpse' },
   { id: 'poor quality', defaultMessage: "The quality of the image is very poor", key: 'poorQuality' },
-
 ]
 
 export const FlagMedia = ({isOpen, onClose, media, onSuccess}: Props) => {
@@ -77,9 +76,25 @@ export const FlagMedia = ({isOpen, onClose, media, onSuccess}: Props) => {
     // Build description text from checkboxes and media info
     const checkboxLabels: string[] = []
     
+    const getCheckboxLabel = (key: string): string => {
+      switch (key) {
+        case 'wrongSpecies':
+          return intl.formatMessage({ id: 'wrong species', defaultMessage: "This is not the right species" })
+        case 'noBirdVisible':
+          return intl.formatMessage({ id: 'no bird visible', defaultMessage: "I can't see a bird in this picture" })
+        case 'multipleSpecies':
+          return intl.formatMessage({ id: 'multiple species', defaultMessage: "There are multiple species in this picture" })
+        case 'chickEggNestCorpse':
+          return intl.formatMessage({ id: 'chick egg nest corpse', defaultMessage: "It's a chick, egg, nest, feather or a dead bird" })
+        case 'poorQuality':
+          return intl.formatMessage({ id: 'poor quality', defaultMessage: "The quality of the image is very poor" })
+        default:
+          return ''
+      }
+    }
     CHECKBOX_OPTIONS.forEach(option => {
       if (checkboxStates[option.key]) {
-        checkboxLabels.push(intl.formatMessage({id: option.id, defaultMessage: option.defaultMessage}))
+        checkboxLabels.push(getCheckboxLabel(option.key))
       }
     })
     
@@ -179,10 +194,11 @@ export const FlagMedia = ({isOpen, onClose, media, onSuccess}: Props) => {
                         <Checkbox.Indicator />
                       </Checkbox.Control>
                       <Checkbox.Label>
-                        <FormattedMessage 
-                          id={option.id} 
-                          defaultMessage={option.defaultMessage}
-                        />
+                        {option.key === 'wrongSpecies' && <FormattedMessage id="wrong species" defaultMessage="This is not the right species" />}
+                        {option.key === 'noBirdVisible' && <FormattedMessage id="no bird visible" defaultMessage="I can't see a bird in this picture" />}
+                        {option.key === 'multipleSpecies' && <FormattedMessage id="multiple species" defaultMessage="There are multiple species in this picture" />}
+                        {option.key === 'chickEggNestCorpse' && <FormattedMessage id="chick egg nest corpse" defaultMessage="It's a chick, egg, nest, feather or a dead bird" />}
+                        {option.key === 'poorQuality' && <FormattedMessage id="poor quality" defaultMessage="The quality of the image is very poor" />}
                       </Checkbox.Label>
                     </Checkbox.Root>
                   </Box>

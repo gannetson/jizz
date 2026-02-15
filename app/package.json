@@ -52,7 +52,7 @@
     "release": "npm run build && npm run deploy",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "extract-messages": "formatjs extract 'src/**/*.ts*' --ignore='**/*.d.ts' --out-file translations/en.json --id-interpolation-pattern '[sha512:contenthash:base64:6]' --format simple"
+    "extract-messages": "NODE_ENV=development extract-react-intl-messages -l en,nl,la -o src/locales -d en --flat true 'src/**/*.ts*'"
   },
   "eslintConfig": {
     "extends": "react-app"

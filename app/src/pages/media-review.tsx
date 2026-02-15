@@ -8,6 +8,7 @@ import { ApiClient, apiClient } from '../api/client';
 import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
+import {useParams} from "react-router-dom"
 
 const {
   Root: DialogRoot,
@@ -22,6 +23,7 @@ const {
 const mediaService = new MediaServiceImpl(apiClient);
 
 export const MediaReviewPage = () => {
+  const { countryCode } = useParams<{ countryCode: string }>();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -31,7 +33,14 @@ export const MediaReviewPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [reviewedItems, setReviewedItems] = useState<Map<number, 'approved' | 'rejected' | 'not_sure'>>(new Map());
   const [loadedItemIds, setLoadedItemIds] = useState<Set<number>>(new Set());
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [selectedCountry, setSelectedCountry] = useState<string>(countryCode ?? '');
+
+  // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
+  useEffect(() => {
+    if (countryCode) {
+      setSelectedCountry(countryCode.toUpperCase());
+    }
+  }, [countryCode]);
   const { countries } = UseCountries();
   const { player } = useContext(AppContext);
   const intl = useIntl();

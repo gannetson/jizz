@@ -80,6 +80,7 @@ export const MainContent = () => {
             <Route path='/scores/' element={<Hiscores />}/>
             <Route path='/updates/' element={<Updates />}/>
             <Route path='/media-review/' element={<MediaReviewPage />}/>
+            <Route path='/media-review/:countryCode' element={<MediaReviewPage />}/>
 
           </Route>
         </Routes>

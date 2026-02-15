@@ -128,7 +128,10 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
       <Link href="/settings" textDecoration="none">
         <FormattedMessage id="settings" defaultMessage="Profile" />
       </Link>
-      
+      <Link href="/media-review" textDecoration="none">
+        <FormattedMessage id="settings" defaultMessage="Review media" />
+      </Link>
+
       {(profile?.is_staff || profile?.is_superuser) && (
         <>
           <Separator />

@@ -46,7 +46,6 @@ export const ProfilePage = () => {
 
   useEffect(() => {
     const loadProfile = async () => {
-      // Check if user is authenticated
       if (!authService.getAccessToken()) {
         navigate("/login");
         return;

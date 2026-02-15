@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Media
+from .models import Media, FlagMedia
 
 
 class VisibilityFilter(admin.SimpleListFilter):
@@ -41,6 +41,14 @@ class HideableAdminMixin:
 
 
 
+class FlagMediaInline(admin.TabularInline):
+    model = FlagMedia
+    fk_name = 'media'
+    extra = 0
+    raw_id_fields = ['player']
+    readonly_fields = ['created']
+
+
 @admin.register(Media)
 class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
     list_display = ['id', 'species', 'type', 'source', 'hide', 'image_thumbnail', 'created']
@@ -50,7 +58,8 @@ class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
     readonly_fields = ['created', 'updated', 'image_preview']
     date_hierarchy = 'created'
     list_per_page = 25
-    
+    inlines = [FlagMediaInline]
+
     fieldsets = (
         ('Species', {
             'fields': ('species',)
@@ -124,3 +133,13 @@ class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
             )
         return "No preview available"
     image_preview.short_description = 'Preview'
+
+
+@admin.register(FlagMedia)
+class FlagMediaAdmin(admin.ModelAdmin):
+    list_display = ['id', 'media', 'player', 'description', 'created']
+    list_filter = ['created']
+    search_fields = ['description', 'media__species__name', 'player__name']
+    raw_id_fields = ['media', 'player']
+    readonly_fields = ['created']
+    date_hierarchy = 'created'

@@ -266,8 +266,10 @@ class MediaListView(ListAPIView):
         if country_code:
             # Get all species for this country (ordered by species id)
             # Pagination will handle loading species progressively
-            country_species_ids = CountrySpecies.objects.filter(
-                country__code=country_code
+            country_species_ids = CountrySpecies.objects.exclude(
+                status__in=['introduced', 'extirpated', 'uncertain']
+            ).filter(
+                country__code=country_code,
             ).values_list('species_id', flat=True).order_by('species_id')
             queryset = queryset.filter(species_id__in=country_species_ids)
         

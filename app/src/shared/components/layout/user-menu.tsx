@@ -122,17 +122,11 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
       
       <Separator />
       
-      <Link href="/profile" textDecoration="none">
-        <FormattedMessage id="view_profile" defaultMessage="View Profile" />
-      </Link>
       <Link href="/my-games" textDecoration="none">
         <FormattedMessage id="my_games" defaultMessage="My Games" />
       </Link>
-      <Link href="/scores" textDecoration="none">
-        <FormattedMessage id="my_scores" defaultMessage="My Scores" />
-      </Link>
       <Link href="/settings" textDecoration="none">
-        <FormattedMessage id="settings" defaultMessage="Settings" />
+        <FormattedMessage id="settings" defaultMessage="Profile" />
       </Link>
       
       {(profile?.is_staff || profile?.is_superuser) && (

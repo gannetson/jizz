@@ -56,12 +56,10 @@ export const MainContent = () => {
             <Route index element={<HomePage/>}/>
             <Route path="/login" element={<Login />} />
             <Route path="/login/:provider" element={<AuthCallback />} />
-            {/* Backend OAuth start - if SPA is served here (e.g. wrong server config), redirect to backend */}
-            {/*<Route path="/auth/login/:provider" element={<AuthLoginRedirect />} />*/}
-            {/*<Route path="/auth/login/:provider/" element={<AuthLoginRedirect />} />*/}
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<ProfilePage />} />
             <Route path="/my-games" element={<MyGamesPage />} />
             <Route path="/my-games/:token" element={<GameDetailPage />} />
             <Route path='/start/' element={<StartPage />}/>

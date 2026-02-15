@@ -115,6 +115,13 @@ The **Authorized redirect URI** that Google uses is your **backend** callback UR
 
 If the redirect URI in the console does not match exactly (including trailing slash and `https`), Google will show “redirect_uri_mismatch” and login will fail.
 
+**Fixing "Error 400: redirect_uri_mismatch"**
+
+1. In [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → your OAuth 2.0 Client ID, open **Authorized redirect URIs**.
+2. Add this **exact** URI (for birdr.pro): `https://birdr.pro/auth/complete/google-oauth2/` — **https**, host **birdr.pro**, path **/auth/complete/google-oauth2/** with a **trailing slash**. No typos.
+3. Click **Save** (changes can take a minute to apply).
+4. If it still fails, the URI Django sends may differ (e.g. wrong host or http). Check Django logs when you start Google login; the redirect_uri is often logged. The value Django sends must match the console exactly.
+
 ## 4. Frontend (env)
 
 In production the app uses `REACT_APP_API_URL` so the “Continue with Google” link hits the backend. Set it to your backend root, e.g.:

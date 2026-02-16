@@ -220,6 +220,7 @@ export const QuestionComponent = () => {
           onClose()
         }}
         media={flagMediaInfo}
+        useMediaReview
         onSuccess={() => {
           // After successful flagging, change to next media item in the sequence
           if (question && game) {

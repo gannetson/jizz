@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Media, FlagMedia
+from .models import Media, FlagMedia, MediaReview
 
 
 class VisibilityFilter(admin.SimpleListFilter):
@@ -139,6 +139,16 @@ class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
 class FlagMediaAdmin(admin.ModelAdmin):
     list_display = ['id', 'media', 'player', 'description', 'created']
     list_filter = ['created']
+    search_fields = ['description', 'media__species__name', 'player__name']
+    raw_id_fields = ['media', 'player']
+    readonly_fields = ['created']
+    date_hierarchy = 'created'
+
+
+@admin.register(MediaReview)
+class MediaReviewAdmin(admin.ModelAdmin):
+    list_display = ['id', 'media', 'player', 'review_type', 'description', 'created']
+    list_filter = ['review_type', 'created']
     search_fields = ['description', 'media__species__name', 'player__name']
     raw_id_fields = ['media', 'player']
     readonly_fields = ['created']

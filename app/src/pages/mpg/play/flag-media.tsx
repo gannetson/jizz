@@ -35,6 +35,8 @@ type Props = {
   onClose: () => void
   media?: MediaInfo | null
   onSuccess?: () => void // Callback to execute after successful flagging
+  /** When true, submit as MediaReview (rejected) instead of FlagMedia. Use for game-question flagging. */
+  useMediaReview?: boolean
 }
 
 type CheckboxOption = {
@@ -51,7 +53,7 @@ const CHECKBOX_OPTIONS: CheckboxOption[] = [
   { id: 'poor quality', defaultMessage: "The quality of the image is very poor", key: 'poorQuality' },
 ]
 
-export const FlagMedia = ({isOpen, onClose, media, onSuccess}: Props) => {
+export const FlagMedia = ({isOpen, onClose, media, onSuccess, useMediaReview = false}: Props) => {
   const [message, setMessage] = useState<string>('')
   const [checkboxStates, setCheckboxStates] = useState<Record<string, boolean>>(
     CHECKBOX_OPTIONS.reduce((acc, option) => ({ ...acc, [option.key]: false }), {})
@@ -123,16 +125,25 @@ export const FlagMedia = ({isOpen, onClose, media, onSuccess}: Props) => {
       return
     }
     
-    const response = await fetch('/api/flag-media/', {
+    const url = useMediaReview ? '/api/review-media/' : '/api/flag-media/'
+    const body = useMediaReview
+      ? {
+          media_id: media.id,
+          player_token: player?.token,
+          review_type: 'rejected' as const,
+          description: combinedDescription,
+        }
+      : {
+          media_id: media.id,
+          player_token: player?.token,
+          description: combinedDescription,
+        }
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        media_id: media.id,
-        player_token: player?.token,
-        description: combinedDescription,
-      })
+      body: JSON.stringify(body),
     })
     const successMessage = intl.formatMessage({id:"media flagged", defaultMessage: "Media flagged. We'll look into this."})
     const errorMessage = intl.formatMessage({id:"problem flagging", defaultMessage: "Error flagging."})

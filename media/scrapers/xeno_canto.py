@@ -1,7 +1,10 @@
 """
 Xeno-Canto scraper for bird audio recordings.
-API Documentation: https://xeno-canto.org/explore/api
+API v2: https://xeno-canto.org/api/2/recordings (may be deprecated)
+API v3: https://xeno-canto.org/api/3/recordings (requires key).
+Use settings.XENO_CANTO_API_KEY or env XENO_CANTO_API_KEY for v3.
 """
+import os
 import re
 from typing import List, Dict, Optional
 from .base import BaseMediaScraper
@@ -10,11 +13,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _get_xeno_canto_api_key() -> str:
+    """Get Xeno-Canto API key from Django settings or env."""
+    try:
+        from django.conf import settings
+        key = getattr(settings, 'XENO_CANTO_API_KEY', '') or os.environ.get('XENO_CANTO_API_KEY', '')
+    except ImportError:
+        key = os.environ.get('XENO_CANTO_API_KEY', '')
+    return key or ''
+
+
 class XenoCantoScraper(BaseMediaScraper):
     """Scraper for Xeno-Canto bird audio recordings."""
-    
-    API_BASE = "https://xeno-canto.org/api/2"
-    
+
+    API_BASE_V2 = "https://xeno-canto.org/api/2"
+    API_BASE_V3 = "https://xeno-canto.org/api/3"
+    MAX_RECORDINGS_PER_SPECIES = 20
+
     def search_species(self, scientific_name: str, common_name: str = None) -> List[Dict]:
         """
         Search Xeno-Canto for audio recordings.
@@ -47,108 +62,129 @@ class XenoCantoScraper(BaseMediaScraper):
         else:
             # Fallback to full name
             queries_to_try.append(normalized_name)
-        
+
+        # Choose API: v3 when settings.XENO_CANTO_API_KEY is set, else v2.
+        api_key = _get_xeno_canto_api_key()
+        if api_key:
+            recordings_url = f"{self.API_BASE_V3}/recordings"
+            base_params = {'key': api_key}
+            if self.verbose:
+                logger.info("Xeno-Canto: using API v3 (XENO_CANTO_API_KEY from settings/env)")
+        else:
+            recordings_url = f"{self.API_BASE_V2}/recordings"
+            base_params = {}
+            if self.verbose:
+                logger.info("Xeno-Canto: using API v2. Set settings.XENO_CANTO_API_KEY for v3.")
+
         # Try each query format
         for query in queries_to_try:
+            if self.verbose:
+                logger.info(f"Xeno-Canto: trying query={query!r} for {scientific_name!r}")
             page = 1
             max_pages = 5  # Limit to first 5 pages (50 results per page = 250 max)
-            
-            while page <= max_pages:
-                params = {
-                    'query': query,
-                    'page': page
-                }
-                
-                data = self._fetch_json(f"{self.API_BASE}/recordings", params)
-                
-                # If we get a 404 or error, try next query format
-                if data is None:
+
+            # Fetch using chosen API (v3 with settings.XENO_CANTO_API_KEY, or v2)
+            params = {**base_params, 'query': query, 'page': page}
+            data = self._fetch_json(recordings_url, params)
+            if data is None:
+                if self.verbose:
+                    logger.warning(f"Xeno-Canto: no data for query={query!r} page={page}")
+                break
+            if self.verbose:
+                num_rec = data.get('numRecordings', '?')
+                num_pages = data.get('numPages', '?')
+                recs = data.get('recordings', [])
+                logger.info(f"Xeno-Canto: page={page} numRecordings={num_rec} numPages={num_pages} len(recordings)={len(recs)}")
+
+            if 'recordings' not in data:
+                # Check if it's an error response
+                if data.get('numRecordings') == 0 or data.get('numRecordings') == '0':
+                    if self.verbose:
+                        logger.info(f"Xeno-Canto: numRecordings=0 for query={query!r}")
                     break
-                
-                if 'recordings' not in data:
-                    # Check if it's an error response
-                    if data.get('numRecordings') == 0:
-                        # No results, but valid response - try next query
-                        break
-                    # Otherwise, might be error - try next query
+                if self.verbose:
+                    logger.warning(f"Xeno-Canto: response missing 'recordings' key: {list(data.keys()) if isinstance(data, dict) else type(data)}")
+                break
+
+            recordings = data.get('recordings', [])
+            if not recordings:
+                if results:
                     break
-            
-                recordings = data.get('recordings', [])
-                if not recordings:
-                    # If we got results from this query, stop trying other queries
-                    if results:
-                        break
-                    # Otherwise, try next query format
-                    break
-                
-                for recording in recordings:
-                    try:
-                        # Get the file URL
-                        file_url = recording.get('file', '')
-                        if not file_url:
-                            continue
-                        
-                        # Construct full URL if relative
-                        if file_url.startswith('//'):
-                            file_url = 'https:' + file_url
-                        elif file_url.startswith('/'):
-                            file_url = 'https://xeno-canto.org' + file_url
-                        
-                        # Get page URL
-                        xc_id = recording.get('id', '')
-                        page_url = f"https://xeno-canto.org/{xc_id}" if xc_id else None
-                        
-                        # Get contributor (recorder)
-                        contributor = recording.get('rec', '') or recording.get('recordist', '')
-                        
-                        # Get license/copyright info
-                        license_info = recording.get('lic', '')
-                        copyright_text = f"License: {license_info}" if license_info else ""
-                        
-                        # Get additional metadata
-                        country = recording.get('cnt', '')
-                        location = recording.get('loc', '')
-                        date = recording.get('date', '')
-                        
-                        title_parts = []
-                        if country:
-                            title_parts.append(country)
-                        if location:
-                            title_parts.append(location)
-                        if date:
-                            title_parts.append(date)
-                        title = ', '.join(title_parts) if title_parts else None
-                        
-                        # Calculate quality score
-                        quality_score = self._calculate_quality_score(recording)
-                        
-                        results.append({
-                            'url': file_url,
-                            'link': page_url,
-                            'contributor': contributor,
-                            'copyright_text': copyright_text,
-                            'title': title,
-                            'source': 'xeno_canto',
-                            'quality_score': quality_score
-                        })
-                    except Exception as e:
-                        logger.error(f"Error processing Xeno-Canto recording: {e}")
+                break
+
+            for recording in recordings:
+                try:
+                    # Get the file URL
+                    file_url = recording.get('file', '')
+                    if not file_url:
+                        if self.verbose and len(results) == 0 and recording is recordings[0]:
+                            logger.info(f"Xeno-Canto: first recording has no 'file'; keys={list(recording.keys())[:25]}")
                         continue
-            
-                # Check if there are more pages
-                num_pages = data.get('numPages', 1)
-                if page >= num_pages:
-                    break
-                
-                page += 1
-            
-            # If we got results, don't try other query formats
+
+                    # Construct full URL if relative
+                    if file_url.startswith('//'):
+                        file_url = 'https:' + file_url
+                    elif file_url.startswith('/'):
+                        file_url = 'https://xeno-canto.org' + file_url
+
+                    # Get page URL
+                    xc_id = recording.get('id', '')
+                    page_url = f"https://xeno-canto.org/{xc_id}" if xc_id else None
+
+                    # Get contributor (recorder)
+                    contributor = recording.get('rec', '') or recording.get('recordist', '')
+
+                    # Get license/copyright info
+                    license_info = recording.get('lic', '')
+                    copyright_text = f"License: {license_info}" if license_info else ""
+
+                    # Get additional metadata
+                    country = recording.get('cnt', '')
+                    location = recording.get('loc', '')
+                    date = recording.get('date', '')
+
+                    title_parts = []
+                    if country:
+                        title_parts.append(country)
+                    if location:
+                        title_parts.append(location)
+                    if date:
+                        title_parts.append(date)
+                    title = ', '.join(title_parts) if title_parts else None
+
+                    # Calculate quality score
+                    quality_score = self._calculate_quality_score(recording)
+
+                    results.append({
+                        'url': file_url,
+                        'link': page_url,
+                        'contributor': contributor,
+                        'copyright_text': copyright_text,
+                        'title': title,
+                        'source': 'xeno_canto',
+                        'quality_score': quality_score
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing Xeno-Canto recording: {e}")
+                    continue
+
+            # Check if there are more pages (single-page fetch for now)
+            num_pages_val = data.get('numPages', 1)
+            try:
+                num_pages_val = int(num_pages_val) if num_pages_val is not None else 1
+            except (TypeError, ValueError):
+                num_pages_val = 1
+            if page >= num_pages_val:
+                break
+            page += 1
+
             if results:
                 break
         
-        # Sort by quality score (highest first)
+        # Sort by quality score (highest first), then limit
         results.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
-        
+        results = results[:self.MAX_RECORDINGS_PER_SPECIES]
+
         logger.info(f"Found {len(results)} Xeno-Canto recordings for {scientific_name}")
         return results
     

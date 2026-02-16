@@ -44,3 +44,5 @@ OPENAI_API_KEY = 'key'
 
 CORNELL_USERNAME = 'username'
 CORNELL_PASSWORD = 'password'
+
+XENO_CANTO_API_KEY = 'key'

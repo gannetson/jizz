@@ -89,9 +89,17 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        # Initialize scrapers
+        self.verbosity = options.get('verbosity', 1)
+        # Enable verbose logging for scrapers when -v2 or -v3
+        if self.verbosity >= 2:
+            logging.getLogger('media.scrapers').setLevel(logging.INFO)
+            logging.getLogger('media.scrapers.xeno_canto').setLevel(logging.INFO)
+        if self.verbosity >= 3:
+            logging.getLogger('media.scrapers.base').setLevel(logging.INFO)
+
+        # Initialize scrapers (pass verbosity for verbose logging)
         scrapers = {
-            'xeno_canto': XenoCantoScraper(),
+            'xeno_canto': XenoCantoScraper(verbose=(self.verbosity >= 2)),
             'inaturalist': iNaturalistScraper(),
             'wikimedia': WikimediaScraper(),
             'gbif': GBIFScraper(),
@@ -186,10 +194,10 @@ class Command(BaseCommand):
     
     def _scrape_audio(self, species, scraper):
         """Scrape audio for a species."""
-        self.stdout.write(f'  Scraping audio from {scraper.__class__.__name__}...')
-        
+        self.stdout.write(f'  Scraping audio from {scraper.__class__.__name__} for {species.name_latin!r}...')
         media_items = scraper.search_species(species.name_latin, species.name)
-        
+        if self.verbosity >= 2:
+            self.stdout.write(f'    Xeno-Canto returned {len(media_items)} recording(s)')
         created_count = 0
         for item in media_items:
             # Check if already exists (by URL)
@@ -214,6 +222,8 @@ class Command(BaseCommand):
         
         if created_count > 0:
             self.stdout.write(self.style.SUCCESS(f'    Created {created_count} audio record(s)'))
+        elif self.verbosity >= 2:
+            self.stdout.write(self.style.WARNING(f'    No new audio created (0 new, {len(media_items)} from API)'))
     
     def _scrape_image(self, species, scraper, source):
         """Scrape image for a species."""

@@ -15,16 +15,18 @@ logger = logging.getLogger(__name__)
 class BaseMediaScraper(ABC):
     """Base class for all media scrapers."""
     
-    def __init__(self, rate_limit_delay: float = 1.0, verify_ssl: bool = True):
+    def __init__(self, rate_limit_delay: float = 1.0, verify_ssl: bool = True, verbose: bool = False):
         """
         Initialize the scraper.
-        
+
         Args:
             rate_limit_delay: Delay between requests in seconds
             verify_ssl: Whether to verify SSL certificates (default: True)
+            verbose: If True, log request/response details (default: False)
         """
         self.rate_limit_delay = rate_limit_delay
         self.verify_ssl = verify_ssl
+        self.verbose = verbose
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -53,14 +55,22 @@ class BaseMediaScraper(ABC):
     def _fetch_json(self, url: str, params: Optional[Dict] = None) -> Optional[Dict]:
         """Fetch JSON data with rate limiting."""
         self._rate_limit()
+        if self.verbose:
+            logger.info(f"GET {url} params={params}")
         try:
             response = self.session.get(url, params=params, timeout=30, verify=self.verify_ssl)
+            if self.verbose:
+                logger.info(f"Response status={response.status_code} url={response.url}")
             # Don't raise for 404 - just return None so caller can handle it
             if response.status_code == 404:
                 logger.debug(f"404 Not Found for {url} with params {params}")
                 return None
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            if self.verbose and isinstance(data, dict):
+                keys = list(data.keys())[:15]
+                logger.info(f"Response keys={keys}")
+            return data
         except requests.exceptions.SSLError as e:
             logger.warning(f"SSL error fetching JSON from {url}: {e}. Retrying without SSL verification...")
             # Retry once without SSL verification for problematic sites

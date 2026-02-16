@@ -88,6 +88,31 @@ class SpeciesListSerializer(serializers.ModelSerializer):
         fields = ('name', 'name_latin', 'name_nl', 'name_translated', 'id', 'tax_family', 'tax_family_en', 'tax_order')
 
 
+class SpeciesReviewStatsSerializer(serializers.Serializer):
+    """Serializer for species with media review stats (annotated queryset)."""
+    id = serializers.IntegerField()
+    name = serializers.SerializerMethodField()
+    total_media = serializers.IntegerField()
+    unreviewed = serializers.SerializerMethodField()
+    approved = serializers.IntegerField(source='approved_media')
+    rejected = serializers.IntegerField(source='rejected_media')
+    not_sure = serializers.IntegerField(source='not_sure_media')
+
+    def get_name(self, obj):
+        request = self.context.get('request')
+        language = request and request.query_params.get('language')
+        if language:
+            try:
+                sn = SpeciesName.objects.get(species=obj, language_id=language)
+                return sn.name
+            except SpeciesName.DoesNotExist:
+                pass
+        return obj.name
+
+    def get_unreviewed(self, obj):
+        return obj.total_media - obj.media_with_review
+
+
 class FamilyListSerializer(serializers.ModelSerializer):
     count = serializers.IntegerField(read_only=True)
 

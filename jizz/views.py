@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Case, When, Value, Prefetch, F
+from django.db.models import Case, When, Value, Prefetch, F, Q
 from django.db.models.aggregates import Count, Min
 from django.db.models.functions import RowNumber
 from django.db.models.expressions import Window
@@ -45,6 +45,7 @@ from jizz.models import (
     Answer,
     Country,
     CountryChallenge,
+    CountrySpecies,
     Feedback,
     FlagQuestion,
     Game,
@@ -68,6 +69,7 @@ from jizz.serializers import (
     GameSerializer,
     PlayerScoreListSerializer,
     PlayerScoreSerializer,
+    SpeciesReviewStatsSerializer,
     PlayerSerializer,
     QuestionSerializer,
     SpeciesDetailSerializer,
@@ -291,6 +293,70 @@ class FlagMediaView(ListCreateAPIView):
     """View for flagging media items."""
     serializer_class = FlagMediaSerializer
     queryset = FlagMedia.objects.all()
+
+
+class SpeciesReviewStatsView(APIView):
+    """List species with media review counts; optional country filter. Returns summary counts (fully/partly/not reviewed)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        country_code = request.query_params.get('country')
+        media_type = request.query_params.get('type', 'image')
+
+        qs = (
+            Species.objects
+            .filter(media__type=media_type)
+            .distinct()
+            .annotate(
+                total_media=Count('media', filter=Q(media__type=media_type), distinct=True),
+                media_with_review=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__id__isnull=False),
+                    distinct=True,
+                ),
+                approved_media=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__review_type='approved'),
+                    distinct=True,
+                ),
+                rejected_media=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__review_type='rejected'),
+                    distinct=True,
+                ),
+                not_sure_media=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__review_type='not_sure'),
+                    distinct=True,
+                ),
+            )
+            .filter(total_media__gt=0)
+            .order_by('id')
+        )
+        if country_code:
+            qs = qs.filter(
+                countryspecies__country__code=country_code.upper(),
+                countryspecies__status__in=['native', 'endemic', 'rare'],
+            ).distinct()
+
+        species_list = list(qs)
+        fully_reviewed = sum(1 for s in species_list if s.media_with_review >= s.total_media)
+        not_reviewed = sum(1 for s in species_list if s.media_with_review == 0)
+        partly_reviewed = len(species_list) - fully_reviewed - not_reviewed
+
+        serializer = SpeciesReviewStatsSerializer(
+            species_list,
+            many=True,
+            context={'request': request},
+        )
+        return Response({
+            'summary': {
+                'fully_reviewed': fully_reviewed,
+                'partly_reviewed': partly_reviewed,
+                'not_reviewed': not_reviewed,
+            },
+            'species': serializer.data,
+        })
 
 
 class GameListView(ListCreateAPIView, GetPlayerMixin):

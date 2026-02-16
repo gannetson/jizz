@@ -17,7 +17,7 @@ import {
 import { Page } from '../shared/components/layout';
 import { FormattedMessage, useIntl } from 'react-intl';
 import AppContext from '../core/app-context';
-import { MediaServiceImpl, MediaItem } from '../api/services/media.service';
+import { MediaServiceImpl, MediaItem, SpeciesReviewStatsResponse } from '../api/services/media.service';
 import { ApiClient, apiClient } from '../api/client';
 import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
@@ -50,6 +50,9 @@ export const MediaReviewPage = () => {
   const [reviewedItems, setReviewedItems] = useState<Map<number, 'approved' | 'rejected' | 'not_sure'>>(new Map());
   const [loadedItemIds, setLoadedItemIds] = useState<Set<number>>(new Set());
   const [selectedCountry, setSelectedCountry] = useState<string>(countryCode ?? '');
+  const [speciesStats, setSpeciesStats] = useState<SpeciesReviewStatsResponse | null>(null);
+  const [speciesStatsLoading, setSpeciesStatsLoading] = useState(true);
+  const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | 'audio'>('image');
 
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
@@ -72,17 +75,35 @@ export const MediaReviewPage = () => {
     return createListCollection({ items });
   }, [countries]);
 
-  const loadMedia = useCallback(async (page: number = 1, reset: boolean = false, countryCode?: string) => {
-    try {
-      if (reset) {
-        setLoading(true);
-        setLoadedItemIds(new Set());
-        setMedia([]);
-      } else {
-        setLoadingMore(true);
-      }
-      
-      const data = await mediaService.getMedia('image', page, countryCode, languageParam);
+  const mediaTypeCollection = useMemo(
+    () =>
+      createListCollection({
+        items: [
+          { label: intl.formatMessage({ id: 'media type images', defaultMessage: 'Images' }), value: 'image' },
+          { label: intl.formatMessage({ id: 'media type videos', defaultMessage: 'Videos' }), value: 'video' },
+          { label: intl.formatMessage({ id: 'media type audio', defaultMessage: 'Audio' }), value: 'audio' },
+        ],
+      }),
+    [intl]
+  );
+
+  const loadMedia = useCallback(
+    async (
+      page: number = 1,
+      reset: boolean = false,
+      countryCode?: string,
+      mediaType: 'image' | 'video' | 'audio' = 'image'
+    ) => {
+      try {
+        if (reset) {
+          setLoading(true);
+          setLoadedItemIds(new Set());
+          setMedia([]);
+        } else {
+          setLoadingMore(true);
+        }
+
+        const data = await mediaService.getMedia(mediaType, page, countryCode, languageParam);
       
       // Use functional updates to access current state
       setLoadedItemIds(currentLoadedIds => {
@@ -120,17 +141,36 @@ export const MediaReviewPage = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [intl, languageParam]);
+  },
+    [intl, languageParam]
+  );
 
   useEffect(() => {
-    loadMedia(1, true, selectedCountry || undefined);
-  }, [selectedCountry, languageParam, loadMedia]);
+    loadMedia(1, true, selectedCountry || undefined, selectedMediaType);
+  }, [selectedCountry, selectedMediaType, languageParam, loadMedia]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSpeciesStatsLoading(true);
+    mediaService
+      .getSpeciesReviewStats(selectedCountry || undefined, selectedMediaType, languageParam)
+      .then((data) => {
+        if (!cancelled) setSpeciesStats(data);
+      })
+      .catch(() => {
+        if (!cancelled) setSpeciesStats(null);
+      })
+      .finally(() => {
+        if (!cancelled) setSpeciesStatsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedCountry, selectedMediaType, languageParam]);
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasNextPage) {
-      loadMedia(currentPage + 1, false, selectedCountry || undefined);
+      loadMedia(currentPage + 1, false, selectedCountry || undefined, selectedMediaType);
     }
-  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry]);
+  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry, selectedMediaType]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -231,43 +271,9 @@ export const MediaReviewPage = () => {
   return (
     <Page>
       <Page.Header>
-        <Flex justifyContent="space-between" alignItems="center" width="100%">
-          <Heading color={'gray.800'} size={'lg'} m={0}>
-            <FormattedMessage id={'media review'} defaultMessage={'Media Review'} />
-          </Heading>
-          <Box minW="200px">
-            <Select.Root
-              collection={countryCollection}
-              value={selectedCountry ? [selectedCountry] : []}
-              onValueChange={(details: { value: string[] }) => {
-                const countryCode = details.value[0] || '';
-                setSelectedCountry(countryCode);
-              }}
-            >
-              <Select.HiddenSelect />
-              <Select.Control>
-                <Select.Trigger>
-                  <Select.ValueText placeholder="Select country..." />
-                </Select.Trigger>
-                <Select.IndicatorGroup>
-                  <Select.Indicator />
-                </Select.IndicatorGroup>
-              </Select.Control>
-              <Portal>
-                <Select.Positioner>
-                  <Select.Content>
-                    {countryCollection.items.map((item: any) => (
-                      <Select.Item key={item.value} item={item}>
-                        <Select.ItemIndicator />
-                        <Select.ItemText>{item.label}</Select.ItemText>
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Positioner>
-              </Portal>
-            </Select.Root>
-          </Box>
-        </Flex>
+        <Heading color={'gray.800'} size={'lg'} m={0}>
+          <FormattedMessage id={'media review'} defaultMessage={'Media Review'} />
+        </Heading>
       </Page.Header>
       <Page.Body>
           <Box backgroundColor={'blue.100'} borderColor={'blue.700'} color={'blue.700'} border={'2px solid'} padding={4}>
@@ -324,6 +330,85 @@ export const MediaReviewPage = () => {
               </ListItem>
             </ListRoot>
           </Box>
+          <Flex gap={3} alignItems="center" flexWrap="wrap" mt={4} mb={4}>
+            <Box minW="160px">
+              <Select.Root
+                collection={mediaTypeCollection}
+                value={[selectedMediaType]}
+                onValueChange={(details: { value: string[] }) => {
+                  const v = details.value[0];
+                  if (v === 'image' || v === 'video' || v === 'audio') setSelectedMediaType(v);
+                }}
+              >
+                <Select.HiddenSelect />
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Media type..." />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {mediaTypeCollection.items.map((item: any) => (
+                        <Select.Item key={item.value} item={item}>
+                          <Select.ItemIndicator />
+                          <Select.ItemText>{item.label}</Select.ItemText>
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+            </Box>
+            <Box minW="200px">
+              <Select.Root
+                collection={countryCollection}
+                value={selectedCountry ? [selectedCountry] : []}
+                onValueChange={(details: { value: string[] }) => {
+                  const countryCode = details.value[0] || '';
+                  setSelectedCountry(countryCode);
+                }}
+              >
+                <Select.HiddenSelect />
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Select country..." />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {countryCollection.items.map((item: any) => (
+                        <Select.Item key={item.value} item={item}>
+                          <Select.ItemIndicator />
+                          <Select.ItemText>{item.label}</Select.ItemText>
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+            </Box>
+          </Flex>
+          {!speciesStatsLoading && speciesStats && (
+            <Flex gap={6} mt={4} mb={4} flexWrap="wrap" fontWeight="bold">
+              <Text color="green.700">
+                <FormattedMessage id="species fully reviewed" defaultMessage="{count} fully reviewed" values={{ count: speciesStats.summary.fully_reviewed }} />
+              </Text>
+              <Text color="orange.600">
+                <FormattedMessage id="species partly reviewed" defaultMessage="{count} partly reviewed" values={{ count: speciesStats.summary.partly_reviewed }} />
+              </Text>
+              <Text color="gray.600">
+                <FormattedMessage id="species not reviewed" defaultMessage="{count} not reviewed" values={{ count: speciesStats.summary.not_reviewed }} />
+              </Text>
+            </Flex>
+          )}
         {loading ? (
           <Text>Loading...</Text>
         ) : (
@@ -348,11 +433,33 @@ export const MediaReviewPage = () => {
                 (a, b) => a.speciesId - b.speciesId
               );
 
-              return sortedSpecies.map((group) => (
+              const speciesStatsMap = speciesStats?.species
+                ? Object.fromEntries(speciesStats.species.map((s) => [s.id, s]))
+                : null;
+
+              return sortedSpecies.map((group) => {
+                const stats = speciesStatsMap?.[group.speciesId];
+                return (
                 <Box key={group.speciesId} mb={8}>
-                  <Heading size="md" mb={4} color="gray.700">
+                  <Heading size="md" mb={2} color="gray.700">
                     {group.speciesName}
                   </Heading>
+                  {stats != null && (
+                    <Text fontSize="sm" color="gray.600" mb={4}>
+                      <FormattedMessage
+                        id="species review stats line"
+                        defaultMessage="{total} media · {unreviewed} unreviewed · {approved} approved · {rejected} rejected · {notSure} not sure"
+                        values={{
+                          total: stats.total_media,
+                          unreviewed: stats.unreviewed,
+                          approved: stats.approved,
+                          rejected: stats.rejected,
+                          notSure: stats.not_sure,
+                        }}
+                      />
+                    </Text>
+                  )}
+                  {!stats && <Box mb={4} />}
                   <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={4}>
                     {group.items.map((item) => {
                 const reviewType = reviewedItems.get(item.id);
@@ -550,7 +657,8 @@ export const MediaReviewPage = () => {
                     })}
                   </SimpleGrid>
                 </Box>
-              ));
+                );
+              });
             })()}
 
             {media.length === 0 && !loading && (

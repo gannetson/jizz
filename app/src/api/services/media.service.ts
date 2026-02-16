@@ -24,9 +24,29 @@ export interface PaginatedMediaResponse {
   results: MediaItem[];
 }
 
+export interface SpeciesReviewStats {
+  id: number;
+  name: string;
+  total_media: number;
+  unreviewed: number;
+  approved: number;
+  rejected: number;
+  not_sure: number;
+}
+
+export interface SpeciesReviewStatsResponse {
+  summary: {
+    fully_reviewed: number;
+    partly_reviewed: number;
+    not_reviewed: number;
+  };
+  species: SpeciesReviewStats[];
+}
+
 export interface MediaService {
   getMedia(type?: string, page?: number, countryCode?: string, language?: string): Promise<PaginatedMediaResponse>;
   reviewMedia(mediaId: number, playerToken: string, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
+  getSpeciesReviewStats(countryCode?: string, mediaType?: string, language?: string): Promise<SpeciesReviewStatsResponse>;
 }
 
 export class MediaServiceImpl implements MediaService {
@@ -51,6 +71,13 @@ export class MediaServiceImpl implements MediaService {
       review_type: reviewType,
       description: description || '',
     });
+  }
+
+  async getSpeciesReviewStats(countryCode?: string, mediaType: string = 'image', language?: string): Promise<SpeciesReviewStatsResponse> {
+    const params = new URLSearchParams({ type: mediaType });
+    if (countryCode) params.set('country', countryCode);
+    if (language) params.set('language', language);
+    return this.client.get<SpeciesReviewStatsResponse>(`/api/species-review-stats/?${params.toString()}`);
   }
 }
 

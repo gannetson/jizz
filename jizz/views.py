@@ -284,7 +284,8 @@ class MediaListView(ListAPIView):
 
 
 class ReviewMediaView(ListCreateAPIView):
-    """View for reviewing media items (positive or negative)."""
+    """View for reviewing media items (positive or negative). Accepts player_token in body or authenticated user."""
+    permission_classes = [AllowAny]
     serializer_class = ReviewMediaSerializer
     queryset = MediaReview.objects.all()
 

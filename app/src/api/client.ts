@@ -5,6 +5,15 @@ export interface ApiClientConfig {
   getHeaders?: () => Record<string, string>;
 }
 
+/** Prefer JWT (logged-in user) so auth endpoints use request.user; fall back to player token. */
+function defaultGetAuthToken(): string | null {
+  return (
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('jw_token') ||
+    localStorage.getItem('player-token')
+  );
+}
+
 export class ApiClient {
   private baseURL: string;
   private getAuthToken: () => string | null;
@@ -12,7 +21,7 @@ export class ApiClient {
 
   constructor(config: ApiClientConfig = {}) {
     this.baseURL = config.baseURL || '';
-    this.getAuthToken = config.getAuthToken || (() => localStorage.getItem('player-token'));
+    this.getAuthToken = config.getAuthToken || defaultGetAuthToken;
     this.getHeaders = config.getHeaders || (() => ({
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -36,7 +45,7 @@ export class ApiClient {
     };
 
     if (token) {
-      headers['Authorization'] = `Token ${token}`;
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(url, {

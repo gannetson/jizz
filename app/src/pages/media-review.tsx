@@ -19,12 +19,14 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import AppContext from '../core/app-context';
 import { MediaServiceImpl, MediaItem, SpeciesReviewStatsResponse } from '../api/services/media.service';
 import { ApiClient, apiClient } from '../api/client';
+import { authService } from '../api/services/auth.service';
 import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
 import {useParams} from "react-router-dom"
 import { FaArrowAltCircleRight } from "react-icons/fa";
 import { FaQuestion } from "react-icons/fa";
+import Confetti from "react-confetti";
 
 const {
   Root: DialogRoot,
@@ -53,6 +55,7 @@ export const MediaReviewPage = () => {
   const [speciesStats, setSpeciesStats] = useState<SpeciesReviewStatsResponse | null>(null);
   const [speciesStatsLoading, setSpeciesStatsLoading] = useState(true);
   const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | 'audio'>('image');
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
@@ -216,13 +219,25 @@ export const MediaReviewPage = () => {
   };
 
   const handleReview = async (mediaId: number, reviewType: 'approved' | 'rejected' | 'not_sure') => {
-    if (!player) return;
-    
+    const canReview = !!player || !!authService.getAccessToken();
+    if (!canReview) {
+      toaster.create({
+        title: intl.formatMessage({ id: 'login to review', defaultMessage: 'Please log in to review media.' }),
+        colorPalette: 'warning',
+        duration: 4000,
+      });
+      return;
+    }
+
+    const item = media.find((m) => m.id === mediaId) ?? selectedMedia;
+    const speciesId = item?.species_id;
+    const speciesName = item?.species_name;
+
     // Mark as reviewed immediately for visual feedback
     setReviewedItems(prev => new Map(prev).set(mediaId, reviewType));
-    
+
     try {
-      await mediaService.reviewMedia(mediaId, player.token, reviewType);
+      await mediaService.reviewMedia(mediaId, player?.token, reviewType);
       const messages = {
         approved: intl.formatMessage({ id: 'media approved', defaultMessage: 'Media approved.' }),
         rejected: intl.formatMessage({ id: 'media rejected', defaultMessage: 'Media rejected.' }),
@@ -233,6 +248,51 @@ export const MediaReviewPage = () => {
         colorPalette: 'success',
         duration: 2000,
       });
+
+      // Celebrate when all media for this species are now reviewed (species fully reviewed)
+      const isSpeciesFullyReviewed =
+        speciesId != null &&
+        speciesName &&
+        (() => {
+          // From stats: this was the last unreviewed for this species
+          const speciesStat = speciesStats?.species?.find((s) => s.id === speciesId);
+          if (speciesStat && speciesStat.unreviewed === 1) return true;
+          // Fallback: in current loaded list, we just reviewed the last item for this species
+          const speciesMediaIds = media.filter((m) => m.species_id === speciesId).map((m) => m.id);
+          const nowReviewedForSpecies = new Set([...Array.from(reviewedItems.keys()), mediaId].filter((id) => speciesMediaIds.includes(id)));
+          return speciesMediaIds.length > 0 && nowReviewedForSpecies.size === speciesMediaIds.length;
+        })();
+
+      if (isSpeciesFullyReviewed) {
+        setShowConfetti(true);
+        toaster.create({
+          title: intl.formatMessage(
+            { id: 'species fully reviewed celebration', defaultMessage: 'Well done! {speciesName} is now fully reviewed!' },
+            { speciesName }
+          ),
+          colorPalette: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        setTimeout(() => setShowConfetti(false), 6000);
+        if (speciesStats?.species?.find((s) => s.id === speciesId)) {
+          setSpeciesStats((prev) => {
+            if (!prev || speciesId == null) return prev;
+            return {
+              ...prev,
+              species: prev.species.map((s) =>
+                s.id === speciesId ? { ...s, unreviewed: 0 } : s
+              ),
+              summary: {
+                ...prev.summary,
+                fully_reviewed: prev.summary.fully_reviewed + 1,
+                partly_reviewed: Math.max(0, prev.summary.partly_reviewed - 1),
+              },
+            };
+          });
+        }
+      }
+
       // Close dialog if this item was selected
       if (selectedMedia?.id === mediaId) {
         setIsDialogOpen(false);
@@ -270,6 +330,23 @@ export const MediaReviewPage = () => {
 
   return (
     <Page>
+      {showConfetti && (
+        <Box
+          position="fixed"
+          inset={0}
+          zIndex={9999}
+          pointerEvents="none"
+          aria-hidden
+        >
+          <Confetti
+            width={window.innerWidth}
+            height={window.innerHeight}
+            run={showConfetti}
+            recycle={false}
+            numberOfPieces={400}
+          />
+        </Box>
+      )}
       <Page.Header>
         <Heading color={'gray.800'} size={'lg'} m={0}>
           <FormattedMessage id={'media review'} defaultMessage={'Media Review'} />
@@ -494,104 +571,96 @@ export const MediaReviewPage = () => {
                     } : {}}
                   >
                     <Box
-                      onClick={() => !isReviewed && handleImageClick(item)}
-                      cursor={isReviewed ? 'not-allowed' : 'pointer'}
+                      width="100%"
+                      height="150px"
+                      overflow="hidden"
+                      bg="gray.100"
+                      position="relative"
                     >
-                      <Box
+                      <Image
+                        src={item.url}
+                        alt={item.species_name}
                         width="100%"
-                        height="150px"
-                        overflow="hidden"
-                        bg="gray.100"
-                        position="relative"
-                      >
-                        <Image
-                          src={item.url}
-                          alt={item.species_name}
-                          width="100%"
-                          height="100%"
-                          objectFit="cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="150" height="150"%3E%3Crect fill="%23ddd" width="150" height="150"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImage%3C/text%3E%3C/svg%3E';
-                          }}
+                        height="100%"
+                        objectFit="cover"
+                        cursor={isReviewed ? 'not-allowed' : 'pointer'}
+                        onClick={() => !isReviewed && handleImageClick(item)}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="150" height="150"%3E%3Crect fill="%23ddd" width="150" height="150"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImage%3C/text%3E%3C/svg%3E';
+                        }}
+                      />
+                      {/* Colored overlay for reviewed items */}
+                      {isReviewed && (
+                        <Box
+                          position="absolute"
+                          top={0}
+                          left={0}
+                          right={0}
+                          bottom={0}
+                          bg={overlayColor}
+                          zIndex={2}
+                          pointerEvents="none"
                         />
-                        {/* Colored overlay for reviewed items */}
-                        {isReviewed && (
-                          <Box
-                            position="absolute"
-                            top={0}
-                            left={0}
-                            right={0}
-                            bottom={0}
-                            bg={overlayColor}
-                            zIndex={2}
-                            pointerEvents="none"
-                          />
-                        )}
-                        {/* Buttons overlay - desktop only, visible on hover */}
-                        {!isReviewed && (
-                          <Flex
-                            data-buttons-overlay
-                            position="absolute"
-                            bottom={0}
-                            left={0}
-                            right={0}
-                            gap={2}
-                            p={2}
+                      )}
+                      {/* Buttons overlay - desktop only, visible on hover */}
+                      {!isReviewed && (
+                        <Flex
+                          data-buttons-overlay
+                          position="absolute"
+                          bottom={0}
+                          left={0}
+                          right={0}
+                          zIndex={3}
+                          gap={2}
+                          p={2}
+                          justifyContent="center"
+                          bg="rgba(0, 0, 0, 0.7)"
+                          opacity={0}
+                          transition="opacity 0.2s"
+                          pointerEvents="auto"
+                          display={{ base: 'none', md: 'flex' }}
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            colorPalette="success"
+                            onClick={() => handleReview(item.id, 'approved')}
+                            minW="40px"
+                            h="40px"
+                            display="flex"
+                            alignItems="center"
                             justifyContent="center"
-                            bg="rgba(0, 0, 0, 0.7)"
-                            opacity={0}
-                            transition="opacity 0.2s"
-                            onClick={(e) => e.stopPropagation()}
-                            display={{ base: 'none', md: 'flex' }}
                           >
-                            <Button
-                              size="sm"
-                              colorPalette="success"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleReview(item.id, 'approved');
-                              }}
-                              minW="40px"
-                              h="40px"
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="center"
-                            >
-                              <Icon as={BsCheckCircle} boxSize={5} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              colorPalette="warning"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleReview(item.id, 'not_sure');
-                              }}
-                              minW="40px"
-                              h="40px"
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="center"
-                            >
-                              <Icon as={FaQuestion} boxSize={5} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              colorPalette="error"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleReview(item.id, 'rejected');
-                              }}
-                              minW="40px"
-                              h="40px"
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="center"
-                            >
-                              <Icon as={BsXCircle} boxSize={5} />
-                            </Button>
-                          </Flex>
-                        )}
-                      </Box>
+                            <Icon as={BsCheckCircle} boxSize={5} />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            colorPalette="warning"
+                            onClick={() => handleReview(item.id, 'not_sure')}
+                            minW="40px"
+                            h="40px"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                          >
+                            <Icon as={FaQuestion} boxSize={5} />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            colorPalette="error"
+                            onClick={() => handleReview(item.id, 'rejected')}
+                            minW="40px"
+                            h="40px"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                          >
+                            <Icon as={BsXCircle} boxSize={5} />
+                          </Button>
+                        </Flex>
+                      )}
                     </Box>
                     {/* Buttons below image - mobile only */}
                     {!isReviewed && (
@@ -602,16 +671,13 @@ export const MediaReviewPage = () => {
                         bg="gray.100"
                         borderTopWidth="1px"
                         borderColor="gray.200"
-                        onClick={(e) => e.stopPropagation()}
                         display={{ base: 'flex', md: 'none' }}
                       >
                         <Button
+                          type="button"
                           size="sm"
                           colorPalette="success"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReview(item.id, 'approved');
-                          }}
+                          onClick={() => handleReview(item.id, 'approved')}
                           minW="40px"
                           h="40px"
                           display="flex"
@@ -621,12 +687,10 @@ export const MediaReviewPage = () => {
                           <Icon as={BsCheckCircle} boxSize={5} />
                         </Button>
                         <Button
+                          type="button"
                           size="sm"
                           colorPalette="warning"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReview(item.id, 'not_sure');
-                          }}
+                          onClick={() => handleReview(item.id, 'not_sure')}
                           minW="40px"
                           h="40px"
                           display="flex"
@@ -636,12 +700,10 @@ export const MediaReviewPage = () => {
                           <Icon as={FaQuestion} boxSize={5} />
                         </Button>
                         <Button
+                          type="button"
                           size="sm"
                           colorPalette="error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReview(item.id, 'rejected');
-                          }}
+                          onClick={() => handleReview(item.id, 'rejected')}
                           minW="40px"
                           h="40px"
                           display="flex"
@@ -718,13 +780,13 @@ export const MediaReviewPage = () => {
                       )}
                     </Box>
                     <Flex gap={4} mt={4}>
-                      <Button onClick={handleOkay} colorPalette="success">
+                      <Button type="button" onClick={handleOkay} colorPalette="success">
                         <FormattedMessage id={'okay'} defaultMessage={'Okay!'} />
                       </Button>
-                      <Button onClick={handleNotSure} colorPalette="warning">
+                      <Button type="button" onClick={handleNotSure} colorPalette="warning">
                         <FormattedMessage id={'not sure'} defaultMessage={'Not Sure'} />
                       </Button>
-                      <Button onClick={handleBad} colorPalette="error">
+                      <Button type="button" onClick={handleBad} colorPalette="error">
                         <FormattedMessage id={'bad'} defaultMessage={'Bad!'} />
                       </Button>
                     </Flex>

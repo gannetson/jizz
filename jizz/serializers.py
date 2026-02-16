@@ -253,8 +253,8 @@ class FlagQuestionSerializer(serializers.ModelSerializer):
 
 
 class ReviewMediaSerializer(serializers.ModelSerializer):
-    """Serializer for reviewing media items (positive or negative)."""
-    player_token = serializers.CharField(write_only=True)
+    """Serializer for reviewing media items (positive or negative). Accepts player_token or uses request.user if authenticated."""
+    player_token = serializers.CharField(write_only=True, required=False)
     media_id = serializers.IntegerField(write_only=True)
     review_type = serializers.ChoiceField(choices=MediaReview.REVIEW_CHOICES, write_only=True)
 
@@ -262,19 +262,46 @@ class ReviewMediaSerializer(serializers.ModelSerializer):
         model = MediaReview
         fields = ('player_token', 'description', 'media_id', 'review_type')
 
+    def validate(self, data):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            if data.get('player_token'):
+                raise serializers.ValidationError(
+                    {'player_token': 'Do not send player_token when authenticated as a user.'}
+                )
+            return data
+        if not data.get('player_token'):
+            raise serializers.ValidationError(
+                {'player_token': 'Either authenticate as a user or provide player_token.'}
+            )
+        return data
+
     def create(self, validated_data):
-        player = Player.objects.get(token=validated_data.pop('player_token'))
         media = Media.objects.get(id=validated_data.pop('media_id'))
         review_type = validated_data.pop('review_type')
         description = validated_data.pop('description', '')
-        # Use get_or_create to handle unique_together constraint
-        review, created = MediaReview.objects.get_or_create(
-            media=media,
-            player=player,
-            defaults={'review_type': review_type, 'description': description}
-        )
+        request = self.context.get('request')
+        player = None
+        user = None
+
+        if request and request.user and request.user.is_authenticated:
+            user = request.user
+        else:
+            player = Player.objects.get(token=validated_data.pop('player_token'))
+
+        if player:
+            review, created = MediaReview.objects.get_or_create(
+                media=media,
+                player=player,
+                defaults={'review_type': review_type, 'description': description},
+            )
+        else:
+            review, created = MediaReview.objects.get_or_create(
+                media=media,
+                user=user,
+                defaults={'review_type': review_type, 'description': description},
+            )
         if not created:
-            # Update existing review
             review.review_type = review_type
             review.description = description
             review.save()

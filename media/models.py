@@ -57,7 +57,7 @@ class MediaReview(models.Model):
         (REJECTED, 'Rejected'),
         (NOT_SURE, 'Not Sure'),
     ]
-    
+
     media = models.ForeignKey(
         Media,
         on_delete=models.CASCADE,
@@ -66,7 +66,16 @@ class MediaReview(models.Model):
     player = models.ForeignKey(
         'jizz.Player',
         on_delete=models.CASCADE,
-        related_name='media_reviews'
+        related_name='media_reviews',
+        null=True,
+        blank=True,
+    )
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='media_reviews',
+        null=True,
+        blank=True,
     )
     review_type = models.CharField(max_length=20, choices=REVIEW_CHOICES)
     description = models.CharField(max_length=500, null=True, blank=True)
@@ -76,7 +85,22 @@ class MediaReview(models.Model):
         verbose_name = 'Media Review'
         verbose_name_plural = 'Media Reviews'
         ordering = ['-created']
-        unique_together = ('media', 'player')  # One review per player per media
+        constraints = [
+            models.UniqueConstraint(
+                fields=['media', 'player'],
+                condition=models.Q(player__isnull=False),
+                name='media_review_unique_media_player',
+            ),
+            models.UniqueConstraint(
+                fields=['media', 'user'],
+                condition=models.Q(user__isnull=False),
+                name='media_review_unique_media_user',
+            ),
+            models.CheckConstraint(
+                check=models.Q(player__isnull=False) | models.Q(user__isnull=False),
+                name='media_review_reviewer_set',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         # Set media to hidden when rejected
@@ -86,7 +110,8 @@ class MediaReview(models.Model):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.get_review_type_display()} for {self.media} by {self.player}"
+        reviewer = self.user or self.player
+        return f"{self.get_review_type_display()} for {self.media} by {reviewer}"
 
 
 class FlagMedia(models.Model):

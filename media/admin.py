@@ -147,9 +147,9 @@ class FlagMediaAdmin(admin.ModelAdmin):
 
 @admin.register(MediaReview)
 class MediaReviewAdmin(admin.ModelAdmin):
-    list_display = ['id', 'media', 'player', 'review_type', 'description', 'created']
+    list_display = ['id', 'media', 'player', 'user', 'review_type', 'description', 'created']
     list_filter = ['review_type', 'created']
-    search_fields = ['description', 'media__species__name', 'player__name']
-    raw_id_fields = ['media', 'player']
+    search_fields = ['description', 'media__species__name', 'player__name', 'user__username']
+    raw_id_fields = ['media', 'player', 'user']
     readonly_fields = ['created']
     date_hierarchy = 'created'

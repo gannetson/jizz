@@ -45,7 +45,8 @@ export interface SpeciesReviewStatsResponse {
 
 export interface MediaService {
   getMedia(type?: string, page?: number, countryCode?: string, language?: string): Promise<PaginatedMediaResponse>;
-  reviewMedia(mediaId: number, playerToken: string, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
+  /** Pass playerToken when using a game player; omit when authenticated as a user (JWT). */
+  reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
   getSpeciesReviewStats(countryCode?: string, mediaType?: string, language?: string): Promise<SpeciesReviewStatsResponse>;
 }
 
@@ -64,13 +65,16 @@ export class MediaServiceImpl implements MediaService {
     return response;
   }
 
-  async reviewMedia(mediaId: number, playerToken: string, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown> {
-    return this.client.post('/api/review-media/', {
+  async reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown> {
+    const body: Record<string, unknown> = {
       media_id: mediaId,
-      player_token: playerToken,
       review_type: reviewType,
       description: description || '',
-    });
+    };
+    if (playerToken != null) {
+      body.player_token = playerToken;
+    }
+    return this.client.post('/api/review-media/', body);
   }
 
   async getSpeciesReviewStats(countryCode?: string, mediaType: string = 'image', language?: string): Promise<SpeciesReviewStatsResponse> {

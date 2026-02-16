@@ -24,9 +24,10 @@ import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
 import {useParams} from "react-router-dom"
-import { FaArrowAltCircleRight } from "react-icons/fa";
+import { FaArrowAltCircleRight, FaTrophy } from "react-icons/fa";
 import { FaQuestion } from "react-icons/fa";
 import Confetti from "react-confetti";
+import { keyframes } from "@emotion/react";
 
 const {
   Root: DialogRoot,
@@ -39,6 +40,11 @@ const {
 } = Dialog;
 
 const mediaService = new MediaServiceImpl(apiClient);
+
+const glowKeyframes = keyframes`
+  0%, 100% { box-shadow: 0 0 20px 4px rgba(234, 179, 8, 0.6), 0 0 40px 8px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 32px 8px rgba(234, 179, 8, 0.8), 0 0 60px 12px rgba(34, 197, 94, 0.5); }
+`;
 
 export const MediaReviewPage = () => {
   const { countryCode } = useParams<{ countryCode: string }>();
@@ -56,6 +62,7 @@ export const MediaReviewPage = () => {
   const [speciesStatsLoading, setSpeciesStatsLoading] = useState(true);
   const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | 'audio'>('image');
   const [showConfetti, setShowConfetti] = useState(false);
+  const [celebrationSpeciesName, setCelebrationSpeciesName] = useState<string | null>(null);
 
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
@@ -237,7 +244,9 @@ export const MediaReviewPage = () => {
     setReviewedItems(prev => new Map(prev).set(mediaId, reviewType));
 
     try {
-      await mediaService.reviewMedia(mediaId, player?.token, reviewType);
+      // When authenticated (JWT), do not send player_token; backend uses request.user
+      const playerToken = authService.getAccessToken() ? undefined : player?.token;
+      await mediaService.reviewMedia(mediaId, playerToken, reviewType);
       const messages = {
         approved: intl.formatMessage({ id: 'media approved', defaultMessage: 'Media approved.' }),
         rejected: intl.formatMessage({ id: 'media rejected', defaultMessage: 'Media rejected.' }),
@@ -265,16 +274,9 @@ export const MediaReviewPage = () => {
 
       if (isSpeciesFullyReviewed) {
         setShowConfetti(true);
-        toaster.create({
-          title: intl.formatMessage(
-            { id: 'species fully reviewed celebration', defaultMessage: 'Well done! {speciesName} is now fully reviewed!' },
-            { speciesName }
-          ),
-          colorPalette: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
+        setCelebrationSpeciesName(speciesName);
         setTimeout(() => setShowConfetti(false), 6000);
+        setTimeout(() => setCelebrationSpeciesName(null), 12000);
         if (speciesStats?.species?.find((s) => s.id === speciesId)) {
           setSpeciesStats((prev) => {
             if (!prev || speciesId == null) return prev;
@@ -346,6 +348,58 @@ export const MediaReviewPage = () => {
             numberOfPieces={400}
           />
         </Box>
+      )}
+      {celebrationSpeciesName && (
+        <Portal>
+          <Flex
+            position="fixed"
+            inset={0}
+            zIndex={10000}
+            align="center"
+            justify="center"
+            p={6}
+            bg="blackAlpha.600"
+            onClick={() => setCelebrationSpeciesName(null)}
+            pointerEvents="auto"
+            aria-live="polite"
+          >
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              position="relative"
+              bg="green.600"
+              color="white"
+              borderRadius="2xl"
+              p={8}
+              maxW="420px"
+              textAlign="center"
+              animation={`${glowKeyframes} 1.5s ease-in-out infinite`}
+              borderWidth="4px"
+              borderColor="yellow.300"
+              borderStyle="solid"
+            >
+              <Icon as={FaTrophy} boxSize={16} mb={4} color="yellow.200" />
+              <Heading size="xl" mb={2}>
+                <FormattedMessage id="well done" defaultMessage="Well done!" />
+              </Heading>
+              <Text fontSize="xl" fontWeight="bold" mb={2}>
+                {celebrationSpeciesName}
+              </Text>
+              <Text fontSize="lg" opacity={0.95}>
+                <FormattedMessage id="species fully reviewed message" defaultMessage="is now fully reviewed!" />
+              </Text>
+              <Button
+                mt={6}
+                size="lg"
+                colorPalette="yellow"
+                variant="outline"
+                borderWidth="2px"
+                onClick={() => setCelebrationSpeciesName(null)}
+              >
+                <FormattedMessage id="dismiss" defaultMessage="Dismiss" />
+              </Button>
+            </Box>
+          </Flex>
+        </Portal>
       )}
       <Page.Header>
         <Heading color={'gray.800'} size={'lg'} m={0}>

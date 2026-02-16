@@ -234,6 +234,8 @@ type SharedState = {
   setMultiplayer?: Dispatch<SetStateAction<string>>
   mediaType: string
   setMediaType: Dispatch<SetStateAction<string>>
+  soundsScope: 'all' | 'passerines'
+  setSoundsScope: Dispatch<SetStateAction<'all' | 'passerines'>>
   species?: Species[]
   loading?: boolean
 };
@@ -262,6 +264,8 @@ const AppContext = createContext<SharedState>({
   setCountry: () => {},
   mediaType: 'images',
   setMediaType: () => {},
+  soundsScope: 'all',
+  setSoundsScope: () => {},
   startCountryChallenge: async () => {},
   countryChallenge: undefined,
   loadCountryChallenge: async () => {},

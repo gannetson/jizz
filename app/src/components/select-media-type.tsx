@@ -5,10 +5,13 @@ import {FormattedMessage} from "react-intl"
 
 
 export const SelectMediaType = () => {
-  const {mediaType, setMediaType} = useContext(AppContext);
+  const {mediaType, setMediaType, soundsScope, setSoundsScope} = useContext(AppContext);
 
   const onChange = (value: string) => {
     setMediaType && setMediaType(value)
+    if (value !== 'audio') {
+      setSoundsScope && setSoundsScope('all')
+    }
   }
 
   return (
@@ -46,6 +49,40 @@ export const SelectMediaType = () => {
               </RadioGroup.ItemText>
             </RadioGroup.Item>
           </Box>
+          {mediaType === 'audio' && (
+            <Box pl={8}>
+              <RadioGroup.Root
+                colorPalette="primary"
+                value={soundsScope}
+                onValueChange={(e: { value?: string }) => e.value && (e.value === 'all' || e.value === 'passerines') && setSoundsScope?.(e.value)}
+              >
+                <Flex direction={'column'} gap={2}>
+                  <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+                    <RadioGroup.Item value="all">
+                      <RadioGroup.ItemHiddenInput />
+                      <RadioGroup.ItemControl>
+                        <RadioGroup.ItemIndicator />
+                      </RadioGroup.ItemControl>
+                      <RadioGroup.ItemText>
+                        <FormattedMessage id={'sounds all birds'} defaultMessage={'All birds'}/>
+                      </RadioGroup.ItemText>
+                    </RadioGroup.Item>
+                  </Box>
+                  <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+                    <RadioGroup.Item value="passerines">
+                      <RadioGroup.ItemHiddenInput />
+                      <RadioGroup.ItemControl>
+                        <RadioGroup.ItemIndicator />
+                      </RadioGroup.ItemControl>
+                      <RadioGroup.ItemText>
+                        <FormattedMessage id={'sounds passerines'} defaultMessage={'Passerines'}/>
+                      </RadioGroup.ItemText>
+                    </RadioGroup.Item>
+                  </Box>
+                </Flex>
+              </RadioGroup.Root>
+            </Box>
+          )}
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
             <RadioGroup.Item value={'video'}>
               <RadioGroup.ItemHiddenInput />

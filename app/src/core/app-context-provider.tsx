@@ -23,6 +23,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [playerName, setPlayerName] = useState<string | undefined>()
   const [multiplayer, setMultiplayer] = useState<string>('1')
   const [mediaType, setMediaType] = useState<string>('images')
+  const [soundsScope, setSoundsScope] = useState<'all' | 'passerines'>('all')
   const [species, setSpecies] = useState<Species[]>([])
   const [game, setGame] = useState<Game | undefined>(undefined)
   const [includeRare, setIncludeRare] = useState<boolean>(true)
@@ -191,7 +192,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
           level: level,
           length: length,
           media: mediaType,
-          tax_order: taxOrder?.tax_order,
+          tax_order: mediaType === 'audio' ? (soundsScope === 'passerines' ? 'Passeriformes' : undefined) : taxOrder?.tax_order,
           tax_family: taxFamily?.tax_family,
           include_rare: includeRare,
           include_escapes: includeEscapes
@@ -466,6 +467,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setMultiplayer,
       mediaType,
       setMediaType,
+      soundsScope,
+      setSoundsScope,
       player,
       createPlayer,
       createGame,

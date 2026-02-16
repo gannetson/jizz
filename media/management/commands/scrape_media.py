@@ -119,7 +119,13 @@ class Command(BaseCommand):
         elif options.get('species_code'):
             species_list = Species.objects.filter(code=options['species_code'])
         elif options.get('all'):
-            species_list = Species.objects.filter(media__isnull=True).all()
+            # Species that are missing at least one of the requested media types
+            has_all_types = Species.objects.all()
+            for mt in media_types:
+                has_all_types = has_all_types.filter(media__type=mt).distinct()
+            species_list = Species.objects.exclude(
+                pk__in=has_all_types.values_list('pk', flat=True)
+            )
         else:
             species_list = Species.objects.all()[:options.get('limit', 10)]
         
@@ -134,30 +140,24 @@ class Command(BaseCommand):
             processed += 1
             self.stdout.write(f'\n[{processed}/{total_species}] Processing {species.name} ({species.name_latin})...')
             
-            # Skip if already has media and --skip-existing
-            if options.get('skip_existing'):
-                # Single query to get all existing media types for this species
-                existing_types = set(
-                    Media.objects.filter(species=species, type__in=media_types)
-                    .values_list('type', flat=True)
-                    .distinct()
-                )
-                
-                # Check if any requested media type already exists
-                if existing_types:
-                    self.stdout.write(self.style.WARNING(
-                        f'  Skipping {species.name} - already has {", ".join(existing_types)}'
-                    ))
-                    skipped += 1
-                    continue
-            
+            # Which media types this species already has (for --skip-existing)
+            existing_types = set(
+                Media.objects.filter(species=species, type__in=media_types)
+                .values_list('type', flat=True)
+                .distinct()
+            ) if options.get('skip_existing') else set()
+
             try:
-                # Scrape audio
+                # Scrape audio (skip only if --skip-existing and species already has audio)
                 if 'audio' in media_types and 'xeno_canto' in sources_to_use:
-                    self._scrape_audio(species, scrapers['xeno_canto'])
+                    if 'audio' in existing_types:
+                        if self.verbosity >= 2:
+                            self.stdout.write(self.style.WARNING('  Skipping audio - already has audio'))
+                    else:
+                        self._scrape_audio(species, scrapers['xeno_canto'])
                 
                 # Scrape image
-                if 'image' in media_types:
+                if 'image' in media_types and 'image' not in existing_types:
                     if 'inaturalist' in sources_to_use:
                         self._scrape_image(species, scrapers['inaturalist'], 'inaturalist')
                     if 'wikimedia' in sources_to_use:
@@ -171,8 +171,8 @@ class Command(BaseCommand):
                     # if 'observation' in sources_to_use:
                     #     self._scrape_image(species, scrapers['observation'], 'observation')
                 
-                # Scrape video
-                if 'video' in media_types:
+                # Scrape video (skip if --skip-existing and species already has video)
+                if 'video' in media_types and 'video' not in existing_types:
                     if 'wikimedia' in sources_to_use:
                         self._scrape_video(species, scrapers['wikimedia'], 'wikimedia')
                     if 'inaturalist' in sources_to_use:

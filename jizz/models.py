@@ -11,6 +11,11 @@ from django.utils.functional import lazy
 from django.utils.timezone import now
 from shortuuid.django_fields import ShortUUIDField
 
+try:
+    from django_quill.fields import QuillField
+except ImportError:
+    QuillField = models.TextField  # fallback if django-quill-editor not installed
+
 
 class Country(models.Model):
     name = models.CharField(max_length=100)
@@ -19,7 +24,7 @@ class Country(models.Model):
 
     @property
     def count(self):
-        return self.species.count()
+        return self.countryspecies.count()
 
     def __str__(self):
         return self.name
@@ -96,6 +101,20 @@ class Language(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Page(models.Model):
+    """Simple CMS page for Help content. Content is Quill rich text (delta JSON); supports images and formatting."""
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    content = QuillField(blank=True)
+    show = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['title']
+
+    def __str__(self):
+        return self.title
 
 
 class SpeciesName(models.Model):

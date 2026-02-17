@@ -139,9 +139,13 @@ class ApiFamiliesOrdersTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        Species.objects.create(
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        self.species = Species.objects.create(
             name='S', name_latin='S', code='S01',
             tax_family='Family1', tax_family_en='Family1', tax_order='Order1',
+        )
+        CountrySpecies.objects.get_or_create(
+            country=self.country, species=self.species, defaults={'status': 'native'}
         )
 
     def test_families_list_returns_200(self):
@@ -151,6 +155,18 @@ class ApiFamiliesOrdersTestCase(TestCase):
 
     def test_orders_list_returns_200(self):
         response = self.client.get('/api/orders/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+
+    def test_families_list_with_country_filter(self):
+        response = self.client.get('/api/families/', {'country': self.country.code})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+        if response.data:
+            self.assertIn(response.data[0].get('tax_family'), ('Family1', None))
+
+    def test_orders_list_with_country_filter(self):
+        response = self.client.get('/api/orders/', {'country': self.country.code})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, list)
 
@@ -363,6 +379,84 @@ class ApiMediaTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_media_list_filter_by_type(self):
+        response = self.client.get('/api/media/', {'type': 'image'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
+    def test_media_list_filter_by_country(self):
+        CountrySpecies.objects.get_or_create(
+            country=Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0],
+            species=self.species,
+            defaults={'status': 'native'},
+        )
+        response = self.client.get('/api/media/', {'country': 'NL'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
+
+class ApiSpeciesReviewStatsTestCase(TestCase):
+    """GET /api/species-review-stats/ (optional country, type)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.species = Species.objects.create(name='S', name_latin='S', code='S01')
+        Media.objects.create(species=self.species, type='image', url='https://x.com/1.jpg', source='test')
+
+    def test_species_review_stats_returns_200(self):
+        response = self.client.get('/api/species-review-stats/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('summary', response.data)
+        self.assertIn('species', response.data)
+        self.assertIn('fully_reviewed', response.data['summary'])
+        self.assertIn('partly_reviewed', response.data['summary'])
+        self.assertIn('not_reviewed', response.data['summary'])
+
+    def test_species_review_stats_with_country_and_type(self):
+        response = self.client.get(
+            '/api/species-review-stats/',
+            {'country': 'NL', 'type': 'image'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('summary', response.data)
+
+
+class ApiScoresFiltersTestCase(TestCase):
+    """GET /api/scores/ with filter params (game__media, game__country, etc.)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        self.player = Player.objects.create(name='P', language='en')
+        self.game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=10,
+            media='images',
+            host=self.player,
+            include_rare=True,
+        )
+        self.player_score = PlayerScore.objects.create(
+            player=self.player,
+            game=self.game,
+            score=50,
+        )
+
+    def test_scores_list_returns_200(self):
+        response = self.client.get('/api/scores/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
+    def test_scores_list_filter_by_game_media(self):
+        response = self.client.get('/api/scores/', {'game__media': 'images'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
+    def test_scores_list_filter_by_game_country(self):
+        response = self.client.get('/api/scores/', {'game__country': self.country.code})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
 
 class ApiFeedbackTestCase(TestCase):
     """GET/POST /api/feedback/."""
@@ -440,6 +534,20 @@ class ApiCountryChallengesTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('id', response.data)
 
+    def test_country_challenges_retrieve_returns_last(self):
+        """ViewSet get_object returns last challenge for the player."""
+        _player_auth(self.client, self.player)
+        c1 = CountryChallenge.objects.create(country=self.country, player=self.player)
+        c2 = CountryChallenge.objects.create(country=self.country, player=self.player)
+        response = self.client.get('/api/country-challenges/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results', response.data)
+        self.assertGreaterEqual(len(results), 2)
+        # Retrieve endpoint returns last (by get_object)
+        response = self.client.get(f'/api/country-challenges/{c2.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], c2.id)
+
 
 class ApiChallengeNextLevelTestCase(TestCase):
     """POST /api/challenge/<id>/next-level/."""
@@ -489,6 +597,20 @@ class ApiChallengeNextLevelTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('game', response.data)
+
+    def test_add_challenge_level_404_wrong_player(self):
+        other_player = Player.objects.create(name='Other', language='en')
+        ChallengeLevel.objects.create(
+            sequence=1, level='advanced', length=10, media='images',
+            jokers=2, include_rare=True, title='Level 1', description='Second',
+        )
+        _player_auth(self.client, other_player)
+        response = self.client.post(
+            f'/api/challenge/{self.challenge.id}/next-level',
+            {},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class ApiJwtTestCase(TestCase):

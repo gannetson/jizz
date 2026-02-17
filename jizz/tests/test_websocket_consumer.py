@@ -606,7 +606,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
     def test_websocket_connect_invalid_game_token_accepts(self):
         """Connect with a game token that does not exist in DB still accepts (game loaded later on join)."""
         async def async_test():
-            communicator = WebsocketCommunicator(application, "/mpg/nonexistent-token-xyz/")
+            communicator = WebsocketCommunicator(application, "/mpg/nonexistent-token-xyz")
             connected, _ = await communicator.connect()
             self.assertTrue(connected)
             await communicator.disconnect()

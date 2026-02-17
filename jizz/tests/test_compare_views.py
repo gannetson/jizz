@@ -198,13 +198,16 @@ class ComparisonRequestViewTestCase(TestCase):
 
     @patch('compare.views.ComparisonRequestView._generate_comparison')
     def test_request_post_family_creates_new_comparison(self, mock_generate):
-        mock_generate.return_value = SpeciesComparison.objects.create(
-            comparison_type='family',
-            family_1='Turdidae',
-            family_2='Passeridae',
-            summary='Generated.',
-            detailed_comparison='Generated comparison.',
-        )
+        # Create comparison only when the view calls _generate_comparison (after existing check)
+        def create_comparison(*args, **kwargs):
+            return SpeciesComparison.objects.create(
+                comparison_type='family',
+                family_1='Turdidae',
+                family_2='Passeridae',
+                summary='Generated.',
+                detailed_comparison='Generated comparison.',
+            )
+        mock_generate.side_effect = create_comparison
         response = self.client.post(
             '/api/compare/request/',
             {

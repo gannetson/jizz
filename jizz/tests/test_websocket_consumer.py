@@ -620,7 +620,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             consumer.send = AsyncMock()
             await consumer.update_players({'players': [{'name': 'P1', 'score': 10}]})
             consumer.send.assert_called_once()
-            payload = json.loads(consumer.send.call_args[0][0])
+            payload = json.loads(consumer.send.call_args[1]['text_data'])
             self.assertEqual(payload['action'], 'update_players')
             self.assertEqual(payload['players'], [{'name': 'P1', 'score': 10}])
 
@@ -633,7 +633,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             consumer.send = AsyncMock()
             await consumer.player_joined({'player_name': 'Alice'})
             consumer.send.assert_called_once()
-            payload = json.loads(consumer.send.call_args[0][0])
+            payload = json.loads(consumer.send.call_args[1]['text_data'])
             self.assertEqual(payload['action'], 'player_joined')
             self.assertEqual(payload['player_name'], 'Alice')
 
@@ -646,7 +646,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             consumer.send = AsyncMock()
             await consumer.game_started({})
             consumer.send.assert_called_once()
-            payload = json.loads(consumer.send.call_args[0][0])
+            payload = json.loads(consumer.send.call_args[1]['text_data'])
             self.assertEqual(payload['action'], 'game_started')
 
         asyncio.run(async_test())
@@ -659,7 +659,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             question_data = {'id': 1, 'species': 1}
             await consumer.new_question({'question': question_data})
             consumer.send.assert_called_once()
-            payload = json.loads(consumer.send.call_args[0][0])
+            payload = json.loads(consumer.send.call_args[1]['text_data'])
             self.assertEqual(payload['action'], 'new_question')
             self.assertEqual(payload['question'], question_data)
 
@@ -675,7 +675,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                 'host_name': 'Host',
             })
             consumer.send.assert_called_once()
-            payload = json.loads(consumer.send.call_args[0][0])
+            payload = json.loads(consumer.send.call_args[1]['text_data'])
             self.assertEqual(payload['action'], 'rematch_invitation')
             self.assertEqual(payload['new_game_token'], 'abc123')
             self.assertEqual(payload['host_name'], 'Host')

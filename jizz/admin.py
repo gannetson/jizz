@@ -10,7 +10,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
-                         CountrySpecies, Feedback, FlagQuestion, Game, Player,
+                         CountrySpecies, Feedback, FlagQuestion, Game, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
                          Update, CountryGame, Language, SpeciesName, UserProfile)
@@ -421,6 +421,14 @@ class SpeciesAdmin(admin.ModelAdmin):
 @register(Language)
 class LanguageAdmin(admin.ModelAdmin):
     fields = ['code', 'name']
+
+
+@register(Page)
+class PageAdmin(admin.ModelAdmin):
+    list_display = ['title', 'slug', 'show']
+    list_editable = ['show']
+    prepopulated_fields = {'slug': ('title',)}
+    fields = ['title', 'slug', 'content', 'show']
 
 
 @register(SpeciesName)

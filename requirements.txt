@@ -1,5 +1,6 @@
 
 Django==4.2.3
+django-quill-editor==0.1.42
 Pillow==10.4.0
 Pygments==2.15.1
 appnope==0.1.3

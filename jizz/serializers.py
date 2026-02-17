@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, SpeciesName, UserProfile
+    ChallengeLevel, Language, Page, SpeciesName, UserProfile
 from media.models import Media, MediaReview, FlagMedia
 
 
@@ -868,6 +868,30 @@ class LanguageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Language
         fields = ('code', 'name')
+
+
+class PageSerializer(serializers.ModelSerializer):
+    content = serializers.SerializerMethodField()
+
+    def get_content(self, obj):
+        """Return Quill content as JSON string (delta + html) for frontend."""
+        val = obj.content
+        if hasattr(val, 'json_string'):
+            return val.json_string
+        if isinstance(val, str):
+            return val
+        return val if val is not None else '{"delta":"","html":""}'
+
+    class Meta:
+        model = Page
+        fields = ('id', 'title', 'slug', 'content', 'show')
+
+
+class PageListSerializer(serializers.ModelSerializer):
+    """Minimal serializer for help overview (no content)."""
+    class Meta:
+        model = Page
+        fields = ('id', 'title', 'slug')
 
 
 class FeedbackSerializer(serializers.ModelSerializer):

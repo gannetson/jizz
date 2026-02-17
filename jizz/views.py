@@ -33,12 +33,15 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
-from .models import CountryChallenge, CountryGame, ChallengeLevel, Game, Language
+from .models import CountryChallenge, CountryGame, ChallengeLevel, Game, Language, Page
 from .serializers import (
     GameSerializer,
     CountryGameSerializer,
     FamilyListSerializer,
-    OrderListSerializer, LanguageSerializer,
+    OrderListSerializer,
+    LanguageSerializer,
+    PageSerializer,
+    PageListSerializer,
 )
 
 from jizz.models import (
@@ -162,6 +165,25 @@ class LanguageListView(ListAPIView):
     serializer_class = LanguageSerializer
     queryset = Language.objects.all()
     pagination_class = None
+
+
+class PageListView(ListAPIView):
+    """List help pages (show=True only)."""
+    serializer_class = PageListSerializer
+    queryset = Page.objects.filter(show=True).order_by('title')
+    pagination_class = None
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+
+class PageDetailView(RetrieveAPIView):
+    """Retrieve a help page by slug."""
+    serializer_class = PageSerializer
+    queryset = Page.objects.filter(show=True)
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'slug'
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 
 class FamilyListView(ListAPIView):

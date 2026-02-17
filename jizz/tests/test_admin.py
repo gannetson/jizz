@@ -36,7 +36,9 @@ class AdminAuthenticationTestCase(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.country = Country.objects.create(name='Netherlands', code='NL')
+        self.country = Country.objects.get_or_create(
+            code='NL', defaults={'name': 'Netherlands'}
+        )[0]
 
     def test_changelist_redirects_to_login_when_not_authenticated(self):
         url = reverse('admin:jizz_country_changelist')
@@ -60,7 +62,7 @@ class AdminChangelistTestCase(TestCase):
         self.client.force_login(self.user)
 
     def test_country_changelist(self):
-        Country.objects.create(name='Netherlands', code='NL')
+        Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})
         response = self.client.get(reverse('admin:jizz_country_changelist'))
         self.assertEqual(response.status_code, 200)
 
@@ -70,7 +72,7 @@ class AdminChangelistTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_game_changelist(self):
-        country = Country.objects.create(name='Netherlands', code='NL')
+        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         player = Player.objects.create(name='P', language='en')
         Game.objects.create(
             country=country, level='beginner', length=5, media='images',
@@ -85,7 +87,7 @@ class AdminChangelistTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_playerscore_changelist(self):
-        country = Country.objects.create(name='Netherlands', code='NL')
+        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         player = Player.objects.create(name='P', language='en')
         game = Game.objects.create(
             country=country, level='beginner', length=5, media='images',
@@ -96,7 +98,7 @@ class AdminChangelistTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_countryspecies_changelist(self):
-        country = Country.objects.create(name='Netherlands', code='NL')
+        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         species = Species.objects.create(name='Robin', name_latin='Erithacus', code='ROB01')
         CountrySpecies.objects.create(country=country, species=species, status='native')
         response = self.client.get(reverse('admin:jizz_countryspecies_changelist'))
@@ -112,7 +114,7 @@ class AdminChangelistTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_countrychallenge_changelist(self):
-        country = Country.objects.create(name='Netherlands', code='NL')
+        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         player = Player.objects.create(name='P', language='en')
         CountryChallenge.objects.create(country=country, player=player)
         response = self.client.get(reverse('admin:jizz_countrychallenge_changelist'))
@@ -132,7 +134,7 @@ class AdminChangeFormTestCase(TestCase):
         self.client.force_login(self.user)
 
     def test_country_change(self):
-        country = Country.objects.create(name='Netherlands', code='NL')
+        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         response = self.client.get(
             reverse('admin:jizz_country_change', args=(country.code,))
         )
@@ -148,7 +150,7 @@ class AdminChangeFormTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_game_change(self):
-        country = Country.objects.create(name='Netherlands', code='NL')
+        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         player = Player.objects.create(name='P', language='en')
         game = Game.objects.create(
             country=country, level='beginner', length=5, media='images',
@@ -183,7 +185,9 @@ class AdminCountryCustomUrlsTestCase(TestCase):
         self.user = _create_staff_user()
         self.client = Client()
         self.client.force_login(self.user)
-        self.country = Country.objects.create(name='Netherlands', code='NL')
+        self.country = Country.objects.get_or_create(
+            code='NL', defaults={'name': 'Netherlands'}
+        )[0]
 
     @patch('jizz.admin.sync_species')
     @patch('jizz.admin.sync_country')
@@ -245,9 +249,10 @@ class AdminSpeciesCompareViewTestCase(TestCase):
 
     def test_compare_species_get_returns_200_or_template_missing(self):
         url = reverse('admin:compare-species')
-        response = self.client.get(url)
-        # Either 200 (template exists) or 500/404 if template missing
-        self.assertIn(response.status_code, (200, 404, 500))
+        # Don't raise on 500 (e.g. TemplateDoesNotExist when template is missing)
+        response = self.client.get(url, raise_request_exception=False)
+        # Either 200 (template exists) or 500 if template missing
+        self.assertIn(response.status_code, (200, 500))
 
     def test_compare_species_post_missing_selection_redirects_to_changelist(self):
         url = reverse('admin:compare-species')
@@ -333,7 +338,7 @@ class AdminSpeciesActionsTestCase(TestCase):
             reverse('admin:compare_speciescomparison_change', args=(comp.pk,)),
         )
 
-    @patch('jizz.admin.BirdsOfTheWorldScraper')
+    @patch('compare.scraper.BirdsOfTheWorldScraper')
     def test_scrape_traits_action_mocked_scraper(self, MockScraper):
         mock_instance = MagicMock()
         mock_instance.scrape_species.return_value = {

@@ -247,12 +247,10 @@ class AdminSpeciesCompareViewTestCase(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
 
-    def test_compare_species_get_returns_200_or_template_missing(self):
+    def test_compare_species_get_returns_200(self):
         url = reverse('admin:compare-species')
-        # Don't raise on 500 (e.g. TemplateDoesNotExist when template is missing)
-        response = self.client.get(url, raise_request_exception=False)
-        # Either 200 (template exists) or 500 if template missing
-        self.assertIn(response.status_code, (200, 500))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
 
     def test_compare_species_post_missing_selection_redirects_to_changelist(self):
         url = reverse('admin:compare-species')

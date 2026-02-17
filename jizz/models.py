@@ -19,7 +19,7 @@ class Country(models.Model):
 
     @property
     def count(self):
-        return self.species.count()
+        return self.countryspecies.count()
 
     def __str__(self):
         return self.name

@@ -74,7 +74,7 @@ class CountryAdmin(admin.ModelAdmin):
         sync_species()
         sync_country(country.code)
         # get_country_images(country.code)
-        messages.add_message(request, messages.INFO, f'Found {country.species.count()} species.')
+        messages.add_message(request, messages.INFO, f'Found {country.countryspecies.count()} species.')
         country_url = reverse('admin:jizz_country_change', args=(country.pk,))
         response = HttpResponseRedirect(country_url)
         return response
@@ -86,7 +86,7 @@ class CountryAdmin(admin.ModelAdmin):
             country.save()
         sync_country(country.code)
         get_country_images(country.code)
-        messages.add_message(request, messages.INFO, f'Found {country.species.count()} species.')
+        messages.add_message(request, messages.INFO, f'Found {country.countryspecies.count()} species.')
         country_url = reverse('admin:jizz_country_change', args=(country.pk,))
         response = HttpResponseRedirect(country_url)
         return response

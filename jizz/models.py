@@ -387,17 +387,25 @@ class Game(models.Model):
             return question
 
         elif self.level == 'beginner':
-            options = all_species.order_by('?')[:3]
-
+            # Distractors must be at least 20 away from answer by species id
+            far_species = all_species.exclude(id=species.id).filter(
+                models.Q(id__lte=species.id - 20) | models.Q(id__gte=species.id + 20)
+            )
+            options = list(far_species.order_by('?')[:3])
+            # If not enough far species, fill with any other species (excluding answer)
+            if len(options) < 3:
+                remaining = all_species.exclude(id=species.id).exclude(id__in=[s.id for s in options])
+                for s in remaining.order_by('?')[: 3 - len(options)]:
+                    options.append(s)
             question = self.questions.create(
                 species=species, number=number, sequence=sequence
             )
-            options = list(options) + [species]
+            options = options + [species]
             shuffle(options)
-            for index, species in enumerate(options):
+            for index, opt in enumerate(options):
                 QuestionOption.objects.create(
                     question=question,
-                    species=species,
+                    species=opt,
                     order=index
                 )
             return question

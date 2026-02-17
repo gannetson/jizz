@@ -1,12 +1,15 @@
 import asyncio
+import json
 import unittest
 from django.test import TransactionTestCase
 from django.db import transaction
 from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
+from unittest.mock import AsyncMock
 from jizz.models import Game, Player, Answer, Species, Country, CountrySpecies, PlayerScore
 from media.models import Media
 from jizz.asgi import application
+from jizz.consumers import QuizConsumer
 
 
 class WebSocketConsumerTestCase(TransactionTestCase):
@@ -574,5 +577,107 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(response['question']['game']['token'], game.token)
 
             await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_receive_missing_action_no_crash(self):
+        """Receive with empty object or missing 'action' does not raise."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({})
+            await communicator.send_json_to({"other_key": "value"})
+            # No response expected; disconnect without error
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_connect_invalid_game_token_accepts(self):
+        """Connect with a game token that does not exist in DB still accepts (game loaded later on join)."""
+        async def async_test():
+            communicator = WebsocketCommunicator(application, "/mpg/nonexistent-token-xyz/")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_channel_handler_update_players_sends_correct_json(self):
+        """Group handler update_players sends action and players to client."""
+        async def async_test():
+            consumer = QuizConsumer()
+            consumer.send = AsyncMock()
+            await consumer.update_players({'players': [{'name': 'P1', 'score': 10}]})
+            consumer.send.assert_called_once()
+            payload = json.loads(consumer.send.call_args[0][0])
+            self.assertEqual(payload['action'], 'update_players')
+            self.assertEqual(payload['players'], [{'name': 'P1', 'score': 10}])
+
+        asyncio.run(async_test())
+
+    def test_channel_handler_player_joined_sends_correct_json(self):
+        """Group handler player_joined sends action and player_name."""
+        async def async_test():
+            consumer = QuizConsumer()
+            consumer.send = AsyncMock()
+            await consumer.player_joined({'player_name': 'Alice'})
+            consumer.send.assert_called_once()
+            payload = json.loads(consumer.send.call_args[0][0])
+            self.assertEqual(payload['action'], 'player_joined')
+            self.assertEqual(payload['player_name'], 'Alice')
+
+        asyncio.run(async_test())
+
+    def test_channel_handler_game_started_sends_correct_json(self):
+        """Group handler game_started sends action."""
+        async def async_test():
+            consumer = QuizConsumer()
+            consumer.send = AsyncMock()
+            await consumer.game_started({})
+            consumer.send.assert_called_once()
+            payload = json.loads(consumer.send.call_args[0][0])
+            self.assertEqual(payload['action'], 'game_started')
+
+        asyncio.run(async_test())
+
+    def test_channel_handler_new_question_sends_correct_json(self):
+        """Group handler new_question sends action and question."""
+        async def async_test():
+            consumer = QuizConsumer()
+            consumer.send = AsyncMock()
+            question_data = {'id': 1, 'species': 1}
+            await consumer.new_question({'question': question_data})
+            consumer.send.assert_called_once()
+            payload = json.loads(consumer.send.call_args[0][0])
+            self.assertEqual(payload['action'], 'new_question')
+            self.assertEqual(payload['question'], question_data)
+
+        asyncio.run(async_test())
+
+    def test_channel_handler_rematch_invitation_sends_correct_json(self):
+        """Group handler rematch_invitation sends action, new_game_token, host_name."""
+        async def async_test():
+            consumer = QuizConsumer()
+            consumer.send = AsyncMock()
+            await consumer.rematch_invitation({
+                'new_game_token': 'abc123',
+                'host_name': 'Host',
+            })
+            consumer.send.assert_called_once()
+            payload = json.loads(consumer.send.call_args[0][0])
+            self.assertEqual(payload['action'], 'rematch_invitation')
+            self.assertEqual(payload['new_game_token'], 'abc123')
+            self.assertEqual(payload['host_name'], 'Host')
 
         asyncio.run(async_test())

@@ -170,8 +170,11 @@ class QuizConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError as e:
             print(f"Error parsing JSON in receive: {e}, text_data: {text_data}")
             return
-        
-        print(f"Received action: {data.get('action')}")
+
+        action = data.get('action')
+        if not action:
+            return
+        print(f"Received action: {action}")
 
         # if data['action'] == 'create_game':
         #     game = await sync_to_async(Game.objects.create)(token=self.game_token, multiplayer=True)
@@ -179,13 +182,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
         #     await self.send(text_data=json.dumps(
         #         {'message': 'Game created', 'game_code': game.token, 'player_token': str(player.token)}))
 
-        if data['action'] == 'end_game':
+        if action == 'end_game':
             game = await sync_to_async(Game.objects.create)(token=self.game_token, multiplayer=True)
             player = await sync_to_async(Player.objects.create)(game=game, name=data['player_name'])
             await self.send(text_data=json.dumps(
                 {'message': 'Game created', 'game_code': game.token, 'player_token': str(player.token)}))
 
-        elif data['action'] == 'join_game':
+        elif action == 'join_game':
             from jizz.models import PlayerScore
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
             player = await sync_to_async(Player.objects.get)(token=data['player_token'])
@@ -204,7 +207,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
             await self.send_current_question(False)
             await self.send_current_answer()
 
-        elif data['action'] == 'start_game':
+        elif action == 'start_game':
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
             if hasattr(Game, 'started'):
                 game.started = True
@@ -218,10 +221,10 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             await self.next_question()
 
-        elif data['action'] == 'next_question':
+        elif action == 'next_question':
             await self.next_question()
 
-        elif data['action'] == 'submit_answer':
+        elif action == 'submit_answer':
             from jizz.models import PlayerScore
             player = await sync_to_async(Player.objects.get)(token=data['player_token'])
             game = await sync_to_async(Game.objects.get)(token=self.game_token)
@@ -253,7 +256,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        elif data['action'] == 'rematch':
+        elif action == 'rematch':
             # Host requests a rematch - create new game with same specs and notify all players
             try:
                 player_token = data.get('player_token')

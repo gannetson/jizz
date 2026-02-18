@@ -394,6 +394,37 @@ class ApiMediaTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('results', response.data)
 
+    def test_media_list_filter_by_species(self):
+        """Filtering by species=ID returns only unreviewed media for that species."""
+        species_b = Species.objects.create(name='B', name_latin='B', code='B02')
+        media_b = Media.objects.create(
+            species=species_b, type='image', url='https://x.com/2.jpg', source='test'
+        )
+        # Unfiltered: both media appear (neither reviewed)
+        response = self.client.get('/api/media/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in response.data['results']]
+        self.assertIn(self.media.id, ids)
+        self.assertIn(media_b.id, ids)
+        # Filter by first species: only self.media
+        response = self.client.get('/api/media/', {'species': self.species.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in response.data['results']]
+        self.assertIn(self.media.id, ids)
+        self.assertNotIn(media_b.id, ids)
+        # Filter by second species: only media_b
+        response = self.client.get('/api/media/', {'species': species_b.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in response.data['results']]
+        self.assertNotIn(self.media.id, ids)
+        self.assertIn(media_b.id, ids)
+
+    def test_media_list_filter_by_species_invalid_ignored(self):
+        """Invalid species param (non-integer) does not crash; list returns 200."""
+        response = self.client.get('/api/media/', {'species': 'not-an-id'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
 
 class ApiSpeciesReviewStatsTestCase(TestCase):
     """GET /api/species-review-stats/ (optional country, type)."""

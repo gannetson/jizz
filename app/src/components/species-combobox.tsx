@@ -1,12 +1,19 @@
 import React, { useMemo, ReactNode } from "react"
 import ReactSelect, { StylesConfig } from "react-select"
 import { Box } from "@chakra-ui/react"
+import { useIntl } from "react-intl"
 import { Species } from "../core/app-context"
 
 type Props = {
   species: Species[]
   playerLanguage?: string | null
   onSelect: (species: Species) => void
+  /** When used as a filter: currently selected species (null = no filter). */
+  value?: Species | null
+  /** Allow clearing the selection; when cleared, onClear is called. */
+  isClearable?: boolean
+  /** Called when user clears the selection (only when isClearable is true). */
+  onClear?: () => void
   loading?: boolean
   autoFocus?: boolean
   placeholder?: ReactNode
@@ -15,9 +22,9 @@ type Props = {
   resetInputOnSelect?: boolean
 }
 
-const defaultPlaceholder = "Start typing your answer..."
-const defaultEmptyMessage = "No options found"
-const defaultLoadingMessage = "Loading..."
+const defaultPlaceholderKey = "type species"
+const defaultEmptyMessageKey = "no options found"
+const defaultLoadingMessageKey = "loading"
 
 interface OptionType {
   label: string
@@ -29,14 +36,21 @@ export const SpeciesCombobox = ({
   species,
   playerLanguage,
   onSelect,
+  value = null,
+  isClearable = false,
+  onClear,
   loading = false,
   autoFocus = false,
-  placeholder = defaultPlaceholder,
-  emptyMessage = defaultEmptyMessage,
-  loadingMessage = defaultLoadingMessage,
+  placeholder,
+  emptyMessage,
+  loadingMessage,
   resetInputOnSelect = true,
 }: Props) => {
+  const intl = useIntl()
   const speciesArray = Array.isArray(species) ? species : []
+  const defaultPlaceholder = intl.formatMessage({ id: defaultPlaceholderKey, defaultMessage: "Start typing your answer..." })
+  const defaultEmptyMessage = intl.formatMessage({ id: defaultEmptyMessageKey, defaultMessage: "No options found" })
+  const defaultLoadingMessage = intl.formatMessage({ id: defaultLoadingMessageKey, defaultMessage: "Loading..." })
   
   const options = useMemo(() => {
     return speciesArray.map((speciesItem) => {
@@ -49,14 +63,20 @@ export const SpeciesCombobox = ({
     })
   }, [speciesArray, playerLanguage])
 
+  const selectedOption = useMemo(() => {
+    if (!value) return null
+    return options.find((o) => o.original.id === value.id) ?? null
+  }, [options, value])
+
   const handleChange = (selectedOption: OptionType | null) => {
-    if (selectedOption && selectedOption.original) {
+    if (selectedOption?.original) {
       onSelect(selectedOption.original)
+    } else if (isClearable && onClear) {
+      onClear()
     }
   }
 
-  const placeholderText =
-    typeof placeholder === "string" ? placeholder : defaultPlaceholder
+  const placeholderText = placeholder ?? defaultPlaceholder
 
   const noOptionsMessage = () => {
     if (typeof emptyMessage === "string") {
@@ -96,10 +116,11 @@ export const SpeciesCombobox = ({
     <Box>
       <ReactSelect<OptionType>
         options={options}
+        value={selectedOption}
         onChange={handleChange}
         isLoading={loading}
         isSearchable={true}
-        isClearable={false}
+        isClearable={isClearable}
         placeholder={placeholderText}
         noOptionsMessage={noOptionsMessage}
         loadingMessage={loadingMessageText}

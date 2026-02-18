@@ -2,9 +2,10 @@ import {Box, Heading, Select, Portal, createListCollection, Theme} from "@chakra
 import { UseCountries } from "../user/use-countries";
 import { useContext, useEffect, useMemo } from "react";
 import AppContext from "../core/app-context";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 const SelectCountry = () => {
+  const intl = useIntl();
   const { countries: countryList } = UseCountries();
   const { country, setCountry, game } = useContext(AppContext);
 
@@ -53,7 +54,7 @@ const SelectCountry = () => {
         <Select.HiddenSelect />
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="Select country..." />
+            <Select.ValueText placeholder={intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' })} />
           </Select.Trigger>
           <Select.IndicatorGroup>
             <Select.Indicator />

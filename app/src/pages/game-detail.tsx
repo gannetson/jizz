@@ -104,7 +104,7 @@ export const GameDetailPage = () => {
         <Page.Body>
           <VStack gap={4}>
             <Spinner size="xl" colorPalette="primary" />
-            <Text>Loading game details...</Text>
+            <Text><FormattedMessage id="loading game details" defaultMessage="Loading game details..." /></Text>
           </VStack>
         </Page.Body>
       </Page>

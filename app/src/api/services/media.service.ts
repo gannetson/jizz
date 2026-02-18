@@ -44,7 +44,7 @@ export interface SpeciesReviewStatsResponse {
 }
 
 export interface MediaService {
-  getMedia(type?: string, page?: number, countryCode?: string, language?: string): Promise<PaginatedMediaResponse>;
+  getMedia(type?: string, page?: number, countryCode?: string, language?: string, speciesId?: number): Promise<PaginatedMediaResponse>;
   /** Pass playerToken when using a game player; omit when authenticated as a user (JWT). */
   reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
   getSpeciesReviewStats(countryCode?: string, mediaType?: string, language?: string): Promise<SpeciesReviewStatsResponse>;
@@ -53,13 +53,16 @@ export interface MediaService {
 export class MediaServiceImpl implements MediaService {
   constructor(private client: ApiClient) {}
 
-  async getMedia(type: string = 'image', page: number = 1, countryCode?: string, language?: string): Promise<PaginatedMediaResponse> {
+  async getMedia(type: string = 'image', page: number = 1, countryCode?: string, language?: string, speciesId?: number): Promise<PaginatedMediaResponse> {
     let url = `/api/media/?type=${type}&page=${page}`;
     if (countryCode) {
       url += `&country=${countryCode}`;
     }
     if (language) {
       url += `&language=${encodeURIComponent(language)}`;
+    }
+    if (speciesId != null) {
+      url += `&species=${speciesId}`;
     }
     const response = await this.client.get<PaginatedMediaResponse>(url);
     return response;

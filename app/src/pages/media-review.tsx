@@ -17,7 +17,9 @@ import {
 import { Page } from '../shared/components/layout';
 import { FormattedMessage, useIntl } from 'react-intl';
 import AppContext from '../core/app-context';
+import type { Species } from '../core/app-context';
 import { MediaServiceImpl, MediaItem, SpeciesReviewStatsResponse } from '../api/services/media.service';
+import SpeciesCombobox from '../components/species-combobox';
 import { ApiClient, apiClient } from '../api/client';
 import { authService } from '../api/services/auth.service';
 import { toaster } from '@/components/ui/toaster';
@@ -63,6 +65,9 @@ export const MediaReviewPage = () => {
   const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | 'audio'>('image');
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebrationSpeciesName, setCelebrationSpeciesName] = useState<string | null>(null);
+  const [speciesList, setSpeciesList] = useState<Species[]>([]);
+  const [speciesListLoading, setSpeciesListLoading] = useState(false);
+  const [selectedSpecies, setSelectedSpecies] = useState<Species | null>(null);
 
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
@@ -70,10 +75,39 @@ export const MediaReviewPage = () => {
       setSelectedCountry(countryCode.toUpperCase());
     }
   }, [countryCode]);
+
+  // Clear species filter when country changes
+  useEffect(() => {
+    setSelectedSpecies(null);
+  }, [selectedCountry]);
+
   const { countries } = UseCountries();
   const { player, language } = useContext(AppContext);
   const intl = useIntl();
   const languageParam = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
+
+  // Load species for selected country (for filter dropdown)
+  useEffect(() => {
+    if (!selectedCountry) {
+      setSpeciesList([]);
+      return;
+    }
+    let cancelled = false;
+    setSpeciesListLoading(true);
+    fetch(`/api/species/?countryspecies__country=${selectedCountry}&language=${languageParam}`, { cache: 'no-cache' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : data?.results ?? data?.data ?? [];
+        if (!cancelled) setSpeciesList(arr);
+      })
+      .catch(() => {
+        if (!cancelled) setSpeciesList([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSpeciesListLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedCountry, languageParam]);
 
   const countryCollection = useMemo(() => {
     const items = countries.map((c, index) => ({
@@ -102,7 +136,8 @@ export const MediaReviewPage = () => {
       page: number = 1,
       reset: boolean = false,
       countryCode?: string,
-      mediaType: 'image' | 'video' | 'audio' = 'image'
+      mediaType: 'image' | 'video' | 'audio' = 'image',
+      speciesId?: number
     ) => {
       try {
         if (reset) {
@@ -113,7 +148,7 @@ export const MediaReviewPage = () => {
           setLoadingMore(true);
         }
 
-        const data = await mediaService.getMedia(mediaType, page, countryCode, languageParam);
+        const data = await mediaService.getMedia(mediaType, page, countryCode, languageParam, speciesId);
       
       // Use functional updates to access current state
       setLoadedItemIds(currentLoadedIds => {
@@ -156,8 +191,8 @@ export const MediaReviewPage = () => {
   );
 
   useEffect(() => {
-    loadMedia(1, true, selectedCountry || undefined, selectedMediaType);
-  }, [selectedCountry, selectedMediaType, languageParam, loadMedia]);
+    loadMedia(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id);
+  }, [selectedCountry, selectedMediaType, selectedSpecies?.id, languageParam, loadMedia]);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,9 +213,9 @@ export const MediaReviewPage = () => {
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasNextPage) {
-      loadMedia(currentPage + 1, false, selectedCountry || undefined, selectedMediaType);
+      loadMedia(currentPage + 1, false, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id);
     }
-  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry, selectedMediaType]);
+  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry, selectedMediaType, selectedSpecies?.id]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -474,7 +509,7 @@ export const MediaReviewPage = () => {
                 <Select.HiddenSelect />
                 <Select.Control>
                   <Select.Trigger>
-                    <Select.ValueText placeholder="Media type..." />
+                    <Select.ValueText placeholder={intl.formatMessage({ id: 'media type placeholder', defaultMessage: 'Media type...' })} />
                   </Select.Trigger>
                   <Select.IndicatorGroup>
                     <Select.Indicator />
@@ -506,7 +541,7 @@ export const MediaReviewPage = () => {
                 <Select.HiddenSelect />
                 <Select.Control>
                   <Select.Trigger>
-                    <Select.ValueText placeholder="Select country..." />
+                    <Select.ValueText placeholder={intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' })} />
                   </Select.Trigger>
                   <Select.IndicatorGroup>
                     <Select.Indicator />
@@ -526,6 +561,21 @@ export const MediaReviewPage = () => {
                 </Portal>
               </Select.Root>
             </Box>
+            {selectedCountry && (
+              <Box minW="220px">
+                <SpeciesCombobox
+                  species={speciesList}
+                  playerLanguage={language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en'}
+                  value={selectedSpecies}
+                  isClearable
+                  onSelect={(s) => setSelectedSpecies(s)}
+                  onClear={() => setSelectedSpecies(null)}
+                  loading={speciesListLoading}
+                  placeholder={<FormattedMessage id="filter by species" defaultMessage="Filter by species..." />}
+                  emptyMessage={<FormattedMessage id="no species found" defaultMessage="No species found" />}
+                />
+              </Box>
+            )}
           </Flex>
           {!speciesStatsLoading && speciesStats && (
             <Flex gap={6} mt={4} mb={4} flexWrap="wrap" fontWeight="bold">
@@ -541,7 +591,7 @@ export const MediaReviewPage = () => {
             </Flex>
           )}
         {loading ? (
-          <Text>Loading...</Text>
+          <Text><FormattedMessage id="loading" defaultMessage="Loading..." /></Text>
         ) : (
           <Box>
             {(() => {

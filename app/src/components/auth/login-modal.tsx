@@ -14,7 +14,7 @@ import {
   Dialog,
   Link,
 } from "@chakra-ui/react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { SiGoogle, SiApple } from "react-icons/si";
 import { authService, AuthError } from "../../api/services/auth.service";
 
@@ -25,6 +25,7 @@ type LoginModalProps = {
 };
 
 export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModalProps) => {
+  const intl = useIntl();
   const [isLogin, setIsLogin] = useState(defaultMode === 'login');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -158,7 +159,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder={intl.formatMessage({ id: 'placeholder enter email', defaultMessage: 'Enter your email' })}
                       required
                     />
                   </Field.Root>
@@ -168,7 +169,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                     colorPalette="primary"
                     width="full"
                     loading={forgotPasswordLoading}
-                    loadingText="Sending..."
+                    loadingText={intl.formatMessage({ id: 'sending', defaultMessage: 'Sending...' })}
                   >
                     <FormattedMessage id="send_reset_link" defaultMessage="Send Reset Link" />
                   </Button>
@@ -202,7 +203,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your username"
+                      placeholder={intl.formatMessage({ id: 'placeholder enter username', defaultMessage: 'Enter your username' })}
                       required={!isLogin}
                     />
                   </Field.Root>
@@ -216,7 +217,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder={intl.formatMessage({ id: 'placeholder enter email', defaultMessage: 'Enter your email' })}
                     required
                   />
                 </Field.Root>
@@ -229,7 +230,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder={intl.formatMessage({ id: 'placeholder enter password', defaultMessage: 'Enter your password' })}
                     required
                     flex={1}
                   />
@@ -256,7 +257,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                   colorPalette="primary"
                   width="full"
                   loading={loading}
-                  loadingText={isLogin ? "Logging in..." : "Registering..."}
+                  loadingText={isLogin ? intl.formatMessage({ id: 'logging in', defaultMessage: 'Logging in...' }) : intl.formatMessage({ id: 'registering', defaultMessage: 'Registering...' })}
                 >
                   {isLogin ? (
                     <FormattedMessage id="login" defaultMessage="Login" />

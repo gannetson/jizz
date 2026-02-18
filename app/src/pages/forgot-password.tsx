@@ -12,13 +12,14 @@ import {
   AlertIndicator,
   Link,
 } from "@chakra-ui/react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
+  const intl = useIntl();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export const ForgotPasswordPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                placeholder={intl.formatMessage({ id: 'placeholder enter email', defaultMessage: 'Enter your email' })}
                 required
               />
             </Field.Root>
@@ -124,7 +125,7 @@ export const ForgotPasswordPage = () => {
               colorPalette="primary"
               width="full"
               loading={loading}
-              loadingText="Sending..."
+              loadingText={intl.formatMessage({ id: 'sending', defaultMessage: 'Sending...' })}
             >
               <FormattedMessage id="send_reset_link" defaultMessage="Send Reset Link" />
             </Button>

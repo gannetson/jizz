@@ -14,6 +14,7 @@ import {
   IconButton,
 } from "@chakra-ui/react";
 import { format } from "date-fns";
+import { FormattedMessage } from "react-intl";
 import { compareService, SpeciesComparison } from "../api/services/compare.service";
 
 // Add global styles for nested modal z-index
@@ -112,7 +113,7 @@ export const ComparisonButton = ({
         {loading ? (
           <VStack gap={1}>
             <Spinner size="sm" />
-            <Text fontSize="xs">Loading...</Text>
+            <Text fontSize="xs"><FormattedMessage id="loading" defaultMessage="Loading..." /></Text>
           </VStack>
         ) : (
           buttonLabel

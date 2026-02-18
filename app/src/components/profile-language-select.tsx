@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Select, Portal, createListCollection } from "@chakra-ui/react";
+import { useIntl } from "react-intl";
 
 interface LanguageSelectProps {
   languages: any[];
@@ -8,6 +9,7 @@ interface LanguageSelectProps {
 }
 
 export const ProfileLanguageSelect = ({ languages, value, onChange }: LanguageSelectProps) => {
+  const intl = useIntl();
   // Ensure languages is always an array
   const languagesArray = Array.isArray(languages) ? languages : [];
   
@@ -41,7 +43,7 @@ export const ProfileLanguageSelect = ({ languages, value, onChange }: LanguageSe
       <Select.HiddenSelect />
       <Select.Control>
         <Select.Trigger>
-          <Select.ValueText placeholder="Select language..." />
+          <Select.ValueText placeholder={intl.formatMessage({ id: 'select language placeholder', defaultMessage: 'Select language...' })} />
         </Select.Trigger>
         <Select.IndicatorGroup>
           <Select.Indicator />

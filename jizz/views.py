@@ -301,7 +301,15 @@ class MediaListView(ListAPIView):
         media_type = self.request.query_params.get('type', 'image')
         if media_type:
             queryset = queryset.filter(type=media_type)
-        
+
+        # Optional filter by species
+        species_id = self.request.query_params.get('species')
+        if species_id:
+            try:
+                queryset = queryset.filter(species_id=int(species_id))
+            except (ValueError, TypeError):
+                pass
+
         return queryset.order_by('species__id', '-created')
 
 

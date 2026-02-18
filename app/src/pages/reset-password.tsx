@@ -14,13 +14,14 @@ import {
   HStack,
   Link,
 } from "@chakra-ui/react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate, useParams } from "react-router-dom";
 import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
 
 export const ResetPasswordPage = () => {
   const navigate = useNavigate();
+  const intl = useIntl();
   const { uid, token } = useParams<{ uid: string; token: string }>();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -138,7 +139,7 @@ export const ResetPasswordPage = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter new password"
+                  placeholder={intl.formatMessage({ id: 'placeholder enter new password', defaultMessage: 'Enter new password' })}
                   required
                   flex={1}
                 />
@@ -152,7 +153,7 @@ export const ResetPasswordPage = () => {
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
+                  placeholder={intl.formatMessage({ id: 'placeholder confirm new password', defaultMessage: 'Confirm new password' })}
                   required
                   flex={1}
                 />
@@ -163,7 +164,7 @@ export const ResetPasswordPage = () => {
               colorPalette="primary"
               width="full"
               loading={loading}
-              loadingText="Resetting..."
+              loadingText={intl.formatMessage({ id: 'resetting', defaultMessage: 'Resetting...' })}
             >
               <FormattedMessage id="reset_password" defaultMessage="Reset Password" />
             </Button>

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Select, Portal, createListCollection } from "@chakra-ui/react";
+import { useIntl } from "react-intl";
 
 interface CountrySelectProps {
   countries: any[];
@@ -8,6 +9,7 @@ interface CountrySelectProps {
 }
 
 export const ProfileCountrySelect = ({ countries, value, onChange }: CountrySelectProps) => {
+  const intl = useIntl();
   // Ensure countries is always an array
   const countriesArray = Array.isArray(countries) ? countries : [];
   
@@ -43,7 +45,7 @@ export const ProfileCountrySelect = ({ countries, value, onChange }: CountrySele
       <Select.HiddenSelect />
       <Select.Control>
         <Select.Trigger>
-          <Select.ValueText placeholder="Select country..." />
+          <Select.ValueText placeholder={intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' })} />
         </Select.Trigger>
         <Select.IndicatorGroup>
           <Select.Indicator />

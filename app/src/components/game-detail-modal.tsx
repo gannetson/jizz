@@ -188,7 +188,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
               {loading ? (
                 <VStack gap={4} py={8}>
                   <Spinner size="xl" colorPalette="primary" />
-                  <Text>Loading game details...</Text>
+                  <Text><FormattedMessage id="loading game details" defaultMessage="Loading game details..." /></Text>
                 </VStack>
               ) : error ? (
                 <Alert.Root status="error">

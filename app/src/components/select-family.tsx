@@ -6,6 +6,7 @@ import {TaxFamily, UseTaxFamily} from "../user/use-tax-family";
 
 
 const SelectTaxFamily = () => {
+  const intl = useIntl();
   const {taxFamilies} = UseTaxFamily()
   const {taxFamily, setTaxFamily, game} = useContext(AppContext);
 

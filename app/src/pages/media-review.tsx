@@ -718,10 +718,10 @@ export const MediaReviewPage = () => {
           </Flex>
           {!speciesStatsLoading && speciesStats && (
             <Flex gap={6} mt={4} mb={4} flexWrap="wrap" fontWeight="bold">
-              <Text color="green.700">
+              <Text color="primary.500">
                 <FormattedMessage id="species reviewed" defaultMessage="{count} reviewed" values={{ count: speciesStats.summary.reviewed ?? 0 }} />
               </Text>
-              <Text color="green.500">
+              <Text color="green.700">
                 <FormattedMessage id="species fully reviewed" defaultMessage="{count} fully reviewed" values={{ count: speciesStats.summary.fully_reviewed }} />
               </Text>
               <Text color="orange.600">

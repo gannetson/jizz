@@ -236,5 +236,12 @@
   "resetting": "Resetting...",
   "no options found": "No options found",
   "filter by species": "Filter by species...",
-  "no species found": "No species found"
+  "no species found": "No species found",
+  "review level fast": "Fast",
+  "review level full": "Full",
+  "review level thorough": "Thorough",
+  "ten approved title": "10 approved!",
+  "ten approved message": "Loading next species...",
+  "species reviewed": "{count} reviewed",
+  "media approved count": "Media approved {count}/10"
 }

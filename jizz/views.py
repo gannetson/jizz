@@ -274,41 +274,71 @@ class MediaPagination(PageNumberPagination):
 
 
 class MediaListView(ListAPIView):
-    """List all unreviewed media items, filtered by type (default: image) and optionally by country."""
+    """List media for review. level=fast|full|thorough. fast: species not fully reviewed and <10 approved; full: species not fully reviewed; thorough: all media with review_status."""
     serializer_class = MediaSerializer
     pagination_class = MediaPagination
-    
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['level'] = self.request.query_params.get('level', 'fast')
+        return context
+
     def get_queryset(self):
         from jizz.models import CountrySpecies
-        
-        # Get all media that haven't been reviewed yet
-        reviewed_media_ids = MediaReview.objects.values_list('media_id', flat=True).distinct()
-        queryset = Media.objects.filter(hide=False).exclude(id__in=reviewed_media_ids)
-        
-        # Filter by country if provided
+
+        level = self.request.query_params.get('level', 'fast')
+        media_type = self.request.query_params.get('type', 'image')
         country_code = self.request.query_params.get('country')
+        species_id_param = self.request.query_params.get('species')
+
+        # Base filters (type, country, species)
+        queryset = Media.objects.filter(hide=False, type=media_type)
         if country_code:
-            # Get all species for this country (ordered by species id)
-            # Pagination will handle loading species progressively
             country_species_ids = CountrySpecies.objects.exclude(
                 status__in=['introduced', 'extirpated', 'uncertain', 'unknown']
-            ).filter(
-                country__code=country_code,
-            ).values_list('species_id', flat=True).order_by('species_id')
+            ).filter(country__code=country_code).values_list('species_id', flat=True)
             queryset = queryset.filter(species_id__in=country_species_ids)
-        
-        # Filter by media type
-        media_type = self.request.query_params.get('type', 'image')
-        if media_type:
-            queryset = queryset.filter(type=media_type)
-
-        # Optional filter by species
-        species_id = self.request.query_params.get('species')
-        if species_id:
+        if species_id_param:
             try:
-                queryset = queryset.filter(species_id=int(species_id))
+                queryset = queryset.filter(species_id=int(species_id_param))
             except (ValueError, TypeError):
                 pass
+
+        if level == 'thorough':
+            # All media (including reviewed) with review counts annotated
+            queryset = queryset.annotate(
+                _approved_count=Count('reviews', filter=Q(reviews__review_type='approved')),
+                _rejected_count=Count('reviews', filter=Q(reviews__review_type='rejected')),
+                _not_sure_count=Count('reviews', filter=Q(reviews__review_type='not_sure')),
+            )
+            return queryset.order_by('species__id', '-created')
+        else:
+            # fast or full: only unreviewed media
+            reviewed_media_ids = MediaReview.objects.values_list('media_id', flat=True).distinct()
+            queryset = queryset.exclude(id__in=reviewed_media_ids)
+
+            if level == 'fast':
+                # Restrict to species that have < 10 approved media (and at least one unreviewed)
+                unreviewed_species_ids = list(
+                    queryset.values_list('species_id', flat=True).distinct()
+                )
+                if not unreviewed_species_ids:
+                    return Media.objects.none().order_by('species__id', '-created')
+                species_under_10 = list(
+                    Species.objects.filter(id__in=unreviewed_species_ids)
+                    .filter(media__type=media_type)
+                    .annotate(
+                        approved_count=Count(
+                            'media',
+                            filter=Q(media__type=media_type, media__reviews__review_type='approved'),
+                            distinct=True,
+                        ),
+                    )
+                    .filter(approved_count__lt=10)
+                    .values_list('id', flat=True)
+                )
+                queryset = queryset.filter(species_id__in=species_under_10)
+            # full: no extra filter
 
         return queryset.order_by('species__id', '-created')
 
@@ -373,7 +403,14 @@ class SpeciesReviewStatsView(APIView):
         species_list = list(qs)
         fully_reviewed = sum(1 for s in species_list if s.media_with_review >= s.total_media)
         not_reviewed = sum(1 for s in species_list if s.media_with_review == 0)
-        partly_reviewed = len(species_list) - fully_reviewed - not_reviewed
+        # Reviewed = 10+ approved but not fully reviewed (excluded from partly_reviewed)
+        reviewed = sum(
+            1 for s in species_list
+            if s.media_with_review < s.total_media and s.approved_media >= 10
+        )
+        partly_reviewed = (
+            len(species_list) - fully_reviewed - not_reviewed - reviewed
+        )
 
         serializer = SpeciesReviewStatsSerializer(
             species_list,
@@ -383,6 +420,7 @@ class SpeciesReviewStatsView(APIView):
         return Response({
             'summary': {
                 'fully_reviewed': fully_reviewed,
+                'reviewed': reviewed,
                 'partly_reviewed': partly_reviewed,
                 'not_reviewed': not_reviewed,
             },

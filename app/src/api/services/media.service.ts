@@ -1,5 +1,13 @@
 import { ApiClient } from '../client';
 
+export type ReviewLevel = 'fast' | 'full' | 'thorough';
+
+export interface MediaItemReviewStatus {
+  approved: number;
+  rejected: number;
+  dont_know: number;
+}
+
 export interface MediaItem {
   id: number;
   type: 'image' | 'video' | 'audio';
@@ -15,6 +23,8 @@ export interface MediaItem {
   species_id: number;
   hide: boolean;
   created: string;
+  /** Present when level=thorough */
+  review_status?: MediaItemReviewStatus | null;
 }
 
 export interface PaginatedMediaResponse {
@@ -37,6 +47,8 @@ export interface SpeciesReviewStats {
 export interface SpeciesReviewStatsResponse {
   summary: {
     fully_reviewed: number;
+    /** Species with 10+ approved but not fully reviewed (excluded from partly_reviewed) */
+    reviewed: number;
     partly_reviewed: number;
     not_reviewed: number;
   };
@@ -44,7 +56,7 @@ export interface SpeciesReviewStatsResponse {
 }
 
 export interface MediaService {
-  getMedia(type?: string, page?: number, countryCode?: string, language?: string, speciesId?: number): Promise<PaginatedMediaResponse>;
+  getMedia(type?: string, page?: number, countryCode?: string, language?: string, speciesId?: number, level?: ReviewLevel): Promise<PaginatedMediaResponse>;
   /** Pass playerToken when using a game player; omit when authenticated as a user (JWT). */
   reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
   getSpeciesReviewStats(countryCode?: string, mediaType?: string, language?: string): Promise<SpeciesReviewStatsResponse>;
@@ -53,8 +65,8 @@ export interface MediaService {
 export class MediaServiceImpl implements MediaService {
   constructor(private client: ApiClient) {}
 
-  async getMedia(type: string = 'image', page: number = 1, countryCode?: string, language?: string, speciesId?: number): Promise<PaginatedMediaResponse> {
-    let url = `/api/media/?type=${type}&page=${page}`;
+  async getMedia(type: string = 'image', page: number = 1, countryCode?: string, language?: string, speciesId?: number, level: ReviewLevel = 'fast'): Promise<PaginatedMediaResponse> {
+    let url = `/api/media/?type=${type}&page=${page}&level=${level}`;
     if (countryCode) {
       url += `&country=${countryCode}`;
     }

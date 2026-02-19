@@ -236,5 +236,20 @@
   "resetting": "Resetten...",
   "no options found": "Geen opties gevonden",
   "filter by species": "Filter op soort...",
-  "no species found": "Geen soorten gevonden"
+  "no species found": "Geen soorten gevonden",
+  "review level fast": "Snel",
+  "review level full": "Volledig",
+  "review level thorough": "Grondig",
+  "ten approved title": "10 goedgekeurd!",
+  "ten approved message": "Volgende soort laden...",
+  "species reviewed": "{count} beoordeeld",
+  "media approved count": "Media goedgekeurd {count}/10",
+  "well done": "Goed gedaan!",
+  "species fully reviewed message": "is nu volledig beoordeeld!",
+  "dismiss": "Sluiten",
+  "species fully reviewed": "{count} volledig beoordeeld",
+  "species partly reviewed": "{count} deels beoordeeld",
+  "species not reviewed": "{count} niet beoordeeld",
+  "help_page": "Help",
+  "species review stats line": "{approved} goedgekeurd, {rejected} afgewezen, {not_sure} niet zeker"
 }

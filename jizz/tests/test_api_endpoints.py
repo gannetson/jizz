@@ -440,6 +440,7 @@ class ApiSpeciesReviewStatsTestCase(TestCase):
         self.assertIn('summary', response.data)
         self.assertIn('species', response.data)
         self.assertIn('fully_reviewed', response.data['summary'])
+        self.assertIn('reviewed', response.data['summary'])
         self.assertIn('partly_reviewed', response.data['summary'])
         self.assertIn('not_reviewed', response.data['summary'])
 

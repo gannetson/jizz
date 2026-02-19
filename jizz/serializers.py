@@ -38,10 +38,11 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
 
 
 class MediaSerializer(serializers.ModelSerializer):
-    """Serializer for Media model (images, videos, audio)."""
+    """Serializer for Media model (images, videos, audio). Optional review_status when level=thorough."""
     species_name = serializers.SerializerMethodField()
     species_code = serializers.CharField(source='species.code', read_only=True)
     species_id = serializers.IntegerField(source='species.id', read_only=True)
+    review_status = serializers.SerializerMethodField()
 
     def get_species_name(self, obj):
         """Return species name in the requested language if available."""
@@ -60,12 +61,23 @@ class MediaSerializer(serializers.ModelSerializer):
                 pass
         return obj.species.name
 
+    def get_review_status(self, obj):
+        """When level=thorough, return { approved, rejected, dont_know } counts for this media."""
+        if self.context.get('level') != 'thorough':
+            return None
+        return {
+            'approved': getattr(obj, '_approved_count', 0),
+            'rejected': getattr(obj, '_rejected_count', 0),
+            'dont_know': getattr(obj, '_not_sure_count', 0),
+        }
+
     class Meta:
         model = Media
         fields = (
             'id', 'type', 'source', 'url', 'link', 'contributor', 'copyright_text',
             'copyright_standardized', 'non_commercial_only',
-            'species_name', 'species_code', 'species_id', 'hide', 'created'
+            'species_name', 'species_code', 'species_id', 'hide', 'created',
+            'review_status',
         )
 
 

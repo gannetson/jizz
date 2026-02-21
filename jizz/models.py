@@ -1,7 +1,7 @@
 import math
 import uuid
 from datetime import timedelta
-from random import randint, shuffle, random
+from random import Random, randint, shuffle, random
 
 from django.db import models
 from django.db.models import Sum, Q
@@ -399,7 +399,9 @@ class Game(models.Model):
         if media_count == 0:
             raise ValueError(f"Species {species.id} ({species.name}) has no eligible {self.media} media (approved or not rejected) after {max_retries} retries")
 
-        number = randint(1, media_count) - 1
+        # Deterministic index so all players get the same media for this question
+        rng = Random((self.id, species.id, sequence))
+        number = rng.randint(0, media_count - 1)
 
         if self.level == 'advanced':
             options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]

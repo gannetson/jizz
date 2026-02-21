@@ -14,6 +14,7 @@ export const ResultsComponent = () => {
   const {game, player, createRematchGame, setGame} = useContext(AppContext)
   const navigate = useNavigate()
   const [rematchInvitation, setRematchInvitation] = useState<{new_game_token: string, host_name: string} | null>(null)
+  const [isRematchLoading, setIsRematchLoading] = useState(false)
 
   // Check if current player is the host
   // Players array now includes is_host field from PlayerScoreSerializer
@@ -32,6 +33,7 @@ export const ResultsComponent = () => {
       console.log('Cannot rematch: missing game, player, or socket', { game: !!game, player: !!player, socket: !!socket })
       return
     }
+    setIsRematchLoading(true)
     // Send rematch action while socket is still open - backend must receive this to create the new game.
     // The host will then receive rematch_invitation (via WebSocket) and handleRematchInvitationForHost
     // will close the socket, clear state, load the new game, and navigate to lobby.
@@ -43,6 +45,7 @@ export const ResultsComponent = () => {
       console.log('Rematch request sent')
     } catch (e) {
       console.error('Failed to send rematch request:', e)
+      setIsRematchLoading(false)
     }
   }
   
@@ -67,28 +70,34 @@ export const ResultsComponent = () => {
       
       // Wait a bit longer to ensure state clearing and WebSocket disconnection propagate
       setTimeout(async () => {
-        // Load the new game
-        const response = await fetch(`/api/games/${new_game_token}/`, {
-          cache: 'no-store',
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
+        try {
+          // Load the new game
+          const response = await fetch(`/api/games/${new_game_token}/`, {
+            cache: 'no-store',
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+            }
+          })
+          
+          if (response.status === 200) {
+            const data = await response.json()
+            // Set new game - this will trigger WebSocket reconnection with clean state
+            setGame(data)
+            localStorage.setItem('game-token', data.token)
+            // Navigate to lobby after a delay to ensure state is set and old question is cleared
+            setTimeout(() => {
+              navigate('/game/lobby')
+            }, 200)
+          } else {
+            console.error('Failed to load rematch game:', response.status)
+            setIsRematchLoading(false)
           }
-        })
-        
-        if (response.status === 200) {
-          const data = await response.json()
-          // Set new game - this will trigger WebSocket reconnection with clean state
-          setGame(data)
-          localStorage.setItem('game-token', data.token)
-          // Navigate to lobby after a delay to ensure state is set and old question is cleared
-          setTimeout(() => {
-            navigate('/game/lobby')
-          }, 200)
-        } else {
-          console.error('Failed to load rematch game:', response.status)
+        } catch (e) {
+          console.error('Failed to load rematch game:', e)
+          setIsRematchLoading(false)
         }
       }, 200)
     }
@@ -179,7 +188,13 @@ export const ResultsComponent = () => {
               </Button>
             )}
             {isHost && (
-              <Button onClick={handleRematch} colorPalette="primary" variant="outline">
+              <Button
+                onClick={handleRematch}
+                colorPalette="primary"
+                variant="outline"
+                loading={isRematchLoading}
+                loadingText={<FormattedMessage id={'creating game'} defaultMessage={'Creating game…'} />}
+              >
                 <FormattedMessage id={'rematch'} defaultMessage={'Rematch'}/>
               </Button>
             )}

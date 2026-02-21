@@ -341,9 +341,19 @@ class SpeciesReviewStatsView(APIView):
             ).distinct()
 
         species_list = list(qs)
-        fully_reviewed = sum(1 for s in species_list if s.media_with_review >= s.total_media)
+        total_species = len(species_list)
         not_reviewed = sum(1 for s in species_list if s.media_with_review == 0)
-        partly_reviewed = len(species_list) - fully_reviewed - not_reviewed
+        fully_reviewed = sum(1 for s in species_list if s.media_with_review >= s.total_media)
+        # reviewed = at least 10 approved, or fully reviewed
+        reviewed = sum(
+            1 for s in species_list
+            if s.approved_media >= 10 or s.media_with_review >= s.total_media
+        )
+        # partly_reviewed = has some reviews but < 10 approved and not fully reviewed
+        partly_reviewed = sum(
+            1 for s in species_list
+            if 0 < s.media_with_review < s.total_media and s.approved_media < 10
+        )
 
         serializer = SpeciesReviewStatsSerializer(
             species_list,
@@ -352,9 +362,11 @@ class SpeciesReviewStatsView(APIView):
         )
         return Response({
             'summary': {
-                'fully_reviewed': fully_reviewed,
-                'partly_reviewed': partly_reviewed,
+                'total_species': total_species,
                 'not_reviewed': not_reviewed,
+                'partly_reviewed': partly_reviewed,
+                'reviewed': reviewed,
+                'fully_reviewed': fully_reviewed,
             },
             'species': serializer.data,
         })

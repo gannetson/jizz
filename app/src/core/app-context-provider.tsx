@@ -6,6 +6,7 @@ import {TaxOrder} from "../user/use-tax-order"
 import {TaxFamily} from "../user/use-tax-family"
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios-config';
+import { apiUrl } from '../api/baseUrl';
 
 type Props = {
   children: ReactNode;
@@ -63,7 +64,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   useEffect(() => {
     if (country?.code) {
       setLoading(true)
-      fetch(`/api/species/?countryspecies__country=${country.code}&language=${language}`, {
+      fetch(apiUrl(`/api/species/?countryspecies__country=${country.code}&language=${language}`), {
         cache: 'no-cache',
         method: 'GET',
         headers: {
@@ -94,7 +95,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const loadPlayer = async (playerToken: string) => {
     setLoading(true)
-    const response = await fetch(`/api/player/${playerToken}/`, {
+    const response = await fetch(apiUrl(`/api/player/${playerToken}/`), {
       cache: 'no-store',
       method: 'GET',
       headers: {
@@ -122,7 +123,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   }
 
   const updatePlayer = useCallback(async (playerToken: string) => {
-    const response = await fetch(`/api/player/${playerToken}/`, {
+    const response = await fetch(apiUrl(`/api/player/${playerToken}/`), {
       cache: 'no-store',
       method: 'PATCH',
       headers: {
@@ -178,7 +179,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     // Wait a tick to ensure state is cleared and WebSocket disconnects
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const response = await fetch('/api/games/', {
+    const response = await fetch(apiUrl('/api/games/'), {
         cache: 'no-store',
         method: 'POST',
         headers: {
@@ -224,7 +225,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // Create new game with same specifications as old game
-    const response = await fetch('/api/games/', {
+    const response = await fetch(apiUrl('/api/games/'), {
         cache: 'no-store',
         method: 'POST',
         headers: {
@@ -254,7 +255,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   const loadGame = async (gameCode: string) => {
     setLoading(true)
-    const response = await fetch(`/api/games/${gameCode}/`, {
+    const response = await fetch(apiUrl(`/api/games/${gameCode}/`), {
       cache: 'no-store',
       method: 'GET',
       headers: noCacheHeaders
@@ -295,7 +296,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/country-challenges/', {
+      const response = await fetch(apiUrl('/api/country-challenges/'), {
         cache: 'no-store',
         method: 'POST',
         headers: {
@@ -328,7 +329,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
     setLoading(true)
     try {
-      const response = await fetch(`/api/country-challenges/current/`, {
+      const response = await fetch(apiUrl(`/api/country-challenges/current/`), {
         cache: 'no-store',
         method: 'GET',
         headers: {
@@ -363,7 +364,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return
     }
 
-    const response = await fetch(`/api/answer/`, {
+    const response = await fetch(apiUrl(`/api/answer/`), {
       method: 'POST',
       headers: {
         ...noCacheHeaders,
@@ -391,7 +392,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
     const hash = new Date().getTime()
     setChallengeQuestion(undefined)
-    const response = await fetch(`/api/challenge/${countryChallenge.id}/next-level?${hash}`, {
+    const response = await fetch(apiUrl(`/api/challenge/${countryChallenge.id}/next-level?${hash}`), {
       method: 'POST',
       headers: {
         ...noCacheHeaders,
@@ -418,7 +419,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
     const hash = new Date().getTime()
 
-    const response = await fetch(`/api/games/${gameToken}/question?${hash}`, {
+    const response = await fetch(apiUrl(`/api/games/${gameToken}/question?${hash}`), {
       method: 'GET',
       headers: {
         ...noCacheHeaders,

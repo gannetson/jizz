@@ -1,8 +1,13 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { authService } from './services/auth.service';
+import { getApiBaseUrl } from './baseUrl';
+
+// Use shared API base URL so requests work in Capacitor (Android/iOS) as well as web
+axios.defaults.baseURL = getApiBaseUrl();
 
 // Create a separate axios instance for refresh calls to avoid interceptor loops
 const refreshAxios = axios.create();
+(refreshAxios.defaults as { baseURL?: string }).baseURL = getApiBaseUrl();
 
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
@@ -118,13 +123,9 @@ axios.interceptors.response.use(
 
       try {
         // Attempt to refresh the token
-        // Use a separate axios instance to avoid interceptors for the refresh call
-        const baseURL = process.env.NODE_ENV === 'development' 
-          ? 'http://127.0.0.1:8050' 
-          : 'https://birdr.pro';
-        
+        // Use getApiBaseUrl() so refresh works in Capacitor (Android/iOS) too
         const refreshResponse = await refreshAxios.post(
-          `${baseURL}/token/refresh/`,
+          `${getApiBaseUrl()}/token/refresh/`,
           { refresh: refreshToken },
           { headers: { 'Content-Type': 'application/json' } }
         );

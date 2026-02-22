@@ -1,6 +1,6 @@
 import {useContext, useEffect, useState} from "react";
 import AppContext from "../core/app-context"
-
+import { apiUrl } from "../api/baseUrl"
 
 export interface TaxOrder {
   tax_order: string
@@ -15,7 +15,7 @@ export const UseTaxOrder = () => {
       const fetchTaxOrders = async () => {
         setTaxOrders([]) // Reset when country changes
         try {
-          const url: string = country ? `/api/orders/?country=${country.code}` : `/api/orders/`;
+          const url: string = country ? apiUrl(`/api/orders/?country=${country.code}`) : apiUrl('/api/orders/');
           const response: Response = await fetch(url);
           const data: any = await response.json();
           

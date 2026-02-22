@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-
+import { apiUrl } from "../api/baseUrl"
 
 export interface Country {
   code: string
@@ -12,7 +12,7 @@ export const UseCountries = () => {
     if (countries.length === 0) {
       const fetchCountries = async () => {
         try {
-          const response: Response = await fetch(`/api/countries/`);
+          const response: Response = await fetch(apiUrl('/api/countries/'));
           const data: any = await response.json();
           
           if (Array.isArray(data)) {

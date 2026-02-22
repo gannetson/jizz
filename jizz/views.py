@@ -401,15 +401,18 @@ class SpeciesReviewStatsView(APIView):
             ).distinct()
 
         species_list = list(qs)
-        fully_reviewed = sum(1 for s in species_list if s.media_with_review >= s.total_media)
+        total_species = len(species_list)
         not_reviewed = sum(1 for s in species_list if s.media_with_review == 0)
-        # Reviewed = 10+ approved but not fully reviewed (excluded from partly_reviewed)
+        fully_reviewed = sum(1 for s in species_list if s.media_with_review >= s.total_media)
+        # reviewed = at least 10 approved, or fully reviewed
         reviewed = sum(
             1 for s in species_list
-            if s.media_with_review < s.total_media and s.approved_media >= 10
+            if s.approved_media >= 10 or s.media_with_review >= s.total_media
         )
-        partly_reviewed = (
-            len(species_list) - fully_reviewed - not_reviewed - reviewed
+        # partly_reviewed = has some reviews but < 10 approved and not fully reviewed
+        partly_reviewed = sum(
+            1 for s in species_list
+            if 0 < s.media_with_review < s.total_media and s.approved_media < 10
         )
 
         serializer = SpeciesReviewStatsSerializer(
@@ -419,10 +422,11 @@ class SpeciesReviewStatsView(APIView):
         )
         return Response({
             'summary': {
-                'fully_reviewed': fully_reviewed,
-                'reviewed': reviewed,
-                'partly_reviewed': partly_reviewed,
+                'total_species': total_species,
                 'not_reviewed': not_reviewed,
+                'partly_reviewed': partly_reviewed,
+                'reviewed': reviewed,
+                'fully_reviewed': fully_reviewed,
             },
             'species': serializer.data,
         })
@@ -577,6 +581,8 @@ class CustomConvertTokenView(ConvertTokenView):
 
 
 class GoogleLoginView(APIView):
+    permission_classes = (AllowAny,)
+
     def post(self, request):
         token = request.data.get("token")
 
@@ -597,6 +603,100 @@ class GoogleLoginView(APIView):
 
         except AuthException:
             return Response({"error": "Invalid token"}, status=400)
+
+
+def _validate_apple_identity_token(identity_token):
+    """
+    Verify Apple Sign In identity_token (JWT) using Apple's public keys.
+    Returns decoded payload with sub, email (optional), email_verified.
+    """
+    import jwt
+    import requests
+    from django.conf import settings
+
+    client_id = getattr(
+        settings, "SOCIAL_AUTH_APPLE_ID_CLIENT", None
+    ) or getattr(settings, "SOCIAL_AUTH_APPLE_ID_SERVICES_ID", None)
+    if not client_id:
+        raise ValueError("SOCIAL_AUTH_APPLE_ID_CLIENT not configured")
+
+    unverified = jwt.get_unverified_header(identity_token)
+    kid = unverified.get("kid")
+    if not kid:
+        raise ValueError("Token header missing kid")
+
+    resp = requests.get("https://appleid.apple.com/auth/keys", timeout=10)
+    resp.raise_for_status()
+    keys = resp.json().get("keys", [])
+    jwk = next((k for k in keys if k.get("kid") == kid), None)
+    if not jwk:
+        raise ValueError("Apple key not found for kid")
+
+    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk)
+    payload = jwt.decode(
+        identity_token,
+        public_key,
+        algorithms=["RS256"],
+        issuer="https://appleid.apple.com",
+        audience=client_id,
+    )
+    return payload
+
+
+class AppleLoginView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        identity_token = request.data.get("identity_token") or request.data.get("token")
+        user_data = request.data.get("user")  # Optional: { "name": { "firstName", "lastName" }, "email" } on first sign-in
+
+        if not identity_token:
+            return Response({"error": "identity_token required"}, status=400)
+
+        try:
+            payload = _validate_apple_identity_token(identity_token)
+        except Exception as e:
+            return Response({"error": "Invalid token"}, status=400)
+
+        sub = payload.get("sub")
+        email = payload.get("email")
+        if not sub:
+            return Response({"error": "Invalid token"}, status=400)
+
+        from social_django.models import UserSocialAuth
+
+        social = UserSocialAuth.objects.filter(provider="apple-id", uid=sub).first()
+        if social:
+            user = social.user
+        else:
+            # First-time Apple sign-in: create or link user
+            if email:
+                user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={"username": email},
+                )
+            else:
+                # Apple may hide email; use sub as unique username
+                username = f"apple_{sub}"
+                if len(username) > 150:
+                    username = username[:150]
+                base_username = username
+                counter = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}_{counter}"
+                    counter += 1
+                user = User.objects.create(username=username)
+
+            UserSocialAuth.objects.get_or_create(
+                provider="apple-id",
+                uid=sub,
+                defaults={"user": user, "extra_data": {}},
+            )
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {"refresh": str(refresh), "access": str(refresh.access_token)}
+        )
 
 
 class OAuthCompleteView(APIView):

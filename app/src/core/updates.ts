@@ -1,7 +1,8 @@
 import {Update} from "./app-context"
+import { apiUrl } from "../api/baseUrl"
 
 export const loadUpdates = async () => {
-    const url = `/api/updates/`
+    const url = apiUrl('/api/updates/')
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',

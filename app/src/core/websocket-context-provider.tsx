@@ -3,6 +3,7 @@ import AppContext, {Answer, Game, MultiPlayer, Player, Question, Species} from "
 import WebsocketContext from "./websocket-context"
 import { toaster } from "@/components/ui/toaster"
 import { validateQuestionForGame, getCurrentGameToken } from './game-token-validator'
+import { getWebSocketUrl } from '../api/baseUrl'
 
 type Props = {
   children: ReactNode;
@@ -88,10 +89,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     setQuestion(undefined)
     setAnswer(undefined)
 
-    let socketUrl = `wss://birdr.pro/mpg/${game.token}`
-    if (window.location.host === 'localhost:3000') {
-      socketUrl = `ws://127.0.0.1:8050/mpg/${game.token}`
-    }
+    const socketUrl = getWebSocketUrl(`/mpg/${game.token}`);
     const ws = new WebSocket(socketUrl);
     
     // Store the game token on the socket for validation

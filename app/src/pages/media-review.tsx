@@ -368,21 +368,23 @@ export const MediaReviewPage = () => {
         setCelebrationSpeciesName(speciesName);
         setTimeout(() => setShowConfetti(false), 6000);
         setTimeout(() => setCelebrationSpeciesName(null), 12000);
-      }
-
-      // Fast mode: when 10th media approved for this species (using updated approved count), celebrate and reload
-      if (
-        reviewLevel === 'fast' &&
-        reviewType === 'approved' &&
-        speciesId != null &&
-        speciesName &&
-        approvedAfter >= 10
-      ) {
-        setTenApprovedSpeciesName(speciesName);
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 6000);
-        setTimeout(() => setTenApprovedSpeciesName(null), 12000);
-        loadMedia(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id ?? undefined, reviewLevel);
+        if (speciesStats?.species?.find((s) => s.id === speciesId)) {
+          setSpeciesStats((prev) => {
+            if (!prev || speciesId == null) return prev;
+            return {
+              ...prev,
+              species: prev.species.map((s) =>
+                s.id === speciesId ? { ...s, unreviewed: 0 } : s
+              ),
+              summary: {
+                ...prev.summary,
+                fully_reviewed: prev.summary.fully_reviewed + 1,
+                partly_reviewed: Math.max(0, prev.summary.partly_reviewed - 1),
+                reviewed: prev.summary.reviewed + 1,
+              },
+            };
+          });
+        }
       }
 
       // Close dialog if this item was selected
@@ -717,20 +719,41 @@ export const MediaReviewPage = () => {
             )}
           </Flex>
           {!speciesStatsLoading && speciesStats && (
-            <Flex gap={6} mt={4} mb={4} flexWrap="wrap" fontWeight="bold">
-              <Text color="primary.500">
-                <FormattedMessage id="species reviewed" defaultMessage="{count} reviewed" values={{ count: speciesStats.summary.reviewed ?? 0 }} />
-              </Text>
-              <Text color="green.700">
-                <FormattedMessage id="species fully reviewed" defaultMessage="{count} fully reviewed" values={{ count: speciesStats.summary.fully_reviewed }} />
-              </Text>
-              <Text color="orange.600">
-                <FormattedMessage id="species partly reviewed" defaultMessage="{count} partly reviewed" values={{ count: speciesStats.summary.partly_reviewed }} />
-              </Text>
-              <Text color="gray.600">
-                <FormattedMessage id="species not reviewed" defaultMessage="{count} not reviewed" values={{ count: speciesStats.summary.not_reviewed }} />
-              </Text>
-            </Flex>
+            <Box mt={4} mb={4}>
+              <Flex gap={6} flexWrap="wrap" fontWeight="bold">
+                <Text color="primary.600">
+                  <FormattedMessage id="species total" defaultMessage="{count} total" values={{ count: speciesStats.summary.total_species }} />
+                </Text>
+                <Text color="primary.700">
+                  <FormattedMessage id="species reviewed" defaultMessage="{count} reviewed" values={{ count: speciesStats.summary.reviewed }} />
+                </Text>
+                <Text color="green.700">
+                  <FormattedMessage id="species fully reviewed" defaultMessage="{count} fully reviewed" values={{ count: speciesStats.summary.fully_reviewed }} />
+                </Text>
+                <Text color="orange.600">
+                  <FormattedMessage id="species partly reviewed" defaultMessage="{count} partly reviewed" values={{ count: speciesStats.summary.partly_reviewed }} />
+                </Text>
+                <Text color="gray.600">
+                  <FormattedMessage id="species not reviewed" defaultMessage="{count} not reviewed" values={{ count: speciesStats.summary.not_reviewed }} />
+                </Text>
+              </Flex>
+              <Flex mt={2} align="center" gap={3}>
+                <Box flex={1} h={4} borderRadius="full" bg="gray.200" overflow="hidden">
+                  <Box
+                    h="100%"
+                    borderRadius="full"
+                    bg="primary.500"
+                    transition="width 0.3s ease"
+                    w={speciesStats.summary.total_species > 0 ? `${(speciesStats.summary.reviewed / speciesStats.summary.total_species) * 100}%` : '0%'}
+                  />
+                </Box>
+                <Text fontWeight="bold" color="primary.700" whiteSpace="nowrap">
+                  {speciesStats.summary.total_species > 0
+                    ? `${Math.round((speciesStats.summary.reviewed / speciesStats.summary.total_species) * 100)}%`
+                    : '0%'}
+                </Text>
+              </Flex>
+            </Box>
           )}
         {loading ? (
           <Text><FormattedMessage id="loading" defaultMessage="Loading..." /></Text>

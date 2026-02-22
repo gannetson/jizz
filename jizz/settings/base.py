@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'jizz.middleware.SocialAuthRedirectUriMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -155,7 +156,7 @@ SERVER_EMAIL = os.environ.get('SERVER_EMAIL', 'info@birdr.pro')
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
-    'social_core.backends.apple.AppleIdAuth',
+    'jizz.backends.AppleIdAuth',  # custom: loads .p8 with cryptography for PyJWT
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -170,8 +171,18 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
-SOCIAL_AUTH_APPLE_ID_CLIENT = os.environ.get('SOCIAL_AUTH_APPLE_ID_CLIENT', '<YOUR_APPLE_CLIENT_ID>')
-SOCIAL_AUTH_APPLE_ID_SECRET = os.environ.get('SOCIAL_AUTH_APPLE_ID_SECRET', '<YOUR_APPLE_SECRET>')
+# Apple Sign In (redirect flow). KEY and TEAM must be non-empty strings for PyJWT.
+SOCIAL_AUTH_APPLE_ID_CLIENT = os.environ.get('SOCIAL_AUTH_APPLE_ID_CLIENT', '')
+_apple_secret_file = os.environ.get('SOCIAL_AUTH_APPLE_ID_SECRET_FILE')
+if _apple_secret_file and os.path.isfile(_apple_secret_file):
+    with open(_apple_secret_file, 'r') as f:
+        SOCIAL_AUTH_APPLE_ID_SECRET = f.read()
+else:
+    _secret = os.environ.get('SOCIAL_AUTH_APPLE_ID_SECRET', '')
+    SOCIAL_AUTH_APPLE_ID_SECRET = _secret.replace('\\n', '\n') if _secret else ''
+# Key ID (kid) and Team ID must be strings; empty will break redirect flow
+SOCIAL_AUTH_APPLE_ID_KEY = str(os.environ.get('SOCIAL_AUTH_APPLE_ID_KEY', '') or '')
+SOCIAL_AUTH_APPLE_ID_TEAM = str(os.environ.get('SOCIAL_AUTH_APPLE_ID_TEAM', '') or '')
 
 SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_AZUREAD_OAUTH2_KEY', '<YOUR_MICROSOFT_CLIENT_ID>')
 SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET', '<YOUR_MICROSOFT_SECRET>')
@@ -202,8 +213,12 @@ SIMPLE_JWT = {
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<YOUR_GOOGLE_CLIENT_ID>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<YOUR_GOOGLE_CLIENT_SECRET>'
-SOCIAL_AUTH_APPLE_ID_CLIENT = '<YOUR_APPLE_CLIENT_ID>'
-SOCIAL_AUTH_APPLE_ID_SECRET = '<YOUR_APPLE_CLIENT_SECRET>'
+SOCIAL_AUTH_APPLE_ID_CLIENT = SOCIAL_AUTH_APPLE_ID_CLIENT or '<YOUR_APPLE_CLIENT_ID>'
+if not (SOCIAL_AUTH_APPLE_ID_SECRET or '').strip().startswith('-----BEGIN'):
+    SOCIAL_AUTH_APPLE_ID_SECRET = '<YOUR_APPLE_SECRET>'
+SOCIAL_AUTH_APPLE_ID_KEY = SOCIAL_AUTH_APPLE_ID_KEY if (SOCIAL_AUTH_APPLE_ID_KEY or '') else ''
+SOCIAL_AUTH_APPLE_ID_TEAM = SOCIAL_AUTH_APPLE_ID_TEAM if (SOCIAL_AUTH_APPLE_ID_TEAM or '') else ''
+
 SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = '<YOUR_MICROSOFT_CLIENT_ID>'
 SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = '<YOUR_MICROSOFT_CLIENT_SECRET>'
 SOCIAL_AUTH_AZUREAD_TENANT_ID = '<YOUR_TENANT_ID>'
@@ -229,5 +244,3 @@ SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'your-actual-google-client-id'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'your-actual-google-client-secret'
-SOCIAL_AUTH_APPLE_ID_CLIENT = 'your-actual-apple-client-id'
-SOCIAL_AUTH_APPLE_ID_SECRET = 'your-actual-apple-secret'

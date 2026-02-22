@@ -1,5 +1,20 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+
+// Fail release builds when signing is not configured (Play Store requires signed bundles)
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(":app:bundleRelease") || taskGraph.hasTask(":app:assembleRelease")) {
+        if (!hasReleaseKeystore) {
+            throw new GradleException(
+                "Release builds must be signed. Create android/keystore.properties (see keystore.properties.example). " +
+                "Zie RELEASE.md voor stappen."
+            )
+        }
+    }
+}
+
 android {
     namespace "pro.birdr"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,10 +31,25 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            def keystoreProperties = new Properties()
+            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+            release {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

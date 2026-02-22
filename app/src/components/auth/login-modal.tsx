@@ -331,6 +331,25 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
                   </Text>
                 </HStack>
               </Button>
+
+              {/* Apple Login */}
+              <Button
+                colorPalette="neutral"
+                width="full"
+                variant="outline"
+                onClick={() => handleSocialLogin('apple-id')}
+                disabled={loading}
+              >
+                <HStack gap={2}>
+                  <SiApple size={20} />
+                  <Text>
+                    <FormattedMessage
+                      id="login_with_apple"
+                      defaultMessage="Continue with Apple"
+                    />
+                  </Text>
+                </HStack>
+              </Button>
             </VStack>
             </>
             )}

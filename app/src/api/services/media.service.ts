@@ -46,11 +46,11 @@ export interface SpeciesReviewStats {
 
 export interface SpeciesReviewStatsResponse {
   summary: {
-    fully_reviewed: number;
-    /** Species with 10+ approved but not fully reviewed (excluded from partly_reviewed) */
-    reviewed: number;
-    partly_reviewed: number;
+    total_species: number;
     not_reviewed: number;
+    partly_reviewed: number;
+    reviewed: number;
+    fully_reviewed: number;
   };
   species: SpeciesReviewStats[];
 }

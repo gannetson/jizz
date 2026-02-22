@@ -53,7 +53,12 @@
     "release": "npm run build && npm run deploy",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "extract-messages": "NODE_ENV=development extract-react-intl-messages -l en,nl,la -o src/locales -d en --flat true 'src/**/*.ts*'"
+    "extract-messages": "NODE_ENV=development extract-react-intl-messages -l en,nl,la -o src/locales -d en --flat true 'src/**/*.ts*'",
+    "cap:sync": "npx cap sync",
+    "cap:copy": "npx cap copy",
+    "build:mobile": "npm run build && npx cap sync",
+    "android": "npx cap open android",
+    "ios": "npx cap open ios"
   },
   "eslintConfig": {
     "extends": "react-app"

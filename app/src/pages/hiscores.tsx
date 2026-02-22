@@ -7,6 +7,7 @@ import {Loading} from "../components/loading"
 import {ScoreLine} from "../components/score-line"
 import {UseCountries} from "../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
+import { apiUrl } from '../api/baseUrl'
 
 const HomePage = () => {
   const intl = useIntl()
@@ -20,7 +21,7 @@ const HomePage = () => {
 
   const loadScores = async () => {
     setLoading(true)
-    const url = `/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}`
+    const url = apiUrl(`/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}`)
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',

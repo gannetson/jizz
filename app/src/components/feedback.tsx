@@ -3,6 +3,7 @@ import {FormattedMessage, useIntl} from "react-intl"
 import StarRating from "./rating/star-rating"
 import {useState} from "react"
 import { toaster } from "@/components/ui/toaster"
+import { apiUrl } from "../api/baseUrl"
 
 export const Feedback = () => {
   const intl = useIntl()
@@ -12,7 +13,7 @@ export const Feedback = () => {
 
   const submit = async () => {
     const player_token = localStorage.getItem('player-token');
-    const response = await fetch('/api/feedback/', {
+    const response = await fetch(apiUrl('/api/feedback/'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

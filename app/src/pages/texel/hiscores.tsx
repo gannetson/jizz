@@ -8,6 +8,7 @@ import {ScoreLine} from "../../components/score-line"
 import {UseCountries} from "../../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 import {ScoreLineShort} from "../../components/score-line-short"
+import { apiUrl } from "../../api/baseUrl"
 
 const TexelHiscorePage = () => {
   const {countries} = UseCountries()
@@ -20,7 +21,7 @@ const TexelHiscorePage = () => {
 
   const loadScores = async () => {
     setLoading(true)
-    const url = `/api/scores/?game__level=advanced&game__length=35&game__media=images&game__country=NL-NH`
+    const url = apiUrl('/api/scores/?game__level=advanced&game__length=35&game__media=images&game__country=NL-NH')
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',

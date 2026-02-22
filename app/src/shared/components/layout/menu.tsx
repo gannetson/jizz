@@ -14,9 +14,6 @@ export const BirdrMenu = () => {
             <Link href={'/start'} textDecoration="none">
               <FormattedMessage id={'new game'} defaultMessage={'New game'} />
             </Link>
-            <Link href={'/join'} textDecoration="none">
-              <FormattedMessage id={'join game'} defaultMessage={'Join a game'} />
-            </Link>
             <Link href={'/scores'} textDecoration="none">
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
             </Link>
@@ -25,6 +22,9 @@ export const BirdrMenu = () => {
             </Link>
             <Link href={'/updates'} textDecoration="none">
               <FormattedMessage id={'Updates'} defaultMessage={'Updates'} />
+            </Link>
+            <Link href={'/help'} textDecoration="none">
+              <FormattedMessage id={'help'} defaultMessage={'Help'} />
             </Link>
             <Link href={'/privacy'} textDecoration="none">
               <FormattedMessage id={'privacy'} defaultMessage={'Privacy'} />

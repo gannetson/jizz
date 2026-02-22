@@ -1,7 +1,7 @@
 import {Box, Heading, Select, Portal, createListCollection} from "@chakra-ui/react";
 import {useContext, useEffect, useMemo} from "react";
 import AppContext from "../core/app-context";
-import {FormattedMessage} from "react-intl"
+import { FormattedMessage, useIntl } from "react-intl"
 import {UseTaxOrder} from "../user/use-tax-order";
 
 interface TaxOrder {
@@ -10,6 +10,7 @@ interface TaxOrder {
 }
 
 const SelectTaxOrder = () => {
+  const intl = useIntl();
   const {taxOrders} = UseTaxOrder()
   const {taxOrder, setTaxOrder, game} = useContext(AppContext);
 
@@ -69,7 +70,7 @@ const SelectTaxOrder = () => {
         <Select.HiddenSelect />
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="Select order..." />
+            <Select.ValueText placeholder={intl.formatMessage({ id: 'select order placeholder', defaultMessage: 'Select order...' })} />
           </Select.Trigger>
           <Select.IndicatorGroup>
             <Select.Indicator />

@@ -14,12 +14,13 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { SiGoogle, SiApple } from "react-icons/si";
 import { authService, AuthError } from "../../api/services/auth.service";
 
 export const Login = () => {
   const navigate = useNavigate();
+  const intl = useIntl();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -93,7 +94,7 @@ export const Login = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder={intl.formatMessage({ id: 'placeholder enter username', defaultMessage: 'Enter your username' })}
                   required={!isLogin}
                 />
               </Field.Root>
@@ -107,7 +108,7 @@ export const Login = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                placeholder={intl.formatMessage({ id: 'placeholder enter email', defaultMessage: 'Enter your email' })}
                 required
               />
             </Field.Root>
@@ -120,7 +121,7 @@ export const Login = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={intl.formatMessage({ id: 'placeholder enter password', defaultMessage: 'Enter your password' })}
                   required
                   flex={1}
                 />
@@ -131,7 +132,7 @@ export const Login = () => {
               colorPalette="primary"
               width="full"
               loading={loading}
-              loadingText={isLogin ? "Logging in..." : "Registering..."}
+              loadingText={isLogin ? intl.formatMessage({ id: 'logging in', defaultMessage: 'Logging in...' }) : intl.formatMessage({ id: 'registering', defaultMessage: 'Registering...' })}
             >
               {isLogin ? (
                 <FormattedMessage id="login" defaultMessage="Login" />

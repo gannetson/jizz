@@ -1,11 +1,12 @@
 import {useContext, useMemo} from "react";
 import AppContext, {Language} from "../core/app-context";
 import {Box, Flex, Heading, RadioGroup, Select, Portal, createListCollection} from "@chakra-ui/react"
-import {FormattedMessage} from "react-intl"
+import { FormattedMessage, useIntl } from "react-intl"
 import {UseLanguages} from "../user/use-languages"
 
 
 const SelectLanguage = () => {
+  const intl = useIntl();
   const {language, setLanguage} = useContext(AppContext);
   const {languages} = UseLanguages();
 
@@ -94,7 +95,7 @@ const SelectLanguage = () => {
         <Select.HiddenSelect />
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="Select language..." />
+            <Select.ValueText placeholder={intl.formatMessage({ id: 'select language placeholder', defaultMessage: 'Select language...' })} />
           </Select.Trigger>
           <Select.IndicatorGroup>
             <Select.Indicator />

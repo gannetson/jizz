@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{% trans "Compare species" %}</h1>
+<form method="post" action="">
+  {% csrf_token %}
+  <p>
+    <label for="species_1">{% trans "Species 1" %}</label>
+    <select name="species_1" id="species_1" required>
+      <option value="">---------</option>
+      {% for s in species_list %}
+      <option value="{{ s.id }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
+    <label for="species_2">{% trans "Species 2" %}</label>
+    <select name="species_2" id="species_2" required>
+      <option value="">---------</option>
+      {% for s in species_list %}
+      <option value="{{ s.id }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p><input type="submit" value="{% trans "Compare" %}"></p>
+</form>
+{% endblock %}

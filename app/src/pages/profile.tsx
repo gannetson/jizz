@@ -16,7 +16,7 @@ import {
   Link,
   Checkbox,
 } from "@chakra-ui/react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { profileService, UserProfile, ProfileUpdateData } from "../api/services/profile.service";
 import { authService } from "../api/services/auth.service";
@@ -28,6 +28,7 @@ import { ProfileCountrySelect } from "../components/profile-country-select";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
+  const intl = useIntl();
   const { countries } = UseCountries();
   const { languages } = UseLanguages();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -169,7 +170,7 @@ export const ProfilePage = () => {
         <Page.Body>
           <VStack gap={4}>
             <Spinner size="xl" colorPalette="primary" />
-            <Text>Loading profile...</Text>
+            <Text><FormattedMessage id="loading profile" defaultMessage="Loading profile..." /></Text>
           </VStack>
         </Page.Body>
       </Page>
@@ -248,7 +249,7 @@ export const ProfilePage = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your player name"
+                placeholder={intl.formatMessage({ id: 'placeholder enter player name', defaultMessage: 'Enter your player name' })}
                 required
               />
             </Field.Root>
@@ -262,7 +263,7 @@ export const ProfilePage = () => {
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Enter your first name"
+                placeholder={intl.formatMessage({ id: 'placeholder enter first name', defaultMessage: 'Enter your first name' })}
               />
             </Field.Root>
 
@@ -275,7 +276,7 @@ export const ProfilePage = () => {
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Enter your last name"
+                placeholder={intl.formatMessage({ id: 'placeholder enter last name', defaultMessage: 'Enter your last name' })}
               />
             </Field.Root>
 
@@ -349,7 +350,7 @@ export const ProfilePage = () => {
               colorPalette="primary"
               width="full"
               loading={saving}
-              loadingText="Saving..."
+              loadingText={intl.formatMessage({ id: 'saving', defaultMessage: 'Saving...' })}
             >
               <FormattedMessage id="save_changes" defaultMessage="Save Changes" />
             </Button>

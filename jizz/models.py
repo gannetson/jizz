@@ -11,6 +11,11 @@ from django.utils.functional import lazy
 from django.utils.timezone import now
 from shortuuid.django_fields import ShortUUIDField
 
+try:
+    from django_quill.fields import QuillField
+except ImportError:
+    QuillField = models.TextField  # fallback if django-quill-editor not installed
+
 
 class Country(models.Model):
     name = models.CharField(max_length=100)
@@ -19,7 +24,7 @@ class Country(models.Model):
 
     @property
     def count(self):
-        return self.species.count()
+        return self.countryspecies.count()
 
     def __str__(self):
         return self.name
@@ -67,19 +72,34 @@ class Species(models.Model):
 
     @property
     def filtered_media(self):
+        """Media that are not rejected. Used as fallback when no approved media exist."""
         return self.media.exclude(reviews__review_type='rejected')
+
+    def _eligible_media(self, media_type):
+        """
+        Media for game use: approved only, or if none approved then not rejected.
+        Ordered by id so index (question.number) is stable.
+        """
+        approved = self.media.filter(
+            type=media_type
+        ).filter(reviews__review_type='approved').distinct()
+        if approved.exists():
+            return approved.order_by('id')
+        return self.media.filter(
+            type=media_type
+        ).exclude(reviews__review_type='rejected').order_by('id')
 
     @property
     def images(self):
-        return self.filtered_media.filter(type='image')
+        return self._eligible_media('image')
 
     @property
     def videos(self):
-        return self.filtered_media.filter(type='video')
+        return self._eligible_media('video')
 
     @property
     def sounds(self):
-        return self.filtered_media.filter(type='audio')
+        return self._eligible_media('audio')
 
     class Meta:
         verbose_name = 'species'
@@ -96,6 +116,20 @@ class Language(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Page(models.Model):
+    """Simple CMS page for Help content. Content is Quill rich text (delta JSON); supports images and formatting."""
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    content = QuillField(blank=True)
+    show = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['title']
+
+    def __str__(self):
+        return self.title
 
 
 class SpeciesName(models.Model):
@@ -331,23 +365,23 @@ class Game(models.Model):
 
         sequence = self.questions.count() + 1
         
-        # Get available media count using old models (SpeciesImage, SpeciesVideo, SpeciesSound)
-        # Retry with another species if selected one has no media
+        # Eligible media: approved only, or if none approved then not rejected (same as Species.images/videos/sounds)
+        # Retry with another species if selected one has no eligible media
         max_retries = 10
         retry_count = 0
         media_count = 0
         while retry_count < max_retries:
             if self.media == 'video':
-                media_count = species.media.filter(type='video').count()
+                media_count = species.videos.count()
             elif self.media == 'audio':
-                media_count = species.media.filter(type='audio').count()
+                media_count = species.sounds.count()
             else:
-                media_count = species.media.filter(type='image').count()
-            
-            # If we have media, break out of retry loop
+                media_count = species.images.count()
+
+            # If we have eligible media, break out of retry loop
             if media_count > 0:
                 break
-            
+
             # Try another species
             retry_count += 1
             remaining = all_species.exclude(id=species.id).exclude(id__in=self.questions.values_list('species_id', flat=True))
@@ -361,10 +395,10 @@ class Game(models.Model):
                 else:
                     # No more species available
                     raise ValueError(f"No species with {self.media} media available for game {self.id}")
-        
+
         if media_count == 0:
-            raise ValueError(f"Species {species.id} ({species.name}) has no {self.media} media after {max_retries} retries")
-        
+            raise ValueError(f"Species {species.id} ({species.name}) has no eligible {self.media} media (approved or not rejected) after {max_retries} retries")
+
         number = randint(1, media_count) - 1
 
         if self.level == 'advanced':

@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, SpeciesName, UserProfile
+    ChallengeLevel, Language, Page, SpeciesName, UserProfile
 from media.models import Media, MediaReview, FlagMedia
 
 
@@ -38,10 +38,11 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
 
 
 class MediaSerializer(serializers.ModelSerializer):
-    """Serializer for Media model (images, videos, audio)."""
+    """Serializer for Media model (images, videos, audio). Optional review_status when level=thorough."""
     species_name = serializers.SerializerMethodField()
     species_code = serializers.CharField(source='species.code', read_only=True)
     species_id = serializers.IntegerField(source='species.id', read_only=True)
+    review_status = serializers.SerializerMethodField()
 
     def get_species_name(self, obj):
         """Return species name in the requested language if available."""
@@ -60,12 +61,23 @@ class MediaSerializer(serializers.ModelSerializer):
                 pass
         return obj.species.name
 
+    def get_review_status(self, obj):
+        """When level=thorough, return { approved, rejected, dont_know } counts for this media."""
+        if self.context.get('level') != 'thorough':
+            return None
+        return {
+            'approved': getattr(obj, '_approved_count', 0),
+            'rejected': getattr(obj, '_rejected_count', 0),
+            'dont_know': getattr(obj, '_not_sure_count', 0),
+        }
+
     class Meta:
         model = Media
         fields = (
             'id', 'type', 'source', 'url', 'link', 'contributor', 'copyright_text',
             'copyright_standardized', 'non_commercial_only',
-            'species_name', 'species_code', 'species_id', 'hide', 'created'
+            'species_name', 'species_code', 'species_id', 'hide', 'created',
+            'review_status',
         )
 
 
@@ -868,6 +880,30 @@ class LanguageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Language
         fields = ('code', 'name')
+
+
+class PageSerializer(serializers.ModelSerializer):
+    content = serializers.SerializerMethodField()
+
+    def get_content(self, obj):
+        """Return Quill content as JSON string (delta + html) for frontend."""
+        val = obj.content
+        if hasattr(val, 'json_string'):
+            return val.json_string
+        if isinstance(val, str):
+            return val
+        return val if val is not None else '{"delta":"","html":""}'
+
+    class Meta:
+        model = Page
+        fields = ('id', 'title', 'slug', 'content', 'show')
+
+
+class PageListSerializer(serializers.ModelSerializer):
+    """Minimal serializer for help overview (no content)."""
+    class Meta:
+        model = Page
+        fields = ('id', 'title', 'slug')
 
 
 class FeedbackSerializer(serializers.ModelSerializer):

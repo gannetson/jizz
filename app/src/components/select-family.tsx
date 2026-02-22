@@ -1,11 +1,12 @@
 import {Box, Heading, Select, Portal, createListCollection} from "@chakra-ui/react";
 import {useContext, useEffect, useMemo} from "react";
 import AppContext from "../core/app-context";
-import {FormattedMessage} from "react-intl"
+import { FormattedMessage, useIntl } from "react-intl"
 import {TaxFamily, UseTaxFamily} from "../user/use-tax-family";
 
 
 const SelectTaxFamily = () => {
+  const intl = useIntl();
   const {taxFamilies} = UseTaxFamily()
   const {taxFamily, setTaxFamily, game} = useContext(AppContext);
 
@@ -65,7 +66,7 @@ const SelectTaxFamily = () => {
         <Select.HiddenSelect />
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="Select family..." />
+            <Select.ValueText placeholder={intl.formatMessage({ id: 'select family placeholder', defaultMessage: 'Select family...' })} />
           </Select.Trigger>
           <Select.IndicatorGroup>
             <Select.Indicator />

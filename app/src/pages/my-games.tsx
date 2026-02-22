@@ -79,7 +79,7 @@ export const MyGamesPage = () => {
         <Page.Body>
           <VStack gap={4}>
             <Spinner size="xl" colorPalette="primary" />
-            <Text>Loading games...</Text>
+            <Text><FormattedMessage id="loading games" defaultMessage="Loading games..." /></Text>
           </VStack>
         </Page.Body>
       </Page>

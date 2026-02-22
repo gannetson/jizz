@@ -17,7 +17,9 @@ import {
 import { Page } from '../shared/components/layout';
 import { FormattedMessage, useIntl } from 'react-intl';
 import AppContext from '../core/app-context';
-import { MediaServiceImpl, MediaItem, SpeciesReviewStatsResponse } from '../api/services/media.service';
+import type { Species } from '../core/app-context';
+import { MediaServiceImpl, MediaItem, SpeciesReviewStatsResponse, type ReviewLevel } from '../api/services/media.service';
+import SpeciesCombobox from '../components/species-combobox';
 import { ApiClient, apiClient } from '../api/client';
 import { authService } from '../api/services/auth.service';
 import { toaster } from '@/components/ui/toaster';
@@ -63,6 +65,11 @@ export const MediaReviewPage = () => {
   const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | 'audio'>('image');
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebrationSpeciesName, setCelebrationSpeciesName] = useState<string | null>(null);
+  const [speciesList, setSpeciesList] = useState<Species[]>([]);
+  const [speciesListLoading, setSpeciesListLoading] = useState(false);
+  const [selectedSpecies, setSelectedSpecies] = useState<Species | null>(null);
+  const [reviewLevel, setReviewLevel] = useState<ReviewLevel>('fast');
+  const [tenApprovedSpeciesName, setTenApprovedSpeciesName] = useState<string | null>(null);
 
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
@@ -70,10 +77,39 @@ export const MediaReviewPage = () => {
       setSelectedCountry(countryCode.toUpperCase());
     }
   }, [countryCode]);
+
+  // Clear species filter when country changes
+  useEffect(() => {
+    setSelectedSpecies(null);
+  }, [selectedCountry]);
+
   const { countries } = UseCountries();
   const { player, language } = useContext(AppContext);
   const intl = useIntl();
   const languageParam = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
+
+  // Load species for selected country (for filter dropdown)
+  useEffect(() => {
+    if (!selectedCountry) {
+      setSpeciesList([]);
+      return;
+    }
+    let cancelled = false;
+    setSpeciesListLoading(true);
+    fetch(`/api/species/?countryspecies__country=${selectedCountry}&language=${languageParam}`, { cache: 'no-cache' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : data?.results ?? data?.data ?? [];
+        if (!cancelled) setSpeciesList(arr);
+      })
+      .catch(() => {
+        if (!cancelled) setSpeciesList([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSpeciesListLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedCountry, languageParam]);
 
   const countryCollection = useMemo(() => {
     const items = countries.map((c, index) => ({
@@ -97,12 +133,26 @@ export const MediaReviewPage = () => {
     [intl]
   );
 
+  const levelCollection = useMemo(
+    () =>
+      createListCollection({
+        items: [
+          { label: intl.formatMessage({ id: 'review level fast', defaultMessage: 'Fast' }), value: 'fast' },
+          { label: intl.formatMessage({ id: 'review level full', defaultMessage: 'Full' }), value: 'full' },
+          { label: intl.formatMessage({ id: 'review level thorough', defaultMessage: 'Thorough' }), value: 'thorough' },
+        ],
+      }),
+    [intl]
+  );
+
   const loadMedia = useCallback(
     async (
       page: number = 1,
       reset: boolean = false,
       countryCode?: string,
-      mediaType: 'image' | 'video' | 'audio' = 'image'
+      mediaType: 'image' | 'video' | 'audio' = 'image',
+      speciesId?: number,
+      level: ReviewLevel = 'fast'
     ) => {
       try {
         if (reset) {
@@ -113,7 +163,7 @@ export const MediaReviewPage = () => {
           setLoadingMore(true);
         }
 
-        const data = await mediaService.getMedia(mediaType, page, countryCode, languageParam);
+        const data = await mediaService.getMedia(mediaType, page, countryCode, languageParam, speciesId, level);
       
       // Use functional updates to access current state
       setLoadedItemIds(currentLoadedIds => {
@@ -156,8 +206,8 @@ export const MediaReviewPage = () => {
   );
 
   useEffect(() => {
-    loadMedia(1, true, selectedCountry || undefined, selectedMediaType);
-  }, [selectedCountry, selectedMediaType, languageParam, loadMedia]);
+    loadMedia(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
+  }, [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam, loadMedia]);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,9 +228,9 @@ export const MediaReviewPage = () => {
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasNextPage) {
-      loadMedia(currentPage + 1, false, selectedCountry || undefined, selectedMediaType);
+      loadMedia(currentPage + 1, false, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
     }
-  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry, selectedMediaType]);
+  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -247,8 +297,18 @@ export const MediaReviewPage = () => {
       // When authenticated (JWT), do not send player_token; backend uses request.user
       const playerToken = authService.getAccessToken() ? undefined : player?.token;
       await mediaService.reviewMedia(mediaId, playerToken, reviewType);
+      const speciesStatForToast = speciesStats?.species?.find((s) => s.id === speciesId);
+      const approvedAfter = speciesStatForToast
+        ? speciesStatForToast.approved + (reviewType === 'approved' ? 1 : 0)
+        : 0;
       const messages = {
-        approved: intl.formatMessage({ id: 'media approved', defaultMessage: 'Media approved.' }),
+        approved:
+          reviewLevel === 'fast'
+            ? intl.formatMessage(
+                { id: 'media approved count', defaultMessage: 'Media approved {count}/10' },
+                { count: approvedAfter },
+              )
+            : intl.formatMessage({ id: 'media approved', defaultMessage: 'Media approved.' }),
         rejected: intl.formatMessage({ id: 'media rejected', defaultMessage: 'Media rejected.' }),
         not_sure: intl.formatMessage({ id: 'media not sure', defaultMessage: 'Marked as not sure.' }),
       };
@@ -258,19 +318,50 @@ export const MediaReviewPage = () => {
         duration: 2000,
       });
 
+      // Update species stats optimistically so counts (approved, rejected, not_sure) stay in sync for 10-approved and UI
+      if (speciesStats && speciesId != null) {
+        setSpeciesStats((prev) => {
+          if (!prev) return prev;
+          const species = prev.species.find((s) => s.id === speciesId);
+          if (!species) return prev;
+          const unreviewed = Math.max(0, species.unreviewed - 1);
+          const approved = species.approved + (reviewType === 'approved' ? 1 : 0);
+          const rejected = species.rejected + (reviewType === 'rejected' ? 1 : 0);
+          const not_sure = species.not_sure + (reviewType === 'not_sure' ? 1 : 0);
+          const isNowFullyReviewed = unreviewed === 0;
+          const hadTenApprovedBefore = species.approved >= 10;
+          const isNowReviewed = !isNowFullyReviewed && approved >= 10;
+          const wasPartlyAndNowReviewed = species.unreviewed > 0 && species.approved < 10 && isNowReviewed;
+          const summary = {
+            ...prev.summary,
+            fully_reviewed: prev.summary.fully_reviewed + (isNowFullyReviewed ? 1 : 0),
+            reviewed: (prev.summary.reviewed ?? 0) + (wasPartlyAndNowReviewed ? 1 : 0) - (isNowFullyReviewed && hadTenApprovedBefore ? 1 : 0),
+            partly_reviewed: Math.max(
+              0,
+              prev.summary.partly_reviewed
+                - (isNowFullyReviewed && !hadTenApprovedBefore ? 1 : 0)
+                - (wasPartlyAndNowReviewed ? 1 : 0),
+            ),
+          };
+          return {
+            ...prev,
+            species: prev.species.map((s) =>
+              s.id === speciesId
+                ? { ...s, unreviewed, approved, rejected, not_sure }
+                : s
+            ),
+            summary,
+          };
+        });
+      }
+
       // Celebrate when all media for this species are now reviewed (species fully reviewed)
+      const speciesStat = speciesStats?.species?.find((s) => s.id === speciesId);
+      const unreviewedAfter = speciesStat ? Math.max(0, speciesStat.unreviewed - 1) : null;
       const isSpeciesFullyReviewed =
         speciesId != null &&
         speciesName &&
-        (() => {
-          // From stats: this was the last unreviewed for this species
-          const speciesStat = speciesStats?.species?.find((s) => s.id === speciesId);
-          if (speciesStat && speciesStat.unreviewed === 1) return true;
-          // Fallback: in current loaded list, we just reviewed the last item for this species
-          const speciesMediaIds = media.filter((m) => m.species_id === speciesId).map((m) => m.id);
-          const nowReviewedForSpecies = new Set([...Array.from(reviewedItems.keys()), mediaId].filter((id) => speciesMediaIds.includes(id)));
-          return speciesMediaIds.length > 0 && nowReviewedForSpecies.size === speciesMediaIds.length;
-        })();
+        unreviewedAfter === 0;
 
       if (isSpeciesFullyReviewed) {
         setShowConfetti(true);
@@ -402,6 +493,58 @@ export const MediaReviewPage = () => {
           </Flex>
         </Portal>
       )}
+      {tenApprovedSpeciesName && (
+        <Portal>
+          <Flex
+            position="fixed"
+            inset={0}
+            zIndex={10000}
+            align="center"
+            justify="center"
+            p={6}
+            bg="blackAlpha.600"
+            onClick={() => setTenApprovedSpeciesName(null)}
+            pointerEvents="auto"
+            aria-live="polite"
+          >
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              position="relative"
+              bg="blue.600"
+              color="white"
+              borderRadius="2xl"
+              p={8}
+              maxW="420px"
+              textAlign="center"
+              animation={`${glowKeyframes} 1.5s ease-in-out infinite`}
+              borderWidth="4px"
+              borderColor="blue.200"
+              borderStyle="solid"
+            >
+              <Icon as={FaTrophy} boxSize={16} mb={4} color="blue.200" />
+              <Heading size="xl" mb={2}>
+                <FormattedMessage id="ten approved title" defaultMessage="10 approved!" />
+              </Heading>
+              <Text fontSize="xl" fontWeight="bold" mb={2}>
+                {tenApprovedSpeciesName}
+              </Text>
+              <Text fontSize="lg" opacity={0.95}>
+                <FormattedMessage id="ten approved message" defaultMessage="Loading next species..." />
+              </Text>
+              <Button
+                mt={6}
+                size="lg"
+                colorPalette="blue"
+                variant="outline"
+                borderWidth="2px"
+                onClick={() => setTenApprovedSpeciesName(null)}
+              >
+                <FormattedMessage id="dismiss" defaultMessage="Dismiss" />
+              </Button>
+            </Box>
+          </Flex>
+        </Portal>
+      )}
       <Page.Header>
         <Heading color={'gray.800'} size={'lg'} m={0}>
           <FormattedMessage id={'media review'} defaultMessage={'Media Review'} />
@@ -475,7 +618,7 @@ export const MediaReviewPage = () => {
                 <Select.HiddenSelect />
                 <Select.Control>
                   <Select.Trigger>
-                    <Select.ValueText placeholder="Media type..." />
+                    <Select.ValueText placeholder={intl.formatMessage({ id: 'media type placeholder', defaultMessage: 'Media type...' })} />
                   </Select.Trigger>
                   <Select.IndicatorGroup>
                     <Select.Indicator />
@@ -485,6 +628,38 @@ export const MediaReviewPage = () => {
                   <Select.Positioner>
                     <Select.Content>
                       {mediaTypeCollection.items.map((item: any) => (
+                        <Select.Item key={item.value} item={item}>
+                          <Select.ItemIndicator />
+                          <Select.ItemText>{item.label}</Select.ItemText>
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+            </Box>
+            <Box minW="140px">
+              <Select.Root
+                collection={levelCollection}
+                value={[reviewLevel]}
+                onValueChange={(details: { value: string[] }) => {
+                  const v = details.value[0];
+                  if (v === 'fast' || v === 'full' || v === 'thorough') setReviewLevel(v);
+                }}
+              >
+                <Select.HiddenSelect />
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder={intl.formatMessage({ id: 'review level fast', defaultMessage: 'Level...' })} />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {levelCollection.items.map((item: any) => (
                         <Select.Item key={item.value} item={item}>
                           <Select.ItemIndicator />
                           <Select.ItemText>{item.label}</Select.ItemText>
@@ -507,7 +682,7 @@ export const MediaReviewPage = () => {
                 <Select.HiddenSelect />
                 <Select.Control>
                   <Select.Trigger>
-                    <Select.ValueText placeholder="Select country..." />
+                    <Select.ValueText placeholder={intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' })} />
                   </Select.Trigger>
                   <Select.IndicatorGroup>
                     <Select.Indicator />
@@ -527,6 +702,21 @@ export const MediaReviewPage = () => {
                 </Portal>
               </Select.Root>
             </Box>
+            {selectedCountry && (
+              <Box minW="220px">
+                <SpeciesCombobox
+                  species={speciesList}
+                  playerLanguage={language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en'}
+                  value={selectedSpecies}
+                  isClearable
+                  onSelect={(s) => setSelectedSpecies(s)}
+                  onClear={() => setSelectedSpecies(null)}
+                  loading={speciesListLoading}
+                  placeholder={<FormattedMessage id="filter by species" defaultMessage="Filter by species..." />}
+                  emptyMessage={<FormattedMessage id="no species found" defaultMessage="No species found" />}
+                />
+              </Box>
+            )}
           </Flex>
           {!speciesStatsLoading && speciesStats && (
             <Box mt={4} mb={4}>
@@ -566,7 +756,7 @@ export const MediaReviewPage = () => {
             </Box>
           )}
         {loading ? (
-          <Text>Loading...</Text>
+          <Text><FormattedMessage id="loading" defaultMessage="Loading..." /></Text>
         ) : (
           <Box>
             {(() => {

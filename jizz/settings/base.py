@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'jizz',  # Put jizz before django.contrib.admin so our templates are found first
     'compare',  # Species comparison app
     'media',  # Media files app (Image, Video, Audio)
+    'django_quill',  # Quill rich text editor (admin + forms)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

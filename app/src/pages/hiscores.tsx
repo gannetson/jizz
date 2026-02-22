@@ -1,6 +1,6 @@
 import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection, useBreakpoint} from "@chakra-ui/react";
 import { Page } from "../shared/components/layout";
-import {FormattedMessage} from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import {useContext, useEffect, useState, useMemo} from "react"
 import AppContext, {Country, Score} from "../core/app-context"
 import {Loading} from "../components/loading"
@@ -10,6 +10,7 @@ import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 import { apiUrl } from '../api/baseUrl'
 
 const HomePage = () => {
+  const intl = useIntl()
   const {countries} = UseCountries()
   const {loading, setLoading} = useContext(AppContext)
   const [scores, setScores] = useState<Score[]>([])
@@ -176,10 +177,10 @@ const HomePage = () => {
       </Page.Header>
       <Page.Body>
         <Flex width={'full'} gap={4} flexDirection={isMobile ? 'column' : 'row'}>
-          {renderSelect(countryCollection, countryValue, handleCountryChange, 'Select country...')}
-          {renderSelect(mediaCollection, mediaValue, handleMediaChange, 'Select media...')}
-          {renderSelect(levelCollection, levelValue, handleLevelChange, 'Select level...')}
-          {renderSelect(lengthCollection, lengthValue, handleLengthChange, 'Select length...')}
+          {renderSelect(countryCollection, countryValue, handleCountryChange, intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' }))}
+          {renderSelect(mediaCollection, mediaValue, handleMediaChange, intl.formatMessage({ id: 'select media placeholder', defaultMessage: 'Select media...' }))}
+          {renderSelect(levelCollection, levelValue, handleLevelChange, intl.formatMessage({ id: 'select level placeholder', defaultMessage: 'Select level...' }))}
+          {renderSelect(lengthCollection, lengthValue, handleLengthChange, intl.formatMessage({ id: 'select length placeholder', defaultMessage: 'Select length...' }))}
         </Flex>
         <>
           {loading ? (

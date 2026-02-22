@@ -2,15 +2,12 @@ import React, { useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { Box, Spinner, Text, VStack } from "@chakra-ui/react";
 
+import { getApiBaseUrl } from "../../api/baseUrl";
+
 /**
  * When the SPA is wrongly served at /auth/login/:provider (e.g. production
  * serves index.html for all routes), redirect to the backend so Django handles OAuth.
  */
-const getApiBaseUrl = () =>
-  process.env.NODE_ENV === "development"
-    ? "http://127.0.0.1:8050"
-    : (process.env.REACT_APP_API_URL || window.location.origin);
-
 export const AuthLoginRedirect = () => {
   const { provider } = useParams<{ provider: string }>();
   const { search } = useLocation();

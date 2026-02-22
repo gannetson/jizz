@@ -1,5 +1,5 @@
 import axios from '../axios-config';
-import { authService } from './auth.service';
+import { getApiBaseUrl } from '../baseUrl';
 
 export interface UserProfile {
   username: string;
@@ -27,9 +27,9 @@ export interface ProfileUpdateData {
 }
 
 class ProfileService {
-  private baseURL = process.env.NODE_ENV === 'development' 
-    ? 'http://127.0.0.1:8050' 
-    : 'https://birdr.pro';
+  private get baseURL(): string {
+    return getApiBaseUrl();
+  }
 
   /**
    * Get current user's profile

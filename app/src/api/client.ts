@@ -1,4 +1,6 @@
 // API Client - Centralized HTTP client with configurable base URL and headers
+import { getApiBaseUrl } from './baseUrl';
+
 export interface ApiClientConfig {
   baseURL?: string;
   getAuthToken?: () => string | null;
@@ -15,12 +17,12 @@ function defaultGetAuthToken(): string | null {
 }
 
 export class ApiClient {
-  private baseURL: string;
+  private baseURLOverride: string | undefined;
   private getAuthToken: () => string | null;
   private getHeaders: () => Record<string, string>;
 
   constructor(config: ApiClientConfig = {}) {
-    this.baseURL = config.baseURL || '';
+    this.baseURLOverride = config.baseURL !== undefined && config.baseURL !== '' ? config.baseURL : undefined;
     this.getAuthToken = config.getAuthToken || defaultGetAuthToken;
     this.getHeaders = config.getHeaders || (() => ({
       'Accept': 'application/json',
@@ -31,11 +33,15 @@ export class ApiClient {
     }));
   }
 
+  private getBaseURL(): string {
+    return this.baseURLOverride ?? getApiBaseUrl();
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${this.getBaseURL()}${endpoint}`;
     const token = this.getAuthToken();
     const defaultHeaders = this.getHeaders();
 

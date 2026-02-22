@@ -202,6 +202,25 @@ export const Login = () => {
             </HStack>
           </Button>
 
+          {/* Apple Login - Uses Django backend OAuth or token */}
+          <Button
+            colorPalette="neutral"
+            width="full"
+            variant="outline"
+            onClick={() => handleSocialLogin('apple-id')}
+            disabled={loading}
+          >
+            <HStack gap={2}>
+              <SiApple size={20} />
+              <Text>
+                <FormattedMessage
+                  id="login_with_apple"
+                  defaultMessage="Continue with Apple"
+                />
+              </Text>
+            </HStack>
+          </Button>
+
         </VStack>
       </VStack>
     </Box>

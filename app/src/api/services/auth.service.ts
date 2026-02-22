@@ -1,4 +1,5 @@
 import axios from '../axios-config';
+import { getApiBaseUrl } from '../baseUrl';
 
 export interface LoginCredentials {
   email: string;
@@ -24,11 +25,10 @@ export interface AuthError {
 }
 
 class AuthService {
-  // Use REACT_APP_API_URL in production so OAuth start URL hits the backend (not the SPA).
-  // If unset in production, defaults to same origin (requires server to proxy /auth/ to Django).
-  private baseURL = process.env.NODE_ENV === 'development'
-    ? 'http://127.0.0.1:8050'
-    : (process.env.REACT_APP_API_URL || 'https://birdr.pro');
+  // getApiBaseUrl() returns correct origin for web and Capacitor (Android/iOS)
+  private get baseURL(): string {
+    return getApiBaseUrl();
+  }
 
   /**
    * Login with email and password using Django JWT
@@ -127,6 +127,32 @@ class AuthService {
         `${this.baseURL}/api/google-login/`,
         {
           token: token,
+        }
+      );
+
+      return {
+        access: response.data.access,
+        refresh: response.data.refresh,
+      };
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Login with Apple identity token (e.g. from Sign in with Apple JS or native)
+   * Optional user object for first-time sign-in: { name?: { firstName, lastName }, email? }
+   */
+  async loginWithAppleToken(
+    identityToken: string,
+    user?: { name?: { firstName?: string; lastName?: string }; email?: string }
+  ): Promise<TokenResponse> {
+    try {
+      const response = await axios.post<TokenResponse>(
+        `${this.baseURL}/api/apple-login/`,
+        {
+          identity_token: identityToken,
+          user: user ?? undefined,
         }
       );
 

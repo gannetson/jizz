@@ -1,6 +1,6 @@
 import {useContext, useEffect, useState} from "react";
 import AppContext from "../core/app-context"
-
+import { apiUrl } from "../api/baseUrl"
 
 export interface TaxFamily {
   tax_family: string
@@ -16,7 +16,7 @@ export const UseTaxFamily = () => {
       const fetchTaxFamilies = async () => {
         setTaxFamilies([]) // Reset when country changes
         try {
-          const url: string = country ? `/api/families/?country=${country.code}` : `/api/families/`;
+          const url: string = country ? apiUrl(`/api/families/?country=${country.code}`) : apiUrl('/api/families/');
           const response: Response = await fetch(url);
           const data: any = await response.json();
           

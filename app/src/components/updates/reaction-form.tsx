@@ -3,6 +3,7 @@ import {FormattedMessage} from "react-intl"
 import {useContext, useState} from "react"
 import AppContext, {Reaction, Update} from "../../core/app-context"
 import {ReactionLine} from "./reaction-line"
+import { apiUrl } from "../../api/baseUrl"
 
 export const ReactionForm = ({update}: { update: Update }) => {
 
@@ -13,7 +14,7 @@ export const ReactionForm = ({update}: { update: Update }) => {
 
   const postReaction = async () => {
     if (update?.id && player?.token) {
-      const url = `/api/updates/reactions/`
+      const url = apiUrl('/api/updates/reactions/')
       const response = await fetch(url, {
         cache: 'no-cache',
         method: 'POST',

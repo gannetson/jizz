@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 import {Language} from "../core/app-context"
-
+import { apiUrl } from "../api/baseUrl"
 
 export const UseLanguages = () => {
   const [languages, setLanguages] = useState<Language[]>([])
@@ -8,7 +8,7 @@ export const UseLanguages = () => {
     if (languages.length === 0) {
       const fetchLanguages = async () => {
         try {
-          const response: Response = await fetch(`/api/languages/`);
+          const response: Response = await fetch(apiUrl('/api/languages/'));
           const data: any = await response.json();
           
           if (Array.isArray(data)) {

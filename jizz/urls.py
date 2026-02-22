@@ -12,7 +12,7 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     ReactionView, \
     AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
-    MediaListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView
+    MediaListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -36,6 +36,8 @@ urlpatterns = [
     re_path(r'^api/my-games/(?P<token>[\w-]+)/$', UserGameDetailView.as_view(), name='user-game-detail'),
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('api/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+    path('api/google-login/', GoogleLoginView.as_view(), name='google-login'),
+    path('api/apple-login/', AppleLoginView.as_view(), name='apple-login'),
 
     path('api/', include(router.urls)),
 

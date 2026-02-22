@@ -1,5 +1,6 @@
 import axios from '../axios-config';
 import { Game } from '../../core/app-context';
+import { getApiBaseUrl } from '../baseUrl';
 
 export interface PaginatedGamesResponse {
   count: number;
@@ -71,9 +72,9 @@ export interface GameDetailWithAnswers {
 }
 
 class GamesService {
-  private baseURL = process.env.NODE_ENV === 'development' 
-    ? 'http://127.0.0.1:8050' 
-    : 'https://birdr.pro';
+  private get baseURL(): string {
+    return getApiBaseUrl();
+  }
 
   /**
    * Get paginated list of games played by the authenticated user

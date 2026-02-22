@@ -1,0 +1,1 @@
+[{"id":"country summary","defaultMessage":"{country} has {speciesCount} species, in {orderCount} orders and {familyCount} families.","file":"src/components/country-summary.tsx","start":{"line":30,"column":8,"index":969},"end":{"line":33,"column":84,"index":1222}}]

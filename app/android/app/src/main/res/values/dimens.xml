@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Extra top padding so web menu/title bar doesn't collide with status bar -->
+    <dimen name="webview_extra_top_padding">12dp</dimen>
+</resources>

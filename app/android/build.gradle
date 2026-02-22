@@ -24,6 +24,16 @@ allprojects {
     }
 }
 
+// Use Java 17 for Capacitor subproject when running with JDK 17 (Capacitor 7 defaults to 21)
+subprojects { subproject ->
+    subproject.afterEvaluate {
+        if (subproject.name == 'capacitor-android' && subproject.hasProperty('android')) {
+            subproject.android.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+            subproject.android.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

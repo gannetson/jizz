@@ -6,7 +6,7 @@ import AppContext from "../../../core/app-context"
 import {PlayerItem} from "./player-item"
 import {useNavigate} from "react-router-dom"
 import {GameRow} from "../../../components/game-row"
-
+import { apiUrl } from '../../../api/baseUrl'
 
 export const ResultsComponent = () => {
 
@@ -72,7 +72,7 @@ export const ResultsComponent = () => {
       setTimeout(async () => {
         try {
           // Load the new game
-          const response = await fetch(`/api/games/${new_game_token}/`, {
+          const response = await fetch(apiUrl(`/api/games/${new_game_token}/`), {
             cache: 'no-store',
             method: 'GET',
             headers: {
@@ -127,7 +127,7 @@ export const ResultsComponent = () => {
     await new Promise(resolve => setTimeout(resolve, 200))
     
     // Load the new game
-    const response = await fetch(`/api/games/${rematchInvitation.new_game_token}/`, {
+    const response = await fetch(apiUrl(`/api/games/${rematchInvitation.new_game_token}/`), {
       cache: 'no-store',
       method: 'GET',
       headers: {

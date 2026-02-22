@@ -2,8 +2,12 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'pro.birdr',
-  appName: 'Birdr - Bird ID Quiz',
-  webDir: 'build'
+  appName: 'Birdr',
+  webDir: 'build',
+  server: {
+    url: 'https://birdr.pro',
+    cleartext: false
+  }
 };
 
 export default config;

@@ -1,4 +1,5 @@
 import axios from '../axios-config';
+import { getApiBaseUrl } from '../baseUrl';
 
 export interface SpeciesComparison {
   id: number;
@@ -36,9 +37,9 @@ export interface SpeciesComparison {
 }
 
 class CompareService {
-  private baseURL = process.env.NODE_ENV === 'development' 
-    ? 'http://127.0.0.1:8050' 
-    : 'https://birdr.pro';
+  private get baseURL(): string {
+    return getApiBaseUrl();
+  }
 
   /**
    * Get or generate a comparison between two species

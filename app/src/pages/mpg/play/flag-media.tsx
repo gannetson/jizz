@@ -8,6 +8,7 @@ import {
 import {FormattedMessage, useIntl} from "react-intl"
 import {useContext, useEffect, useState} from "react"
 import { toaster } from "@/components/ui/toaster"
+import { apiUrl } from "../../../api/baseUrl"
 
 const {
   Root: DialogRoot,
@@ -125,7 +126,7 @@ export const FlagMedia = ({isOpen, onClose, media, onSuccess, useMediaReview = f
       return
     }
     
-    const url = useMediaReview ? '/api/review-media/' : '/api/flag-media/'
+    const url = useMediaReview ? apiUrl('/api/review-media/') : apiUrl('/api/flag-media/')
     const body = useMediaReview
       ? {
           media_id: media.id,

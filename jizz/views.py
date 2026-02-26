@@ -59,6 +59,7 @@ from jizz.models import (
     Species,
     Update,
     Reaction,
+    UserProfile,
 )
 from media.models import Media, MediaReview, FlagMedia
 from jizz.serializers import (
@@ -641,6 +642,31 @@ class GoogleLoginView(APIView):
             user, created = User.objects.get_or_create(
                 email=email, defaults={"username": email}
             )
+
+            # Get or create profile and save Google avatar if present
+            profile, _ = UserProfile.objects.get_or_create(
+                user=user, defaults={}
+            )
+            picture_url = idinfo.get("picture")
+            if picture_url:
+                try:
+                    import requests
+                    from django.core.files.base import ContentFile
+                    from urllib.parse import urlparse
+                    import os
+
+                    response = requests.get(picture_url, timeout=10)
+                    if response.status_code == 200:
+                        parsed_url = urlparse(picture_url)
+                        ext = os.path.splitext(parsed_url.path)[1] or ".jpg"
+                        filename = f"avatar_{user.id}{ext}"
+                        profile.avatar.save(
+                            filename,
+                            ContentFile(response.content),
+                            save=True,
+                        )
+                except Exception as e:
+                    logger.warning("Failed to save Google avatar for user %s: %s", user.id, e)
 
             refresh = RefreshToken.for_user(user)
             return Response(

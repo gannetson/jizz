@@ -1,18 +1,19 @@
-from django.contrib import admin
-from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import path, re_path, include
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
-from rest_framework.routers import DefaultRouter
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
-    GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, PlayerScoreListView, \
-    FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
+    GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
+    PlayerScoreListView, \
+    PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
     AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
-    MediaListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, PageListView, PageDetailView
+    MediaListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
+    PageListView, PageDetailView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -62,7 +63,6 @@ urlpatterns = [
     re_path(r"^api/answer/(?P<question>[\w-]+)/(?P<token>[\w-]+)$", AnswerDetail.as_view(), name="answer-detail"),
 
 
-    re_path(r"^api/flag/$", FlagQuestionView.as_view(), name="flag-question-create"),
     re_path(r"^api/media/$", MediaListView.as_view(), name="media-list"),
     re_path(r"^api/review-media/$", ReviewMediaView.as_view(), name="review-media-create"),
     re_path(r"^api/flag-media/$", FlagMediaView.as_view(), name="flag-media-create"),

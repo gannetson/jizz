@@ -7,7 +7,7 @@ from rest_framework_simplejwt import views as jwt_views
 from rest_framework.routers import DefaultRouter
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
-    GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, AnswerView, AnswerDetail, PlayerScoreListView, \
+    GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, PlayerScoreListView, \
     FlagQuestionView, PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
     AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
@@ -43,6 +43,7 @@ urlpatterns = [
 
     re_path(r"^api/languages/$", LanguageListView.as_view(), name="language-list"),
     re_path(r"^api/player/$", PlayerCreateView.as_view(), name="player-create"),
+    re_path(r"^api/player/link/$", PlayerLinkView.as_view(), name="player-link"),
     re_path(r"^api/player/(?P<token>[\w-]+)/$", PlayerView.as_view(), name="player-load"),
     re_path(r"^api/player/(?P<token>[\w-]+)/stats/$", PlayerStatsView.as_view(), name="player-stats"),
 

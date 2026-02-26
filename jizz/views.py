@@ -17,7 +17,7 @@ from rest_framework.generics import (
     RetrieveUpdateAPIView,
 )
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
@@ -262,7 +262,35 @@ class PlayerStatsView(RetrieveAPIView):
     lookup_field = "token"
 
 
-class FlagQuestionView(ListCreateAPIView):
+class PlayerLinkView(APIView):
+    """
+    Link an existing player (by player token) to the currently authenticated user.
+    Call after login so anonymous player/game data is associated with the account.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        player_token = (request.data or {}).get("player_token") or (request.data or {}).get("token")
+        if not player_token or not isinstance(player_token, str):
+            return Response(
+                {"error": "Missing player_token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            player = Player.objects.get(token=player_token.strip())
+        except Player.DoesNotExist:
+            return Response(
+                {"error": "Player not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if player.user_id is not None and player.user_id != request.user.id:
+            return Response(
+                {"error": "Player already linked to another account"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        player.user = request.user
+        player.save(update_fields=["user"])
+        return Response({"ok": True, "player_id": player.id})
     serializer_class = FlagQuestionSerializer
     queryset = FlagQuestion.objects.all()
 

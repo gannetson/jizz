@@ -244,3 +244,38 @@ SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'your-actual-google-client-id'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'your-actual-google-client-secret'
+
+# Ensure errors are visible in the server process (runserver, gunicorn, etc.)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stderr',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'jizz': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'django.request': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+    },
+}

@@ -611,6 +611,14 @@ class GoogleLoginView(APIView):
             logger.exception("Google login error: %s", e)
             return Response({"error": "Invalid token"}, status=400)
 
+    def dispatch(self, request, *args, **kwargs):
+        """Catch any uncaught exception so we always log 500s to console."""
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except Exception as e:
+            logger.exception("GoogleLoginView 500: %s", e)
+            raise
+
 
 def _validate_apple_identity_token(identity_token):
     """

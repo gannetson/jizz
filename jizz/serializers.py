@@ -183,7 +183,11 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     def get_options(self, obj):
         option_orders = QuestionOption.objects.filter(question=obj).order_by('order')
-        return SpeciesDetailSerializer([op.species for op in option_orders], many=True).data
+        return SpeciesDetailSerializer(
+            [op.species for op in option_orders],
+            many=True,
+            context={'game': obj.game, **self.context},
+        ).data
 
     def get_game(self, obj):
         # Include game token so frontend can verify question belongs to current game

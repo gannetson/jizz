@@ -98,7 +98,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
         answer = await self.get_current_answer()
         if not answer:
             return None
-        serializer = AnswerSerializer(answer)
+        serializer = AnswerSerializer(answer, context={'game': answer.question.game})
         data = await sync_to_async(lambda: serializer.data)()
         if not data:
             return None
@@ -240,7 +240,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                     correct=correct
                 )
 
-            serializer = AnswerSerializer(answer)
+            serializer = AnswerSerializer(answer, context={'game': question.game})
             answer_data = await sync_to_async(lambda: serializer.data)()
             await self.send(text_data=json.dumps({
                 'action': 'answer_checked',

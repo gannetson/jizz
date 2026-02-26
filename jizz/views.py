@@ -28,6 +28,9 @@ from social_core.exceptions import AuthException
 from social_django.utils import load_strategy
 from django.shortcuts import redirect
 from django.contrib.auth import login
+import logging
+
+logger = logging.getLogger(__name__)
 from social_django.views import complete as social_complete
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -601,7 +604,11 @@ class GoogleLoginView(APIView):
                 {"refresh": str(refresh), "access": str(refresh.access_token)}
             )
 
-        except AuthException:
+        except AuthException as e:
+            logger.warning("Google login invalid token: %s", e)
+            return Response({"error": "Invalid token"}, status=400)
+        except Exception as e:
+            logger.exception("Google login error: %s", e)
             return Response({"error": "Invalid token"}, status=400)
 
 

@@ -23,9 +23,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_social_oauth2.views import ConvertTokenView
-from social_core.backends.google import GoogleOAuth2
-from social_core.exceptions import AuthException
-from social_django.utils import load_strategy
+from django.conf import settings
 from django.shortcuts import redirect
 from django.contrib.auth import login
 import logging
@@ -588,15 +586,32 @@ class GoogleLoginView(APIView):
 
     def post(self, request):
         token = request.data.get("token")
+        if not token:
+            return Response({"error": "Missing token"}, status=400)
 
         try:
-            strategy = load_strategy(request)
-            backend = GoogleOAuth2(strategy=strategy)
-            user_data = backend.get_user_details(
-                backend.validate_and_return_id_token(token)
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+
+            client_id = getattr(
+                settings, "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", None
+            ) or ""
+            if not client_id or client_id.startswith("<") or client_id.startswith("your-"):
+                logger.warning("Google login: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY not set or placeholder")
+                return Response({"error": "Invalid token"}, status=400)
+
+            idinfo = id_token.verify_oauth2_token(
+                token, google_requests.Request(), client_id
             )
+            if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+                raise ValueError("Wrong issuer")
+
+            email = idinfo.get("email")
+            if not email:
+                raise ValueError("No email in token")
+
             user, created = User.objects.get_or_create(
-                email=user_data["email"], defaults={"username": user_data["email"]}
+                email=email, defaults={"username": email}
             )
 
             refresh = RefreshToken.for_user(user)
@@ -604,7 +619,7 @@ class GoogleLoginView(APIView):
                 {"refresh": str(refresh), "access": str(refresh.access_token)}
             )
 
-        except AuthException as e:
+        except ValueError as e:
             logger.warning("Google login invalid token: %s", e)
             return Response({"error": "Invalid token"}, status=400)
         except Exception as e:

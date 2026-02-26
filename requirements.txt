@@ -23,6 +23,7 @@ djangorestframework-simplejwt==5.3.1
 djangorestframework==3.14.0
 ebird-api==3.0.6
 executing==1.2.0
+google-auth==2.36.0
 html2text==2024.2.26
 idna==3.4
 ipdb==0.13.13

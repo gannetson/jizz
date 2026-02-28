@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Native (optional - uncomment if you don't commit prebuild output)
+# android/
+# ios/
+
+# Env and secrets
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Metro
+.metro-health-check*
+
+# Debug / logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# macOS
+.DS_Store
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Android build / local (backup - android/.gitignore has most)
+# android/app/build/
+# android/.gradle/
+# android/local.properties
+
+# iOS (backup - ios/.gitignore has most)
+# ios/build/
+# ios/Pods/
+# ios/.xcode.env.local
+# *.xcuserstate
+# xcuserdata/

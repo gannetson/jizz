@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Birdr",
+    "slug": "birdr-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "birdr",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "pro.birdr.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "pro.birdr.mobile"
+    },
+    "plugins": [
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Birdr needs access to your photo library to set your profile picture.",
+          "cameraPermission": "Birdr needs access to your camera to take a profile picture."
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.56451813101-in1gn3a1llf3pf0t4tnoffp6ak51enk2"
+        }
+      ]
+    ]
+  }
+}

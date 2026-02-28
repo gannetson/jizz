@@ -1,0 +1,22 @@
+# OSX
+#
+.DS_Store
+
+# Android/IntelliJ
+#
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+
+# Signing - do not commit
+app/debug.keystore
+debug.keystore
+*.jks
+*.keystore
+
+# Bundle artifacts
+*.jsbundle

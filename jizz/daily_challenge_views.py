@@ -17,9 +17,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import NotFound, ValidationError
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 
+from jizz.notifications import send_push_to_user
 from jizz.models import (
-    User,
     Country,
     Game,
     Player,
@@ -41,6 +42,8 @@ from jizz.serializers import (
     DailyChallengeRoundSerializer,
     DeviceTokenSerializer,
 )
+
+User = get_user_model()
 
 
 def _send_daily_challenge_invite_email(request, invite):
@@ -70,6 +73,21 @@ def _send_daily_challenge_invite_email(request, invite):
         msg.send()
     except Exception:
         pass
+
+
+def _ensure_friends(inviter, invitee):
+    """When an invitation is accepted, make inviter and invitee friends (accepted)."""
+    if inviter.id == invitee.id:
+        return
+    for from_u, to_u in [(inviter, invitee), (invitee, inviter)]:
+        friendship, created = Friendship.objects.get_or_create(
+            from_user=from_u,
+            to_user=to_u,
+            defaults={'status': 'accepted'},
+        )
+        if not created and friendship.status != 'accepted':
+            friendship.status = 'accepted'
+            friendship.save(update_fields=['status'])
 
 
 class FriendsListView(APIView):
@@ -257,13 +275,31 @@ class DailyChallengeInviteView(APIView):
                 defaults={'invited_by': request.user, 'status': 'invited'},
             )
         for email in serializer.validated_data.get('emails', []):
-            invite, created = DailyChallengeInvite.objects.get_or_create(
-                challenge=challenge,
-                email=email,
-                defaults={'status': 'pending'},
-            )
-            if created and invite.email:
-                _send_daily_challenge_invite_email(request, invite)
+            email = (email or '').strip().lower()
+            if not email:
+                continue
+            existing_user = User.objects.filter(email__iexact=email).first()
+            if existing_user:
+                DailyChallengeParticipant.objects.get_or_create(
+                    challenge=challenge,
+                    user=existing_user,
+                    defaults={'invited_by': request.user, 'status': 'invited'},
+                )
+                inviter_name = getattr(request.user, 'username', None) or request.user.email or 'Someone'
+                send_push_to_user(
+                    existing_user,
+                    'Daily Challenge invite',
+                    f'{inviter_name} invited you to a Daily Challenge',
+                    {'challenge_id': challenge.id, 'type': 'daily_challenge_invite'},
+                )
+            else:
+                invite, created = DailyChallengeInvite.objects.get_or_create(
+                    challenge=challenge,
+                    email=email,
+                    defaults={'status': 'pending'},
+                )
+                if created and invite.email:
+                    _send_daily_challenge_invite_email(request, invite)
         challenge.refresh_from_db()
         return Response(DailyChallengeSerializer(challenge).data)
 
@@ -283,6 +319,7 @@ class DailyChallengeAcceptByIdView(APIView):
         participant.status = 'accepted'
         participant.accepted_at = now()
         participant.save(update_fields=['status', 'accepted_at'])
+        _ensure_friends(participant.challenge.creator, request.user)
         return Response(DailyChallengeSerializer(participant.challenge).data)
 
 
@@ -429,6 +466,7 @@ class DailyChallengeAcceptByTokenPostView(APIView):
                 participant.save(update_fields=['status', 'accepted_at'])
         invite.status = 'accepted'
         invite.save(update_fields=['status'])
+        _ensure_friends(invite.challenge.creator, request.user)
         return Response(DailyChallengeSerializer(invite.challenge).data)
 
 

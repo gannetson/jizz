@@ -858,6 +858,10 @@ class CountryGame(models.Model):
             return 'running'
         return 'new'
 
+    def update_status(self):
+        """No-op for compatibility with save(); status is a property."""
+        pass
+
     def save(self, *args, **kwargs):
         # Only update status if the instance already exists
         if self.pk:
@@ -867,4 +871,186 @@ class CountryGame(models.Model):
     class Meta:
         ordering = ['-id']
 
+
+# --- Daily Challenge & Friends ---
+
+
+class Friendship(models.Model):
+    """Friend request / friendship between two users. Symmetric once accepted."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+    ]
+    from_user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='friendship_sent'
+    )
+    to_user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='friendship_received'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('from_user', 'to_user')
+        ordering = ['-created']
+
+
+class DailyChallenge(models.Model):
+    """A 7-day (or configurable) daily challenge series."""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_accept', 'Pending accept'),
+        ('active', 'Active'),
+        ('ended', 'Ended'),
+    ]
+    creator = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='daily_challenges_created'
+    )
+    country = models.ForeignKey(
+        'jizz.Country',
+        on_delete=models.CASCADE,
+        related_name='daily_challenges'
+    )
+    media = models.CharField(max_length=10, choices=Game.MEDIA_CHOICES, default='images')
+    length = models.IntegerField(default=10)
+    duration_days = models.IntegerField(default=7)
+    started_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    token = ShortUUIDField(
+        length=12,
+        max_length=16,
+        alphabet="abcdefghijklmnopqrstuvwxyz0123456789",
+        unique=True,
+        editable=False,
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created']
+
+
+class DailyChallengeParticipant(models.Model):
+    """User participating in a daily challenge (creator or invited)."""
+    STATUS_CHOICES = [
+        ('invited', 'Invited'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+    ]
+    challenge = models.ForeignKey(
+        DailyChallenge,
+        on_delete=models.CASCADE,
+        related_name='participants'
+    )
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='daily_challenge_participations'
+    )
+    invited_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='daily_challenge_invites_sent'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='invited')
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('challenge', 'user')
+        ordering = ['-created']
+
+
+class DailyChallengeInvite(models.Model):
+    """Invite by email/phone for users not yet on Birdr (accept via link)."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('expired', 'Expired'),
+    ]
+    challenge = models.ForeignKey(
+        DailyChallenge,
+        on_delete=models.CASCADE,
+        related_name='invites'
+    )
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=30, null=True, blank=True)
+    invite_token = ShortUUIDField(
+        length=16,
+        max_length=24,
+        alphabet="abcdefghijklmnopqrstuvwxyz0123456789",
+        unique=True,
+        editable=False,
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created']
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at and self.pk is None:
+            from django.utils.timezone import now
+            self.expires_at = now() + timedelta(days=7)
+        super().save(*args, **kwargs)
+
+
+class DailyChallengeRound(models.Model):
+    """One round = one day = one game in a daily challenge."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+    ]
+    challenge = models.ForeignKey(
+        DailyChallenge,
+        on_delete=models.CASCADE,
+        related_name='rounds'
+    )
+    day_number = models.PositiveIntegerField()  # 1..duration_days
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name='daily_challenge_rounds',
+        null=True,
+        blank=True
+    )
+    opens_at = models.DateTimeField()
+    closes_at = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('challenge', 'day_number')
+        ordering = ['challenge', 'day_number']
+
+
+class DeviceToken(models.Model):
+    """Push notification device token (FCM or Expo)."""
+    PLATFORM_CHOICES = [
+        ('ios', 'iOS'),
+        ('android', 'Android'),
+    ]
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='device_tokens'
+    )
+    token = models.CharField(max_length=500)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+    created = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'token')
+        ordering = ['-last_used']
 

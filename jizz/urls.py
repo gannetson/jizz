@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import path, re_path, include
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
@@ -15,6 +15,24 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
     MediaListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
+from jizz.daily_challenge_views import (
+    FriendsListView,
+    FriendRequestsListView,
+    FriendRequestView,
+    FriendAcceptView,
+    FriendDeclineView,
+    DailyChallengeCreateView,
+    DailyChallengeDetailView,
+    DailyChallengeInviteView,
+    DailyChallengeAcceptByIdView,
+    DailyChallengeDeclineView,
+    DailyChallengeStartView,
+    DailyChallengeRoundView,
+    DailyChallengeAcceptByTokenView,
+    DailyChallengeAcceptByTokenPostView,
+    DeviceTokenCreateView,
+    DeviceTokenDeleteView,
+)
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -51,9 +69,16 @@ def android_asset_links(request):
     ], safe=False, content_type="application/json")
 
 
+def join_challenge_redirect(request, token):
+    """Redirect /join/challenge/<token> to app deep link (for desktop fallback)."""
+    return HttpResponseRedirect(f'birdr://join/challenge/{token}')
+
+
 urlpatterns = [
     path('.well-known/apple-app-site-association', apple_app_site_association),
     path('.well-known/assetlinks.json', android_asset_links),
+
+    path('join/challenge/<str:token>/', join_challenge_redirect, name='join-challenge'),
 
     path('admin/', admin.site.urls),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
@@ -117,7 +142,29 @@ urlpatterns = [
         AddChallengeLevelView.as_view(),
         name='add_challenge_level'
     ),
-    
+
+    # Friends
+    path('api/friends/', FriendsListView.as_view(), name='friends-list'),
+    path('api/friends/requests/', FriendRequestsListView.as_view(), name='friends-requests'),
+    path('api/friends/request/', FriendRequestView.as_view(), name='friends-request'),
+    path('api/friends/accept/<int:pk>/', FriendAcceptView.as_view(), name='friends-accept'),
+    path('api/friends/decline/<int:pk>/', FriendDeclineView.as_view(), name='friends-decline'),
+
+    # Daily challenges
+    path('api/daily-challenges/', DailyChallengeCreateView.as_view(), name='daily-challenge-list-create'),
+    path('api/daily-challenges/accept-by-token/', DailyChallengeAcceptByTokenPostView.as_view(), name='daily-challenge-accept-by-token'),
+    re_path(r'^api/daily-challenges/accept/(?P<token>[\w-]+)/$', DailyChallengeAcceptByTokenView.as_view(), name='daily-challenge-accept-by-token-get'),
+    re_path(r'^api/daily-challenges/(?P<pk>\d+)/$', DailyChallengeDetailView.as_view(), name='daily-challenge-detail'),
+    path('api/daily-challenges/<int:pk>/invite/', DailyChallengeInviteView.as_view(), name='daily-challenge-invite'),
+    path('api/daily-challenges/<int:pk>/accept/', DailyChallengeAcceptByIdView.as_view(), name='daily-challenge-accept'),
+    path('api/daily-challenges/<int:pk>/decline/', DailyChallengeDeclineView.as_view(), name='daily-challenge-decline'),
+    path('api/daily-challenges/<int:pk>/start/', DailyChallengeStartView.as_view(), name='daily-challenge-start'),
+    path('api/daily-challenges/<int:pk>/rounds/<int:day>/', DailyChallengeRoundView.as_view(), name='daily-challenge-round'),
+
+    # Device tokens (push)
+    path('api/device-tokens/', DeviceTokenCreateView.as_view(), name='device-token-create'),
+    path('api/device-tokens/<int:pk>/', DeviceTokenDeleteView.as_view(), name='device-token-delete'),
+
     # Compare app URLs
     path('api/compare/', include('compare.urls')),
 ]

@@ -29,7 +29,11 @@ export function AppHeader({ title, routeName }: AppHeaderProps) {
       return <Text style={styles.icon}>👤</Text>;
     }
     if (avatarUrl) {
-      return <Image source={{ uri: avatarUrl }} style={styles.avatar} />;
+      return (
+        <View style={styles.avatarWrap}>
+          <Image source={{ uri: avatarUrl }} style={styles.avatar} resizeMode="cover" />
+        </View>
+      );
     }
     return (
       <View style={styles.initialsCircle}>
@@ -93,6 +97,13 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 22,
     color: colors.primary[800],
+  },
+  avatarWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.primary[100],
   },
   avatar: {
     width: 32,

@@ -120,6 +120,20 @@ For **production** you must sign release builds with your own keystore:
 
 - **SHA-1 (e.g. for Google Sign-In / Firebase):** `npm run print-sha1` (use the SHA-1 from the release variant when you use a release keystore).
 
+## Google Sign-In (DEVELOPER_ERROR on Android)
+
+If you see **DEVELOPER_ERROR** when signing in with Google on Android:
+
+1. **Package name in Google Console must be** `pro.birdr.app` (not `pro.birdr.mobile`).
+2. Add the **SHA-1** of the keystore that signs your build to the Android OAuth client:
+   ```bash
+   npm run print-sha1
+   ```
+   Copy the SHA-1 for the variant you use (e.g. `debug`), then in [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → your **Android** OAuth client, add that fingerprint.
+3. Rebuild the app after changing credentials.
+
+Full steps: see **`GOOGLE_CONSOLE_SETUP.md`**.
+
 ## Structure
 
 - **Top bar:** Left = open main (left) drawer; center = title; right = open user menu.

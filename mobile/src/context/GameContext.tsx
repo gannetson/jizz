@@ -35,6 +35,7 @@ type GameContextType = {
   createGame: () => Promise<Game | null>;
   loadGame: (token: string) => Promise<Game | null>;
   setGame: (g: Game | null) => void;
+  setPlayer: (p: Player | null) => void;
   loadStoredPlayer: () => Promise<void>;
   clearGame: () => Promise<void>;
 };
@@ -158,6 +159,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         createGame,
         loadGame,
         setGame,
+        setPlayer,
         loadStoredPlayer,
         clearGame,
       }}

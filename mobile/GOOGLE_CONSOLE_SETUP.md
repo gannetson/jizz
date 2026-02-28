@@ -32,7 +32,7 @@ You need **two** client IDs for the mobile app:
 ### B. Android client (for native sign-in on Android)
 
 - **Create** an **Android** OAuth 2.0 Client ID.
-- **Package name:** `pro.birdr.mobile` (must match `android.package` in `app.json`).
+- **Package name:** `pro.birdr.app` (must match `android.package` in `app.json`).
 - **SHA-1 certificate fingerprint:** Add the SHA-1 of the keystore used to sign the app.
 
 **Get SHA-1:**
@@ -47,7 +47,7 @@ Copy the **SHA-1** line (e.g. `AA:BB:CC:...`) into the Android client in Google 
 ### C. iOS client (if you build for iOS)
 
 - **Create** an **iOS** OAuth 2.0 Client ID.
-- **Bundle ID:** `pro.birdr.mobile` (must match `ios.bundleIdentifier` in `app.json`).
+- **Bundle ID:** `pro.birdr.app` (must match `ios.bundleIdentifier` in `app.json`).
 
 No SHA-1 for iOS; the bundle ID is enough.
 
@@ -56,8 +56,8 @@ No SHA-1 for iOS; the bundle ID is enough.
 | Use case              | Client type | What to set |
 |-----------------------|------------|-------------|
 | App + backend token   | Web        | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and iOS URL scheme in `app.json` |
-| Android native sign-in| Android    | Package `pro.birdr.mobile` + SHA-1 (debug + release) |
-| iOS native sign-in    | iOS        | Bundle ID `pro.birdr.mobile` |
+| Android native sign-in| Android    | Package `pro.birdr.app` + SHA-1 (debug + release) |
+| iOS native sign-in    | iOS        | Bundle ID `pro.birdr.app` |
 
 After adding or changing clients, rebuild the app (`npx expo prebuild --clean` then `npx expo run:android` or `run:ios`).
 
@@ -94,7 +94,7 @@ In the output, find **SHA1** under `Variant: debug` (or the variant you run). Co
 1. Open [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Credentials**.
 2. Open your **Android** OAuth 2.0 Client ID (or create one):
    - **Application type:** Android  
-   - **Package name:** `pro.birdr.mobile` (exactly).  
+   - **Package name:** `pro.birdr.app` (exactly — must match your app).  
    - Under **SHA-1 certificate fingerprint**, click **Add fingerprint** and paste the SHA-1 from Step 1.
 3. Save. If the client is new, wait a few minutes for changes to apply.
 
@@ -109,9 +109,9 @@ Use the same keystore you used to get the SHA-1 (e.g. don’t switch from local 
 
 **Checklist**
 
-- [ ] Android OAuth client has **Package name** `pro.birdr.mobile`.  
+- [ ] Android OAuth client has **Package name** `pro.birdr.app` (not pro.birdr.mobile).  
 - [ ] **SHA-1** added for the keystore that actually signs the build you’re testing.  
-- [ ] **Web** client ID is set in the app as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (for the ID token).  
+- [ ] **Web** client ID is set in the app (for the ID token).  
 - [ ] App rebuilt after changing credentials.
 
 ---

@@ -5,7 +5,8 @@ from rest_framework import serializers
 
 from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, Page, SpeciesName, UserProfile
+    ChallengeLevel, Language, Page, SpeciesName, UserProfile, \
+    Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
 
 
@@ -955,3 +956,116 @@ class CountryChallengeSerializer(serializers.ModelSerializer):
     class Meta:
         model = CountryChallenge
         fields = ['id', 'country', 'player', 'created', 'levels', 'country_code']
+
+
+# --- Friends & Daily Challenge ---
+
+
+class UserMinimalSerializer(serializers.ModelSerializer):
+    """Minimal user for friend lists and challenge participants."""
+    username = serializers.CharField(read_only=True)
+    profile = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'profile')
+
+    def get_profile(self, obj):
+        try:
+            p = obj.profile
+            return {
+                'username': obj.username,
+                'language': getattr(p, 'language', None),
+                'country_code': p.country_id if p and p.country_id else None,
+            }
+        except UserProfile.DoesNotExist:
+            return {'username': obj.username}
+
+
+class FriendshipSerializer(serializers.ModelSerializer):
+    from_user = UserMinimalSerializer(read_only=True)
+    to_user = UserMinimalSerializer(read_only=True)
+
+    class Meta:
+        model = Friendship
+        fields = ('id', 'from_user', 'to_user', 'status', 'created')
+        read_only_fields = ('id', 'created')
+
+
+class FriendshipRequestSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=False)
+    username = serializers.CharField(required=False)
+
+    def validate(self, attrs):
+        if not attrs.get('user_id') and not attrs.get('username'):
+            raise serializers.ValidationError('Provide user_id or username')
+        return attrs
+
+
+class DailyChallengeParticipantSerializer(serializers.ModelSerializer):
+    user = UserMinimalSerializer(read_only=True)
+
+    class Meta:
+        model = DailyChallengeParticipant
+        fields = ('id', 'user', 'invited_by', 'status', 'accepted_at', 'created')
+
+
+class DailyChallengeRoundSerializer(serializers.ModelSerializer):
+    game_token = serializers.SerializerMethodField()
+    my_player_token = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DailyChallengeRound
+        fields = ('id', 'day_number', 'game', 'game_token', 'my_player_token', 'opens_at', 'closes_at', 'status', 'created')
+
+    def get_game_token(self, obj):
+        return obj.game.token if obj.game_id else None
+
+    def get_my_player_token(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not obj.game_id:
+            return None
+        from jizz.models import Player
+        player = Player.objects.filter(user=request.user).filter(scores__game=obj.game).first()
+        return player.token if player else None
+
+
+class DailyChallengeSerializer(serializers.ModelSerializer):
+    country = CountrySerializer(read_only=True)
+    country_code = serializers.SlugRelatedField(
+        slug_field='code',
+        queryset=Country.objects.all(),
+        write_only=True,
+        required=False
+    )
+    participants = DailyChallengeParticipantSerializer(many=True, read_only=True)
+    rounds = DailyChallengeRoundSerializer(many=True, read_only=True)
+    creator_username = serializers.CharField(source='creator.username', read_only=True)
+
+    class Meta:
+        model = DailyChallenge
+        fields = (
+            'id', 'token', 'creator', 'creator_username', 'country', 'country_code',
+            'media', 'length', 'duration_days', 'started_at', 'status',
+            'participants', 'rounds', 'created'
+        )
+        read_only_fields = ('token', 'creator', 'started_at', 'participants', 'rounds')
+
+
+class DailyChallengeCreateSerializer(serializers.Serializer):
+    country = serializers.CharField()
+    media = serializers.ChoiceField(choices=Game.MEDIA_CHOICES, default='images')
+    length = serializers.IntegerField(default=10)
+    duration_days = serializers.IntegerField(default=7, required=False)
+
+
+class DailyChallengeInviteSerializer(serializers.Serializer):
+    friend_user_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
+    emails = serializers.ListField(child=serializers.EmailField(), required=False, default=list)
+
+
+class DeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceToken
+        fields = ('id', 'token', 'platform', 'created', 'last_used')
+        read_only_fields = ('id', 'created', 'last_used')

@@ -191,11 +191,12 @@ export function ProfileScreen() {
           disabled={uploadingAvatar}
         >
           {avatarPreviewUri ? (
-            <Image source={{ uri: avatarPreviewUri }} style={styles.avatarImage} />
-          ) : profile?.avatar_url ? (
+            <Image source={{ uri: avatarPreviewUri }} style={styles.avatarImage} resizeMode="cover" />
+          ) : getAvatarUrl(profile) ? (
             <Image
               source={{ uri: getAvatarUrl(profile) ?? '' }}
               style={styles.avatarImage}
+              resizeMode="cover"
               accessibilityLabel={t('username')}
             />
           ) : (

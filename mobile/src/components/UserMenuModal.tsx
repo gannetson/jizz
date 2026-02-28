@@ -95,7 +95,7 @@ export function UserMenuModal() {
                 <View style={styles.userSummary}>
                   <View style={styles.userAvatarWrap}>
                     {avatarUrl ? (
-                      <Image source={{ uri: avatarUrl }} style={styles.userAvatar} />
+                      <Image source={{ uri: avatarUrl }} style={styles.userAvatar} resizeMode="cover" />
                     ) : (
                       <View style={styles.userInitialsCircle}>
                         <Text style={styles.userInitialsText}>{initials || '?'}</Text>
@@ -144,7 +144,7 @@ export function UserMenuModal() {
                 style={[styles.menuItem, styles.exitItem]}
                 onPress={handleExit}
               >
-                <Text style={styles.exitLabel}>Exit</Text>
+                <Text style={styles.exitLabel}>Close app</Text>
               </TouchableOpacity>
             </ScrollView>
           </Pressable>

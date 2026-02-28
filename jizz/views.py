@@ -60,6 +60,12 @@ from jizz.models import (
     Update,
     Reaction,
     UserProfile,
+    Friendship,
+    DailyChallenge,
+    DailyChallengeParticipant,
+    DailyChallengeInvite,
+    DailyChallengeRound,
+    DeviceToken,
 )
 from media.models import Media, MediaReview, FlagMedia
 from jizz.serializers import (

@@ -1,0 +1,19 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Daily Challenge Invite - Birdr{% endblock %}
+
+{% block content %}
+<h2>You're invited to a Daily Challenge!</h2>
+<p>Hello,</p>
+<p><strong>{{ inviter_username }}</strong> has invited you to join a 7-day Daily Challenge on Birdr.</p>
+<p>Play a short bird quiz every day for 7 days and compete with friends.</p>
+
+<div class="button-container">
+    <a href="{{ accept_url }}" class="button">Accept challenge</a>
+</div>
+
+<p class="text-muted">Or copy and paste this link into your browser:</p>
+<p class="text-muted" style="word-break: break-all; font-size: 12px;">{{ accept_url }}</p>
+
+<p class="text-muted">This invite expires in 7 days.</p>
+{% endblock %}

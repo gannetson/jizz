@@ -15,7 +15,9 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
                          CountrySpecies, Feedback, FlagQuestion, Game, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
-                         Update, CountryGame, Language, SpeciesName, UserProfile)
+                         Update, CountryGame, Language, SpeciesName, UserProfile,
+                         Friendship, DailyChallenge, DailyChallengeParticipant,
+                         DailyChallengeInvite, DailyChallengeRound, DeviceToken)
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
 from media.models import Media
@@ -692,3 +694,45 @@ class UserProfileAdmin(admin.ModelAdmin):
             )
         return '-'
     avatar_preview.short_description = 'Avatar Preview'
+
+
+@admin.register(Friendship)
+class FriendshipAdmin(admin.ModelAdmin):
+    list_display = ['from_user', 'to_user', 'status', 'created']
+    list_filter = ['status', 'created']
+    search_fields = ['from_user__username', 'to_user__username']
+    raw_id_fields = ['from_user', 'to_user']
+
+
+class DailyChallengeParticipantInline(admin.TabularInline):
+    model = DailyChallengeParticipant
+    raw_id_fields = ['user', 'invited_by']
+    extra = 0
+
+
+class DailyChallengeInviteInline(admin.TabularInline):
+    model = DailyChallengeInvite
+    extra = 0
+
+
+class DailyChallengeRoundInline(admin.TabularInline):
+    model = DailyChallengeRound
+    raw_id_fields = ['game']
+    extra = 0
+
+
+@admin.register(DailyChallenge)
+class DailyChallengeAdmin(admin.ModelAdmin):
+    list_display = ['id', 'token', 'creator', 'country', 'media', 'length', 'duration_days', 'status', 'started_at', 'created']
+    list_filter = ['status', 'media', 'created']
+    search_fields = ['creator__username', 'token']
+    raw_id_fields = ['creator', 'country']
+    inlines = [DailyChallengeParticipantInline, DailyChallengeInviteInline, DailyChallengeRoundInline]
+
+
+@admin.register(DeviceToken)
+class DeviceTokenAdmin(admin.ModelAdmin):
+    list_display = ['user', 'platform', 'created', 'last_used']
+    list_filter = ['platform', 'created']
+    search_fields = ['user__username']
+    raw_id_fields = ['user']

@@ -19,6 +19,9 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { ChallengeScreen } from '../screens/ChallengeScreen';
 import { ChallengePlayScreen } from '../screens/ChallengePlayScreen';
 import { GameDetailScreen } from '../screens/GameDetailScreen';
+import { DailyChallengeListScreen } from '../screens/DailyChallengeListScreen';
+import { DailyChallengeDetailScreen } from '../screens/DailyChallengeDetailScreen';
+import { DailyChallengeCreateScreen } from '../screens/DailyChallengeCreateScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +30,9 @@ const SCREENS = [
   { name: 'Start', title: 'New game', component: StartScreen },
   { name: 'Scores', title: 'High scores', component: ScoresScreen },
   { name: 'Challenge', title: 'Country challenge', component: ChallengeScreen },
+  { name: 'DailyChallenge', title: 'Daily challenge', component: DailyChallengeListScreen },
+  { name: 'DailyChallengeDetail', title: 'Daily challenge', component: DailyChallengeDetailScreen },
+  { name: 'DailyChallengeCreate', title: 'New daily challenge', component: DailyChallengeCreateScreen },
   { name: 'ChallengePlay', title: 'Challenge', component: ChallengePlayScreen },
   { name: 'Updates', title: 'Updates', component: UpdatesScreen },
   { name: 'Help', title: 'Help', component: HelpOverviewScreen },

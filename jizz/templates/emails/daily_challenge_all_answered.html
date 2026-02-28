@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+
+{% block title %}All players answered - Birdr{% endblock %}
+
+{% block content %}
+<h2>All players answered!</h2>
+<p>Everyone has completed today's round. Check the app to see the current ranking.</p>
+{% if ranking %}<p>Current standings: {{ ranking }}</p>{% endif %}
+{% endblock %}

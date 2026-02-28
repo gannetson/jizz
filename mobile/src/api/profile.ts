@@ -27,7 +27,7 @@ export type ProfileUpdateData = {
 /** Resolve profile avatar to a full URL (backend may return relative). */
 export function getAvatarUrl(profile: UserProfile | null): string | null {
   const url = profile?.avatar_url;
-  if (!url) return null;
+  if (!url || (typeof url === 'string' && url.trim() === '')) return null;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const base = API_BASE_URL.replace(/\/$/, '');
   return url.startsWith('/') ? base + url : base + '/' + url;

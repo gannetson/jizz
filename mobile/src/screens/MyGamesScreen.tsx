@@ -69,7 +69,7 @@ function GameRow({
 
 export function MyGamesScreen() {
   const navigation = useNavigation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [games, setGames] = useState<UserGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -107,12 +107,17 @@ export function MyGamesScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (authLoading) return;
       if (!isAuthenticated) {
-        (navigation as any).replace('Login');
+        const state = navigation.getState();
+        const currentRoute = state?.routes[state.index]?.name;
+        if (currentRoute !== 'Login' && currentRoute !== 'Register') {
+          (navigation as any).replace('Login');
+        }
         return;
       }
       load(true);
-    }, [isAuthenticated, navigation, load])
+    }, [authLoading, isAuthenticated, navigation, load])
   );
 
   const loadMore = useCallback(() => {

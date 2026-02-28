@@ -9,11 +9,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { getSocialLoginUrl } from '../api/auth';
+import { OAuthWebViewModal } from '../components/OAuthWebViewModal';
 import { colors } from '../theme';
 
 export function LoginScreen() {
@@ -27,6 +27,8 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [oauthModalVisible, setOauthModalVisible] = useState(false);
+  const [oauthAuthUrl, setOauthAuthUrl] = useState('');
 
   const handleEmailSubmit = async () => {
     if (!email.trim() || !password) {
@@ -49,24 +51,22 @@ export function LoginScreen() {
     }
   };
 
-  const openSocialLogin = async (provider: 'google-oauth2' | 'apple-id') => {
+  const openSocialLogin = (provider: 'google-oauth2' | 'apple-id') => {
     setError(null);
     const path = provider === 'google-oauth2' ? 'google' : 'apple';
     const redirectUri = `birdr://auth/${path}`;
     const authUrl = getSocialLoginUrl(provider, redirectUri);
-    setSocialLoading(provider === 'google-oauth2' ? 'google' : 'apple');
-    try {
-      const canOpen = await Linking.canOpenURL(authUrl);
-      if (canOpen) {
-        await Linking.openURL(authUrl);
-      } else {
-        setError('Could not open sign-in.');
-      }
-    } catch (e) {
-      setError('Could not open sign-in.');
-    } finally {
-      setSocialLoading(null);
+    setOauthAuthUrl(authUrl);
+    setOauthModalVisible(true);
+  };
+
+  const handleOAuthRedirect = async (url: string): Promise<boolean> => {
+    const ok = await auth.handleOAuthRedirect(url);
+    if (ok) {
+      setOauthModalVisible(false);
+      (navigation as any).goBack();
     }
+    return ok;
   };
 
   return (
@@ -180,6 +180,13 @@ export function LoginScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        <OAuthWebViewModal
+          visible={oauthModalVisible}
+          authUrl={oauthAuthUrl}
+          onClose={() => setOauthModalVisible(false)}
+          onRedirect={handleOAuthRedirect}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );

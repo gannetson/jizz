@@ -18,7 +18,7 @@ import {
 } from "@chakra-ui/react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
-import { profileService, UserProfile, ProfileUpdateData } from "../api/services/profile.service";
+import { profileService, UserProfile, ProfileUpdateData, getAvatarUrl } from "../api/services/profile.service";
 import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
 import { UseCountries } from "../user/use-countries";
@@ -59,7 +59,7 @@ export const ProfilePage = () => {
         setUsername(profileData.username);
         setFirstName(profileData.first_name || "");
         setLastName(profileData.last_name || "");
-        setAvatarPreview(profileData.avatar_url);
+        setAvatarPreview(getAvatarUrl(profileData));
         setReceiveUpdates(profileData.receive_updates || false);
         setLanguage(profileData.language || "en");
         setCountryCode(profileData.country_code || null);
@@ -141,7 +141,7 @@ export const ProfilePage = () => {
       setUsername(updatedProfile.username);
       setFirstName(updatedProfile.first_name || "");
       setLastName(updatedProfile.last_name || "");
-      setAvatarPreview(updatedProfile.avatar_url);
+      setAvatarPreview(getAvatarUrl(updatedProfile));
       setAvatarFile(null);
       setReceiveUpdates(updatedProfile.receive_updates || false);
       setLanguage(updatedProfile.language || "en");

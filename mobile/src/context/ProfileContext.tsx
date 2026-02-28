@@ -49,7 +49,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     } else {
       setProfile(null);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refreshProfile]);
 
   const avatarUrl = getAvatarUrl(profile);
   const initials = deriveInitials(profile);

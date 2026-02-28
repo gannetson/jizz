@@ -15,15 +15,17 @@ import {FormattedMessage} from "react-intl"
 
 export function ViewSpecies({species}: { species?: Species }) {
 
-  const {language} = useContext(AppContext)
+  const {speciesLanguage} = useContext(AppContext)
   const {open: isOpen, onOpen, onClose} = useDisclosure()
 
   if (!species) return <></>
 
+  const displayName = species.name_translated || (speciesLanguage === 'nl' ? species.name_nl : speciesLanguage === 'la' ? species.name_latin : species.name)
+
   return (
     <>
       <Button variant={"outline"} size='sm' onClick={onOpen}>
-        {language === 'nl' ? species.name_nl : species.name}
+        {displayName}
         <BsImages style={{ marginLeft: '8px' }} />
       </Button>
 
@@ -32,7 +34,7 @@ export function ViewSpecies({species}: { species?: Species }) {
           <Dialog.Backdrop/>
           <Dialog.Positioner>
             <Dialog.Content>
-              <Dialog.Header>{language === 'nl' ? species.name_nl : language === 'la' ? species.name_latin : species.name}</Dialog.Header>
+              <Dialog.Header>{displayName}</Dialog.Header>
               <Dialog.CloseTrigger/>
               <Dialog.Body>
                 <Link href={'https://ebird.org/species/' + species.code} target="_blank" rel="noopener noreferrer">
@@ -43,7 +45,7 @@ export function ViewSpecies({species}: { species?: Species }) {
                 </Link>
                 <SimpleGrid columns={{base: 1, md: 2, xl: 3}} gap={4}>
                   {species.images.map((img, key) => (
-                    <Image width={'300px'} key={key} src={img.url} alt={species.name}/>
+                    <Image width={'300px'} key={key} src={img.url} alt={displayName}/>
                   ))}
                 </SimpleGrid>
               </Dialog.Body>

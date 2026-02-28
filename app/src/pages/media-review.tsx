@@ -84,9 +84,9 @@ export const MediaReviewPage = () => {
   }, [selectedCountry]);
 
   const { countries } = UseCountries();
-  const { player, language } = useContext(AppContext);
+  const { player, speciesLanguage } = useContext(AppContext);
   const intl = useIntl();
-  const languageParam = language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en';
+  const languageParam = speciesLanguage === 'nl' ? 'nl' : speciesLanguage === 'la' ? 'la' : (speciesLanguage ?? 'en');
 
   // Load species for selected country (for filter dropdown)
   useEffect(() => {
@@ -704,7 +704,7 @@ export const MediaReviewPage = () => {
               <Box minW="220px">
                 <SpeciesCombobox
                   species={speciesList}
-                  playerLanguage={language === 'nl' ? 'nl' : language === 'la' ? 'la' : 'en'}
+                  playerLanguage={languageParam}
                   value={selectedSpecies}
                   isClearable
                   onSelect={(s) => setSelectedSpecies(s)}

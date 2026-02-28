@@ -7,15 +7,17 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { requestComparison, type SpeciesComparison } from '../api/compare';
 import { colors } from '../theme';
 
 const htmlStyle = `
+  body { word-wrap: break-word; overflow-wrap: break-word; }
   p { margin-bottom: 0.5rem; }
-  ul, ol { margin-left: 1rem; margin-bottom: 0.5rem; }
-  li { margin-bottom: 0.25rem; }
+  ul, ol { list-style: none; margin: 0; padding: 0; margin-bottom: 0.5rem; }
+  li { margin-bottom: 0.25rem; padding-left: 0; }
   strong { font-weight: bold; }
   em { font-style: italic; }
   h1, h2, h3 { font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.5rem; }
@@ -26,6 +28,8 @@ type ComparisonModalProps = {
   onClose: () => void;
   species1Id: number;
   species2Id: number;
+  species1Name?: string;
+  species2Name?: string;
 };
 
 export function ComparisonModal({
@@ -33,6 +37,8 @@ export function ComparisonModal({
   onClose,
   species1Id,
   species2Id,
+  species1Name,
+  species2Name,
 }: ComparisonModalProps) {
   const [comparison, setComparison] = useState<SpeciesComparison | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,6 +95,9 @@ export function ComparisonModal({
     );
   };
 
+  const displayName1 = species1Name || comparison?.species_1_name || '';
+  const displayName2 = species2Name || comparison?.species_2_name || '';
+
   return (
     <Modal
       visible={visible}
@@ -99,11 +108,18 @@ export function ComparisonModal({
       <View style={styles.backdrop}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>
-              {comparison
-                ? `Comparison: ${comparison.species_1_name} vs ${comparison.species_2_name}`
-                : 'Species Comparison'}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>
+                {comparison
+                  ? `${displayName1} vs ${displayName2}`
+                  : 'Species Comparison'}
+              </Text>
+              {comparison && (
+                <Text style={styles.latinSubtitle}>
+                  {comparison.species_1_latin} / {comparison.species_2_latin}
+                </Text>
+              )}
+            </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeBtnText}>Close</Text>
             </TouchableOpacity>
@@ -119,6 +135,31 @@ export function ComparisonModal({
             </View>
           ) : comparison ? (
             <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+              <View style={styles.linksRow}>
+                <View style={styles.linksColumn}>
+                  <Text style={styles.linksSpeciesName}>{displayName1}</Text>
+                  <View style={styles.linksButtons}>
+                    <TouchableOpacity onPress={() => Linking.openURL(`https://ebird.org/species/${comparison.species_1_code}`)}>
+                      <Text style={styles.linkText}>eBird ›</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => Linking.openURL(`https://birdsoftheworld.org/bow/species/${comparison.species_1_code}/cur/introduction`)}>
+                      <Text style={styles.linkText}>Birds of the World ›</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.linksColumn}>
+                  <Text style={styles.linksSpeciesName}>{displayName2}</Text>
+                  <View style={styles.linksButtons}>
+                    <TouchableOpacity onPress={() => Linking.openURL(`https://ebird.org/species/${comparison.species_2_code}`)}>
+                      <Text style={styles.linkText}>eBird ›</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => Linking.openURL(`https://birdsoftheworld.org/bow/species/${comparison.species_2_code}/cur/introduction`)}>
+                      <Text style={styles.linkText}>Birds of the World ›</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
               {renderHtmlSection(comparison.summary_html ?? comparison.summary, 'Summary')}
               {comparison.identification_tips_html && (
                 <View style={styles.tipsBox}>
@@ -167,7 +208,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.primary[200],
@@ -176,7 +217,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.primary[800],
-    flex: 1,
+  },
+  latinSubtitle: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: colors.primary[400],
+    marginTop: 2,
   },
   closeBtn: {
     paddingVertical: 8,
@@ -212,6 +258,31 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 24,
+  },
+  linksRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+    flexWrap: 'wrap',
+  },
+  linksColumn: {
+    flex: 1,
+    minWidth: 120,
+  },
+  linksSpeciesName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[800],
+    marginBottom: 4,
+  },
+  linksButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  linkText: {
+    fontSize: 12,
+    color: colors.primary[500],
+    textDecorationLine: 'underline',
   },
   section: {
     marginBottom: 16,

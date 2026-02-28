@@ -12,6 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getMedia, reviewMedia, getSpeciesReviewStats } from '../api/media';
 import type { MediaItem, ReviewLevel, SpeciesReviewStatsResponse } from '../api/media';
@@ -91,6 +92,7 @@ function FilterSelect<T extends string>({
 export function MediaReviewScreen() {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { profile } = useProfile();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -111,7 +113,7 @@ export function MediaReviewScreen() {
   const [celebrationSpecies, setCelebrationSpecies] = useState<string | null>(null);
   const [failedImageIds, setFailedImageIds] = useState<Set<number>>(new Set());
 
-  const languageParam = 'en';
+  const languageParam = profile?.language ?? 'en';
 
   useEffect(() => {
     loadCountries().then(setCountries).catch(() => setCountries([]));
@@ -127,7 +129,7 @@ export function MediaReviewScreen() {
       .then(setSpeciesList)
       .catch(() => setSpeciesList([]))
       .finally(() => setSpeciesListLoading(false));
-  }, [selectedCountry]);
+  }, [selectedCountry, languageParam]);
 
   const loadMedia = useCallback(
     async (page: number = 1, reset: boolean = false) => {
@@ -165,12 +167,12 @@ export function MediaReviewScreen() {
         setLoadingMore(false);
       }
     },
-    [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]
+    [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam]
   );
 
   useEffect(() => {
     loadMedia(1, true);
-  }, [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]);
+  }, [loadMedia, selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]);
 
   useEffect(() => {
     setSpeciesStatsLoading(true);
@@ -178,7 +180,7 @@ export function MediaReviewScreen() {
       .then(setSpeciesStats)
       .catch(() => setSpeciesStats(null))
       .finally(() => setSpeciesStatsLoading(false));
-  }, [selectedCountry, selectedMediaType]);
+  }, [selectedCountry, selectedMediaType, languageParam]);
 
   const handleReview = async (mediaId: number, reviewType: 'approved' | 'rejected' | 'not_sure') => {
     const token = await getAccessToken();
@@ -601,6 +603,4 @@ const styles = StyleSheet.create({
   modalBtnOk: { backgroundColor: '#22c55e' },
   modalBtnNotSure: { backgroundColor: '#f97316' },
   modalBtnBad: { backgroundColor: '#ef4444' },
-  modalClose: { marginTop: 16, alignSelf: 'center' },
-  modalCloseText: { color: colors.primary[500], fontSize: 16 },
 });

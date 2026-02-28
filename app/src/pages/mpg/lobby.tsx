@@ -10,6 +10,7 @@ import {PlayerItem} from "./play/player-item"
 import GameHeader from "./game-header"
 import { QRCodeSVG } from 'qrcode.react'
 import { validateQuestionForGame, getCurrentGameToken } from '../../core/game-token-validator'
+import AppStoreBanner from '../../components/app-store-banner'
 
 const Lobby: React.FC = () => {
 
@@ -134,6 +135,7 @@ const Lobby: React.FC = () => {
         ) : (
           <FormattedMessage id={'no high score'} defaultMessage={'No high score yet.'}/>
         )}
+        <AppStoreBanner />
       </Page.Body>
     </Page>
   );

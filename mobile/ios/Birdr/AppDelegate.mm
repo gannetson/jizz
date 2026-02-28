@@ -24,7 +24,29 @@
 - (NSURL *)bundleURL
 {
 #if DEBUG
-  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@".expo/.virtual-metro-entry"];
+  NSURL *url = [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@".expo/.virtual-metro-entry"];
+  // On device, packager may be unreachable at launch; use Mac IP from ip.txt so we have a URL to try
+  if (!url || !url.absoluteString.length) {
+    NSString *ipPath = [[NSBundle mainBundle] pathForResource:@"ip" ofType:@"txt"];
+    if (ipPath) {
+      NSString *ip = [[NSString stringWithContentsOfFile:ipPath encoding:NSUTF8StringEncoding error:nil]
+                      stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      if (ip.length) {
+        RCTBundleURLProvider *settings = [RCTBundleURLProvider sharedSettings];
+        url = [RCTBundleURLProvider jsBundleURLForBundleRoot:@".expo/.virtual-metro-entry"
+                                               packagerHost:ip
+                                             packagerScheme:[settings packagerScheme]
+                                                  enableDev:[settings enableDev]
+                                         enableMinification:[settings enableMinification]
+                                            inlineSourceMap:[settings inlineSourceMap]
+                                                modulesOnly:NO
+                                                  runModule:YES
+                                        additionalOptions:nil];
+      }
+    }
+  }
+  if (url) return url;
+  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #else
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif

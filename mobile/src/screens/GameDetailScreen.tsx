@@ -49,6 +49,11 @@ function getSpeciesName(q: QuestionWithAnswer, gameLang?: string): string {
   return s.name || s.name_latin || '';
 }
 
+function getAnswerName(answer: NonNullable<QuestionWithAnswer['user_answer']>, gameLang?: string): string {
+  if (gameLang === 'nl' && answer.name_nl) return answer.name_nl;
+  return answer.name || answer.name_latin || '';
+}
+
 export function GameDetailScreen() {
   const route = useRoute<RouteProp<{ GameDetail: GameDetailRouteParams }, 'GameDetail'>>();
   const navigation = useNavigation();
@@ -217,7 +222,7 @@ export function GameDetailScreen() {
                     {q.user_answer && q.correct === false && (
                       <>
                         <SpeciesViewButton
-                          label={`${q.user_answer.name}${q.user_answer.name_latin ? ` (${q.user_answer.name_latin})` : ''}`}
+                          label={q.user_answer.name}
                           onPress={(e) => {
                             e?.stopPropagation?.();
                             setMediaSpecies(q.user_answer as unknown as SpeciesMediaData);

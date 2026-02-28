@@ -230,6 +230,8 @@ type SharedState = {
   setCountry: Dispatch<SetStateAction<Country>>
   language?: string
   setLanguage?: Dispatch<SetStateAction<string>>
+  /** Language for species names (profile > player > en). Use for species lists and media. */
+  speciesLanguage?: string
   multiplayer?: string
   setMultiplayer?: Dispatch<SetStateAction<string>>
   mediaType: string
@@ -262,6 +264,7 @@ const AppContext = createContext<SharedState>({
   setLength: () => {},
   country: { code: 'nl', name: 'Netherlands' },
   setCountry: () => {},
+  speciesLanguage: 'en',
   mediaType: 'images',
   setMediaType: () => {},
   soundsScope: 'all',

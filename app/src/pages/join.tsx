@@ -10,6 +10,7 @@ import {SetName} from "../components/set-name"
 import SelectLanguage from "../components/select-language"
 import {profileService} from "../api/services/profile.service"
 import {authService} from "../api/services/auth.service"
+import AppStoreBanner from "../components/app-store-banner"
 
 
 const JoinPage: React.FC = () => {
@@ -81,6 +82,7 @@ const JoinPage: React.FC = () => {
         <Button onClick={handleSubmit} loading={loading} disabled={!code || !playerName} colorPalette="primary">
           Join game
         </Button>
+        <AppStoreBanner />
       </Page.Body>
     </Page>
   );

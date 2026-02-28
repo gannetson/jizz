@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../../api/services/auth.service";
-import { profileService, UserProfile } from "../../../api/services/profile.service";
+import { profileService, UserProfile, getAvatarUrl } from "../../../api/services/profile.service";
 
 type UserMenuProps = {
   onOpenLoginModal?: (mode: 'login' | 'register') => void;
@@ -100,8 +100,8 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
       <Flex direction="column" gap={2} mb={2}>
         <Flex alignItems="center" gap={3}>
           <Avatar.Root size="md">
-            {profile?.avatar_url ? (
-              <Avatar.Image src={profile.avatar_url} alt={profile.username || "User"} />
+            {getAvatarUrl(profile) ? (
+              <Avatar.Image src={getAvatarUrl(profile)!} alt={profile?.username || "User"} />
             ) : null}
             <Avatar.Fallback>
               {(profile?.username || userEmail || "User").charAt(0).toUpperCase()}

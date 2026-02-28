@@ -360,10 +360,11 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                                         <ComparisonButton
                                           species1Id={question.species.id}
                                           species2Id={question.user_answer.id}
+                                          species1Name={getSpeciesName(question.species)}
+                                          species2Name={question.user_answer.name_nl && game?.language === 'nl' ? question.user_answer.name_nl : question.user_answer.name}
                                           stopPropagation
                                           buttonProps={{
-                                            colorPalette: "info",
-                                            variant: "outline",
+                                            variant: "subtle",
                                             size: "sm",
                                           }}
                                         />

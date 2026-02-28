@@ -643,12 +643,12 @@ class GoogleLoginView(APIView):
                 email=email, defaults={"username": email}
             )
 
-            # Get or create profile and save Google avatar if present
+            # Get or create profile and save Google avatar if user doesn't have one yet
             profile, _ = UserProfile.objects.get_or_create(
                 user=user, defaults={}
             )
             picture_url = idinfo.get("picture")
-            if picture_url:
+            if picture_url and not profile.avatar:
                 try:
                     import requests
                     from django.core.files.base import ContentFile
@@ -945,8 +945,8 @@ class OAuthCompleteView(APIView):
                     request.user.save()
                     logger.info(f"Updated user name: {request.user.first_name} {request.user.last_name}, username: {request.user.username}")
                 
-                # Download and save avatar if available
-                if 'picture' in extra_data and extra_data['picture']:
+                # Download and save avatar if available and user doesn't have one yet
+                if 'picture' in extra_data and extra_data['picture'] and not profile.avatar:
                     try:
                         import requests
                         from django.core.files.base import ContentFile
@@ -957,19 +957,16 @@ class OAuthCompleteView(APIView):
                         avatar_url = extra_data['picture']
                         response = requests.get(avatar_url, timeout=10)
                         if response.status_code == 200:
-                            # Get file extension from URL or default to jpg
                             parsed_url = urlparse(avatar_url)
                             ext = os.path.splitext(parsed_url.path)[1] or '.jpg'
                             filename = f"avatar_{request.user.id}{ext}"
                             
-                            # Save the image
                             profile.avatar.save(
                                 filename,
                                 ContentFile(response.content),
                                 save=True
                             )
                     except Exception as e:
-                        # If avatar download fails, just log it and continue
                         logger = logging.getLogger(__name__)
                         logger.warning(f"Failed to download avatar for user {request.user.id}: {e}")
             

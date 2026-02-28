@@ -214,7 +214,7 @@ export const GameDetailPage = () => {
                             />
                           </Text>
                           <Text fontSize="md" color="gray.700">
-                            {question.species.name}
+                            {question.species.name_translated || question.species.name}
                             {question.species.name_latin && (
                               <Text as="span" fontSize="sm" color="gray.500" ml={2}>
                                 ({question.species.name_latin})
@@ -246,7 +246,7 @@ export const GameDetailPage = () => {
                               <FormattedMessage id="your_answer" defaultMessage="Your answer:" />
                             </Text>
                             <Text fontSize="md" color="red.800">
-                              {question.user_answer.name}
+                              {question.user_answer.name_translated || question.user_answer.name}
                               {question.user_answer.name_latin && (
                                 <Text as="span" fontSize="sm" color="red.600" ml={2}>
                                   ({question.user_answer.name_latin})

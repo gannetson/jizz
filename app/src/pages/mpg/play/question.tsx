@@ -361,8 +361,9 @@ export const QuestionComponent = () => {
         <ComparisonButton
           species1Id={answer.species.id}
           species2Id={answer.answer.id}
+          species1Name={answer.species.name_translated || answer.species.name}
+          species2Name={answer.answer.name_translated || answer.answer.name}
           buttonLabel={<FormattedMessage id="view_comparison" defaultMessage="Comparison" />}
-          buttonProps={{ colorPalette: "info" }}
         />
       )}
       {answer && (

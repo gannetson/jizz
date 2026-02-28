@@ -49,9 +49,9 @@ const variantStyles: Record<SpeciesViewButtonVariant, { button: ViewStyle; text:
     viewText: { color: colors.primary[800] },
   },
   compare: {
-    button: { backgroundColor: '#2563eb' },
-    text: { color: '#fff' },
-    viewText: { color: 'rgba(255,255,255,0.8)' },
+    button: { backgroundColor: colors.primary[200] },
+    text: { color: colors.primary[800] },
+    viewText: { color: colors.primary[800] },
   },
 };
 

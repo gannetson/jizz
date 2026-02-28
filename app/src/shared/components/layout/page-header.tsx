@@ -5,7 +5,7 @@ import {FaUserCircle} from "react-icons/fa";
 import {useMenu} from "./menu-context";
 import {useState, useEffect} from "react";
 import {authService} from "../../../api/services/auth.service";
-import {profileService, UserProfile} from "../../../api/services/profile.service";
+import {profileService, UserProfile, getAvatarUrl} from "../../../api/services/profile.service";
 
 const PageHeader = ({children}: {children: ReactElement | ReactNode[]} ) => {
   const {onOpenMenu, onOpenUserMenu} = useMenu();
@@ -77,8 +77,8 @@ const PageHeader = ({children}: {children: ReactElement | ReactNode[]} ) => {
         {isAuthenticated ? (
           <HStack gap={2}>
             <Avatar.Root size="sm">
-              {profile?.avatar_url ? (
-                <Avatar.Image src={profile.avatar_url} alt={profile.username || userEmail || "User"} />
+              {getAvatarUrl(profile) ? (
+                <Avatar.Image src={getAvatarUrl(profile)!} alt={profile?.username || userEmail || "User"} />
               ) : null}
               <Avatar.Fallback>
                 {(profile?.username || userEmail || "User").charAt(0).toUpperCase()}

@@ -6,7 +6,7 @@ export interface UserProfile {
   email: string;
   first_name: string;
   last_name: string;
-  avatar: File | null;
+  avatar: string | null;
   avatar_url: string | null;
   receive_updates: boolean;
   language: string;
@@ -14,6 +14,15 @@ export interface UserProfile {
   country_name: string | null;
   is_staff: boolean;
   is_superuser: boolean;
+}
+
+/** Resolve profile avatar to a full URL (backend may return relative). */
+export function getAvatarUrl(profile: UserProfile | null): string | null {
+  const url = profile?.avatar_url;
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = getApiBaseUrl().replace(/\/$/, '');
+  return url.startsWith('/') ? base + url : base + '/' + url;
 }
 
 export interface ProfileUpdateData {
@@ -85,11 +94,6 @@ class ProfileService {
       const response = await axios.put<UserProfile>(
         `${this.baseURL}/api/profile/`,
         formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
       );
       return response.data;
     } catch (error: any) {

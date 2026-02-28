@@ -20,8 +20,10 @@ class SpeciesTraitSerializer(serializers.ModelSerializer):
 class SpeciesComparisonSerializer(serializers.ModelSerializer):
     species_1_name = serializers.CharField(source='species_1.name', read_only=True)
     species_1_latin = serializers.CharField(source='species_1.name_latin', read_only=True)
+    species_1_code = serializers.CharField(source='species_1.code', read_only=True)
     species_2_name = serializers.CharField(source='species_2.name', read_only=True)
     species_2_latin = serializers.CharField(source='species_2.name_latin', read_only=True)
+    species_2_code = serializers.CharField(source='species_2.code', read_only=True)
     
     # HTML versions of markdown fields
     summary_html = serializers.SerializerMethodField()
@@ -73,8 +75,8 @@ class SpeciesComparisonSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpeciesComparison
         fields = [
-            'id', 'comparison_type', 'species_1', 'species_1_name', 'species_1_latin',
-            'species_2', 'species_2_name', 'species_2_latin', 'family_1', 'family_2',
+            'id', 'comparison_type', 'species_1', 'species_1_name', 'species_1_latin', 'species_1_code',
+            'species_2', 'species_2_name', 'species_2_latin', 'species_2_code', 'family_1', 'family_2',
             'order_1', 'order_2', 'summary', 'summary_html', 'detailed_comparison', 'detailed_comparison_html',
             'size_comparison', 'size_comparison_html', 'plumage_comparison', 'plumage_comparison_html',
             'behavior_comparison', 'behavior_comparison_html', 'habitat_comparison', 'habitat_comparison_html',

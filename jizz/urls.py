@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, re_path, include
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
@@ -19,7 +20,41 @@ router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
 router.register(r'country-challenges', CountryChallengeViewSet, basename='country-challenge')
 
+def apple_app_site_association(request):
+    """iOS Universal Links configuration."""
+    return JsonResponse({
+        "applinks": {
+            "apps": [],
+            "details": [
+                {
+                    "appID": "TEAM_ID.pro.birdr.mobile",
+                    "paths": ["/join/*"]
+                }
+            ]
+        }
+    }, content_type="application/json")
+
+
+def android_asset_links(request):
+    """Android App Links verification."""
+    return JsonResponse([
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "pro.birdr.mobile",
+                "sha256_cert_fingerprints": [
+                    "SHA256_FINGERPRINT_PLACEHOLDER"
+                ]
+            }
+        }
+    ], safe=False, content_type="application/json")
+
+
 urlpatterns = [
+    path('.well-known/apple-app-site-association', apple_app_site_association),
+    path('.well-known/assetlinks.json', android_asset_links),
+
     path('admin/', admin.site.urls),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
     re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),

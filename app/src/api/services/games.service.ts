@@ -29,6 +29,7 @@ export interface QuestionWithAnswer {
     name: string;
     name_latin: string;
     name_nl?: string;
+    name_translated?: string;
     code: string;
     images?: Array<{ url: string; link?: string; contributor?: string }>;
     videos?: Array<{ url: string; link?: string; contributor?: string }>;

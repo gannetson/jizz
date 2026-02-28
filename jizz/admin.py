@@ -2,6 +2,8 @@ from collections import defaultdict
 
 from django.contrib import admin, messages
 from django.contrib.admin import register
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 from django.db.models import Count, Sum
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
@@ -18,6 +20,45 @@ from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
 from media.models import Media
 from media.utils import get_species_media
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fields = ['avatar', 'avatar_preview', 'receive_updates', 'language', 'country']
+    readonly_fields = ['avatar_preview']
+
+    def avatar_preview(self, obj):
+        if obj.avatar:
+            return format_html(
+                '<img src="{}" style="max-width: 100px; max-height: 100px; border-radius: 50%;" />',
+                obj.avatar.url
+            )
+        return '-'
+    avatar_preview.short_description = 'Avatar Preview'
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    inlines = [UserProfileInline]
+    list_display = ['username', 'email', 'first_name', 'last_name', 'avatar_preview', 'is_staff', 'date_joined']
+
+    def avatar_preview(self, obj):
+        try:
+            profile = obj.profile
+            if profile.avatar:
+                return format_html(
+                    '<img src="{}" style="max-width: 32px; max-height: 32px; border-radius: 50%;" />',
+                    profile.avatar.url
+                )
+        except UserProfile.DoesNotExist:
+            pass
+        return '-'
+    avatar_preview.short_description = 'Avatar'
 
 
 class CountrySpeciesInline(admin.TabularInline):

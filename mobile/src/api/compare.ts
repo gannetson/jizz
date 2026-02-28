@@ -6,7 +6,11 @@ export type SpeciesComparison = {
   species_1: { id: number; name: string; name_latin: string };
   species_2: { id: number; name: string; name_latin: string };
   species_1_name: string;
+  species_1_latin: string;
+  species_1_code: string;
   species_2_name: string;
+  species_2_latin: string;
+  species_2_code: string;
   summary: string;
   summary_html?: string;
   detailed_comparison?: string;

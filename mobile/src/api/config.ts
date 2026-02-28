@@ -7,6 +7,12 @@ export const API_BASE_URL = 'https://birdr.pro';
  */
 export const GOOGLE_WEB_CLIENT_ID = '56451813101-pab6limmhoe0tqhtf0oel1tht3ja0rqq.apps.googleusercontent.com';
 
+/**
+ * iOS OAuth client ID from Google Console (type "iOS").
+ * Required for Google Sign-In on iOS; pass as iosClientId to GoogleSignin.configure().
+ */
+export const GOOGLE_IOS_CLIENT_ID = '56451813101-kkjv7e0agsujmmtuuq5gs6mdkumdmp71.apps.googleusercontent.com';
+
 export function apiUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
   return API_BASE_URL + p;

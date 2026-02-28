@@ -7,6 +7,8 @@ import {TaxFamily} from "../user/use-tax-family"
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios-config';
 import { apiUrl } from '../api/baseUrl';
+import { authService } from '../api/services/auth.service';
+import { profileService, UserProfile } from '../api/services/profile.service';
 
 type Props = {
   children: ReactNode;
@@ -31,6 +33,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
   const [countryChallenge, setCountryChallenge] = useState<CountryChallenge | undefined>(undefined)
   const [challengeQuestion, setChallengeQuestion] = useState<Question | undefined>(undefined)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
 
   const playerToken = localStorage.getItem('player-token')
   const gameToken = localStorage.getItem('game-token')
@@ -61,10 +64,23 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }
 
+  // Load profile when authenticated (for species language preference)
+  useEffect(() => {
+    if (authService.getAccessToken()) {
+      profileService.getProfile()
+        .then(setProfile)
+        .catch(() => setProfile(null));
+    } else {
+      setProfile(null);
+    }
+  }, []);
+
+  const speciesLanguage = profile?.language ?? language ?? 'en';
+
   useEffect(() => {
     if (country?.code) {
       setLoading(true)
-      fetch(apiUrl(`/api/species/?countryspecies__country=${country.code}&language=${language}`), {
+      fetch(apiUrl(`/api/species/?countryspecies__country=${country.code}&language=${speciesLanguage}`), {
         cache: 'no-cache',
         method: 'GET',
         headers: {
@@ -91,7 +107,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       })
 
     }
-  }, [country?.code, language]);
+  }, [country?.code, speciesLanguage]);
 
   const loadPlayer = async (playerToken: string) => {
     setLoading(true)
@@ -464,6 +480,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setCountry,
       language,
       setLanguage,
+      speciesLanguage,
       multiplayer,
       setMultiplayer,
       mediaType,

@@ -48,10 +48,12 @@ if (typeof document !== 'undefined') {
 
 export function SpeciesModal({species, onClose, isOpen}: { species?: Species, onClose: () => void, isOpen: boolean }) {
 
-  const {language} = useContext(AppContext)
+  const {speciesLanguage} = useContext(AppContext)
   const [activeTab, setActiveTab] = useState<'images' | 'videos' | 'sounds'>('images')
 
   if (!species) return null
+
+  const displayName = species.name_translated || (speciesLanguage === 'nl' ? species.name_nl : speciesLanguage === 'la' ? species.name_latin : species.name)
 
   const DialogPositionerComponent = Dialog.Positioner as React.FC<any>;
   const DialogContentComponent = Dialog.Content as React.FC<any>;
@@ -68,7 +70,7 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
         <DialogBackdropComponent/>
         <DialogPositionerComponent>
           <DialogContentComponent>
-            <DialogHeaderComponent>{language === 'nl' ? species.name_nl : language === 'la' ? species.name_latin : species.name}</DialogHeaderComponent>
+            <DialogHeaderComponent>{displayName}</DialogHeaderComponent>
             <DialogCloseTriggerComponent/>
             <DialogBodyComponent>
                 <Link href={'https://ebird.org/species/' + species.code} target="_blank" rel="noopener noreferrer">
@@ -123,7 +125,7 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                           >
                             <Image 
                               src={img.url} 
-                              alt={species.name}
+                              alt={displayName}
                               maxWidth="100%"
                               maxHeight="100%"
                               borderRadius="md"

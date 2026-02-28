@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Box,
@@ -6,33 +6,32 @@ import {
   ButtonProps,
   Dialog,
   VStack,
+  HStack,
   Spinner,
   Text,
   Heading,
   Alert,
   AlertIndicator,
-  IconButton,
+  Link,
+  Flex,
 } from "@chakra-ui/react";
+import { BsBoxArrowRight } from "react-icons/bs";
 import { format } from "date-fns";
 import { FormattedMessage } from "react-intl";
 import { compareService, SpeciesComparison } from "../api/services/compare.service";
 
-// Add global styles for nested modal z-index
-// This ensures the comparison dialog appears above the game detail modal
 if (typeof document !== 'undefined') {
   const styleId = 'comparison-dialog-styles';
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-      /* Target Chakra UI Dialog backdrop and content */
       .comparison-dialog-wrapper [role="dialog"],
       .comparison-dialog-wrapper [data-part="backdrop"],
       .comparison-dialog-wrapper [data-part="positioner"],
       .comparison-dialog-wrapper [data-part="content"] {
         z-index: 1400 !important;
       }
-      /* Ensure backdrop is below content but above parent modal */
       .comparison-dialog-wrapper [data-part="backdrop"] {
         z-index: 1399 !important;
       }
@@ -52,6 +51,8 @@ const DialogCloseTriggerComponent = Dialog.CloseTrigger as React.FC<any>;
 type ComparisonButtonProps = {
   species1Id?: number;
   species2Id?: number;
+  species1Name?: string;
+  species2Name?: string;
   buttonLabel?: React.ReactNode;
   buttonProps?: ButtonProps;
   stopPropagation?: boolean;
@@ -60,6 +61,8 @@ type ComparisonButtonProps = {
 export const ComparisonButton = ({
   species1Id,
   species2Id,
+  species1Name,
+  species2Name,
   buttonLabel = "Comparison",
   buttonProps,
   stopPropagation = false,
@@ -100,13 +103,16 @@ export const ComparisonButton = ({
     }
   };
 
+  const displayName1 = species1Name || comparison?.species_1_name || "";
+  const displayName2 = species2Name || comparison?.species_2_name || "";
+
   return (
     <>
       <Button
         onClick={handleOpen}
         disabled={!species1Id || !species2Id || loading}
-        colorPalette="info"
-        variant="outline"
+        colorPalette="primary"
+        variant="subtle"
         size="sm"
         {...buttonProps}
       >
@@ -127,9 +133,18 @@ export const ComparisonButton = ({
             <DialogPositionerComponent>
               <DialogContentComponent maxW="4xl" maxH="90vh" overflowY="auto">
                 <Dialog.Header pr={10}>
-                  {comparison
-                    ? `Comparison: ${comparison.species_1_name} vs ${comparison.species_2_name}`
-                    : "Species Comparison"}
+                  <VStack align="start" gap={0}>
+                    <Text fontWeight="bold" fontSize="lg">
+                      {comparison
+                        ? `${displayName1} vs ${displayName2}`
+                        : "Species Comparison"}
+                    </Text>
+                    {comparison && (
+                      <Text fontSize="sm" color="gray.500" fontStyle="italic">
+                        {comparison.species_1_latin} / {comparison.species_2_latin}
+                      </Text>
+                    )}
+                  </VStack>
                 </Dialog.Header>
                 <DialogCloseTriggerComponent 
                   position="absolute" 
@@ -157,9 +172,21 @@ export const ComparisonButton = ({
                 ) : comparison ? (
                   <>
                     <style>{`
+                      .comparison-html {
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                      }
                       .comparison-html p { margin-bottom: 0.5rem; }
-                      .comparison-html ul, .comparison-html ol { margin-left: 1rem; margin-bottom: 0.5rem; }
-                      .comparison-html li { margin-bottom: 0.25rem; }
+                      .comparison-html ul, .comparison-html ol {
+                        list-style: none;
+                        margin: 0;
+                        padding: 0;
+                        margin-bottom: 0.5rem;
+                      }
+                      .comparison-html li {
+                        margin-bottom: 0.25rem;
+                        padding-left: 0;
+                      }
                       .comparison-html strong { font-weight: bold; }
                       .comparison-html em { font-style: italic; }
                       .comparison-html h1, .comparison-html h2, .comparison-html h3 { 
@@ -168,6 +195,40 @@ export const ComparisonButton = ({
                         margin-bottom: 0.5rem; 
                       }
                     `}</style>
+
+                    <HStack gap={4} mb={4} flexWrap="wrap">
+                      <VStack align="start" gap={1}>
+                        <Text fontWeight="600" fontSize="sm">{displayName1}</Text>
+                        <HStack gap={3}>
+                          <Link href={`https://ebird.org/species/${comparison.species_1_code}`} target="_blank" rel="noopener noreferrer">
+                            <Flex gap={1} alignItems="center" fontSize="xs">
+                              eBird <BsBoxArrowRight />
+                            </Flex>
+                          </Link>
+                          <Link href={`https://birdsoftheworld.org/bow/species/${comparison.species_1_code}/cur/introduction`} target="_blank" rel="noopener noreferrer">
+                            <Flex gap={1} alignItems="center" fontSize="xs">
+                              Birds of the World <BsBoxArrowRight />
+                            </Flex>
+                          </Link>
+                        </HStack>
+                      </VStack>
+                      <VStack align="start" gap={1}>
+                        <Text fontWeight="600" fontSize="sm">{displayName2}</Text>
+                        <HStack gap={3}>
+                          <Link href={`https://ebird.org/species/${comparison.species_2_code}`} target="_blank" rel="noopener noreferrer">
+                            <Flex gap={1} alignItems="center" fontSize="xs">
+                              eBird <BsBoxArrowRight />
+                            </Flex>
+                          </Link>
+                          <Link href={`https://birdsoftheworld.org/bow/species/${comparison.species_2_code}/cur/introduction`} target="_blank" rel="noopener noreferrer">
+                            <Flex gap={1} alignItems="center" fontSize="xs">
+                              Birds of the World <BsBoxArrowRight />
+                            </Flex>
+                          </Link>
+                        </HStack>
+                      </VStack>
+                    </HStack>
+
                     <VStack align="stretch" gap={4}>
                       {comparison.summary_html && (
                         <Box>
@@ -276,4 +337,3 @@ export const ComparisonButton = ({
     </>
   );
 };
-

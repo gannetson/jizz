@@ -27,7 +27,7 @@ import { colors } from '../theme';
 export function ProfileScreen() {
   const { t, locale, setLocale } = useTranslation();
   const navigation = useNavigation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { refreshProfile } = useProfile();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +53,7 @@ export function ProfileScreen() {
       setUsername(p.username);
       setLanguage(p.language || 'en');
       setCountryCode(p.country_code ?? null);
+      if (p.avatar_url) setAvatarPreviewUri(null);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load profile');
       if (e?.message === 'Unauthorized' || e?.message?.includes('401')) {
@@ -65,12 +66,17 @@ export function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (authLoading) return;
       if (!isAuthenticated) {
-        (navigation as any).replace('Login');
+        const state = navigation.getState();
+        const currentRoute = state?.routes[state.index]?.name;
+        if (currentRoute !== 'Login' && currentRoute !== 'Register') {
+          (navigation as any).replace('Login');
+        }
         return;
       }
       loadProfile();
-    }, [isAuthenticated, navigation, loadProfile])
+    }, [authLoading, isAuthenticated, navigation, loadProfile])
   );
 
   useEffect(() => {
@@ -203,7 +209,9 @@ export function ProfileScreen() {
             </View>
           )}
         </TouchableOpacity>
-        <Text style={styles.changePhotoLabel}>{t('change_avatar')}</Text>
+        <TouchableOpacity onPress={uploadingAvatar ? undefined : showAvatarOptions} disabled={uploadingAvatar}>
+          <Text style={styles.changePhotoLabel}>{t('change_avatar')}</Text>
+        </TouchableOpacity>
       </View>
       <Text style={styles.label}>{t('username')}</Text>
       <TextInput

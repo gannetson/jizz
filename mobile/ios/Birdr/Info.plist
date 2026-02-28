@@ -28,13 +28,13 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>birdr</string>
-          <string>pro.birdr.mobile</string>
+          <string>pro.birdr.app</string>
         </array>
       </dict>
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>com.googleusercontent.apps.REPLACE_WITH_YOUR_WEB_CLIENT_ID</string>
+          <string>com.googleusercontent.apps.56451813101-kkjv7e0agsujmmtuuq5gs6mdkumdmp71</string>
         </array>
       </dict>
     </array>

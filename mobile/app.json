@@ -2,7 +2,7 @@
   "expo": {
     "name": "Birdr",
     "slug": "birdr-mobile",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "birdr",
@@ -15,14 +15,32 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "pro.birdr.mobile"
+      "bundleIdentifier": "pro.birdr.app",
+      "buildNumber": "18",
+      "icon": "./assets/icon.png",
+      "associatedDomains": ["applinks:birdr.pro"]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "pro.birdr.mobile"
+      "package": "pro.birdr.app",
+      "versionCode": 18,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/join/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "plugins": [
       "expo-asset",
@@ -36,7 +54,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.56451813101-in1gn3a1llf3pf0t4tnoffp6ak51enk2"
+          "iosUrlScheme": "com.googleusercontent.apps.56451813101-kkjv7e0agsujmmtuuq5gs6mdkumdmp71"
         }
       ]
     ]

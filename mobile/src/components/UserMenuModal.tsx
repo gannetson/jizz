@@ -9,10 +9,14 @@ import {
   ScrollView,
   Dimensions,
   Animated,
+  Image,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
@@ -29,6 +33,7 @@ export function UserMenuModal() {
   const navigation = useNavigation();
   const { userMenuVisible, closeUserMenu } = useMenu();
   const { isAuthenticated, logout } = useAuth();
+  const { profile, avatarUrl, initials } = useProfile();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
 
@@ -43,6 +48,13 @@ export function UserMenuModal() {
   const handleItem = (route: string) => {
     closeUserMenu();
     (navigation as any).navigate(route);
+  };
+
+  const handleExit = () => {
+    closeUserMenu();
+    if (Platform.OS === 'android') {
+      BackHandler.exitApp();
+    }
   };
 
   return (
@@ -80,7 +92,21 @@ export function UserMenuModal() {
                   </Text>
                 </>
               ) : (
-                <Text style={styles.hint}>You are logged in.</Text>
+                <View style={styles.userSummary}>
+                  <View style={styles.userAvatarWrap}>
+                    {avatarUrl ? (
+                      <Image source={{ uri: avatarUrl }} style={styles.userAvatar} />
+                    ) : (
+                      <View style={styles.userInitialsCircle}>
+                        <Text style={styles.userInitialsText}>{initials || '?'}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.userName} numberOfLines={1}>
+                    {profile?.username || profile?.email || 'Logged in'}
+                  </Text>
+                  <Text style={styles.hint}>You are logged in.</Text>
+                </View>
               )}
               {USER_MENU_ITEMS.map((item) => (
                 <TouchableOpacity
@@ -114,6 +140,12 @@ export function UserMenuModal() {
                   <Text style={styles.logoutLabel}>Close</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={[styles.menuItem, styles.exitItem]}
+                onPress={handleExit}
+              >
+                <Text style={styles.exitLabel}>Exit</Text>
+              </TouchableOpacity>
             </ScrollView>
           </Pressable>
         </Animated.View>
@@ -170,6 +202,14 @@ const styles = StyleSheet.create({
     color: colors.error[500],
     fontWeight: '500',
   },
+  exitItem: {
+    marginTop: 8,
+  },
+  exitLabel: {
+    fontSize: 17,
+    color: colors.primary[600],
+    fontWeight: '500',
+  },
   separator: {
     height: 1,
     backgroundColor: colors.primary[200],
@@ -179,5 +219,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary[600],
     marginBottom: 8,
+  },
+  userSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  userAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: colors.primary[100],
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  userInitialsCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary[500],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userInitialsText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary[50],
+  },
+  userName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary[800],
   },
 });

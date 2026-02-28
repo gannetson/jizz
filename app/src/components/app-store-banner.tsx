@@ -1,17 +1,10 @@
 import React from 'react';
 import { Box, Flex, Text, Link } from '@chakra-ui/react';
 import { FormattedMessage } from 'react-intl';
+import { getMobileOS } from '../../utils/device';
 
 const IOS_URL = 'https://apps.apple.com/app/birdr/id_PLACEHOLDER';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=pro.birdr.mobile';
-
-function getMobileOS(): 'ios' | 'android' | null {
-  if (typeof navigator === 'undefined') return null;
-  const ua = navigator.userAgent || '';
-  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
-  if (/android/i.test(ua)) return 'android';
-  return null;
-}
 
 function isCapacitor(): boolean {
   return !!(typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.());

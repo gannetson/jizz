@@ -82,7 +82,7 @@ export function StartScreen() {
     loadStoredPlayer();
   }, []);
 
-  // When logged in, prefill player name and country from profile
+  // When logged in, prefill player name, country and species language from profile
   useEffect(() => {
     if (!isAuthenticated || !countriesLoaded || countries.length === 0) return;
     let cancelled = false;
@@ -95,6 +95,9 @@ export function StartScreen() {
         if (profile.country_code) {
           const c = countries.find((x) => x.code === profile.country_code);
           if (c) setCountry(c);
+        }
+        if (profile.language?.trim()) {
+          setLanguage(profile.language.trim());
         }
       })
       .catch(() => {});
@@ -112,11 +115,18 @@ export function StartScreen() {
       Alert.alert('Select country', 'Please select a country.');
       return;
     }
-    const game = await createGame();
-    if (game) {
-      (navigation as any).navigate('Lobby');
-    } else {
-      Alert.alert('Error', 'Could not create game. Please try again.');
+    try {
+      const game = await createGame();
+      if (game) {
+        (navigation as any).navigate('Lobby');
+      } else {
+        Alert.alert('Error', 'Could not create game. Please try again.');
+      }
+    } catch (e: any) {
+      const message = e?.name === 'AbortError'
+        ? 'Request timed out. Check your connection and try again.'
+        : (e?.message || 'Could not create game. Please try again.');
+      Alert.alert('Error', message);
     }
   };
 

@@ -10,6 +10,8 @@ export type Player = {
   language: string;
 };
 
+const PLAYER_REQUEST_TIMEOUT_MS = 25000;
+
 /**
  * Create a player. When accessToken is provided (user logged in), the backend links the player to the user account.
  */
@@ -18,21 +20,30 @@ export async function createPlayer(
   language: string,
   accessToken?: string | null
 ): Promise<Player | null> {
-  const headers: HeadersInit = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-  };
-  if (accessToken?.trim()) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken.trim()}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PLAYER_REQUEST_TIMEOUT_MS);
+  try {
+    const headers: HeadersInit = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (accessToken?.trim()) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken.trim()}`;
+    }
+    const response = await fetch(apiUrl('/api/player/'), {
+      method: 'POST',
+      signal: controller.signal,
+      headers,
+      body: JSON.stringify({ name, language }),
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data as Player;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
   }
-  const response = await fetch(apiUrl('/api/player/'), {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ name, language }),
-  });
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data as Player;
 }
 
 export async function getPlayer(token: string): Promise<Player | null> {

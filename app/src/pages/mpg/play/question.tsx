@@ -176,7 +176,7 @@ export const QuestionComponent = () => {
 
 
   const flag = (
-    <Link float={'right'} onClick={flagMedia} fontSize={'sm'} color={'error.700'}>
+    <Link onClick={flagMedia} fontSize={'sm'} color={'error.700'}>
       🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
     </Link>
   )
@@ -258,8 +258,10 @@ export const QuestionComponent = () => {
               controls={true}
               playing={true}
             />
-            {flag}
-            <MediaCredits media={question.videos[currentMediaIndex]} />
+            <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
+              <MediaCredits media={question.videos[currentMediaIndex]} />
+              {flag}
+            </Flex>
           </>
         )}
         {game.media === 'images' && question.images[currentMediaIndex] && (
@@ -270,11 +272,13 @@ export const QuestionComponent = () => {
                 e.currentTarget.src = '/images/birdr-logo.png';
               }}
             />
-            {flag}
-            <MediaCredits 
-              media={question.images[currentMediaIndex]} 
-              onClick={skipQuestion}
-            />
+            <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
+              <MediaCredits 
+                media={question.images[currentMediaIndex]} 
+                onClick={skipQuestion}
+              />
+              {flag}
+            </Flex>
           </>
 
         )}
@@ -288,8 +292,10 @@ export const QuestionComponent = () => {
                 controls={true}
                 playing={true}
               />
-              {flag}
-              <MediaCredits media={question.sounds[currentMediaIndex]} />
+              <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
+                <MediaCredits media={question.sounds[currentMediaIndex]} />
+                {flag}
+              </Flex>
             </>
           </Box>
 

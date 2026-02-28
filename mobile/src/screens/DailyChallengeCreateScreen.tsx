@@ -22,12 +22,19 @@ const MEDIA_OPTIONS = [
   { value: 'audio', label: 'Audio' },
 ];
 
+const LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'expert', label: 'Expert' },
+];
+
 export function DailyChallengeCreateScreen() {
   const navigation = useNavigation();
   const [countries, setCountries] = useState<Country[]>([]);
   const [country, setCountry] = useState<Country | null>(null);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [media, setMedia] = useState('images');
+  const [level, setLevel] = useState('advanced');
   const [length, setLength] = useState(10);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +63,7 @@ export function DailyChallengeCreateScreen() {
         media,
         length,
         duration_days: 7,
+        level,
       });
       await startDailyChallenge(challenge.id);
       (navigation as any).navigate('DailyChallengeDetail', { challengeId: challenge.id });
@@ -91,6 +99,19 @@ export function DailyChallengeCreateScreen() {
             onPress={() => setMedia(opt.value)}
           >
             <Text style={[styles.mediaChipText, media === opt.value && styles.mediaChipTextSelected]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Level (default Advanced)</Text>
+      <View style={styles.mediaRow}>
+        {LEVEL_OPTIONS.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            style={[styles.mediaChip, level === opt.value && styles.mediaChipSelected]}
+            onPress={() => setLevel(opt.value)}
+          >
+            <Text style={[styles.mediaChipText, level === opt.value && styles.mediaChipTextSelected]}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </View>

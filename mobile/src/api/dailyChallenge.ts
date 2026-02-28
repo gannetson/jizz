@@ -7,6 +7,8 @@ export type DailyChallengeRound = {
   game: number | null;
   game_token: string | null;
   my_player_token?: string | null;
+  game_ended?: boolean;
+  user_score?: number | null;
   opens_at: string;
   closes_at: string;
   status: string;
@@ -30,6 +32,7 @@ export type DailyChallenge = {
   media: string;
   length: number;
   duration_days: number;
+  level?: string;
   started_at: string | null;
   status: string;
   participants: DailyChallengeParticipant[];
@@ -101,12 +104,13 @@ export async function createDailyChallenge(params: {
   media?: string;
   length?: number;
   duration_days?: number;
+  level?: string;
 }): Promise<DailyChallenge> {
   const headers = await getAuthHeaders();
   const response = await fetch(apiUrl('/api/daily-challenges/'), {
     method: 'POST',
     headers: { ...(headers as Record<string, string>), 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify({ ...params, level: params.level ?? 'advanced' }),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

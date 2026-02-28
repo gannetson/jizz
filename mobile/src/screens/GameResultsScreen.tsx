@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -9,12 +9,23 @@ import { colors } from '../theme';
 export function GameResultsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const route = useRoute();
+  const dailyChallengeId = (route.params as { dailyChallengeId?: number })?.dailyChallengeId;
   const { game, clearGame } = useGame();
   const { players } = useGameWebSocket();
 
   const handlePlayAgain = async () => {
     await clearGame();
     (navigation as any).navigate('Start');
+  };
+
+  const handleBackToDailyChallenge = async () => {
+    await clearGame();
+    if (dailyChallengeId != null) {
+      (navigation as any).navigate('DailyChallengeDetail', { challengeId: dailyChallengeId });
+    } else {
+      (navigation as any).navigate('Start');
+    }
   };
 
   const sortedPlayers = [...(players || [])].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
@@ -35,8 +46,10 @@ export function GameResultsScreen() {
           ))
         )}
       </View>
-      <TouchableOpacity style={styles.primaryButton} onPress={handlePlayAgain}>
-        <Text style={styles.primaryButtonText}>{t('play_again')}</Text>
+      <TouchableOpacity style={styles.primaryButton} onPress={dailyChallengeId != null ? handleBackToDailyChallenge : handlePlayAgain}>
+        <Text style={styles.primaryButtonText}>
+          {dailyChallengeId != null ? (t('back_to_daily_challenge') || 'Back to Daily Challenge') : t('play_again')}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );

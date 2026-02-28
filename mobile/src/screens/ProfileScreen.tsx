@@ -230,7 +230,7 @@ export function ProfileScreen() {
         editable={false}
         placeholderTextColor={colors.primary[500]}
       />
-      <Text style={styles.label}>Language (species names)</Text>
+      <Text style={styles.label}>Species language (names)</Text>
       <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)}>
         <Text style={styles.selectButtonText}>{languageLabel}</Text>
       </TouchableOpacity>

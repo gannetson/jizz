@@ -1,5 +1,5 @@
 import React, {useContext, useEffect, useState} from 'react';
-import {Box, Button, Flex, Heading, Input} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Input, Link, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import WebsocketContext from "../core/websocket-context"
 import {useNavigate, useParams} from "react-router-dom"
@@ -11,6 +11,7 @@ import SelectLanguage from "../components/select-language"
 import {profileService} from "../api/services/profile.service"
 import {authService} from "../api/services/auth.service"
 import AppStoreBanner from "../components/app-store-banner"
+import { getMobileOS } from "../utils/device"
 
 
 const JoinPage: React.FC = () => {
@@ -20,6 +21,17 @@ const JoinPage: React.FC = () => {
   const navigate = useNavigate()
   const {gameCode} = useParams<{ gameCode: string }>();
   const [code, setCode] = useState<string | undefined>(gameCode)
+  const mobileOS = getMobileOS()
+  const showOpenInApp = Boolean(mobileOS && gameCode)
+
+  // On mobile with game code, try opening the app once after a short delay (user can still use the form)
+  useEffect(() => {
+    if (!showOpenInApp || !gameCode) return
+    const t = setTimeout(() => {
+      window.location.href = `birdr://join/${gameCode}`
+    }, 800)
+    return () => clearTimeout(t)
+  }, [showOpenInApp, gameCode])
 
   // Load user profile to prefill player name and language
   useEffect(() => {
@@ -73,6 +85,37 @@ const JoinPage: React.FC = () => {
         </Heading>
       </Page.Header>
       <Page.Body>
+        {showOpenInApp && (
+          <Box
+            p={4}
+            borderRadius="lg"
+            border="1px solid"
+            borderColor="green.200"
+            bg="green.50"
+            mb={4}
+          >
+            <Flex direction="column" align="center" gap={2}>
+              <Text fontWeight="600" fontSize="md" textAlign="center">
+                <FormattedMessage
+                  id="open_in_app_prompt"
+                  defaultMessage="Open in Birdr app to join this game"
+                />
+              </Text>
+              <Link
+                href={`birdr://join/${gameCode}`}
+                fontWeight="600"
+                color="green.700"
+                fontSize="md"
+                _hover={{ color: 'green.900' }}
+              >
+                <FormattedMessage
+                  id="open_in_birdr_app"
+                  defaultMessage="Open in Birdr app"
+                />
+              </Link>
+            </Flex>
+          </Box>
+        )}
         <Box>
           Game code
           <Input name={'game_code'} value={code} cursor="text" onChange={(event) => setCode(event.target.value)}/>

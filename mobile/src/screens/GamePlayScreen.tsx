@@ -14,7 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { Video, Audio } from 'expo-av';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -28,6 +28,7 @@ import { getSpeciesForCountry } from '../api/species';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import type { Species } from '../types/game';
+import * as playerApi from '../api/player';
 
 function speciesDisplayName(s: Species, lang?: string): string {
   if (s.name_translated) return s.name_translated;
@@ -39,8 +40,14 @@ function speciesDisplayName(s: Species, lang?: string): string {
 export function GamePlayScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const { game, player } = useGame();
-  const { question, answer, players, nextQuestion, submitAnswer } = useGameWebSocket();
+  const route = useRoute();
+  const dailyChallengeId = (route.params as { dailyChallengeId?: number })?.dailyChallengeId;
+  const gameTokenParam = (route.params as { gameToken?: string })?.gameToken;
+  const playerTokenParam = (route.params as { playerToken?: string })?.playerToken;
+  const { game, player, setGame, setPlayer, loadGame } = useGame();
+  const { question, answer, players, nextQuestion, submitAnswer, joinGame, startGame, connected } = useGameWebSocket();
+  const dailyChallengeStartSent = useRef(false);
+  const [dailyChallengeLoadTimeout, setDailyChallengeLoadTimeout] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
   const [expertQuery, setExpertQuery] = useState('');
@@ -56,6 +63,24 @@ export function GamePlayScreen() {
   const pulsatingStyle = usePulsatingAnimation(soundPlaying);
   const lang = game?.language || (player as any)?.language;
 
+  // When coming from daily challenge with gameToken/playerToken in params, ensure we have game and player (context may not have updated yet)
+  const dailyLoadCancelled = useRef(false);
+  useEffect(() => {
+    if (!gameTokenParam) return;
+    if (game?.token === gameTokenParam && (!playerTokenParam || player?.token === playerTokenParam)) return;
+    dailyLoadCancelled.current = false;
+    (async () => {
+      const g = await loadGame(gameTokenParam);
+      if (dailyLoadCancelled.current || !g) return;
+      setGame(g);
+      if (playerTokenParam) {
+        const p = await playerApi.getPlayer(playerTokenParam);
+        if (!dailyLoadCancelled.current && p) setPlayer(p);
+      }
+    })();
+    return () => { dailyLoadCancelled.current = true; };
+  }, [gameTokenParam, playerTokenParam, loadGame, setGame, setPlayer]);
+
   useEffect(() => {
     if (answer) {
       setShowFeedback(true);
@@ -65,21 +90,46 @@ export function GamePlayScreen() {
 
   useEffect(() => {
     if (game?.ended) {
-      (navigation as any).navigate('GameResults');
+      (navigation as any).navigate('GameResults', { dailyChallengeId });
     }
-  }, [game?.ended, navigation]);
+  }, [game?.ended, navigation, dailyChallengeId]);
 
   useEffect(() => {
     if (question) setMediaIndex(question.sequence ?? 0);
   }, [question?.id]);
 
+  // When playing daily challenge we skip lobby: join WebSocket and (if host) start game from here
+  useEffect(() => {
+    if (dailyChallengeId && game?.token && player?.token) {
+      joinGame(game, player, setGame);
+    }
+  }, [dailyChallengeId, game?.token, player?.token, joinGame, setGame]);
+
+  useEffect(() => {
+    if (dailyChallengeId && connected && !question && game && player) {
+      const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
+      if (isHost && !dailyChallengeStartSent.current) {
+        dailyChallengeStartSent.current = true;
+        startGame();
+      }
+    }
+  }, [dailyChallengeId, connected, question, game, player, startGame]);
+
+  // If we're in daily challenge and waiting for first question, show error after timeout so we don't hang
+  useEffect(() => {
+    if (!dailyChallengeId || question || !game || !player) return;
+    setDailyChallengeLoadTimeout(false);
+    const t = setTimeout(() => setDailyChallengeLoadTimeout(true), 20000);
+    return () => clearTimeout(t);
+  }, [dailyChallengeId, question, game, player]);
+
   useEffect(() => {
     if (!question || game?.level !== 'expert') return;
     const countryCode = (game as any).country?.code;
     if (!countryCode) return;
-    const language = game?.language || 'en';
+    const language = game?.language || (player as any)?.language || 'en';
     getSpeciesForCountry(countryCode, language).then(setExpertSpecies);
-  }, [question?.id, game?.level, game?.language, (game as any)?.country?.code]);
+  }, [question?.id, game?.level, game?.language, (game as any)?.country?.code, (player as any)?.language]);
 
   useEffect(() => {
     return () => {
@@ -119,7 +169,7 @@ export function GamePlayScreen() {
   const done = gameLength <= (question?.sequence ?? 0);
 
   const handleEndGame = () => {
-    (navigation as any).navigate('GameResults');
+    (navigation as any).navigate('GameResults', { dailyChallengeId });
   };
 
   const handleNext = () => {
@@ -225,6 +275,20 @@ export function GamePlayScreen() {
     (mediaType === 'audio' && !soundUri);
 
   if (!question) {
+    if (dailyChallengeId && dailyChallengeLoadTimeout) {
+      return (
+        <View style={styles.centered}>
+          <Text style={styles.muted}>{t('loading_question')}</Text>
+          <Text style={styles.errorText}>Connection problem. The game could not start.</Text>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => (navigation as any).navigate('DailyChallengeDetail', { challengeId: dailyChallengeId })}
+          >
+            <Text style={styles.primaryButtonText}>Back to Daily Challenge</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
@@ -295,10 +359,12 @@ export function GamePlayScreen() {
             )}
             {currentMedia && (
               <>
-                <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
-                  <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
-                </TouchableOpacity>
-                <MediaCredits media={image} />
+                <View style={styles.creditsRow}>
+                  <MediaCredits media={image} />
+                  <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
+                    <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </>
@@ -312,10 +378,12 @@ export function GamePlayScreen() {
               resizeMode="contain"
               shouldPlay
             />
-            <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
-              <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
-            </TouchableOpacity>
-            <MediaCredits media={video} />
+            <View style={styles.creditsRow}>
+              <MediaCredits media={video} />
+              <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
+                <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
         {mediaType === 'audio' && soundUri && (
@@ -330,10 +398,12 @@ export function GamePlayScreen() {
                 </Text>
               </TouchableOpacity>
             </Animated.View>
-            <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
-              <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
-            </TouchableOpacity>
-            <MediaCredits media={sound} />
+            <View style={styles.creditsRow}>
+              <MediaCredits media={sound} />
+              <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
+                <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
         {showPlaceholder && !currentMedia && (
@@ -520,6 +590,7 @@ const styles = StyleSheet.create({
   content: { padding: 24, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   muted: { fontSize: 14, color: colors.primary[500], marginTop: 8 },
+  errorText: { fontSize: 14, color: colors.error[500], marginTop: 12, textAlign: 'center' },
   link: { fontSize: 16, color: colors.primary[500], marginTop: 8 },
   nextSection: { marginBottom: 20 },
   primaryButton: {
@@ -538,6 +609,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
   mediaWrap: { minHeight: 200, marginBottom: 24 },
+  creditsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   image: { width: '100%', height: 280, borderRadius: 8, backgroundColor: colors.primary[100] },
   video: { width: '100%', height: 220, borderRadius: 8, backgroundColor: '#000' },
   placeholder: {
@@ -555,7 +634,7 @@ const styles = StyleSheet.create({
   mediaLinkPlaying: { backgroundColor: colors.primary[500] },
   mediaLinkText: { fontSize: 16, color: colors.primary[700], fontWeight: '600' },
   mediaLinkTextPlaying: { color: colors.primary[50] },
-  flagLink: { alignSelf: 'flex-end', marginTop: 8 },
+  flagLink: { marginTop: 8 },
   flagLinkText: { fontSize: 13, color: colors.error[500] },
   label: { fontSize: 14, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },
   expertInput: {

@@ -106,6 +106,7 @@ export const translations: Record<string, Record<string, string>> = {
     copied: 'Copied!',
     invite_whatsapp: 'Invite via WhatsApp',
     scan_to_join: 'Scan this QR code to join the game',
+    explain_mpg: 'You can play against other players by sharing the game link. To play solo, start the game now.',
     join_game_message: 'Join my Birdr game! {link}',
     // Menu / nav
     home: 'Home',
@@ -124,6 +125,7 @@ export const translations: Record<string, Record<string, string>> = {
     image_failed_to_load: 'Image failed to load. Check your connection or try again.',
     final_results: 'Final results',
     play_again: 'Play another game',
+    back_to_daily_challenge: 'Back to Daily Challenge',
     no_scores_yet: 'No scores yet.',
   },
   nl: {
@@ -222,6 +224,7 @@ export const translations: Record<string, Record<string, string>> = {
     copied: 'Gekopieerd!',
     invite_whatsapp: 'Uitnodigen via WhatsApp',
     scan_to_join: 'Scan deze QR-code om mee te spelen',
+    explain_mpg: 'Je kunt tegen anderen spelen door de spellink te delen. Om solo te spelen, start het spel nu.',
     join_game_message: 'Doe mee met mijn Birdr-spel! {link}',
     home: 'Home',
     about_birdr: 'Over Birdr',
@@ -240,6 +243,7 @@ export const translations: Record<string, Record<string, string>> = {
     image_failed_to_load: 'Afbeelding kon niet worden geladen. Controleer je verbinding of probeer opnieuw.',
     final_results: 'Eindresultaten',
     play_again: 'Nog een spel spelen',
+    back_to_daily_challenge: 'Terug naar dagelijkse uitdaging',
     no_scores_yet: 'Nog geen scores.',
   },
 };

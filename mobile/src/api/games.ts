@@ -28,22 +28,33 @@ type CreateGameBody = {
   tax_family?: string;
 };
 
+const GAME_REQUEST_TIMEOUT_MS = 30000;
+
 export async function createGame(
   playerToken: string,
   body: CreateGameBody
 ): Promise<Game | null> {
-  const response = await fetch(apiUrl('/api/games/'), {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Token ${playerToken}`,
-    },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data as Game;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GAME_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(apiUrl('/api/games/'), {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${playerToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data as Game;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
 }
 
 export async function loadGame(token: string): Promise<Game | null> {

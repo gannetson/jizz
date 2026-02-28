@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Pressable,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { getDailyChallenge, getDailyChallengeRound, type DailyChallenge, type DailyChallengeRound } from '../api/dailyChallenge';
@@ -21,6 +22,7 @@ export function DailyChallengeDetailScreen() {
   const { loadGame, setGame, setPlayer } = useGame();
   const [challenge, setChallenge] = useState<DailyChallenge | null>(null);
   const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -48,6 +50,8 @@ export function DailyChallengeDetailScreen() {
 
   const handlePlayRound = async (round: DailyChallengeRound & { game_token?: string | null; my_player_token?: string | null }) => {
     if (!round.game_token || !challengeId) return;
+    setPlaying(true);
+    setError(null);
     try {
       const roundData = await getDailyChallengeRound(challengeId, round.day_number);
       const myToken = roundData.my_player_token ?? (roundData as any).my_player_token;
@@ -58,11 +62,24 @@ export function DailyChallengeDetailScreen() {
       const game = await loadGame(round.game_token);
       if (game) {
         setGame(game);
-        (navigation as any).navigate('Lobby');
+        const playerToken = roundData.my_player_token ?? (roundData as any).my_player_token;
+        (navigation as any).navigate('GamePlay', {
+          dailyChallengeId: challengeId,
+          gameToken: round.game_token,
+          playerToken: playerToken ?? undefined,
+        });
+      } else {
+        setError('Could not load game');
       }
     } catch {
       setError('Could not load game');
+    } finally {
+      setPlaying(false);
     }
+  };
+
+  const handleOpenRoundReview = (gameToken: string) => {
+    (navigation as any).navigate('GameDetail', { token: gameToken });
   };
 
   if (challengeId == null) {
@@ -112,17 +129,60 @@ export function DailyChallengeDetailScreen() {
       ) : null}
 
       <Text style={styles.sectionTitle}>Rounds</Text>
-      {rounds.map((r) => (
-        <View key={r.id} style={[styles.roundCard, r.status === 'active' && styles.roundCardActive]}>
-          <Text style={styles.roundTitle}>Day {r.day_number}</Text>
-          <Text style={styles.roundMeta}>{r.status} · closes {r.closes_at ? new Date(r.closes_at).toLocaleString() : ''}</Text>
-          {r.status === 'active' && r.game_token && (
-            <TouchableOpacity style={styles.playButton} onPress={() => handlePlayRound(r)}>
-              <Text style={styles.playButtonText}>Play</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
+      {rounds.map((r) => {
+        const isCompleted = Boolean(r.game_ended && r.user_score != null);
+        const isPlayable = r.status === 'active' && r.game_token && !isCompleted;
+        const isReviewable = isCompleted && r.game_token;
+
+        const cardContent = (
+          <>
+            <View style={styles.roundCardHeader}>
+              <Text style={styles.roundTitle}>Day {r.day_number}</Text>
+              {r.user_score != null && (
+                <Text style={styles.roundScore}>{r.user_score} pts</Text>
+              )}
+            </View>
+            <Text style={styles.roundMeta}>
+              {r.status} · closes {r.closes_at ? new Date(r.closes_at).toLocaleString() : ''}
+            </Text>
+            {isPlayable && (
+              <TouchableOpacity
+                style={[styles.playButton, playing && styles.playButtonDisabled]}
+                onPress={() => handlePlayRound(r)}
+                disabled={playing}
+              >
+                {playing ? (
+                  <ActivityIndicator size="small" color={colors.primary[50]} />
+                ) : (
+                  <Text style={styles.playButtonText}>Play</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            {isReviewable && (
+              <Text style={styles.viewResultsHint}>Tap to view right and wrong answers</Text>
+            )}
+          </>
+        );
+
+        return (
+          <View
+            key={r.id}
+            style={[
+              styles.roundCard,
+              r.status === 'active' && !isCompleted && styles.roundCardActive,
+              isCompleted && styles.roundCardCompleted,
+            ]}
+          >
+            {isReviewable ? (
+              <Pressable onPress={() => handleOpenRoundReview(r.game_token!)} style={styles.roundCardPressable}>
+                {cardContent}
+              </Pressable>
+            ) : (
+              cardContent
+            )}
+          </View>
+        );
+      })}
 
       {currentRound && !currentRound.game_token && (
         <Text style={styles.muted}>Today&apos;s round is not ready yet.</Text>
@@ -149,7 +209,15 @@ const styles = StyleSheet.create({
     borderColor: colors.primary[200],
   },
   roundCardActive: { borderColor: colors.primary[500], borderWidth: 2 },
+  roundCardCompleted: {
+    borderColor: colors.success[500],
+    backgroundColor: colors.success[50],
+    borderWidth: 2,
+  },
+  roundCardPressable: { flex: 1 },
+  roundCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   roundTitle: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
+  roundScore: { fontSize: 16, fontWeight: '600', color: colors.primary[700] },
   roundMeta: { fontSize: 13, color: colors.primary[600], marginTop: 4 },
   playButton: {
     marginTop: 12,
@@ -158,6 +226,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+  playButtonDisabled: { opacity: 0.8 },
   playButtonText: { color: colors.primary[50], fontWeight: '600' },
+  viewResultsHint: { fontSize: 12, color: colors.primary[600], marginTop: 8 },
   muted: { fontSize: 14, color: colors.primary[600], marginTop: 8 },
 });

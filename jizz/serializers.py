@@ -1013,10 +1013,16 @@ class DailyChallengeParticipantSerializer(serializers.ModelSerializer):
 class DailyChallengeRoundSerializer(serializers.ModelSerializer):
     game_token = serializers.SerializerMethodField()
     my_player_token = serializers.SerializerMethodField()
+    game_ended = serializers.SerializerMethodField()
+    user_score = serializers.SerializerMethodField()
 
     class Meta:
         model = DailyChallengeRound
-        fields = ('id', 'day_number', 'game', 'game_token', 'my_player_token', 'opens_at', 'closes_at', 'status', 'created')
+        fields = (
+            'id', 'day_number', 'game', 'game_token', 'my_player_token',
+            'game_ended', 'user_score',
+            'opens_at', 'closes_at', 'status', 'created'
+        )
 
     def get_game_token(self, obj):
         return obj.game.token if obj.game_id else None
@@ -1028,6 +1034,26 @@ class DailyChallengeRoundSerializer(serializers.ModelSerializer):
         from jizz.models import Player
         player = Player.objects.filter(user=request.user).filter(scores__game=obj.game).first()
         return player.token if player else None
+
+    def get_game_ended(self, obj):
+        if not obj.game_id or not obj.game:
+            return False
+        if obj.status == 'completed':
+            return True
+        return getattr(obj.game, 'ended', False) if hasattr(obj.game, 'ended') else False
+
+    def get_user_score(self, obj):
+        if not obj.game_id:
+            return None
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        from jizz.models import Player
+        player = Player.objects.filter(user=request.user).filter(scores__game=obj.game).first()
+        if not player:
+            return None
+        ps = PlayerScore.objects.filter(player=player, game=obj.game).first()
+        return ps.score if ps is not None else None
 
 
 class DailyChallengeSerializer(serializers.ModelSerializer):
@@ -1046,7 +1072,7 @@ class DailyChallengeSerializer(serializers.ModelSerializer):
         model = DailyChallenge
         fields = (
             'id', 'token', 'creator', 'creator_username', 'country', 'country_code',
-            'media', 'length', 'duration_days', 'started_at', 'status',
+            'media', 'length', 'duration_days', 'level', 'started_at', 'status',
             'participants', 'rounds', 'created'
         )
         read_only_fields = ('token', 'creator', 'started_at', 'participants', 'rounds')
@@ -1057,6 +1083,7 @@ class DailyChallengeCreateSerializer(serializers.Serializer):
     media = serializers.ChoiceField(choices=Game.MEDIA_CHOICES, default='images')
     length = serializers.IntegerField(default=10)
     duration_days = serializers.IntegerField(default=7, required=False)
+    level = serializers.CharField(default='advanced', required=False)
 
 
 class DailyChallengeInviteSerializer(serializers.Serializer):

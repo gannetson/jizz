@@ -921,6 +921,7 @@ class DailyChallenge(models.Model):
     media = models.CharField(max_length=10, choices=Game.MEDIA_CHOICES, default='images')
     length = models.IntegerField(default=10)
     duration_days = models.IntegerField(default=7)
+    level = models.CharField(max_length=20, default='advanced')
     started_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     token = ShortUUIDField(

@@ -203,6 +203,7 @@ class DailyChallengeCreateView(APIView):
             media=serializer.validated_data['media'],
             length=serializer.validated_data['length'],
             duration_days=serializer.validated_data.get('duration_days', 7),
+            level=serializer.validated_data.get('level', 'advanced'),
             status='pending_accept',
         )
         # Creator is first participant, accepted
@@ -368,7 +369,7 @@ class DailyChallengeStartView(APIView):
         game = Game.objects.create(
             country=challenge.country,
             language='en',
-            level='beginner',
+            level=challenge.level,
             length=challenge.length,
             media=challenge.media,
             multiplayer=True,

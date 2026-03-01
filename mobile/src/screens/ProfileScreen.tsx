@@ -35,6 +35,7 @@ export function ProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [language, setLanguage] = useState('');
+  const [timezone, setTimezone] = useState('Europe/Amsterdam');
   const [countryCode, setCountryCode] = useState<string | null>(null);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -52,6 +53,7 @@ export function ProfileScreen() {
       setProfile(p);
       setUsername(p.username);
       setLanguage(p.language || 'en');
+      setTimezone(p.timezone || 'Europe/Amsterdam');
       setCountryCode(p.country_code ?? null);
       if (p.avatar_url) setAvatarPreviewUri(null);
     } catch (e: any) {
@@ -137,12 +139,14 @@ export function ProfileScreen() {
       await updateProfile({
         username: username.trim() || undefined,
         language: language || undefined,
+        timezone: timezone?.trim() || undefined,
         country_code: countryCode ?? undefined,
       });
       const updated = await getProfile();
       setProfile(updated);
       setUsername(updated.username);
       setLanguage(updated.language || 'en');
+      setTimezone(updated.timezone ?? 'Europe/Amsterdam');
       setCountryCode(updated.country_code ?? null);
       refreshProfile();
     } catch (e: any) {
@@ -267,6 +271,16 @@ export function ProfileScreen() {
       <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)}>
         <Text style={styles.selectButtonText}>{countryLabel}</Text>
       </TouchableOpacity>
+      <Text style={styles.label}>Timezone (daily challenge)</Text>
+      <TextInput
+        style={styles.input}
+        value={timezone}
+        onChangeText={setTimezone}
+        placeholder="e.g. Europe/Amsterdam"
+        placeholderTextColor={colors.primary[400]}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
       <TouchableOpacity
         style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         onPress={handleSave}

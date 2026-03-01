@@ -9,6 +9,7 @@ export type UserProfile = {
   avatar_url: string | null;
   receive_updates: boolean;
   language: string;
+  timezone: string;
   country_code: string | null;
   country_name: string | null;
   is_staff?: boolean;
@@ -21,6 +22,7 @@ export type ProfileUpdateData = {
   last_name?: string;
   receive_updates?: boolean;
   language?: string;
+  timezone?: string;
   country_code?: string | null;
 };
 

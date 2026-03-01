@@ -9,8 +9,12 @@ export type DailyChallengeRound = {
   my_player_token?: string | null;
   game_ended?: boolean;
   user_score?: number | null;
+  points_multiplier?: number;
+  display_score?: number | null;
   opens_at: string;
   closes_at: string;
+  opens_at_local?: string | null;
+  closes_at_local?: string | null;
   status: string;
   created: string;
 };

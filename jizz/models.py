@@ -523,6 +523,12 @@ class UserProfile(models.Model):
     receive_updates = models.BooleanField(default=False, help_text='Receive updates about Birdr app')
     language = models.CharField(max_length=10, default='en', blank=True, help_text='Preferred language')
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True, blank=True, help_text='Preferred country')
+    timezone = models.CharField(
+        max_length=63,
+        default='Europe/Amsterdam',
+        blank=True,
+        help_text='Timezone for daily challenge (e.g. Europe/Amsterdam)',
+    )
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 

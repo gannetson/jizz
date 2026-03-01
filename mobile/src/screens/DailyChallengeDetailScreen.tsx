@@ -133,17 +133,30 @@ export function DailyChallengeDetailScreen() {
         const isCompleted = Boolean(r.game_ended && r.user_score != null);
         const isPlayable = r.status === 'active' && r.game_token && !isCompleted;
         const isReviewable = isCompleted && r.game_token;
+        const multiplier = r.points_multiplier ?? (r.day_number === 3 ? 2 : r.day_number === 7 ? 3 : 1);
+        const showMultiplier = multiplier > 1;
+        const scoreToShow = r.display_score ?? r.user_score;
+        const closesAt = r.closes_at_local ? new Date(r.closes_at_local).toLocaleString() : (r.closes_at ? new Date(r.closes_at).toLocaleString() : '');
 
         const cardContent = (
           <>
             <View style={styles.roundCardHeader}>
-              <Text style={styles.roundTitle}>Day {r.day_number}</Text>
-              {r.user_score != null && (
-                <Text style={styles.roundScore}>{r.user_score} pts</Text>
+              <View style={styles.roundTitleRow}>
+                <Text style={styles.roundTitle}>Day {r.day_number}</Text>
+                {showMultiplier && (
+                  <View style={[styles.multiplierBadge, multiplier === 3 && styles.multiplierBadgeTriple]}>
+                    <Text style={styles.multiplierBadgeText}>
+                      {multiplier === 2 ? '2× points!' : '3× points!!'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {scoreToShow != null && (
+                <Text style={styles.roundScore}>{scoreToShow} pts</Text>
               )}
             </View>
             <Text style={styles.roundMeta}>
-              {r.status} · closes {r.closes_at ? new Date(r.closes_at).toLocaleString() : ''}
+              {r.status} · closes {closesAt}
             </Text>
             {isPlayable && (
               <TouchableOpacity
@@ -154,7 +167,9 @@ export function DailyChallengeDetailScreen() {
                 {playing ? (
                   <ActivityIndicator size="small" color={colors.primary[50]} />
                 ) : (
-                  <Text style={styles.playButtonText}>Play</Text>
+                  <Text style={styles.playButtonText}>
+                    {showMultiplier ? `Play · ${multiplier}× points!` : 'Play'}
+                  </Text>
                 )}
               </TouchableOpacity>
             )}
@@ -216,7 +231,20 @@ const styles = StyleSheet.create({
   },
   roundCardPressable: { flex: 1 },
   roundCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  roundTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   roundTitle: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
+  multiplierBadge: {
+    backgroundColor: colors.primary[200],
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  multiplierBadgeTriple: {
+    backgroundColor: colors.primary[400],
+  },
+  multiplierBadgeText: {
+    fontSize: 12, fontWeight: '700', color: colors.primary[800],
+  },
   roundScore: { fontSize: 16, fontWeight: '600', color: colors.primary[700] },
   roundMeta: { fontSize: 13, color: colors.primary[600], marginTop: 4 },
   playButton: {

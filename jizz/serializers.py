@@ -387,7 +387,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'country_code', 'country_name', 'is_staff', 'is_superuser')
+        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'timezone', 'country_code', 'country_name', 'is_staff', 'is_superuser')
         read_only_fields = ('avatar_url', 'country_code', 'country_name', 'is_staff', 'is_superuser')
 
     def get_avatar_url(self, obj):
@@ -413,6 +413,7 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     avatar = serializers.ImageField(required=False, allow_null=True)
     receive_updates = serializers.BooleanField(required=False)
     language = serializers.CharField(required=False, max_length=10, allow_blank=True)
+    timezone = serializers.CharField(required=False, max_length=63, allow_blank=True)
     country_code = serializers.CharField(required=False, max_length=10, allow_blank=True, allow_null=True)
 
     def validate_username(self, value):
@@ -467,6 +468,10 @@ class UserProfileUpdateSerializer(serializers.Serializer):
         # Update language if provided
         if 'language' in validated_data:
             instance.language = validated_data['language']
+        
+        # Update timezone if provided
+        if 'timezone' in validated_data:
+            instance.timezone = (validated_data['timezone'] or 'Europe/Amsterdam').strip() or 'Europe/Amsterdam'
         
         # Update country if provided
         if 'country_code' in validated_data:
@@ -1015,14 +1020,36 @@ class DailyChallengeRoundSerializer(serializers.ModelSerializer):
     my_player_token = serializers.SerializerMethodField()
     game_ended = serializers.SerializerMethodField()
     user_score = serializers.SerializerMethodField()
+    points_multiplier = serializers.SerializerMethodField()
+    display_score = serializers.SerializerMethodField()
+    opens_at_local = serializers.SerializerMethodField()
+    closes_at_local = serializers.SerializerMethodField()
 
     class Meta:
         model = DailyChallengeRound
         fields = (
             'id', 'day_number', 'game', 'game_token', 'my_player_token',
-            'game_ended', 'user_score',
-            'opens_at', 'closes_at', 'status', 'created'
+            'game_ended', 'user_score', 'points_multiplier', 'display_score',
+            'opens_at', 'closes_at', 'opens_at_local', 'closes_at_local',
+            'status', 'created'
         )
+
+    @staticmethod
+    def _points_multiplier_for_day(day_number):
+        if day_number == 3:
+            return 2
+        if day_number == 7:
+            return 3
+        return 1
+
+    def get_points_multiplier(self, obj):
+        return self._points_multiplier_for_day(obj.day_number)
+
+    def get_display_score(self, obj):
+        raw = self.get_user_score(obj)
+        if raw is None:
+            return None
+        return raw * self._points_multiplier_for_day(obj.day_number)
 
     def get_game_token(self, obj):
         return obj.game.token if obj.game_id else None
@@ -1054,6 +1081,38 @@ class DailyChallengeRoundSerializer(serializers.ModelSerializer):
             return None
         ps = PlayerScore.objects.filter(player=player, game=obj.game).first()
         return ps.score if ps is not None else None
+
+    def get_opens_at_local(self, obj):
+        if not obj.opens_at:
+            return None
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        try:
+            profile = UserProfile.objects.filter(user=request.user).first()
+            tz_name = (profile.timezone if profile else 'Europe/Amsterdam') or 'Europe/Amsterdam'
+            tz_name = (tz_name or '').strip() or 'Europe/Amsterdam'
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(tz_name)
+            return obj.opens_at.astimezone(tz).isoformat()
+        except Exception:
+            return None
+
+    def get_closes_at_local(self, obj):
+        if not obj.closes_at:
+            return None
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        try:
+            profile = UserProfile.objects.filter(user=request.user).first()
+            tz_name = (profile.timezone if profile else 'Europe/Amsterdam') or 'Europe/Amsterdam'
+            tz_name = (tz_name or '').strip() or 'Europe/Amsterdam'
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(tz_name)
+            return obj.closes_at.astimezone(tz).isoformat()
+        except Exception:
+            return None
 
 
 class DailyChallengeSerializer(serializers.ModelSerializer):

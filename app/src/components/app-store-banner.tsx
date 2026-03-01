@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Flex, Text, Link } from '@chakra-ui/react';
 import { FormattedMessage } from 'react-intl';
-import { getMobileOS } from '../../utils/device';
+import { getMobileOS } from '../utils/device';
 
 const IOS_URL = 'https://apps.apple.com/app/birdr/id_PLACEHOLDER';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=pro.birdr.mobile';

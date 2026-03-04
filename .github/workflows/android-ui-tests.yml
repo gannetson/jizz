@@ -10,7 +10,7 @@ on:
 
 jobs:
   android-ui-tests:
-    runs-on: macos-13  # macos-13 more reliable for emulator than macos-14
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
 
@@ -40,4 +40,8 @@ jobs:
           api-level: 30
           target: default
           arch: x86_64
-          script: cd mobile/android && ./gradlew connectedDebugAndroidTest --no-daemon
+          script: |
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            cd mobile/android && ./gradlew connectedDebugAndroidTest --no-daemon

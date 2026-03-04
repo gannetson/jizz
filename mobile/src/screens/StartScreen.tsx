@@ -140,7 +140,7 @@ export function StartScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title} testID="start.title">Start a new game</Text>
+      <Text style={styles.title} testID="start.title" accessibilityLabel="Start a new game screen title">Start a new game</Text>
       <Text style={styles.hint}>
         To get a high score, identify the birds correctly and be fast! After each answer you see how many points you got.
       </Text>

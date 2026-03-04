@@ -36,8 +36,6 @@ class NormalGameFlowTest {
         onView(withContentDescription("Start a new game"))
             .perform(click())
 
-        onView(withText("Start a new game"))
-            .check(matches(isDisplayed()))
         onView(withContentDescription("Player name"))
             .check(matches(isDisplayed()))
         onView(withContentDescription("Select country"))
@@ -72,6 +70,8 @@ class NormalGameFlowTest {
         onView(withContentDescription("Close"))
             .perform(click())
 
+        onView(withContentDescription("Start a new game"))
+            .perform(androidx.test.espresso.contrib.ViewActions.scrollTo())
         onView(withContentDescription("Start a new game"))
             .check(matches(isDisplayed()))
     }

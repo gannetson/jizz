@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "pro.birdr.app",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "icon": "./assets/icon.png",
       "associatedDomains": ["applinks:birdr.pro"]
     },
@@ -26,7 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "pro.birdr.app",
-      "versionCode": 18,
+      "versionCode": 19,
       "intentFilters": [
         {
           "action": "VIEW",

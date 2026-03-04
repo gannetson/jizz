@@ -43,6 +43,7 @@ export const ProfilePage = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [receiveUpdates, setReceiveUpdates] = useState(false);
   const [language, setLanguage] = useState("en");
+  const [timezone, setTimezone] = useState("Europe/Amsterdam");
   const [countryCode, setCountryCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export const ProfilePage = () => {
         setAvatarPreview(getAvatarUrl(profileData));
         setReceiveUpdates(profileData.receive_updates || false);
         setLanguage(profileData.language || "en");
+        setTimezone(profileData.timezone || "Europe/Amsterdam");
         setCountryCode(profileData.country_code || null);
       } catch (err: any) {
         setError(err.message || "Failed to load profile");
@@ -130,6 +132,10 @@ export const ProfilePage = () => {
         updateData.country_code = countryCode;
       }
 
+      if (timezone !== (profile?.timezone ?? "Europe/Amsterdam")) {
+        updateData.timezone = timezone?.trim() || "Europe/Amsterdam";
+      }
+
       if (Object.keys(updateData).length === 0) {
         setSuccess("No changes to save");
         setSaving(false);
@@ -145,6 +151,7 @@ export const ProfilePage = () => {
       setAvatarFile(null);
       setReceiveUpdates(updatedProfile.receive_updates || false);
       setLanguage(updatedProfile.language || "en");
+      setTimezone(updatedProfile.timezone ?? "Europe/Amsterdam");
       setCountryCode(updatedProfile.country_code || null);
       setSuccess("Profile updated successfully!");
       
@@ -343,6 +350,19 @@ export const ProfilePage = () => {
                 onChange={setCountryCode}
               />
             </Box>
+
+            {/* Timezone (for daily challenge) */}
+            <Field.Root>
+              <Field.Label>
+                <FormattedMessage id="timezone_daily_challenge" defaultMessage="Timezone (daily challenge)" />
+              </Field.Label>
+              <Input
+                type="text"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                placeholder="e.g. Europe/Amsterdam"
+              />
+            </Field.Root>
 
             {/* Submit Button */}
             <Button

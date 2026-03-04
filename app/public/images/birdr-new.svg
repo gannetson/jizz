@@ -13,7 +13,10 @@
    style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
    id="svg861"
    sodipodi:docname="birdr-new.svg"
-   inkscape:version="1.0.2 (e86c8708, 2021-01-15)">
+   inkscape:version="1.0.2 (e86c8708, 2021-01-15)"
+   inkscape:export-filename="/Users/gannetson/birdr.png"
+   inkscape:export-xdpi="614"
+   inkscape:export-ydpi="614">
   <metadata
      id="metadata867">
     <rdf:RDF>
@@ -43,17 +46,33 @@
      showgrid="false"
      inkscape:zoom="0.95572728"
      inkscape:cx="440.01993"
-     inkscape:cy="294.48295"
+     inkscape:cy="343.77458"
      inkscape:window-x="318"
      inkscape:window-y="69"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg861" />
+  <ellipse
+     style="fill:#ffffff;stroke-width:8.66466"
+     id="path898"
+     cx="393.41766"
+     cy="393.41766"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614"
+     rx="391.32504"
+     ry="388.18607" />
   <g
      id="g835"
-     transform="matrix(1.1233444,0,0,1.112295,-52.145189,-40.758191)" />
+     transform="matrix(1.1099889,0,0,1.107816,-51.500354,-40.572997)"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614" />
   <g
      id="g843"
-     transform="matrix(1.1233444,0,0,1.112295,-52.145189,-40.758191)">
+     transform="matrix(1.1099889,0,0,1.107816,-51.500354,-40.572997)"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614">
     <path
        style="opacity:1"
        fill="#d8b165"
@@ -62,7 +81,10 @@
   </g>
   <g
      id="g847"
-     transform="matrix(1.1233444,0,0,1.112295,-52.145189,-40.758191)">
+     transform="matrix(1.1099889,0,0,1.107816,-51.500354,-40.572997)"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614">
     <path
        style="opacity:1"
        fill="#000000"
@@ -71,7 +93,10 @@
   </g>
   <g
      id="g851"
-     transform="matrix(1.1233444,0,0,1.112295,-52.145189,-40.758191)">
+     transform="matrix(1.1099889,0,0,1.107816,-51.500354,-40.572997)"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614">
     <path
        style="opacity:1"
        fill="#5c1808"
@@ -80,7 +105,10 @@
   </g>
   <g
      id="g855"
-     transform="matrix(1.1233444,0,0,1.112295,-52.145189,-40.758191)">
+     transform="matrix(1.1099889,0,0,1.107816,-51.500354,-40.572997)"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614">
     <path
        style="opacity:1"
        fill="#5c1808"
@@ -89,7 +117,10 @@
   </g>
   <g
      id="g859"
-     transform="matrix(1.1233444,0,0,1.112295,-52.145189,-40.758191)">
+     transform="matrix(1.1099889,0,0,1.107816,-51.500354,-40.572997)"
+     inkscape:export-filename="/Users/gannetson/birdr-new.png"
+     inkscape:export-xdpi="614"
+     inkscape:export-ydpi="614">
     <path
        style="opacity:1"
        fill="#d8b165"

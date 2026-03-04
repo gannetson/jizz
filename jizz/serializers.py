@@ -394,7 +394,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if obj.avatar:
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.avatar.url)
+                url = request.build_absolute_uri(obj.avatar.url)
+                # In production (behind proxy), ensure HTTPS so avatars load over HTTPS
+                from django.conf import settings
+                if not getattr(settings, 'DEBUG', True) and url.startswith('http://'):
+                    url = 'https://' + url[7:]
+                return url
             return obj.avatar.url
         return None
 

@@ -10,6 +10,117 @@ from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesS
 SERVER_NAME = 'api.ebird.org'
 API_VERSION = 'v2'
 
+# Status and Trends download API (regional stats CSV)
+ST_DOWNLOAD_BASE = 'https://st-download.ebird.org/v1'
+
+# GBIF API (https://techdocs.gbif.org/en/openapi/)
+GBIF_API_BASE = 'https://api.gbif.org/v1'
+# Set User-Agent so GBIF can contact us if there are issues (recommended in their docs)
+GBIF_HEADERS = {
+    'User-Agent': 'JizzBirdApp/1.0 (https://github.com/jizz-bird)',
+}
+
+
+def gbif_species_match(scientific_name):
+    """
+    Resolve a scientific name to GBIF usageKey (taxonKey) via the Species API.
+    Returns the usageKey (int) or None if no match or on error.
+    """
+    if not scientific_name or not str(scientific_name).strip():
+        return None
+    url = f'{GBIF_API_BASE}/species/match'
+    try:
+        r = requests.get(
+            url,
+            params={'name': scientific_name.strip()},
+            headers=GBIF_HEADERS,
+            timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+        # Prefer species-level key; usageKey can be genus etc. for fuzzy matches
+        key = data.get('speciesKey') or data.get('usageKey')
+        if key is not None and data.get('matchType') != 'NONE':
+            return int(key)
+        return None
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return None
+
+
+def gbif_occurrence_count(country_code, taxon_key):
+    """
+    Return the number of occurrence records in GBIF for the given country and taxon.
+    Uses occurrence search with limit=0 to get only the count.
+    """
+    if not country_code or taxon_key is None:
+        return 0
+    url = f'{GBIF_API_BASE}/occurrence/search'
+    try:
+        r = requests.get(
+            url,
+            params={
+                'country': country_code.upper(),
+                'taxonKey': taxon_key,
+                'limit': 0,
+            },
+            headers=GBIF_HEADERS,
+            timeout=60,
+        )
+        r.raise_for_status()
+        return int(r.json().get('count', 0))
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return 0
+
+
+def ebird_st_list_files(species_code, access_key, version_year=2023):
+    """
+    List available files for a species from eBird Status and Trends API.
+    Returns list of object paths (e.g. ['2023/woothr/regional_stats.csv', ...]).
+    See https://ebird.github.io/ebirdst/articles/api.html
+    """
+    url = f'{ST_DOWNLOAD_BASE}/list-obj/{version_year}/{species_code}'
+    res = requests.get(url, params={'key': access_key}, timeout=60)
+    res.raise_for_status()
+    return res.json()
+
+
+def ebird_st_download_regional_stats(species_code, access_key, version_year=2023):
+    """
+    Download the regional_stats.csv for a species from eBird Status and Trends.
+    Returns CSV content as string, or None if no regional_stats.csv is available.
+    """
+    paths = ebird_st_list_files(species_code, access_key, version_year)
+    obj_key = None
+    for p in paths:
+        if isinstance(p, str) and p.endswith('regional_stats.csv'):
+            obj_key = p
+            break
+    if not obj_key:
+        return None
+    url = f'{ST_DOWNLOAD_BASE}/fetch'
+    r = requests.get(url, params={'objKey': obj_key, 'key': access_key}, timeout=120)
+    r.raise_for_status()
+    return r.text
+
+
+def download_ebird_regional_zip(url):
+    """
+    Fetch URL; if response is a ZIP, extract the first .csv and return its content as string.
+    If response is already CSV (text), return as-is.
+    """
+    import io
+    import zipfile
+    r = requests.get(url, timeout=120)
+    r.raise_for_status()
+    content_type = (r.headers.get('Content-Type') or '').lower()
+    if 'zip' in content_type or r.content[:4] == b'PK\x03\x04':
+        with zipfile.ZipFile(io.BytesIO(r.content), 'r') as zf:
+            for name in zf.namelist():
+                if name.lower().endswith('.csv'):
+                    return zf.read(name).decode('utf-8', errors='replace')
+        raise ValueError('ZIP contains no CSV file')
+    return r.text
+
 
 def sync_species():
 

@@ -4,6 +4,7 @@ from datetime import timedelta
 from random import randint, shuffle, random
 
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Sum, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -721,6 +722,28 @@ class CountrySpecies(models.Model):
 
     status = models.CharField(max_length=100, default='unknown', choices=STATUS_CHOICES)
 
+    FREQUENCY_CHOICES = [
+        ('very_common', 'Very common'),
+        ('common', 'Common'),
+        ('fairly_common', 'Fairly common'),
+        ('uncommon', 'Uncommon'),
+        ('rare', 'Rare'),
+        ('very_rare', 'Very rare'),
+    ]
+    frequency = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=FREQUENCY_CHOICES,
+        help_text='Relative abundance/frequency in this country (e.g. from eBird regional stats)',
+    )
+
+    frequency_pct = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Raw percentage from source (e.g. range_occupied_percent from eBird Status and Trends CSV)',
+    )
+
     @property
     def name(self):
         return self.species.name
@@ -732,6 +755,31 @@ class CountrySpecies(models.Model):
         verbose_name = 'Country Species'
         verbose_name_plural = 'Country Species'
         unique_together = ('country', 'species')
+
+
+class CountrySpeciesFrequency(models.Model):
+    """Per-month frequency from eBird (e.g. regional_stats CSV by season)."""
+    country_species = models.ForeignKey(
+        CountrySpecies,
+        on_delete=models.CASCADE,
+        related_name='frequency_by_month',
+    )
+    month = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+    )
+    frequency_pct = models.FloatField(null=True, blank=True)
+    frequency = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=CountrySpecies.FREQUENCY_CHOICES,
+    )
+
+    class Meta:
+        verbose_name = 'Country Species Frequency'
+        verbose_name_plural = 'Country Species Frequencies'
+        unique_together = ('country_species', 'month')
+        ordering = ['country_species', 'month']
 
 
 class Feedback(models.Model):

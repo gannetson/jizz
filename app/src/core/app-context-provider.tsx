@@ -75,7 +75,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }, []);
 
-  const speciesLanguage = profile?.language ?? language ?? 'en';
+  const speciesLanguage = game?.language ?? profile?.language ?? language ?? 'en';
 
   useEffect(() => {
     if (country?.code) {
@@ -279,6 +279,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
     if (response.status === 200) {
       const data = await response.json()
       setGame(data)
+      setLanguage(data.language)
       return data as Game
     } else {
       console.log('Could not load game.')
@@ -494,6 +495,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       loadGame,
       game,
       setGame,
+      setPlayer,
+      loadPlayer,
       startCountryChallenge,
       countryChallenge,
       loadCountryChallenge,

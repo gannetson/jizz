@@ -94,8 +94,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "Taiga Bean Goose"
+        versionCode 19
+        versionName "Tundra Bean Goose"
     }
     signingConfigs {
         debug {

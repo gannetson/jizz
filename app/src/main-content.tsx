@@ -32,6 +32,10 @@ import { MyGamesPage } from "./pages/my-games"
 import { GameDetailPage } from "./pages/game-detail"
 import { MediaReviewPage } from "./pages/media-review"
 import { HelpOverviewPage, HelpPageDetail } from "./pages/help"
+import { DailyChallengeListPage } from "./pages/daily-challenge"
+import { DailyChallengeNewPage } from "./pages/daily-challenge/new"
+import { DailyChallengeDetailPage } from "./pages/daily-challenge/detail"
+import { JoinChallengePage } from "@/pages/join-challenge"
 
 
 export const MainContent = () => {
@@ -65,11 +69,15 @@ export const MainContent = () => {
             <Route path="/my-games/:token" element={<GameDetailPage />} />
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>
+            <Route path="/join/challenge/:inviteToken" element={<JoinChallengePage />} />
             <Route path="/join/:gameCode" element={<JoinPage/>}/>
             <Route path='/about/' element={<AboutPage/>}/>
             <Route path='/privacy/' element={<PrivacyPage/>}/>
             <Route path='/challenge/' element={<ChallengePage />}/>
             <Route path='/challenge/play' element={<ChallengeQuestion />}/>
+            <Route path="/daily-challenge" element={<DailyChallengeListPage />} />
+            <Route path="/daily-challenge/new" element={<DailyChallengeNewPage />} />
+            <Route path="/daily-challenge/:id" element={<DailyChallengeDetailPage />} />
 
             <Route path='/texel/start/' element={<TexelStartPage />}/>
             <Route path='/texel/scores/' element={<TexelHiscorePage />}/>

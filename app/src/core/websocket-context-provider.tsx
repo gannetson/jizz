@@ -20,6 +20,10 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const retries = useRef<number>(0);
   const prevGameTokenRef = useRef<string | undefined>(undefined);
   const isConnectingRef = useRef<boolean>(false);
+  const socketRef = useRef<WebSocket | undefined>(undefined);
+  const questionGameTokenRef = useRef<string | undefined>(undefined);
+  const pendingActionsRef = useRef<{}[]>([]);
+  const currentQuestionIdRef = useRef<number | undefined>(undefined);
 
   const {game, setGame, player, language} = useContext(AppContext)
 
@@ -58,6 +62,23 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     })
   }
 
+  // Keep ref in sync so connectSocket/onclose always see latest socket (avoids stale closure)
+  useEffect(() => {
+    socketRef.current = socket
+  }, [socket])
+
+  // Track which game the current question belongs to (so we can skip retry when we have a question)
+  useEffect(() => {
+    if (question?.game?.token) {
+      questionGameTokenRef.current = question.game.token
+    }
+  }, [question?.game?.token])
+
+  // Track current question id so we don't clear answer when we receive the same question on reconnect
+  useEffect(() => {
+    currentQuestionIdRef.current = question?.id
+  }, [question?.id])
+
   const connectSocket = (game?: Game, player?: Player) => {
     // Try to get player from context or localStorage
     const activePlayer = player || (playerToken ? { token: playerToken } as Player : null)
@@ -82,12 +103,15 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       isConnectingRef.current = false
       return
     }
-    
-    // Clear question/answer immediately when connecting to a new game
-    // This prevents old questions from persisting
-    console.log('Connecting to new game, clearing question/answer:', connectionGameToken)
-    setQuestion(undefined)
-    setAnswer(undefined)
+
+    // Only clear question/answer when switching to a different game (or first connect).
+    // When reconnecting to the same game (e.g. retry after disconnect), keep current question to avoid blank flash loop.
+    const isSameGameReconnect = socket && (socket as any).gameToken === connectionGameToken
+    if (!isSameGameReconnect) {
+      console.log('Connecting to new game, clearing question/answer:', connectionGameToken)
+      setQuestion(undefined)
+      setAnswer(undefined)
+    }
 
     const socketUrl = getWebSocketUrl(`/mpg/${game.token}`);
     const ws = new WebSocket(socketUrl);
@@ -104,6 +128,21 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
         player_token: activePlayer.token,
         language_code: language
       }))
+
+      // Flush any pending actions that were queued while socket was closed.
+      // Join game must be first so the backend knows this connection's player/game.
+      if (pendingActionsRef.current.length > 0) {
+        const actionsToSend = [...pendingActionsRef.current]
+        pendingActionsRef.current = []
+        actionsToSend.forEach((data) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              ...(data as object),
+              language_code: language
+            }))
+          }
+        })
+      }
     };
 
     ws.onmessage = (event) => {
@@ -122,7 +161,12 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           console.log(`${message.player_name} joined the game`)
           break
         case 'new_question':
-          setAnswer(undefined)
+          // Only clear answer when advancing to a genuinely new question.
+          // On reconnect we get the same question again; don't wipe answer_checked we may receive after.
+          const incomingQuestionId = message.question?.id
+          if (incomingQuestionId !== currentQuestionIdRef.current) {
+            setAnswer(undefined)
+          }
           const question: Question = message.question
           
           // Get the authoritative current game token (from context, fallback to socket)
@@ -184,40 +228,17 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       console.log('WebSocket connection closed');
       isConnectingRef.current = false // Connection closed, can connect again
 
-      // CRITICAL: Check both the game token from context AND localStorage
-      // to ensure we don't reconnect to an old game after rematch
-      const currentGameToken = game?.token
-      const localStorageToken = typeof window !== 'undefined' ? localStorage.getItem('game-token') : null
-      
-      // Only retry if:
-      // 1. We still have a valid game and player
-      // 2. The game token matches the connection token (this socket's game)
-      // 3. The game token matches localStorage (prevents reconnecting to old game after rematch)
-      // 4. We haven't exceeded max retries
-      const shouldRetry = (
-        currentGameToken === connectionGameToken &&
-        currentGameToken === localStorageToken &&
-        activePlayer?.token &&
-        retries.current < maxRetries.current
-      )
-      
-      if (shouldRetry) {
-        retries.current++;
-        console.log(`Reconnecting... (${retries.current}/${maxRetries.current})`);
-        setTimeout(() => connectSocket(game, activePlayer as Player), retryInterval.current);
-      } else {
-        if (retries.current >= maxRetries.current) {
-          console.log('Max retries reached. Could not reconnect.');
-        } else {
-          console.log('Not retrying - game cleared, changed, or localStorage mismatch:', {
-            currentGameToken,
-            connectionGameToken,
-            localStorageToken,
-            tokensMatch: currentGameToken === connectionGameToken && currentGameToken === localStorageToken
-          });
-        }
-        retries.current = 0; // Reset retries
+      // Don't retry when we closed the socket intentionally (e.g. joinGame reconnecting)
+      if ((ws as any).closedByJoin) {
+        retries.current = 0;
+        return;
       }
+
+      // For now, do not auto-retry this WebSocket.
+      // We keep the last question in state so the UI doesn't flicker,
+      // and a fresh connection will be made only when navigating to a new game.
+      retries.current = 0;
+      console.log('Not retrying WebSocket for game:', connectionGameToken);
     };
 
     setSocket(ws);
@@ -225,13 +246,26 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   }
 
   const sendAction = (data: {}) => {
-    if (socket) {
-      socket.send(JSON.stringify({
+    const currentSocket = socketRef.current ?? socket
+
+    if (currentSocket && currentSocket.readyState === WebSocket.OPEN) {
+      currentSocket.send(JSON.stringify({
         ...data,
         language_code: language
       }))
+      return
+    }
+
+    // Socket is not open – queue the action and (re)connect before sending.
+    if (game?.token) {
+      console.warn("Socket not open, queueing action and reconnecting:", (data as any).action)
+      pendingActionsRef.current.push(data)
+      if (!isConnectingRef.current) {
+        isConnectingRef.current = true
+        connectSocket(game, player)
+      }
     } else {
-      console.log("Error sending action. Socket not ready.")
+      console.warn("Error sending action. No game token and socket not ready.")
     }
   }
 
@@ -254,6 +288,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     // Close and clear socket first
     if (socket) {
       console.log('Closing old socket before joining new game')
+      ;(socket as any).closedByJoin = true // Prevent onclose from retrying
       socket.close()
       setSocket(undefined)
     }
@@ -341,14 +376,15 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       // Check if we're already connected to this game
       const currentSocketGameToken = socket ? (socket as any).gameToken : undefined
       const isSocketOpen = socket && socket.readyState === WebSocket.OPEN
-      
+      const isSocketConnecting = socket && socket.readyState === WebSocket.CONNECTING
+
       // Only connect if:
       // 1. No socket exists, OR
       // 2. Socket exists but is for a different game, OR
-      // 3. Socket exists but is not open
+      // 3. Socket exists but is closed/closing (not open and not still connecting)
       // AND we're not already in the process of connecting
       if (!isConnectingRef.current) {
-        if (!socket || game.token !== currentSocketGameToken || !isSocketOpen) {
+        if (!socket || game.token !== currentSocketGameToken || (!isSocketOpen && !isSocketConnecting)) {
           if (socket && game.token !== currentSocketGameToken) {
             // Game changed - reconnect (this will clear question/answer)
             console.log('Game token changed, reconnecting:', {
@@ -360,10 +396,14 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
             // No socket yet - connect
             console.log('No socket, connecting to game:', game.token)
             joinGame(game, player)
-          } else if (!isSocketOpen) {
-            // Socket exists but not open - reconnect
+          } else if (!isSocketOpen && !isSocketConnecting) {
+            // Socket exists but closed/closing - reconnect without clearing (same game)
             console.log('Socket not open, reconnecting to game:', game.token)
-            joinGame(game, player)
+            if (game.token === currentSocketGameToken) {
+              connectSocket(game, player)
+            } else {
+              joinGame(game, player)
+            }
           }
         } else {
           console.log('Already connected to game:', game.token)

@@ -106,47 +106,6 @@ const Layout = () => {
 
           <DrawerFooter bg="white">
             <Flex direction={'column'} gap={4}>
-              <Box mb={10}>
-                Data
-                <Link href='https://ebird.org'>
-                  <Image _dark={{filter: 'invert(100%)'}} width='80px' src={'/images/ebird.svg'}/>
-                </Link>
-              </Box>
-              <Box mb={10}>
-                Media from
-                <ListRoot>
-                  <ListItem>
-                    <Link href='https://www.inaturalist.org' target="_blank" rel="noopener noreferrer">
-                      iNaturalist
-                    </Link>
-                  </ListItem>
-                  <ListItem>
-                    <Link href='https://commons.wikimedia.org' target="_blank" rel="noopener noreferrer">
-                      Wikimedia Commons
-                    </Link>
-                  </ListItem>
-                  <ListItem>
-                    <Link href='https://www.gbif.org' target="_blank" rel="noopener noreferrer">
-                      GBIF
-                    </Link>
-                  </ListItem>
-                  <ListItem>
-                    <Link href='https://eol.org' target="_blank" rel="noopener noreferrer">
-                      Encyclopedia of Life
-                    </Link>
-                  </ListItem>
-                  <ListItem>
-                    <Link href='https://observation.org' target="_blank" rel="noopener noreferrer">
-                      Observation.org
-                    </Link>
-                  </ListItem>
-                  <ListItem>
-                    <Link href='https://xeno-canto.org' target="_blank" rel="noopener noreferrer">
-                      Xeno-Canto
-                    </Link>
-                  </ListItem>
-                </ListRoot>
-              </Box>
               <Box>
                 Developed by <b>GoedLoek</b>
               </Box>

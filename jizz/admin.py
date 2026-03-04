@@ -12,7 +12,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
-                         CountrySpecies, Feedback, FlagQuestion, Game, Page, Player,
+                         CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
                          Update, CountryGame, Language, SpeciesName, UserProfile,
@@ -561,14 +561,6 @@ class GameAdmin(admin.ModelAdmin):
 class AnswerAdmin(admin.ModelAdmin):
     raw_id_fields = ['answer']
 
-@register(FlagQuestion)
-class FlagQuestionAdmin(admin.ModelAdmin):
-    readonly_fields = ['created', 'question', 'player', 'description', 'media_url']
-    fields = readonly_fields
-    list_display = ['created', 'question', 'player', 'description']
-
-
-
 class QuestionOptionInline(admin.TabularInline):
     model = QuestionOption
     readonly_fields = ['question', 'species']
@@ -622,13 +614,27 @@ class PlayerScoreAdmin(admin.ModelAdmin):
         return obj.game.length
 
 
+class CountrySpeciesFrequencyInline(admin.TabularInline):
+    model = CountrySpeciesFrequency
+    extra = 0
+    fields = ['month', 'frequency_pct', 'frequency']
+
+
 @register(CountrySpecies)
 class CountrySpeciesAdmin(admin.ModelAdmin):
-    list_display = ['name', 'country', 'species', 'status']
+    list_display = ['name', 'country', 'species', 'status', 'frequency', 'frequency_pct']
     search_fields = ['species__name', 'species__name_nl', 'species__name_latin']
-    list_filter = ['status', 'country', ]
+    list_filter = ['status', 'frequency', 'country']
     raw_id_fields = ['species', 'country']
-    list_editable = ['status']
+    list_editable = ['status', 'frequency']
+    inlines = [CountrySpeciesFrequencyInline]
+
+
+@register(CountrySpeciesFrequency)
+class CountrySpeciesFrequencyAdmin(admin.ModelAdmin):
+    list_display = ['country_species', 'month', 'frequency_pct', 'frequency']
+    list_filter = ['month', 'frequency']
+    raw_id_fields = ['country_species']
 
 
 @register(Feedback)

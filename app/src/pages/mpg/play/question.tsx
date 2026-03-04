@@ -31,7 +31,7 @@ import SpeciesCombobox from "../../../components/species-combobox"
 import { ComparisonButton } from "../../../components/comparison-button"
 
 export const QuestionComponent = () => {
-  const {species, player, game} = useContext(AppContext)
+  const {species, player, game, speciesLanguage} = useContext(AppContext)
   const {players, nextQuestion, question, submitAnswer, answer} = useContext(WebsocketContext)
   const {onOpen, onClose, open: isOpen} = useDisclosure()
   const [flagMediaInfo, setFlagMediaInfo] = useState<{
@@ -44,8 +44,8 @@ export const QuestionComponent = () => {
   const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
   const {open: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
-  // Local state to track media index (for changing media after flagging)
-  const [mediaIndex, setMediaIndex] = useState<number | null>(0)
+  // Local state for media index (after flagging). null = use question.sequence so we don't flash first image on reload.
+  const [mediaIndex, setMediaIndex] = useState<number | null>(null)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
   const navigate = useNavigate()
@@ -101,14 +101,12 @@ export const QuestionComponent = () => {
     )
   }
 
-  // Use local mediaIndex if set, otherwise use question.number
-  const currentMediaIndex = mediaIndex !== null ? mediaIndex : (question.sequence ?? 0)
-    console.log(question.sequence)
-    console.log(currentMediaIndex)
+  // Use question.sequence when mediaIndex not yet synced to avoid showing first image briefly on reload
+  const currentMediaIndex = mediaIndex ?? question?.sequence ?? 0
 
   const flagMedia = () => {
     if (!question || !game) return
-    const currentIndex = mediaIndex !== null ? mediaIndex : (question.sequence ?? 0)
+    const currentIndex = mediaIndex ?? question.sequence ?? 0
     let mediaData: {
       id?: number
       type: 'image' | 'video' | 'audio'
@@ -355,7 +353,7 @@ export const QuestionComponent = () => {
         ) : (
           <SpeciesCombobox
             species={species || []}
-            playerLanguage={player?.language}
+            playerLanguage={speciesLanguage ?? player?.language}
             onSelect={(selected) => selectAnswer(selected)}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}

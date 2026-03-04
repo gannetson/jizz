@@ -144,6 +144,11 @@ STATIC_URL = 'django/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# When not in debug (e.g. production behind HTTPS proxy), trust X-Forwarded-Proto
+# so request.build_absolute_uri() returns https URLs (e.g. avatar_url).
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -241,6 +246,11 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
 # SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
+# eBird API (for taxonomy, species lists, etc.)
+EBIRD_API_TOKEN = os.environ.get('EBIRD_API_TOKEN', '')
+
+# eBird Status and Trends (for regional abundance CSV downloads); get key at https://ebird.org/st/request
+EBIRD_ST_ACCESS_KEY = os.environ.get('EBIRD_ST_ACCESS_KEY', '')
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'your-actual-google-client-id'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'your-actual-google-client-secret'

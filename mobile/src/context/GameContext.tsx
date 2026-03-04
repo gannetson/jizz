@@ -129,8 +129,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const loadGame = useCallback(async (token: string): Promise<Game | null> => {
     const g = await gamesApi.loadGame(token);
-    if (g) setGame(g);
-    return g;
+    if (g) {
+      setGame(g);
+      setLanguage(g.language || 'en');
+      return g;
+    }
+    return null;
   }, []);
 
   return (

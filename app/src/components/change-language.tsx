@@ -4,7 +4,7 @@ import {Box, Flex} from "@chakra-ui/react"
 import Flag from "react-world-flags";
 
 const LANGUAGES = [
-  { code: 'en', flag: 'gb' },
+  { code: 'en_UK', flag: 'gb' },
   { code: 'en_US', flag: 'us' },
   { code: 'nl', flag: 'nl' },
 ] as const

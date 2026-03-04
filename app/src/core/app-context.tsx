@@ -218,6 +218,8 @@ type SharedState = {
   setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
   setGame: (game?: Game) => void
+  setPlayer: Dispatch<SetStateAction<Player | undefined>>
+  loadPlayer: (playerToken: string) => Promise<Player | undefined>
   level: string
   setLevel: Dispatch<SetStateAction<string>>
   taxOrder?: TaxOrder
@@ -250,6 +252,8 @@ const AppContext = createContext<SharedState>({
   setLoading: () => false,
   loadGame: async () => undefined,
   setGame: () => {},
+  setPlayer: () => {},
+  loadPlayer: async () => undefined,
   includeEscapes: false,
   setIncludeEscapes: () => {},
   includeRare: true,

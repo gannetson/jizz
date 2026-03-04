@@ -63,6 +63,26 @@ Copy it to your Android device (e.g. via USB, cloud, or email) and open it to in
 
 **“Unable to load script”:** The debug APK is built with the JS bundle **included**, so it runs without a dev server. If you see that error, reinstall the APK from the path above (after running `npm run build:android:debug` again). If you prefer to load from Metro instead, connect the phone via USB, run `adb reverse tcp:8081 tcp:8081`, start Metro with `npm start`, then open the app.
 
+## Android UI tests (Espresso)
+
+Automated UI tests for the Country challenge flow (tap → assert screen/modal changes). Run them with an **emulator or device** connected and **Node 18+** in the same shell (Gradle runs Node for the React Native build):
+
+```bash
+cd mobile/android
+./gradlew connectedDebugAndroidTest
+```
+
+Or from repo root:
+
+```bash
+cd mobile && (cd android && ./gradlew connectedDebugAndroidTest)
+```
+
+Tests live in `mobile/android/app/src/androidTest/kotlin/pro/birdr/app/CountryChallengeFlowTest.kt`. They launch the app, go to Country challenge from Home, open/close country and language modals, and (in a second test) fill the form, tap “Start challenge”, and assert that the next state (level intro or play screen) appears. **Test 2 calls the real “Start challenge” API**; use a running backend (e.g. staging) or a test build variant with a test API URL if you need a controlled environment.
+
+- **CI:** Add a job that starts an Android emulator (e.g. `system-images;android-34;google_apis;x86_64`), runs `./gradlew connectedDebugAndroidTest`, and fails the build if any test fails.
+- **Firebase Test Lab:** Build the debug APK and test APK, then run `gcloud firebase test android run` with the APKs to run the same tests on multiple devices/API levels.
+
 ## Android release / AAB (testing & Play Store)
 
 Use **Node 18+** in the same terminal as for debug.

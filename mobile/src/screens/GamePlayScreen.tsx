@@ -298,7 +298,7 @@ export function GamePlayScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">
       <FlagMediaModal
         visible={flagModalVisible}
         onClose={() => { setFlagModalVisible(false); setFlagMediaInfo(null); }}
@@ -316,12 +316,12 @@ export function GamePlayScreen() {
 
       <View style={styles.nextSection}>
         {done ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
             <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
           </TouchableOpacity>
         ) : isHost ? (
           answer ? (
-            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
               <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
             </TouchableOpacity>
           ) : (
@@ -436,11 +436,13 @@ export function GamePlayScreen() {
             const isSubmitting = submittingId === opt.id;
             const isDisabled = submittingId !== null;
             return (
-              <TouchableOpacity
+                <TouchableOpacity
                 key={i}
                 style={[styles.optionButton, isDisabled && !isSubmitting && styles.optionDisabled]}
                 onPress={() => handleAnswer(opt)}
                 disabled={isDisabled}
+                testID={`gamePlay.option.${opt.id}`}
+                accessibilityLabel={speciesDisplayName(opt, lang)}
               >
                 <View style={styles.optionRow}>
                   <Text style={[styles.optionText, styles.optionTextFlex]} numberOfLines={2}>
@@ -564,11 +566,11 @@ export function GamePlayScreen() {
 
       <View style={styles.nextSection}>
         {done ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
             <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
           </TouchableOpacity>
         ) : isHost && answer ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
             <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
           </TouchableOpacity>
         ) : null}

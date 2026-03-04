@@ -140,7 +140,7 @@ export function StartScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Start a new game</Text>
+      <Text style={styles.title} testID="start.title">Start a new game</Text>
       <Text style={styles.hint}>
         To get a high score, identify the birds correctly and be fast! After each answer you see how many points you got.
       </Text>
@@ -152,16 +152,18 @@ export function StartScreen() {
         onChangeText={setPlayerName}
         placeholder="Your name"
         placeholderTextColor={colors.primary[500]}
+        testID="start.playerName"
+        accessibilityLabel="Player name"
       />
 
       <Text style={styles.label}>Country</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)}>
+      <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="start.selectCountry" accessibilityLabel="Select country">
         <Text style={styles.selectButtonText}>{country?.name ?? 'Select country...'}</Text>
       </TouchableOpacity>
       <Modal visible={countryModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Select country</Text>
+            <Text style={styles.modalTitle} testID="start.modal.countryTitle">Select country</Text>
             <FlatList
               data={countries}
               keyExtractor={(c) => c.code}
@@ -174,7 +176,7 @@ export function StartScreen() {
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)} testID="start.modal.closeCountry" accessibilityLabel="Close">
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
@@ -182,13 +184,13 @@ export function StartScreen() {
       </Modal>
 
       <Text style={styles.label}>Language (species names)</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)}>
+      <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="start.selectLanguage" accessibilityLabel="Select language">
         <Text style={styles.selectButtonText}>{languages.find((l) => l.code === language)?.name ?? 'Select language...'}</Text>
       </TouchableOpacity>
       <Modal visible={languageModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => setLanguageModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Select language</Text>
+            <Text style={styles.modalTitle} testID="start.modal.languageTitle">Select language</Text>
             <FlatList
               data={languages}
               keyExtractor={(l) => l.code}
@@ -201,7 +203,7 @@ export function StartScreen() {
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)} testID="start.modal.closeLanguage" accessibilityLabel="Close">
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
@@ -289,6 +291,8 @@ export function StartScreen() {
         style={[styles.startButton, (!country || !playerName.trim()) && styles.startButtonDisabled]}
         onPress={handleStart}
         disabled={loading || !country || !playerName.trim()}
+        testID="start.startGame"
+        accessibilityLabel="Start a new game"
       >
         {loading ? (
           <ActivityIndicator color={colors.primary[50]} />

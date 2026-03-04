@@ -193,7 +193,7 @@ export function ChallengeScreen() {
 
       {!challenge || !level ? (
         <View style={styles.createSection}>
-          <Text style={styles.title}>Country challenge</Text>
+          <Text style={styles.title} testID="countryChallenge.title" accessibilityLabel="Country challenge">Country challenge</Text>
           <Text style={styles.hint}>
             You will run through different levels. Some easy and some quite difficult.
           </Text>
@@ -204,21 +204,25 @@ export function ChallengeScreen() {
             onChangeText={setName}
             placeholder="Your name"
             placeholderTextColor={colors.primary[500]}
+            testID="countryChallenge.nameInput"
+            accessibilityLabel="Your name"
           />
           <Text style={styles.label}>Language (species names)</Text>
-          <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)}>
+          <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="countryChallenge.selectLanguage" accessibilityLabel="Select language">
             <Text style={styles.selectButtonText}>
               {languages.find((l) => l.code === language)?.name ?? 'Select language'}
             </Text>
           </TouchableOpacity>
           <Text style={styles.label}>Country</Text>
-          <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)}>
+          <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="countryChallenge.selectCountry" accessibilityLabel="Select country">
             <Text style={styles.selectButtonText}>{country?.name ?? 'Select country'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.primaryButton, creating && styles.buttonDisabled]}
             onPress={handleStartChallenge}
             disabled={creating || !name.trim() || !country}
+            testID="countryChallenge.startChallenge"
+            accessibilityLabel="Start challenge"
           >
             {creating ? (
               <ActivityIndicator color={colors.primary[50]} />
@@ -240,7 +244,7 @@ export function ChallengeScreen() {
             Jokers this round: {' '}
             {Array.from({ length: level.challenge_level.jokers }).map((_, i) => '♥').join(' ')}
           </Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleStartLevel}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleStartLevel} testID="countryChallenge.startLevel" accessibilityLabel="Start Level">
             <Text style={styles.primaryButtonText}>Start Level</Text>
           </TouchableOpacity>
         </View>
@@ -256,6 +260,8 @@ export function ChallengeScreen() {
             style={[styles.primaryButton, nextLevelLoading && styles.buttonDisabled]}
             onPress={handleRestartOrNextLevel}
             disabled={nextLevelLoading}
+            testID="countryChallenge.restartLevel"
+            accessibilityLabel="Restart Level"
           >
             {nextLevelLoading ? (
               <ActivityIndicator color={colors.primary[50]} />
@@ -276,6 +282,8 @@ export function ChallengeScreen() {
             style={[styles.primaryButton, nextLevelLoading && styles.buttonDisabled]}
             onPress={handleRestartOrNextLevel}
             disabled={nextLevelLoading}
+            testID="countryChallenge.nextLevel"
+            accessibilityLabel="Next Level"
           >
             {nextLevelLoading ? (
               <ActivityIndicator color={colors.primary[50]} />
@@ -287,7 +295,7 @@ export function ChallengeScreen() {
       ) : (
         <View style={styles.levelSection}>
           <Text style={styles.title}>Level in progress</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleStartLevel}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleStartLevel} testID="countryChallenge.continue" accessibilityLabel="Continue">
             <Text style={styles.primaryButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
@@ -296,7 +304,7 @@ export function ChallengeScreen() {
       <Modal visible={countryModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Select country</Text>
+            <Text style={styles.modalTitle} testID="countryChallenge.modal.countryTitle">Select country</Text>
             <FlatList
               data={countries}
               keyExtractor={(c) => c.code}
@@ -307,6 +315,8 @@ export function ChallengeScreen() {
                     setCountry(item);
                     setCountryModalVisible(false);
                   }}
+                  testID={`countryChallenge.modal.country.${item.code}`}
+                  accessibilityLabel={item.name}
                 >
                   <Text style={[styles.modalItemText, country?.code === item.code && styles.modalItemTextSelected]}>
                     {item.name}
@@ -314,7 +324,7 @@ export function ChallengeScreen() {
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)} testID="countryChallenge.modal.countryClose" accessibilityLabel="Close">
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
@@ -324,7 +334,7 @@ export function ChallengeScreen() {
       <Modal visible={languageModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => setLanguageModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Select language</Text>
+            <Text style={styles.modalTitle} testID="countryChallenge.modal.languageTitle">Select language</Text>
             <FlatList
               data={languages}
               keyExtractor={(l) => l.code}
@@ -335,6 +345,8 @@ export function ChallengeScreen() {
                     setLanguage(item.code);
                     setLanguageModalVisible(false);
                   }}
+                  testID={`countryChallenge.modal.language.${item.code}`}
+                  accessibilityLabel={item.name}
                 >
                   <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>
                     {item.name}
@@ -342,7 +354,7 @@ export function ChallengeScreen() {
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)} testID="countryChallenge.modal.languageClose" accessibilityLabel="Close">
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </Pressable>

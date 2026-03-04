@@ -306,14 +306,16 @@ class ApiQuestionDetailTestCase(TestCase):
 
 
 class ApiFlagTestCase(TestCase):
-    """GET/POST /api/flag/."""
+    """GET/POST /api/flag-media/ (media review mode)."""
 
     def setUp(self):
         self.client = APIClient()
         self.player = Player.objects.create(name='P', language='en')
+        self.species = Species.objects.create(name='S', name_latin='S', code='S01')
+        self.media = Media.objects.create(species=self.species, type='image', url='https://example.com/x.jpg', source='test')
 
     def test_flag_list_returns_200(self):
-        response = self.client.get('/api/flag/')
+        response = self.client.get('/api/flag-media/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data.get('results', response.data)
         self.assertIsInstance(results, list)
@@ -321,8 +323,8 @@ class ApiFlagTestCase(TestCase):
     def test_flag_create_returns_201(self):
         _player_auth(self.client, self.player)
         response = self.client.post(
-            '/api/flag/',
-            {'player_token': self.player.token, 'description': 'Test flag', 'media_url': 'https://example.com/x.jpg'},
+            '/api/flag-media/',
+            {'player_token': self.player.token, 'description': 'Test flag', 'media_id': self.media.id},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

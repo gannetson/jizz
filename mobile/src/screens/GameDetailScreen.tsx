@@ -264,40 +264,7 @@ export function GameDetailScreen() {
 }
 
 function AudioPlayer({ uri }: { uri: string }) {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const pulsatingStyle = usePulsatingAnimation(playing);
-
-  useEffect(() => {
-    return () => {
-      if (sound) sound.unloadAsync().catch(() => {});
-    };
-  }, [sound]);
-
-  const play = async () => {
-    try {
-      if (sound) await sound.unloadAsync();
-      const { sound: s } = await Audio.Sound.createAsync({ uri });
-      s.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) setPlaying(false);
-      });
-      setSound(s);
-      await s.playAsync();
-      setPlaying(true);
-    } catch (_) {}
-  };
-
-  return (
-    <Animated.View style={playing && pulsatingStyle}>
-      <TouchableOpacity
-        style={[styles.audioBtn, playing && styles.audioBtnPlaying]}
-        onPress={play}
-      >
-        <Text style={[styles.audioBtnText, playing && styles.audioBtnTextPlaying]}>Play audio</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
+git }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },

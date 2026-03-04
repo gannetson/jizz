@@ -61,12 +61,16 @@ export function HomeScreen() {
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => navigation.navigate('Start')}
+        testID="home.startNewGame"
+        accessibilityLabel="Start a new game"
       >
         <Text style={styles.primaryButtonText}>Start a new game</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => navigation.navigate('Challenge')}
+        testID="home.countryChallenge"
+        accessibilityLabel="Country challenge"
       >
         <Text style={styles.primaryButtonText}>Country challenge</Text>
       </TouchableOpacity>

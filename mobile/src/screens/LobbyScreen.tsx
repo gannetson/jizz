@@ -76,7 +76,7 @@ export function LobbyScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Game Lobby</Text>
+      <Text style={styles.title} testID="lobby.title">Game Lobby</Text>
       <Text style={styles.hint}>
         {t('explain_mpg') || 'You can play against other players by sharing the game link. To play solo, start the game now.'}
       </Text>
@@ -146,6 +146,8 @@ export function LobbyScreen() {
             style={[styles.primaryButton, starting && styles.primaryButtonDisabled]}
             onPress={() => { setStarting(true); startGame(); }}
             disabled={starting}
+            testID="lobby.startGame"
+            accessibilityLabel="Start game"
           >
             {starting ? (
               <ActivityIndicator size="small" color={colors.primary[50]} />

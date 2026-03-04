@@ -186,7 +186,7 @@ export function ChallengePlayScreen() {
 
   if (loading && !question) {
     return (
-      <View style={styles.centered}>
+      <View style={styles.centered} testID="challengePlay.loading">
         <ActivityIndicator size="large" color={colors.primary[500]} />
         <Text style={styles.muted}>Loading question…</Text>
       </View>
@@ -209,9 +209,9 @@ export function ChallengePlayScreen() {
     : expertSpecies.slice(0, 50);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="challengePlay.screen">
       {feedback !== null && (
-        <View style={[styles.feedbackBox, feedback.correct ? styles.feedbackCorrect : styles.feedbackIncorrect]}>
+        <View style={[styles.feedbackBox, feedback.correct ? styles.feedbackCorrect : styles.feedbackIncorrect]} testID="challengePlay.feedback">
           <Text style={styles.feedbackText}>{feedback.correct ? 'Correct!' : 'Incorrect'}</Text>
         </View>
       )}
@@ -232,6 +232,8 @@ export function ChallengePlayScreen() {
           <TouchableOpacity
             style={[styles.audioBtn, soundPlaying && styles.audioBtnPlaying]}
             onPress={playSound}
+            testID="challengePlay.playSound"
+            accessibilityLabel="Play sound"
           >
             <Text style={[styles.audioBtnText, soundPlaying && styles.audioBtnTextPlaying]}>Play sound</Text>
           </TouchableOpacity>
@@ -246,6 +248,8 @@ export function ChallengePlayScreen() {
               style={[styles.optionButton, submitting && styles.optionButtonDisabled]}
               onPress={() => giveAnswer(opt)}
               disabled={submitting}
+              testID={`challengePlay.option.${opt.id}`}
+              accessibilityLabel={speciesDisplayName(opt, lang)}
             >
               <Text style={styles.optionButtonText}>{speciesDisplayName(opt, lang)}</Text>
             </TouchableOpacity>
@@ -260,6 +264,7 @@ export function ChallengePlayScreen() {
             onChangeText={setExpertQuery}
             placeholder="Species name..."
             placeholderTextColor={colors.primary[500]}
+            testID="challengePlay.expertInput"
           />
           <FlatList
             data={filteredSpecies}
@@ -271,6 +276,8 @@ export function ChallengePlayScreen() {
                 style={[styles.optionButton, submitting && styles.optionButtonDisabled]}
                 onPress={() => giveAnswer(item)}
                 disabled={submitting}
+                testID={`challengePlay.expertOption.${item.id}`}
+                accessibilityLabel={speciesDisplayName(item, lang)}
               >
                 <Text style={styles.optionButtonText}>{speciesDisplayName(item, lang)}</Text>
               </TouchableOpacity>

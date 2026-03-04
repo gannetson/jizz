@@ -71,8 +71,6 @@ class NormalGameFlowTest {
             .perform(click())
 
         onView(withContentDescription("Start a new game"))
-            .perform(androidx.test.espresso.contrib.ViewActions.scrollTo())
-        onView(withContentDescription("Start a new game"))
             .check(matches(isDisplayed()))
     }
 

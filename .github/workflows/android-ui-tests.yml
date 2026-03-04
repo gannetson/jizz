@@ -10,7 +10,7 @@ on:
 
 jobs:
   android-ui-tests:
-    runs-on: macos-latest
+    runs-on: macos-13  # macos-13 more reliable for emulator than macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -33,8 +33,11 @@ jobs:
 
       - name: Run Espresso tests
         uses: ReactiveCircus/android-emulator-runner@v2
+        env:
+          # Give emulator more time to boot and become visible to adb
+          ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: 300
         with:
-          api-level: 34
-          target: google_apis
+          api-level: 30
+          target: default
           arch: x86_64
           script: cd mobile/android && ./gradlew connectedDebugAndroidTest --no-daemon

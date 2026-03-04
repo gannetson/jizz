@@ -177,11 +177,18 @@ export async function getNextChallengeLevel(
   return data as CountryGameLevel;
 }
 
-/** Get the current question for the challenge game. */
-export async function getChallengeQuestion(gameToken: string): Promise<ChallengeQuestion | null> {
+/** Get the current question for the challenge game. Optionally pass playerToken for auth. */
+export async function getChallengeQuestion(
+  gameToken: string,
+  playerToken?: string | null
+): Promise<ChallengeQuestion | null> {
+  const headers: HeadersInit = { Accept: 'application/json' };
+  if (playerToken) {
+    Object.assign(headers, playerAuthHeaders(playerToken));
+  }
   const response = await fetch(apiUrl(`/api/games/${gameToken}/question`), {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers,
   });
   if (response.status === 404 || response.status === 204) return null;
   const data = await response.json().catch(() => ({}));

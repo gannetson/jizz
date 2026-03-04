@@ -488,6 +488,7 @@ class GameDetailView(RetrieveAPIView):
 class QuestionView(RetrieveAPIView):
     serializer_class = QuestionSerializer
     queryset = Question.objects.all()
+    permission_classes = [AllowAny]
 
     def get_object(self):
         game = Game.objects.get(token=self.kwargs["token"])
@@ -501,6 +502,7 @@ class QuestionView(RetrieveAPIView):
 class AnswerView(CreateAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
+    permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         answer = serializer.save()

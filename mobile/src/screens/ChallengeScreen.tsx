@@ -324,7 +324,7 @@ export function ChallengeScreen() {
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)} testID="countryChallenge.modal.countryClose" accessibilityLabel="Close">
+            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)} testID="countryChallenge.modal.countryClose" accessibilityLabel="Close country modal">
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
@@ -354,7 +354,7 @@ export function ChallengeScreen() {
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)} testID="countryChallenge.modal.languageClose" accessibilityLabel="Close">
+            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)} testID="countryChallenge.modal.languageClose" accessibilityLabel="Close language modal">
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
@@ -412,6 +412,6 @@ const styles = StyleSheet.create({
   modalItemSelected: { backgroundColor: colors.primary[100] },
   modalItemText: { fontSize: 16, color: colors.primary[800] },
   modalItemTextSelected: { fontWeight: '600', color: colors.primary[700] },
-  modalClose: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
+  modalClose: { marginTop: 12, paddingVertical: 14, paddingHorizontal: 24, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   modalCloseText: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
 });

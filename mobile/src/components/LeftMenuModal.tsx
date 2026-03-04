@@ -87,6 +87,8 @@ export function LeftMenuModal() {
                     key={item.route}
                     style={[styles.item, isFocused && styles.itemFocused]}
                     onPress={() => handleItem(item.route)}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
                   >
                     <Text style={[styles.label, isFocused && styles.labelFocused]}>{item.label}</Text>
                   </TouchableOpacity>

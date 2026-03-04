@@ -39,17 +39,19 @@ export function HelpOverviewScreen({ onPageSelect }: { onPageSelect?: (slug: str
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Help</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="help.overview" accessibilityLabel="Help overview">
+      <Text style={styles.screenTitle} accessibilityLabel="Help">Help</Text>
       {pages.length === 0 ? (
         <Text style={styles.emptyText}>No help pages available.</Text>
       ) : (
-        pages.map((p) => (
+        pages.map((p, idx) => (
           <TouchableOpacity
             key={p.id}
             style={styles.linkRow}
             onPress={() => handleSelect(p.slug)}
             activeOpacity={0.7}
+            testID={idx === 0 ? 'help.firstPageLink' : undefined}
+            accessibilityLabel={p.title}
           >
             <Text style={styles.linkText}>{p.title}</Text>
           </TouchableOpacity>

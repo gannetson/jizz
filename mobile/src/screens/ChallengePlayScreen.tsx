@@ -61,7 +61,8 @@ export function ChallengePlayScreen() {
     if (!gameToken) return;
     setLoading(true);
     try {
-      const q = await getChallengeQuestion(gameToken);
+      const token = await getStoredChallengePlayerToken();
+      const q = await getChallengeQuestion(gameToken, token ?? undefined);
       setQuestion(q);
     } catch (e) {
       setQuestion(null);
@@ -164,7 +165,9 @@ export function ChallengePlayScreen() {
       }
       setFeedback(null);
       setQuestion(null);
-      const nextQ = await getChallengeQuestion(gameToken);
+      // Brief delay so backend can commit and UI shows "Loading next question…"
+      await new Promise((r) => setTimeout(r, 150));
+      const nextQ = await getChallengeQuestion(gameToken, playerToken);
       setQuestion(nextQ ?? null);
     } catch (e) {
       setFeedback({ correct: false });
@@ -242,14 +245,14 @@ export function ChallengePlayScreen() {
 
       {hasOptions ? (
         <View style={styles.optionsSection}>
-          {options.map((opt) => (
+          {options.map((opt, idx) => (
             <TouchableOpacity
               key={opt.id}
               style={[styles.optionButton, submitting && styles.optionButtonDisabled]}
               onPress={() => giveAnswer(opt)}
               disabled={submitting}
-              testID={`challengePlay.option.${opt.id}`}
-              accessibilityLabel={speciesDisplayName(opt, lang)}
+              testID={idx === 0 ? 'challengePlay.firstOption' : `challengePlay.option.${opt.id}`}
+              accessibilityLabel={idx === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
             >
               <Text style={styles.optionButtonText}>{speciesDisplayName(opt, lang)}</Text>
             </TouchableOpacity>

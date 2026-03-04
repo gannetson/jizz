@@ -109,7 +109,7 @@ export function HelpDetailScreen({ slug, onBack }: HelpDetailScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backLink}>
+        <TouchableOpacity onPress={onBack} style={styles.backLink} testID="helpDetail.back" accessibilityLabel="Back to Help overview">
           <Text style={styles.backLinkText}>← Help overview</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{page!.title}</Text>

@@ -48,6 +48,7 @@ export function AppHeader({ title, routeName }: AppHeaderProps) {
         style={styles.sideButton}
         onPress={openLeftMenu}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityLabel="Open menu"
       >
         <Text style={styles.icon}>☰</Text>
       </TouchableOpacity>

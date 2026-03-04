@@ -31,8 +31,8 @@ export function GameResultsScreen() {
   const sortedPlayers = [...(players || [])].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{t('final_results')}</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gameResults.screen" accessibilityLabel="Game results">
+      <Text style={styles.title} accessibilityLabel="Final results">{t('final_results')}</Text>
       <View style={styles.list}>
         {sortedPlayers.length === 0 ? (
           <Text style={styles.muted}>{t('no_scores_yet')}</Text>

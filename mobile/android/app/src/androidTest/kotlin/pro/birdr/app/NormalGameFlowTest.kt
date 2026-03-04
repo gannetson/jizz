@@ -10,6 +10,8 @@ import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,13 +20,23 @@ import org.junit.runner.RunWith
  * Espresso UI tests for the normal (multiplayer) game flow.
  * Run with: cd mobile/android && ./gradlew connectedDebugAndroidTest
  *
- * Tests 1–2 only need the app (no backend). Test 3 requires backend and WebSocket to reach Lobby and GamePlay.
+ * Tests 1–2 need only the app. Tests 3–4 require backend and WebSocket; they are skipped unless
+ * you pass: -Pandroid.testInstrumentationRunnerArguments.backendAvailable=true
  */
 @RunWith(AndroidJUnit4::class)
 class NormalGameFlowTest {
 
     @get:Rule
     val activityRule = ActivityScenarioRule(MainActivity::class.java)
+
+    private fun assumeBackendAvailable() {
+        val backendAvailable = InstrumentationRegistry.getInstrumentation()
+            .arguments.getString("backendAvailable") == "true"
+        assumeTrue(
+            "Backend not available; run with -Pandroid.testInstrumentationRunnerArguments.backendAvailable=true",
+            backendAvailable
+        )
+    }
 
     /**
      * Test 1: Home → Start screen. Tap "Start a new game", assert Start screen title and form elements.
@@ -75,11 +87,12 @@ class NormalGameFlowTest {
     }
 
     /**
-     * Test 3: Full flow when backend is available. Fill name, Start → Lobby → Start game → GamePlay (or loading).
-     * Requires backend and WebSocket. If backend is down, this test will fail at waiting for "Game Lobby".
+     * Test 3: Full flow when backend is available. Fill name, Start → Lobby → Start game → GamePlay.
+     * Requires backend and WebSocket; skipped unless backendAvailable=true.
      */
     @Test
     fun normalGame_fullFlow_toLobbyAndGamePlay() {
+        assumeBackendAvailable()
         waitForView(withText("Welcome"), 30_000)
 
         onView(withContentDescription("Start a new game"))
@@ -104,6 +117,85 @@ class NormalGameFlowTest {
                 withContentDescription("End game"),
                 withText("Next question"),
                 withText("End game")
+            ),
+            20_000
+        )
+    }
+
+    /**
+     * Test 4: Full game cycle – answer 10 questions then end game and assert results screen.
+     * Requires backend and WebSocket; skipped unless backendAvailable=true.
+     */
+    @Test
+    fun normalGame_fullFlow_answer10Questions_toResults() {
+        assumeBackendAvailable()
+        waitForView(withText("Welcome"), 30_000)
+
+        onView(withContentDescription("Start a new game"))
+            .perform(click())
+        waitForView(withContentDescription("Select country"), 10_000)
+
+        onView(withContentDescription("Player name"))
+            .perform(typeText("EspressoHost"), closeSoftKeyboard())
+        onView(withContentDescription("Start a new game"))
+            .perform(click())
+
+        waitForView(withContentDescription("Start game"), 20_000)
+        onView(withContentDescription("Start game"))
+            .perform(click())
+
+        // Wait until we're on game play (first question or next/end visible)
+        waitForAnyOf(
+            listOf(
+                withContentDescription("First answer option"),
+                withContentDescription("Next question"),
+                withContentDescription("End game"),
+                withText("Next question"),
+                withText("End game")
+            ),
+            35_000
+        )
+
+        var questionIndex = 0
+        while (questionIndex < 10) {
+            // Wait for a question (option to tap) or End game on last question
+            waitForAnyOf(
+                listOf(
+                    withContentDescription("First answer option"),
+                    withContentDescription("End game"),
+                    withText("End game")
+                ),
+                20_000
+            )
+            if (tryTap(withContentDescription("End game")) || tryTap(withText("End game")))
+                break
+            // Answer: tap first option
+            onView(withContentDescription("First answer option")).perform(click())
+            // Wait for "Next question" or "End game" after answer
+            waitForAnyOf(
+                listOf(
+                    withContentDescription("Next question"),
+                    withContentDescription("End game"),
+                    withText("Next question"),
+                    withText("End game")
+                ),
+                15_000
+            )
+            if (tryTap(withContentDescription("End game")) || tryTap(withText("End game")))
+                break
+            // Tap Next question (single instance at bottom of screen, visible after answering)
+            val nextTapped = tryTap(withContentDescription("Next question")) || tryTap(withText("Next question"))
+            if (!nextTapped) throw AssertionError("Next question button not found after answer")
+            questionIndex++
+        }
+
+        // After loop we should be on results (or we tapped End game in the loop)
+        waitForAnyOf(
+            listOf(
+                withContentDescription("Final results"),
+                withText("Final results"),
+                withContentDescription("Play another game"),
+                withText("Play another game")
             ),
             20_000
         )
@@ -139,5 +231,16 @@ class NormalGameFlowTest {
             Thread.sleep(300)
         }
         throw AssertionError("None of the expected views appeared within ${timeoutMs}ms")
+    }
+
+    /** Returns true if the view was found and clicked. */
+    private fun tryTap(matcher: org.hamcrest.Matcher<android.view.View>): Boolean {
+        return try {
+            onView(matcher).check(matches(isDisplayed()))
+            onView(matcher).perform(click())
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }

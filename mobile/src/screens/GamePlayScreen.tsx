@@ -314,26 +314,6 @@ export function GamePlayScreen() {
         />
       )}
 
-      <View style={styles.nextSection}>
-        {done ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
-            <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
-          </TouchableOpacity>
-        ) : isHost ? (
-          answer ? (
-            <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
-              <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.primaryButtonDisabled}>
-              <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
-            </View>
-          )
-        ) : (
-          <Text style={styles.muted}>{t('waiting_for_host')}</Text>
-        )}
-      </View>
-
       <View style={styles.mediaWrap}>
         {mediaType === 'images' && (
           <>
@@ -441,8 +421,8 @@ export function GamePlayScreen() {
                 style={[styles.optionButton, isDisabled && !isSubmitting && styles.optionDisabled]}
                 onPress={() => handleAnswer(opt)}
                 disabled={isDisabled}
-                testID={`gamePlay.option.${opt.id}`}
-                accessibilityLabel={speciesDisplayName(opt, lang)}
+                testID={i === 0 ? 'gamePlay.firstOption' : `gamePlay.option.${opt.id}`}
+                accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
                 <View style={styles.optionRow}>
                   <Text style={[styles.optionText, styles.optionTextFlex]} numberOfLines={2}>

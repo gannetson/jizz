@@ -19,6 +19,8 @@ class CreateInitialCountryGameSignalTestCase(TestCase):
     def setUp(self):
         self.country = Country.objects.create(name='Testland', code='XX')
         self.player = Player.objects.create(name='P', language='en')
+        # Signal uses ChallengeLevel.objects.get(sequence=0); ensure exactly one exists.
+        ChallengeLevel.objects.filter(sequence=0).delete()
         self.level0 = ChallengeLevel.objects.create(
             sequence=0,
             level='beginner',

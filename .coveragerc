@@ -8,9 +8,14 @@ omit =
     */venv/*
     */.virtualenvs/*
     manage.py
+    */wsgi.py
     */scrapers/*
     *scraper*.py
     */management/commands/*scrape*.py
+    */management/commands/provision_country_species_frequency.py
+    */management/commands/daily_challenge_reminders.py
+    */management/commands/daily_challenge_end_series.py
+    */management/commands/daily_challenge_all_answered.py
     *standardize_copyright*
     *generate_comparison*
     *ai_service*

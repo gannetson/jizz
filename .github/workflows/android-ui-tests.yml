@@ -6,10 +6,10 @@ name: Android UI tests
 
 on:
   push:
-    branches: ['main', 'master']
+    branches: ['main']
     paths: ['mobile/**']
   pull_request:
-    branches: ['main', 'master']
+    branches: ['main']
     paths: ['mobile/**']
   workflow_dispatch:
 

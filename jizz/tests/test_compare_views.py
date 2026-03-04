@@ -175,6 +175,14 @@ class ComparisonRequestViewTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_request_post_order_validation_missing_orders(self):
+        response = self.client.post(
+            '/api/compare/request/',
+            {'comparison_type': 'order'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_request_post_returns_existing_species_comparison(self):
         comp = SpeciesComparison.objects.create(
             comparison_type='species',
@@ -221,6 +229,28 @@ class ComparisonRequestViewTestCase(TestCase):
         self.assertEqual(response.data['comparison_type'], 'family')
         self.assertEqual(response.data['family_1'], 'Turdidae')
         mock_generate.assert_called_once()
+
+    @patch('compare.views.ComparisonRequestView._generate_comparison')
+    def test_request_post_returns_500_when_generate_raises(self, mock_generate):
+        mock_generate.side_effect = ValueError('AI service unavailable')
+        response = self.client.post(
+            '/api/compare/request/',
+            {
+                'comparison_type': 'family',
+                'family_1': 'Turdidae',
+                'family_2': 'Passeridae',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('error', response.data)
+        from compare.models import ComparisonRequest
+        req = ComparisonRequest.objects.filter(
+            comparison_type='family', family_1='Turdidae', family_2='Passeridae'
+        ).order_by('-requested_at').first()
+        self.assertIsNotNone(req)
+        self.assertEqual(req.status, 'failed')
+        self.assertIn('AI service unavailable', (req.error_message or ''))
 
     def test_request_get_returns_list_anonymous(self):
         response = self.client.get('/api/compare/request/')

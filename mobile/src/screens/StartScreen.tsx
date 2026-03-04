@@ -210,6 +210,20 @@ export function StartScreen() {
         </Pressable>
       </Modal>
 
+      <TouchableOpacity
+        style={[styles.startButton, (!country || !playerName.trim()) && styles.startButtonDisabled]}
+        onPress={handleStart}
+        disabled={loading || !country || !playerName.trim()}
+        testID="start.startGame"
+        accessibilityLabel="Start a new game"
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.primary[50]} />
+        ) : (
+          <Text style={styles.startButtonText}>Start a new game</Text>
+        )}
+      </TouchableOpacity>
+
       <Text style={styles.label}>Include rare species</Text>
       <View style={styles.row}>
         <TouchableOpacity
@@ -287,19 +301,6 @@ export function StartScreen() {
         </>
       )}
 
-      <TouchableOpacity
-        style={[styles.startButton, (!country || !playerName.trim()) && styles.startButtonDisabled]}
-        onPress={handleStart}
-        disabled={loading || !country || !playerName.trim()}
-        testID="start.startGame"
-        accessibilityLabel="Start a new game"
-      >
-        {loading ? (
-          <ActivityIndicator color={colors.primary[50]} />
-        ) : (
-          <Text style={styles.startButtonText}>Start a new game</Text>
-        )}
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -346,7 +347,8 @@ const styles = StyleSheet.create({
   levelSub: { fontSize: 12, color: colors.primary[600], marginTop: 2 },
   levelSubSelected: { color: colors.primary[200] },
   startButton: {
-    marginTop: 32,
+    marginTop: 24,
+    marginBottom: 8,
     backgroundColor: colors.primary[500],
     paddingVertical: 16,
     borderRadius: 8,

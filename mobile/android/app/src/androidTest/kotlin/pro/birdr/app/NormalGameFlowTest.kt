@@ -69,7 +69,7 @@ class NormalGameFlowTest {
             .check(matches(isDisplayed()))
         onView(withContentDescription("Close"))
             .perform(click())
-
+        waitForView(withContentDescription("Select country"), 3_000)
         onView(withContentDescription("Start a new game"))
             .check(matches(isDisplayed()))
     }
@@ -93,7 +93,7 @@ class NormalGameFlowTest {
         onView(withContentDescription("Start a new game"))
             .perform(click())
 
-        waitForView(withText("Game Lobby"), 20_000)
+        waitForView(withContentDescription("Start game"), 20_000)
 
         onView(withContentDescription("Start game"))
             .perform(click())

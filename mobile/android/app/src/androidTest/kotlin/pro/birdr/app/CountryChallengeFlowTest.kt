@@ -47,9 +47,10 @@ class CountryChallengeFlowTest {
             .perform(click())
         onView(withText("Select country"))
             .check(matches(isDisplayed()))
-        onView(withContentDescription("Close"))
+        onView(withText("Close"))
             .perform(click())
-
+        // Wait for country modal to dismiss and Challenge screen to show (modal animation can be slow)
+        waitForView(withContentDescription("Select language"), 8_000)
         // Tap "Select language" and assert language modal appears
         onView(withContentDescription("Select language"))
             .perform(click())

@@ -88,6 +88,26 @@ export function LobbyScreen() {
         </View>
       )}
 
+      <View style={styles.actions}>
+        {isHost ? (
+          <TouchableOpacity
+            style={[styles.primaryButton, (starting || !connected) && styles.primaryButtonDisabled]}
+            onPress={() => { setStarting(true); startGame(); }}
+            disabled={starting || !connected}
+            testID="lobby.startGame"
+            accessibilityLabel="Start game"
+          >
+            {starting ? (
+              <ActivityIndicator size="small" color={colors.primary[50]} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Start game</Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.muted}>Waiting for host to start the game.</Text>
+        )}
+      </View>
+
       {/* Share section */}
       <Text style={styles.sectionTitle}>{t('share_game')}</Text>
       <View style={styles.shareCard}>
@@ -139,26 +159,6 @@ export function LobbyScreen() {
           </View>
         ))
       )}
-
-      <View style={styles.actions}>
-        {isHost ? (
-          <TouchableOpacity
-            style={[styles.primaryButton, starting && styles.primaryButtonDisabled]}
-            onPress={() => { setStarting(true); startGame(); }}
-            disabled={starting}
-            testID="lobby.startGame"
-            accessibilityLabel="Start game"
-          >
-            {starting ? (
-              <ActivityIndicator size="small" color={colors.primary[50]} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Start game</Text>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <Text style={styles.muted}>Waiting for host to start the game.</Text>
-        )}
-      </View>
 
       {topScores.length > 0 && (
         <>

@@ -394,6 +394,18 @@ export function GamePlayScreen() {
         )}
       </View>
 
+      <View style={styles.nextSection}>
+        {done ? (
+          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
+            <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
+          </TouchableOpacity>
+        ) : isHost && answer ? (
+          <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
+            <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       {hasOptions ? (
         <View style={styles.options}>
           {question.options!.map((opt, i) => {
@@ -543,18 +555,6 @@ export function GamePlayScreen() {
           ))}
         </View>
       )}
-
-      <View style={styles.nextSection}>
-        {done ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
-            <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
-          </TouchableOpacity>
-        ) : isHost && answer ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
-            <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
 
       <SpeciesMediaModal
         visible={!!mediaSpecies}

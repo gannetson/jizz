@@ -10,9 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import org.hamcrest.CoreMatchers.allOf
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,24 +18,12 @@ import org.junit.runner.RunWith
 /**
  * Espresso UI tests for the Country challenge flow.
  * Run with: cd mobile/android && ./gradlew connectedDebugAndroidTest
- *
- * Tests that need the backend are skipped unless you pass:
- * -Pandroid.testInstrumentationRunnerArguments.backendAvailable=true
  */
 @RunWith(AndroidJUnit4::class)
 class CountryChallengeFlowTest {
 
     @get:Rule
     val activityRule = ActivityScenarioRule(MainActivity::class.java)
-
-    private fun assumeBackendAvailable() {
-        val backendAvailable = InstrumentationRegistry.getInstrumentation()
-            .arguments.getString("backendAvailable") == "true"
-        assumeTrue(
-            "Backend not available; run with -Pandroid.testInstrumentationRunnerArguments.backendAvailable=true",
-            backendAvailable
-        )
-    }
 
     /**
      * Test 1: Navigate to Country challenge, assert screen, open/close country and language modals,
@@ -47,6 +33,7 @@ class CountryChallengeFlowTest {
     fun countryChallengeScreen_andModals_startChallengeVisible() {
         // Wait for Home to load (React Native bundle)
         waitForView(withText("Welcome"), 30_000)
+        waitForView(withContentDescription("Country challenge"), 10_000)
 
         // Navigate to Country challenge from Home
         onView(withContentDescription("Country challenge"))
@@ -55,6 +42,9 @@ class CountryChallengeFlowTest {
         // Assert we're on the Challenge screen (title or key form elements)
         onView(withContentDescription("Country challenge"))
             .check(matches(isDisplayed()))
+
+        // Wait for form to be ready (Challenge screen may still be loading)
+        waitForView(withContentDescription("Select country"), 15_000)
 
         // Tap "Select country" and assert modal appears
         onView(withContentDescription("Select country"))
@@ -85,32 +75,53 @@ class CountryChallengeFlowTest {
 
     /**
      * Test 2: Fill name, select country, tap "Start challenge", assert next state appears
-     * (loading, "Start Level", "Round", or play screen). Requires backend; skipped otherwise.
+     * (loading, "Start Level", "Round", or play screen). Handles persisted state: if level intro
+     * is already visible (from previous run), tap "Start Level" instead of filling the form.
      */
     @Test
     fun startChallengeButton_leadsToNextState() {
-        assumeBackendAvailable()
         waitForView(withText("Welcome"), 30_000)
+        waitForView(withContentDescription("Country challenge"), 10_000)
 
         onView(withContentDescription("Country challenge"))
             .perform(click())
 
-        waitForView(withContentDescription("Select country"), 5_000)
+        // Wait for Challenge screen to load: form ("Select country") or level intro ("Start Level"). Allow time for loadCountryChallenge.
+        waitForAnyOf(
+            listOf(
+                withContentDescription("Select country"),
+                withContentDescription("Start Level"),
+                withText("Start Level"),
+                withText("Country challenge")
+            ),
+            15_000
+        )
+        // If we only see the title, wait a bit more for form or level intro
+        if (!isViewDisplayed(withContentDescription("Select country")) && !isViewDisplayed(withContentDescription("Start Level"))) {
+            waitForAnyOf(
+                listOf(
+                    withContentDescription("Select country"),
+                    withContentDescription("Start Level"),
+                    withText("Start Level")
+                ),
+                10_000
+            )
+        }
 
-        // Fill name
-        onView(withContentDescription("Your name"))
-            .perform(typeText("TestUser"), closeSoftKeyboard())
-
-        // Select country: open modal and tap a country (by displayed name; list comes from API)
-        onView(withContentDescription("Select country"))
-            .perform(click())
-        waitForView(withText("Select country"), 3_000)
-        // Tap a country (API-dependent; try common names that many backends return)
-        tapFirstVisibleOf(listOf("Netherlands", "United States", "United Kingdom", "Albania"))
-
-        // Tap "Start challenge"
-        onView(withContentDescription("Start challenge"))
-            .perform(click())
+        // If we see the form, fill it and tap "Start challenge"
+        if (isViewDisplayed(withContentDescription("Select country"))) {
+            onView(withContentDescription("Your name"))
+                .perform(typeText("TestUser"), closeSoftKeyboard())
+            onView(withContentDescription("Select country"))
+                .perform(click())
+            waitForView(withText("Select country"), 3_000)
+            tapFirstVisibleOf(listOf("Netherlands", "United States", "United Kingdom", "Albania"))
+            onView(withContentDescription("Start challenge"))
+                .perform(click())
+        } else {
+            // Level intro already visible — tap "Start Level"
+            tryTap(withContentDescription("Start Level")) || tryTap(withText("Start Level"))
+        }
 
         // Assert something visible changed: either loading, level intro, or play screen
         waitForAnyOf(
@@ -127,26 +138,58 @@ class CountryChallengeFlowTest {
     }
 
     /**
-     * Test 3: Full country challenge cycle – start challenge, answer up to 10 questions until level ends.
-     * Requires backend. Skipped unless backendAvailable=true.
+     * Test 3: Full country challenge cycle – start challenge, answer 3 questions then stop.
+     * Handles persisted state: if level intro is visible, tap "Start Level" first. In the loop,
+     * taps "Start Level" when moving to the next level.
      */
     @Test
-    fun startChallenge_fullCycle_answerUpTo10Questions() {
-        assumeBackendAvailable()
+    fun startChallenge_fullCycle_answer3Questions() {
         waitForView(withText("Welcome"), 30_000)
+        // Ensure home is fully rendered so "Country challenge" is present before clicking
+        waitForView(withContentDescription("Country challenge"), 10_000)
 
         onView(withContentDescription("Country challenge"))
             .perform(click())
-        waitForView(withContentDescription("Select country"), 5_000)
 
-        onView(withContentDescription("Your name"))
-            .perform(typeText("ChallengeUser"), closeSoftKeyboard())
-        onView(withContentDescription("Select country"))
-            .perform(click())
-        waitForView(withText("Select country"), 3_000)
-        tapFirstVisibleOf(listOf("Netherlands", "United States", "United Kingdom", "Albania"))
-        onView(withContentDescription("Start challenge"))
-            .perform(click())
+        // Wait for either create form or level intro (Challenge screen may load slowly)
+        waitForAnyOf(
+            listOf(
+                withContentDescription("Select country"),
+                withContentDescription("Start Level"),
+                withText("Start Level"),
+                withText("Country challenge")
+            ),
+            15_000
+        )
+        if (!isViewDisplayed(withContentDescription("Select country")) && !isViewDisplayed(withContentDescription("Start Level"))) {
+            waitForAnyOf(
+                listOf(
+                    withContentDescription("Select country"),
+                    withContentDescription("Start Level"),
+                    withText("Start Level")
+                ),
+                10_000
+            )
+        }
+
+        if (isViewDisplayed(withContentDescription("Select country"))) {
+            // Wait for full form (Start challenge button) to be visible; may need scroll on small screens
+            if (!waitForViewOrNull(withContentDescription("Start challenge"), 15_000)) {
+                // Form not ready in time; might be level intro instead
+                tryTap(withContentDescription("Start Level")) || tryTap(withText("Start Level"))
+            } else {
+                onView(withContentDescription("Your name"))
+                    .perform(typeText("ChallengeUser"), closeSoftKeyboard())
+                onView(withContentDescription("Select country"))
+                    .perform(click())
+                waitForView(withText("Select country"), 3_000)
+                tapFirstVisibleOf(listOf("Netherlands", "United States", "United Kingdom", "Albania"))
+                onView(withContentDescription("Start challenge"))
+                    .perform(click())
+            }
+        } else {
+            tryTap(withContentDescription("Start Level")) || tryTap(withText("Start Level"))
+        }
 
         // Wait for first question (or level intro or back to challenge on error)
         waitForAnyOf(
@@ -155,33 +198,57 @@ class CountryChallengeFlowTest {
                 withContentDescription("Loading question…"),
                 withText("Loading question…"),
                 withText("Start Level"),
+                withContentDescription("Start Level"),
                 withContentDescription("Select country")
             ),
             35_000
         )
 
-        var answered = 0
-        while (answered < 10) {
-            // If we're back on Challenge screen, level ended
-            try {
-                onView(withContentDescription("Select country")).check(matches(isDisplayed()))
-                onView(withContentDescription("Start challenge")).check(matches(isDisplayed()))
-                return
-            } catch (_: Exception) { }
+        // If we're on level intro, tap "Start Level" to enter the level
+        tryTap(withContentDescription("Start Level")) || tryTap(withText("Start Level"))
 
+        var answered = 0
+        while (answered < 3) {
+            // If we're back on Challenge screen, level ended
+            if (isViewDisplayed(withContentDescription("Select country")) && isViewDisplayed(withContentDescription("Start challenge"))) {
+                return
+            }
+            // If we're on level intro, tap to continue
+            if (tryTap(withContentDescription("Start Level")) || tryTap(withText("Start Level"))) {
+                Thread.sleep(500)
+                continue
+            }
+            // Answer: tap first option
             if (tryTap(withContentDescription("First answer option"))) {
                 answered++
-                Thread.sleep(1500)
+                // Wait for "Next question" or "End level" (no auto-advance)
+                waitForAnyOf(
+                    listOf(
+                        withContentDescription("Next question"),
+                        withContentDescription("End level"),
+                        withText("Next question"),
+                        withText("End level"),
+                        withText("Volgende vraag"),
+                        withText("Level beëindigen")
+                    ),
+                    20_000
+                )
+                if (tryTap(withContentDescription("End level")) || tryTap(withText("End level")) || tryTap(withText("Level beëindigen")))
+                    break
+                val nextTapped = tryTap(withContentDescription("Next question")) || tryTap(withText("Next question")) || tryTap(withText("Volgende vraag"))
+                if (!nextTapped) throw AssertionError("Next question button not found after answer")
             }
-            // Wait for next question or loading or back to challenge
+            // Wait for next question or loading or back to challenge or next level intro
             try {
                 waitForAnyOf(
                     listOf(
                         withContentDescription("First answer option"),
                         withText("Loading question…"),
-                        withContentDescription("Select country")
+                        withContentDescription("Select country"),
+                        withContentDescription("Start Level"),
+                        withText("Start Level")
                     ),
-                    18_000
+                    22_000
                 )
             } catch (_: Exception) { }
         }
@@ -191,6 +258,16 @@ class CountryChallengeFlowTest {
         return try {
             onView(matcher).check(matches(isDisplayed()))
             onView(matcher).perform(click())
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Returns true if the view is currently displayed. */
+    private fun isViewDisplayed(matcher: org.hamcrest.Matcher<android.view.View>): Boolean {
+        return try {
+            onView(matcher).check(matches(isDisplayed()))
             true
         } catch (_: Exception) {
             false

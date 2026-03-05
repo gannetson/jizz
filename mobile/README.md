@@ -4,7 +4,7 @@ React Native (Expo) app for Birdr, with the same structure as the web app in `/a
 
 ## Setup
 
-Requires **Node 18+** (recommend 20 LTS).
+Requires **Node 22+**.
 
 ```bash
 cd mobile
@@ -23,12 +23,12 @@ To run on a **physical device** (e.g. connected iPad):
 
 1. **Start Metro first** (in one terminal):
    ```bash
-   cd mobile && nvm use 20 && npm start
+   cd mobile && nvm use 22 && npm start
    ```
 2. **iPad and Mac on the same Wi‑Fi** so the app can load the JS bundle from Metro.
 3. In another terminal, build and run on the device:
    ```bash
-   cd mobile && nvm use 20 && npx expo run:ios --device "iPad van Loek"
+   cd mobile && nvm use 22 && npx expo run:ios --device "iPad van Loek"
    ```
    Use your device name (e.g. from Xcode → Window → Devices) or leave off `"iPad van Loek"` to pick from a list.
 4. **Trust the developer** on the device: Settings → General → VPN & Device Management → tap your developer profile → Trust.
@@ -37,10 +37,10 @@ To run on a **physical device** (e.g. connected iPad):
 
 ## Generate native projects (Android + iOS)
 
-To get full `android/` and `ios/` folders (use **Node 18+**):
+To get full `android/` and `ios/` folders (use **Node 22+**):
 
 ```bash
-nvm use 18   # or nvm use 20
+nvm use 22
 npx expo prebuild
 ```
 
@@ -48,10 +48,10 @@ This also copies the app icon from `assets/icon.png` into the native projects (i
 
 Then build a **debug APK for your phone**:
 
-Use **Node 18+** in the same terminal (Gradle runs `node` for autolinking; older Node causes build failures):
+Use **Node 22+** in the same terminal (Gradle runs `node` for autolinking; older Node causes build failures). If the build fails with "Process 'command 'node'' finished with non-zero exit value 1", the Gradle daemon was started with an older Node—run `./gradlew --stop` in `android/` then retry, or use `./run-with-node22.sh` (see Android UI tests below).
 
 ```bash
-nvm use 18   # or nvm use 20 — must be run in this shell before the next command
+nvm use 22   # must be run in this shell before the next command
 npm run build:android:debug
 ```
 
@@ -65,17 +65,23 @@ Copy it to your Android device (e.g. via USB, cloud, or email) and open it to in
 
 ## Android UI tests (Espresso)
 
-Automated UI tests for the Country challenge flow (tap → assert screen/modal changes). Run them with an **emulator or device** connected and **Node 18+** in the same shell (Gradle runs Node for the React Native build):
+Automated UI tests for the Country challenge flow (tap → assert screen/modal changes). Run them with an **emulator or device** connected and **Node 22+** (Gradle runs Node for the React Native build). If you see "Process 'command 'node'' finished with non-zero exit value 1", the Gradle daemon was started with an older Node—use one of:
 
 ```bash
 cd mobile/android
+
+# Option A: Stop daemon, then run (daemon restarts with current Node)
+./gradlew --stop
 ./gradlew connectedDebugAndroidTest
+
+# Option B: Wrapper (uses Node 22 and avoids daemon PATH issues)
+./run-with-node22.sh connectedDebugAndroidTest
 ```
 
 Or from repo root:
 
 ```bash
-cd mobile && (cd android && ./gradlew connectedDebugAndroidTest)
+cd mobile && (cd android && ./run-with-node22.sh connectedDebugAndroidTest)
 ```
 
 Tests live in `mobile/android/app/src/androidTest/kotlin/pro/birdr/app/CountryChallengeFlowTest.kt`. They launch the app, go to Country challenge from Home, open/close country and language modals, and (in a second test) fill the form, tap “Start challenge”, and assert that the next state (level intro or play screen) appears. **Test 2 calls the real “Start challenge” API**; use a running backend (e.g. staging) or a test build variant with a test API URL if you need a controlled environment.
@@ -85,7 +91,7 @@ Tests live in `mobile/android/app/src/androidTest/kotlin/pro/birdr/app/CountryCh
 
 ## Android release / AAB (testing & Play Store)
 
-Use **Node 18+** in the same terminal as for debug.
+Use **Node 22+** in the same terminal as for debug.
 
 ### Testing: release APK or AAB (signed with debug keystore)
 

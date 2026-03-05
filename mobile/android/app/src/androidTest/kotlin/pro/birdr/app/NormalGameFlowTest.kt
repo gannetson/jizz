@@ -10,8 +10,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,24 +17,12 @@ import org.junit.runner.RunWith
 /**
  * Espresso UI tests for the normal (multiplayer) game flow.
  * Run with: cd mobile/android && ./gradlew connectedDebugAndroidTest
- *
- * Tests 1–2 need only the app. Tests 3–4 require backend and WebSocket; they are skipped unless
- * you pass: -Pandroid.testInstrumentationRunnerArguments.backendAvailable=true
  */
 @RunWith(AndroidJUnit4::class)
 class NormalGameFlowTest {
 
     @get:Rule
     val activityRule = ActivityScenarioRule(MainActivity::class.java)
-
-    private fun assumeBackendAvailable() {
-        val backendAvailable = InstrumentationRegistry.getInstrumentation()
-            .arguments.getString("backendAvailable") == "true"
-        assumeTrue(
-            "Backend not available; run with -Pandroid.testInstrumentationRunnerArguments.backendAvailable=true",
-            backendAvailable
-        )
-    }
 
     /**
      * Test 1: Home → Start screen. Tap "Start a new game", assert Start screen title and form elements.
@@ -47,6 +33,9 @@ class NormalGameFlowTest {
 
         onView(withContentDescription("Start a new game"))
             .perform(click())
+
+        // Wait for Start screen to load (React Native may still be loading)
+        waitForView(withContentDescription("Select country"), 15_000)
 
         onView(withContentDescription("Player name"))
             .check(matches(isDisplayed()))
@@ -66,15 +55,18 @@ class NormalGameFlowTest {
         onView(withContentDescription("Start a new game"))
             .perform(click())
 
-        waitForView(withContentDescription("Select country"), 5_000)
+        // Wait for Start screen form to load
+        waitForView(withContentDescription("Select country"), 15_000)
 
         onView(withContentDescription("Select country"))
             .perform(click())
+        waitForView(withText("Select country"), 5_000)
         onView(withText("Select country"))
             .check(matches(isDisplayed()))
         onView(withContentDescription("Close"))
             .perform(click())
-
+        // Wait for country modal to dismiss (animation); then "Select language" becomes findable
+        waitForView(withContentDescription("Select language"), 8_000)
         onView(withContentDescription("Select language"))
             .perform(click())
         onView(withText("Select language"))
@@ -88,11 +80,9 @@ class NormalGameFlowTest {
 
     /**
      * Test 3: Full flow when backend is available. Fill name, Start → Lobby → Start game → GamePlay.
-     * Requires backend and WebSocket; skipped unless backendAvailable=true.
      */
     @Test
     fun normalGame_fullFlow_toLobbyAndGamePlay() {
-        assumeBackendAvailable()
         waitForView(withText("Welcome"), 30_000)
 
         onView(withContentDescription("Start a new game"))
@@ -115,20 +105,20 @@ class NormalGameFlowTest {
             listOf(
                 withContentDescription("Next question"),
                 withContentDescription("End game"),
+                withContentDescription("First answer option"),
                 withText("Next question"),
                 withText("End game")
             ),
-            20_000
+            25_000
         )
     }
 
     /**
      * Test 4: Full game cycle – answer 10 questions then end game and assert results screen.
-     * Requires backend and WebSocket; skipped unless backendAvailable=true.
+     * Requires backend and WebSocket.
      */
     @Test
     fun normalGame_fullFlow_answer10Questions_toResults() {
-        assumeBackendAvailable()
         waitForView(withText("Welcome"), 30_000)
 
         onView(withContentDescription("Start a new game"))

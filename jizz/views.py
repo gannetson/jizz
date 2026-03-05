@@ -494,6 +494,8 @@ class QuestionView(RetrieveAPIView):
         game = Game.objects.get(token=self.kwargs["token"])
         if game.ended:
             raise NotFound("Game has ended")
+        # Ensure we see latest state (e.g. after a previous request marked question done)
+        game.refresh_from_db()
         if not game.question:
             game.add_question()
         return game.question
@@ -576,15 +578,20 @@ class CountryChallengeViewSet(viewsets.ModelViewSet, GetPlayerMixin):
         player = self.get_player_from_request(self.request)
 
         return CountryChallenge.objects.filter(player=player).prefetch_related(
-            "games", "games__challenge_level", "games__game"
+            "games", "games__challenge_level", "games__game",
+            "games__game__scores", "games__game__scores__answers", "games__game__scores__answers__question"
         )
 
     def get_object(self):
         player = self.get_player_from_request(self.request)
         challenge = (
             CountryChallenge.objects.filter(player=player)
-            .prefetch_related("games", "games__challenge_level", "games__game")
-            .last()
+            .order_by('-id')
+            .prefetch_related(
+                "games", "games__challenge_level", "games__game",
+                "games__game__scores", "games__game__scores__answers", "games__game__scores__answers__question"
+            )
+            .first()
         )
         if not challenge:
             raise Http404("No challenges found for this player.")

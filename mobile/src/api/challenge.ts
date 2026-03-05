@@ -80,6 +80,17 @@ export type AnswerPayload = {
   player_token: string;
 };
 
+/** Response from submitChallengeAnswer; backend AnswerSerializer returns answer, species, correct. */
+export type SubmitChallengeAnswerResponse = {
+  correct?: boolean;
+  score?: number;
+  /** User's chosen species (from answer_id). */
+  answer?: QuestionOption;
+  /** Correct species for the question. */
+  species?: QuestionOption;
+  [k: string]: unknown;
+};
+
 const CHALLENGE_PLAYER_KEY = 'challenge_player_token';
 
 /** Get stored challenge player token (for country challenge flow). */
@@ -127,9 +138,19 @@ export async function createChallengePlayer(
   return data as PlayerRef & { token: string };
 }
 
-/** Load current country challenge for the given player token. */
-export async function loadCountryChallenge(playerToken: string): Promise<CountryChallenge | null> {
-  const response = await fetch(apiUrl('/api/country-challenges/current/'), {
+/** Load current country challenge for the given player token.
+ * Returns the challenge in progress or null (404). This response is the single source of truth for
+ * in-progress state, level, and progress: use challenge.levels[].game.scores[0].answers for
+ * correct/incorrect per question and to derive current question index (e.g. answers.length + 1).
+ * Pass cacheBust: true to avoid stale responses after answering or loading next question. */
+export async function loadCountryChallenge(
+  playerToken: string,
+  options?: { cacheBust?: boolean }
+): Promise<CountryChallenge | null> {
+  const url =
+    apiUrl('/api/country-challenges/current/') +
+    (options?.cacheBust ? `?${Date.now()}` : '');
+  const response = await fetch(url, {
     method: 'GET',
     headers: playerAuthHeaders(playerToken),
   });
@@ -177,33 +198,51 @@ export async function getNextChallengeLevel(
   return data as CountryGameLevel;
 }
 
-/** Get the current question for the challenge game. Optionally pass playerToken for auth. */
+/** Get the current question for the challenge game. Optionally pass playerToken for auth.
+ * Uses cache-busting query param (like the web app) to avoid stale responses.
+ * Times out after timeoutMs (default 25s) to avoid hanging. */
 export async function getChallengeQuestion(
   gameToken: string,
-  playerToken?: string | null
+  playerToken?: string | null,
+  options?: { cacheBust?: boolean; timeoutMs?: number }
 ): Promise<ChallengeQuestion | null> {
   const headers: HeadersInit = { Accept: 'application/json' };
   if (playerToken) {
     Object.assign(headers, playerAuthHeaders(playerToken));
   }
-  const response = await fetch(apiUrl(`/api/games/${gameToken}/question`), {
-    method: 'GET',
-    headers,
-  });
-  if (response.status === 404 || response.status === 204) return null;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const msg = data.detail ?? data.error ?? data.message ?? 'Failed to load question';
-    throw new Error(typeof msg === 'string' ? msg : 'Failed to load question');
+  const url =
+    apiUrl(`/api/games/${gameToken}/question`) +
+    (options?.cacheBust ? `?${Date.now()}` : '');
+  const timeoutMs = options?.timeoutMs ?? 25_000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+    if (response.status === 404 || response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const msg = data.detail ?? data.error ?? data.message ?? 'Failed to load question';
+      throw new Error(typeof msg === 'string' ? msg : 'Failed to load question');
+    }
+    const question = data as ChallengeQuestion;
+    if (question?.game?.token !== gameToken) {
+      return null;
+    }
+    return question;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data as ChallengeQuestion;
 }
 
 /** Submit an answer for the challenge. */
 export async function submitChallengeAnswer(
   payload: AnswerPayload,
   playerToken: string
-): Promise<{ correct?: boolean; score?: number; [k: string]: unknown }> {
+): Promise<SubmitChallengeAnswerResponse> {
   const response = await fetch(apiUrl('/api/answer/'), {
     method: 'POST',
     headers: playerAuthHeaders(playerToken),
@@ -214,5 +253,5 @@ export async function submitChallengeAnswer(
     const msg = data.detail ?? data.error ?? data.message ?? 'Failed to submit answer';
     throw new Error(typeof msg === 'string' ? msg : 'Failed to submit answer');
   }
-  return data as { correct?: boolean; score?: number; [k: string]: unknown };
+  return data as SubmitChallengeAnswerResponse;
 }

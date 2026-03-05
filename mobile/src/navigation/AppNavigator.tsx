@@ -17,6 +17,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { MyGamesScreen } from '../screens/MyGamesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ChallengeScreen } from '../screens/ChallengeScreen';
+import { ChallengeLevelIntroScreen } from '../screens/ChallengeLevelIntroScreen';
 import { ChallengePlayScreen } from '../screens/ChallengePlayScreen';
 import { GameDetailScreen } from '../screens/GameDetailScreen';
 import { DailyChallengeListScreen } from '../screens/DailyChallengeListScreen';
@@ -30,6 +31,7 @@ const SCREENS = [
   { name: 'Start', title: 'New game', component: StartScreen },
   { name: 'Scores', title: 'High scores', component: ScoresScreen },
   { name: 'Challenge', title: 'Country challenge', component: ChallengeScreen },
+  { name: 'ChallengeLevelIntro', title: 'Level', component: ChallengeLevelIntroScreen },
   { name: 'DailyChallenge', title: 'Daily challenge', component: DailyChallengeListScreen },
   { name: 'DailyChallengeDetail', title: 'Daily challenge', component: DailyChallengeDetailScreen },
   { name: 'DailyChallengeCreate', title: 'New daily challenge', component: DailyChallengeCreateScreen },

@@ -3,7 +3,8 @@
 # to reach Lobby and GamePlay; it may fail in CI if no backend is configured.
 #
 # Note: Emulator startup on GitHub-hosted runners can be flaky (device not found).
-# Run locally with: cd mobile/android && ./gradlew connectedDebugAndroidTest
+# Run locally: use Node 22 (e.g. `cd mobile && nvm use`), then
+#   cd mobile/android && ./gradlew connectedDebugAndroidTest
 
 name: Android UI tests
 
@@ -22,7 +23,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: mobile/package-lock.json
 

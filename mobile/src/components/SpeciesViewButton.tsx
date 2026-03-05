@@ -20,6 +20,8 @@ type Props = {
   /** Right-side label; defaults to "View ›" */
   viewLabel?: string;
   disabled?: boolean;
+  testID?: string;
+  accessibilityLabel?: string;
 };
 
 const variantStyles: Record<SpeciesViewButtonVariant, { button: ViewStyle; text: TextStyle; viewText: TextStyle }> = {
@@ -62,6 +64,8 @@ export function SpeciesViewButton({
   icon,
   viewLabel = 'View ›',
   disabled = false,
+  testID,
+  accessibilityLabel,
 }: Props) {
   const vs = variantStyles[variant];
   return (
@@ -70,6 +74,8 @@ export function SpeciesViewButton({
       onPress={(e) => onPress(e)}
       disabled={disabled}
       activeOpacity={0.8}
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
     >
       <View style={styles.row}>
         {icon && (

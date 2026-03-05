@@ -454,17 +454,14 @@ class Game(models.Model):
     def question(self):
         """
         Get the current active (undone) question.
-        
-        Returns the first question where done=False, ensuring players
-        always get the current question, not a completed one.
-        
-        This is the authoritative way to get the current question.
-        Do not use game.questions.last() as it may return a completed question.
-        
+
+        Returns the first question where done=False, ordered by sequence,
+        ensuring players always get the current question, not a completed one.
+
         Returns:
             Question instance or None if no active question exists
         """
-        return self.questions.filter(done=False).first()
+        return self.questions.filter(done=False).order_by('sequence').first()
 
     @property
     def progress(self):

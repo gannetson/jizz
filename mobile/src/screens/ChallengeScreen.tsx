@@ -17,12 +17,11 @@ import { loadLanguages, type Language } from '../api/languages';
 import {
   loadCountryChallenge,
   startCountryChallenge,
-  getNextChallengeLevel,
   createChallengePlayer,
   getStoredChallengePlayerToken,
   setStoredChallengePlayerToken,
+  clearStoredChallengePlayerToken,
   type CountryChallenge,
-  type CountryGameLevel,
 } from '../api/challenge';
 import { useAuth } from '../context/AuthContext';
 import { getProfile } from '../api/profile';
@@ -57,34 +56,37 @@ export function ChallengeScreen() {
     }
   }, []);
 
-  const refreshChallenge = useCallback(async () => {
-    const token = await getStoredChallengePlayerToken();
-    if (token) {
-      setPlayerToken(token);
-      await loadChallenge(token);
-    } else {
-      setChallenge(null);
-      setPlayerToken(null);
-    }
-  }, [loadChallenge]);
-
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
         setLoading(true);
+        setError(null);
         const token = await getStoredChallengePlayerToken();
         if (token) {
-          setPlayerToken(token);
           try {
             const c = await loadCountryChallenge(token);
-            if (!cancelled) setChallenge(c);
+            if (cancelled) return;
+            if (c === null) {
+              await clearStoredChallengePlayerToken();
+              setChallenge(null);
+              setPlayerToken(null);
+            } else {
+              setChallenge(c);
+              setPlayerToken(token);
+            }
           } catch (e: any) {
-            if (!cancelled) setError(e?.message ?? 'Failed to load challenge');
+            if (cancelled) return;
+            await clearStoredChallengePlayerToken();
+            setChallenge(null);
+            setPlayerToken(null);
+            setError(e?.message ?? 'Failed to load challenge');
           }
         } else {
-          if (!cancelled) setChallenge(null);
-          setPlayerToken(null);
+          if (!cancelled) {
+            setChallenge(null);
+            setPlayerToken(null);
+          }
         }
         if (!cancelled) setLoading(false);
       })();
@@ -128,12 +130,19 @@ export function ChallengeScreen() {
     }
     setCreating(true);
     setError(null);
+    setChallenge(null);
     try {
+      await clearStoredChallengePlayerToken();
       const player = await createChallengePlayer(name.trim(), language);
       await setStoredChallengePlayerToken(player.token);
       setPlayerToken(player.token);
       const c = await startCountryChallenge(country.code, player.token);
       setChallenge(c);
+      const gameToken = c?.levels?.[0]?.game?.token;
+      (navigation as any).navigate('ChallengeLevelIntro', {
+        challengeId: c?.id,
+        gameToken: gameToken ?? undefined,
+      });
     } catch (e: any) {
       setError(e?.message ?? 'Failed to start challenge');
     } finally {
@@ -141,34 +150,12 @@ export function ChallengeScreen() {
     }
   };
 
-  const handleStartLevel = () => {
+  const handleContinueToChallenge = () => {
     const gameToken = challenge?.levels?.[0]?.game?.token;
-    const gameLevel = challenge?.levels?.[0]?.game?.level;
-    const gameMedia = challenge?.levels?.[0]?.game?.media;
-    if (gameToken && challenge?.id && playerToken) {
-      (navigation as any).navigate('ChallengePlay', {
-        gameToken,
-        challengeId: challenge.id,
-        countryCode: challenge.country?.code,
-        language: challenge.levels?.[0]?.game?.language ?? language,
-        gameLevel: gameLevel ?? 'advanced',
-        gameMedia: gameMedia ?? 'images',
-      });
-    }
-  };
-
-  const handleRestartOrNextLevel = async () => {
-    if (!challenge?.id || !playerToken) return;
-    setNextLevelLoading(true);
-    setError(null);
-    try {
-      await getNextChallengeLevel(challenge.id, playerToken);
-      await refreshChallenge();
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to continue');
-    } finally {
-      setNextLevelLoading(false);
-    }
+    (navigation as any).navigate('ChallengeLevelIntro', {
+      challengeId: challenge?.id,
+      gameToken: gameToken ?? undefined,
+    });
   };
 
   if (loading && !challenge) {
@@ -181,7 +168,6 @@ export function ChallengeScreen() {
   }
 
   const level = challenge?.levels?.[0];
-  const status = level?.status;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -191,115 +177,74 @@ export function ChallengeScreen() {
         </View>
       ) : null}
 
-      {!challenge || !level ? (
-        <View style={styles.createSection}>
-          <Text style={styles.title} testID="countryChallenge.title" accessibilityLabel="Country challenge">Country challenge</Text>
-          <Text style={styles.hint}>
-            You will run through different levels. Some easy and some quite difficult.
+      {/* First step: create form (name, country, language) – always shown */}
+      <View style={styles.createSection}>
+        <Text style={styles.title} testID="countryChallenge.title" accessibilityLabel="Country challenge">Country challenge</Text>
+        <Text style={styles.hint}>
+          You will run through different levels. Some easy and some quite difficult.
+        </Text>
+        <Text style={styles.label}>Your name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Your name"
+          placeholderTextColor={colors.primary[500]}
+          testID="countryChallenge.nameInput"
+          accessibilityLabel="Your name"
+        />
+        <Text style={styles.label}>Language (species names)</Text>
+        <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="countryChallenge.selectLanguage" accessibilityLabel="Select language">
+          <Text style={styles.selectButtonText}>
+            {languages.find((l) => l.code === language)?.name ?? 'Select language'}
           </Text>
-          <Text style={styles.label}>Your name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            placeholderTextColor={colors.primary[500]}
-            testID="countryChallenge.nameInput"
-            accessibilityLabel="Your name"
-          />
-          <Text style={styles.label}>Language (species names)</Text>
-          <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="countryChallenge.selectLanguage" accessibilityLabel="Select language">
-            <Text style={styles.selectButtonText}>
-              {languages.find((l) => l.code === language)?.name ?? 'Select language'}
-            </Text>
-          </TouchableOpacity>
-          <Text style={styles.label}>Country</Text>
-          <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="countryChallenge.selectCountry" accessibilityLabel="Select country">
-            <Text style={styles.selectButtonText}>{country?.name ?? 'Select country'}</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
+        <Text style={styles.label}>Country</Text>
+        <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="countryChallenge.selectCountry" accessibilityLabel="Select country">
+          <Text style={styles.selectButtonText}>{country?.name ?? 'Select country'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.primaryButton, creating && styles.buttonDisabled]}
+          onPress={handleStartChallenge}
+          disabled={creating || !name.trim() || !country}
+          testID="countryChallenge.startChallenge"
+          accessibilityLabel="Start challenge"
+        >
+          {creating ? (
+            <ActivityIndicator color={colors.primary[50]} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Start challenge</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+      {challenge?.country?.name && level?.challenge_level?.title ? (
+        <View style={[styles.levelSection, styles.levelSectionDivider]}>
+          <Text>
+            {challenge.country.name} – {level.challenge_level.title}
+          </Text>
+          {(() => {
+            const answersCount = level?.game?.scores?.[0]?.answers?.length ?? 0;
+            const total = typeof level?.game?.length === 'number' ? level.game.length : Number(level?.game?.length) || 0;
+            if (answersCount > 0 && total > 0) {
+              const currentQuestion = answersCount + 1;
+              if (currentQuestion <= total) {
+                return (
+                  <Text style={styles.inProgressSummary}>Question {currentQuestion} of {total}</Text>
+                );
+              }
+            }
+            return null;
+          })()}
           <TouchableOpacity
-            style={[styles.primaryButton, creating && styles.buttonDisabled]}
-            onPress={handleStartChallenge}
-            disabled={creating || !name.trim() || !country}
-            testID="countryChallenge.startChallenge"
-            accessibilityLabel="Start challenge"
+            style={styles.secondaryButton}
+            onPress={handleContinueToChallenge}
+            testID="countryChallenge.continueToChallenge"
+            accessibilityLabel="Continue to your challenge"
           >
-            {creating ? (
-              <ActivityIndicator color={colors.primary[50]} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Start challenge</Text>
-            )}
+            <Text style={styles.secondaryButtonText}>Continue to your challenge</Text>
           </TouchableOpacity>
         </View>
-      ) : status === 'new' ? (
-        <View style={styles.levelSection}>
-          <Text style={styles.title}>
-            Round {level.challenge_level.sequence + 1} – {level.challenge_level.title}
-          </Text>
-          <Text style={styles.subtitle}>What is this level about?</Text>
-          <Text style={styles.description}>
-            {level.challenge_level.description}
-          </Text>
-          <Text style={styles.jokersLabel}>
-            Jokers this round: {' '}
-            {Array.from({ length: level.challenge_level.jokers }).map((_, i) => '♥').join(' ')}
-          </Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleStartLevel} testID="countryChallenge.startLevel" accessibilityLabel="Start Level">
-            <Text style={styles.primaryButtonText}>Start Level</Text>
-          </TouchableOpacity>
-        </View>
-      ) : status === 'failed' ? (
-        <View style={styles.levelSection}>
-          <Text style={[styles.title, styles.failedTitle]}>
-            Failed! Round {level.challenge_level.sequence + 1} – {level.challenge_level.title}
-          </Text>
-          <Text style={styles.description}>
-            Ouch! That was one wrong answer too many...
-          </Text>
-          <TouchableOpacity
-            style={[styles.primaryButton, nextLevelLoading && styles.buttonDisabled]}
-            onPress={handleRestartOrNextLevel}
-            disabled={nextLevelLoading}
-            testID="countryChallenge.restartLevel"
-            accessibilityLabel="Restart Level"
-          >
-            {nextLevelLoading ? (
-              <ActivityIndicator color={colors.primary[50]} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Restart Level</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      ) : status === 'passed' ? (
-        <View style={styles.levelSection}>
-          <Text style={styles.title}>
-            Congratulations! Level {level.challenge_level.sequence + 1} completed!
-          </Text>
-          <Text style={styles.description}>
-            Well done! Ready for the next challenge?
-          </Text>
-          <TouchableOpacity
-            style={[styles.primaryButton, nextLevelLoading && styles.buttonDisabled]}
-            onPress={handleRestartOrNextLevel}
-            disabled={nextLevelLoading}
-            testID="countryChallenge.nextLevel"
-            accessibilityLabel="Next Level"
-          >
-            {nextLevelLoading ? (
-              <ActivityIndicator color={colors.primary[50]} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Next Level</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.levelSection}>
-          <Text style={styles.title}>Level in progress</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleStartLevel} testID="countryChallenge.continue" accessibilityLabel="Continue">
-            <Text style={styles.primaryButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      ) : null}
 
       <Modal visible={countryModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
@@ -373,6 +318,9 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.error[500] },
   createSection: {},
   levelSection: {},
+  levelSectionDivider: { marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: colors.primary[200] },
+  inProgressSummary: { fontSize: 15, color: colors.primary[700], marginTop: 4, marginBottom: 4 },
+  levelSectionTitle: { fontSize: 18, fontWeight: '600', color: colors.primary[700], marginBottom: 12 },
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 8 },
   failedTitle: { color: colors.error[500] },
   subtitle: { fontSize: 18, fontWeight: '600', color: colors.primary[700], marginTop: 12 },
@@ -403,7 +351,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  buttonDisabled: { opacity: 0.7 },
+  secondaryButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: colors.primary[100],
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+  },
+  secondaryButtonText: { color: colors.primary[700], fontSize: 16, fontWeight: '600' },
+  buttonDisabled: { opacity: 0.4, backgroundColor: colors.primary[300] },
   primaryButtonText: { color: colors.primary[50], fontSize: 18, fontWeight: '600' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },

@@ -31,7 +31,7 @@ class PlayerTokenAuthenticationTestCase(TestCase):
         user, token = result
         from django.contrib.auth.models import AnonymousUser
         self.assertIsInstance(user, AnonymousUser)
-        self.assertEqual(token, self.player.token)
+        self.assertEqual(token, str(self.player.token))
 
     def test_malformed_header_returns_none(self):
         request = self.factory.get('/api/answer/', HTTP_AUTHORIZATION='Basic abc')

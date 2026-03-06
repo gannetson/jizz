@@ -132,6 +132,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (g) {
       setGame(g);
       setLanguage(g.language || 'en');
+      await AsyncStorage.setItem(GAME_TOKEN_KEY, g.token);
       return g;
     }
     return null;

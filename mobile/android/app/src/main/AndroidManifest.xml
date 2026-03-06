@@ -29,6 +29,13 @@
         <data android:scheme="birdr"/>
         <data android:scheme="pro.birdr.app"/>
       </intent-filter>
+      <!-- App Links: https://birdr.pro/join/* opens in app when verified via assetlinks.json -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https" android:host="birdr.pro" android:pathPrefix="/join/"/>
+      </intent-filter>
       <!-- Dev client: so "expo run:android" can open app with bundler URL -->
       <intent-filter>
         <action android:name="android.intent.action.VIEW"/>

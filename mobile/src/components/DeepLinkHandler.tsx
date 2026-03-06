@@ -70,21 +70,21 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
 function parseGameJoinUrl(url: string): string | null {
   // Don't treat join/challenge/... as game join
   if (url.includes('/join/challenge/')) return null;
-  // birdr://join/{token}
-  const schemeMatch = url.match(/^birdr:\/\/join\/([a-z]{6,12})$/);
+  // birdr://join/{token}  (game token is 8–10 lowercase letters)
+  const schemeMatch = url.match(/^birdr:\/\/join\/([a-z]{6,16})$/);
   if (schemeMatch) return schemeMatch[1];
 
   // https://birdr.pro/join/{token}
   const base = API_BASE_URL.replace(/\/$/, '');
   if (url.startsWith(base + '/join/')) {
-    const path = url.slice(base.length);
-    const match = path.match(/^\/join\/([a-z]{6,12})/);
+    const path = url.slice(base.length).replace(/[?#].*$/, '');
+    const match = path.match(/^\/join\/([a-z]{6,16})/);
     if (match) return match[1];
   }
 
   try {
     const parsed = new URL(url);
-    const match = parsed.pathname.match(/^\/join\/([a-z]{6,12})$/);
+    const match = parsed.pathname.match(/^\/join\/([a-z]{6,16})$/);
     if (match) return match[1];
   } catch {}
 

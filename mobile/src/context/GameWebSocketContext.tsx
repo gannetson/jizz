@@ -22,6 +22,9 @@ type GameWebSocketContextType = {
   joinGame: (game: Game | null, player: Player | null, setGame: (g: Game | null) => void) => void;
   clearQuestion: () => void;
   connected: boolean;
+  sendRematch: () => void;
+  rematchInvitation: { new_game_token: string; host_name: string } | null;
+  clearRematchInvitation: () => void;
 };
 
 type Species = { id: number; name?: string; name_nl?: string; name_latin?: string; name_translated?: string };
@@ -34,9 +37,19 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const [question, setQuestion] = useState<Question | undefined>(undefined);
   const [answer, setAnswer] = useState<Answer | undefined>(undefined);
   const [connected, setConnected] = useState(false);
+  const [rematchInvitation, setRematchInvitation] = useState<{ new_game_token: string; host_name: string } | null>(null);
   const playerTokenRef = useRef<string>('');
   const setGameRef = useRef<((g: Game | null) => void) | null>(null);
   const gameTokenRef = useRef<string>('');
+  const currentSocketRef = useRef<WebSocket | null>(null);
+
+  const clearRematchInvitation = useCallback(() => setRematchInvitation(null), []);
+
+  const sendRematch = useCallback(() => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ action: 'rematch', player_token: playerTokenRef.current }));
+    }
+  }, [socket]);
 
   const sendAction = useCallback(
     (payload: Record<string, unknown>) => {
@@ -80,8 +93,10 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
 
     const url = getWebSocketUrl(`/mpg/${game.token}`);
     const ws = new WebSocket(url);
+    currentSocketRef.current = ws;
 
     ws.onopen = () => {
+      if (currentSocketRef.current !== ws) return;
       setConnected(true);
       ws.send(
         JSON.stringify({
@@ -115,16 +130,29 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
           case 'answer_checked':
             setAnswer(message.answer as Answer);
             break;
+          case 'rematch_invitation':
+            if (message.new_game_token && message.host_name != null) {
+              setRematchInvitation({
+                new_game_token: message.new_game_token,
+                host_name: message.host_name,
+              });
+            }
+            break;
           default:
             break;
         }
       } catch (_) {}
     };
 
-    ws.onerror = () => setConnected(false);
+    ws.onerror = () => {
+      if (currentSocketRef.current === ws) setConnected(false);
+    };
     ws.onclose = () => {
-      setConnected(false);
-      setSocket(undefined);
+      if (currentSocketRef.current === ws) {
+        currentSocketRef.current = null;
+        setConnected(false);
+        setSocket(undefined);
+      }
     };
 
     setSocket(ws);
@@ -133,6 +161,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const joinGame = useCallback(
     (game: Game | null, player: Player | null, setGame: (g: Game | null) => void) => {
       if (socket) {
+        currentSocketRef.current = null;
         socket.close();
         setSocket(undefined);
       }
@@ -158,6 +187,9 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         joinGame,
         clearQuestion,
         connected,
+        sendRematch,
+        rematchInvitation,
+        clearRematchInvitation,
       }}
     >
       {children}

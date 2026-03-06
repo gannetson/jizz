@@ -160,6 +160,29 @@ If you see **DEVELOPER_ERROR** when signing in with Google on Android:
 
 Full steps: see **`GOOGLE_CONSOLE_SETUP.md`**.
 
+## Opening game links in the app (QR code / share link)
+
+When someone scans the lobby QR code or taps a shared game link (`https://birdr.pro/join/<game_token>`), the link should open in the Birdr app instead of the browser.
+
+**What’s already in place**
+
+- **App:** Custom scheme `birdr://` and (on Android) an App Link intent for `https://birdr.pro/join/`. `DeepLinkHandler` loads the game and navigates to Lobby.
+- **Server:** `GET /join/<token>/` redirects to `birdr://join/<token>`, so opening the HTTPS link in a browser sends the user into the app. The same backend serves `.well-known/apple-app-site-association` (iOS) and `.well-known/assetlinks.json` (Android) for verified App Links.
+
+**To get “Open in app” without a disambiguation dialog**
+
+1. **iOS (Universal Links)**  
+   In `jizz/urls.py`, in `apple_app_site_association`, replace `TEAM_ID` with your Apple Team ID (e.g. `ABC123XYZ`). The bundle ID must stay `pro.birdr.app` (it matches `app.json`).
+
+2. **Android (App Links)**  
+   In `jizz/urls.py`, in `android_asset_links`, replace `SHA256_FINGERPRINT_PLACEHOLDER` with the SHA-256 fingerprint of the certificate that signs your app (colon-separated). Get it with:
+   ```bash
+   keytool -list -v -keystore your.keystore -alias youralias
+   ```
+   Use the same signing key you use for Play Store builds. The `package_name` is already `pro.birdr.app`.
+
+After deploying the updated `.well-known` files, install the app and tap `https://birdr.pro/join/<token>` (e.g. from Notes or Messages). If verification succeeds, the link should open directly in the app. If not, the server redirect still sends `birdr://join/<token>`, so the system may show “Open in Birdr?” once.
+
 ## Structure
 
 - **Top bar:** Left = open main (left) drawer; center = title; right = open user menu.

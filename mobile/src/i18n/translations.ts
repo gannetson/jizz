@@ -138,6 +138,9 @@ export const translations: Record<string, Record<string, string>> = {
     play_again: 'Play another game',
     back_to_daily_challenge: 'Back to Daily Challenge',
     no_scores_yet: 'No scores yet.',
+    rematch: 'Rematch',
+    join_rematch: 'Join rematch',
+    creating_game: 'Creating game…',
   },
   nl: {
     cancel: 'Annuleren',
@@ -267,6 +270,9 @@ export const translations: Record<string, Record<string, string>> = {
     play_again: 'Nog een spel spelen',
     back_to_daily_challenge: 'Terug naar dagelijkse uitdaging',
     no_scores_yet: 'Nog geen scores.',
+    rematch: 'Revanche',
+    join_rematch: 'Doe mee met revanche',
+    creating_game: 'Spel aanmaken…',
   },
 };
 

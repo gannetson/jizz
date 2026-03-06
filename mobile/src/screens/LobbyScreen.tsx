@@ -16,6 +16,10 @@ export function LobbyScreen() {
   const { game, player, setGame, loadGame: loadGameFromApi } = useGame();
   const { players, question, startGame, joinGame, connected } = useGameWebSocket();
 
+  const [starting, setStarting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [topScores, setTopScores] = useState<Score[]>([]);
+
   useEffect(() => {
     if (!game?.token || !player?.token) return;
     joinGame(game, player, setGame);
@@ -34,22 +38,6 @@ export function LobbyScreen() {
     }
   }, [question, game?.token, navigation]);
 
-  if (!game || !player) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>No game or player. Start a game from the Start screen.</Text>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Start')}>
-          <Text style={styles.buttonText}>Go to Start</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const [starting, setStarting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [topScores, setTopScores] = useState<Score[]>([]);
-  const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
-
   useEffect(() => {
     if (!game) return;
     loadScores({
@@ -60,7 +48,7 @@ export function LobbyScreen() {
     }).then((scores) => setTopScores(scores.slice(0, 3)));
   }, [game?.token]);
 
-  const gameLink = `${API_BASE_URL}/join/${game.token}`;
+  const gameLink = game ? `${API_BASE_URL}/join/${game.token}` : '';
 
   const copyLink = useCallback(async () => {
     await Clipboard.setStringAsync(gameLink);
@@ -73,6 +61,19 @@ export function LobbyScreen() {
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => {});
   }, [gameLink, t]);
+
+  if (!game || !player) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>No game or player. Start a game from the Start screen.</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Start')}>
+          <Text style={styles.buttonText}>Go to Start</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

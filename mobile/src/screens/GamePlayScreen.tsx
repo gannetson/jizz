@@ -153,6 +153,27 @@ export function GamePlayScreen() {
     setSoundPlaying(false);
   }, [question?.id, mediaIndex]);
 
+  const mediaType = game?.media || 'images';
+  const currentIndex = mediaIndex;
+  const image = mediaType === 'images' && question?.images?.[currentIndex];
+  const video = mediaType === 'video' && question?.videos?.[currentIndex];
+  const sound = mediaType === 'audio' && question?.sounds?.[currentIndex];
+  const soundUri = sound?.url ? (sound.url.startsWith('http') ? sound.url : apiUrl(sound.url)) : null;
+
+  const playSound = useCallback(async () => {
+    if (!soundUri) return;
+    try {
+      if (soundRef.current) await soundRef.current.unloadAsync();
+      const { sound: s } = await Audio.Sound.createAsync({ uri: soundUri });
+      s.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) setSoundPlaying(false);
+      });
+      soundRef.current = s;
+      await s.playAsync();
+      setSoundPlaying(true);
+    } catch (_) {}
+  }, [soundUri]);
+
   if (!game || !player) {
     return (
       <View style={styles.centered}>
@@ -184,30 +205,10 @@ export function GamePlayScreen() {
     submitAnswer({ question, answer: option });
   };
 
-  const mediaType = game.media || 'images';
-  const currentIndex = mediaIndex;
-  const image = mediaType === 'images' && question?.images?.[currentIndex];
-  const video = mediaType === 'video' && question?.videos?.[currentIndex];
-  const sound = mediaType === 'audio' && question?.sounds?.[currentIndex];
   const imageUri = image?.url
     ? (image.url.startsWith('http') ? image.url : apiUrl(image.url)).replace('/1800', '/900')
     : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
-  const soundUri = sound?.url ? (sound.url.startsWith('http') ? sound.url : apiUrl(sound.url)) : null;
-
-  const playSound = useCallback(async () => {
-    if (!soundUri) return;
-    try {
-      if (soundRef.current) await soundRef.current.unloadAsync();
-      const { sound: s } = await Audio.Sound.createAsync({ uri: soundUri });
-      s.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) setSoundPlaying(false);
-      });
-      soundRef.current = s;
-      await s.playAsync();
-      setSoundPlaying(true);
-    } catch (_) {}
-  }, [soundUri]);
 
   const openFlagModal = () => {
     if (!question || !game) return;
@@ -395,7 +396,7 @@ export function GamePlayScreen() {
       </View>
 
       <View style={styles.nextSection}>
-        {done ? (
+        {done && answer ? (
           <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
             <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
           </TouchableOpacity>
@@ -523,6 +524,11 @@ export function GamePlayScreen() {
           {players.map((p, i) => (
             <View key={i} style={styles.playerCard}>
               <View style={styles.playerLeft}>
+                <View style={styles.playerAvatar}>
+                  <Text style={styles.playerAvatarText}>
+                    {(p.name || '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
                 {p.status === 'correct' && (
                   <View style={[styles.playerStatusIcon, styles.playerStatusIconCorrect]}>
                     <Text style={styles.playerStatusIconText}>✓</Text>
@@ -540,11 +546,6 @@ export function GamePlayScreen() {
                 {p.ranking != null && (
                   <View style={styles.scoreTag}>
                     <Text style={styles.scoreTagText}>#{p.ranking} {t('high_score')}</Text>
-                  </View>
-                )}
-                {p.last_answer?.correct === true && p.last_answer?.score != null && (
-                  <View style={styles.scoreTagGreen}>
-                    <Text style={styles.scoreTagTextGreen}>+{p.last_answer.score}</Text>
                   </View>
                 )}
                 <View style={styles.scoreTotal}>
@@ -653,12 +654,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 8,
-    backgroundColor: colors.primary[100],
+    backgroundColor: colors.primary[50],
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.primary[200],
   },
   playerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  playerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary[500],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playerAvatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  playerName: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
+  crown: { fontSize: 14 },
   playerStatusIcon: {
     width: 22,
     height: 22,
@@ -669,8 +681,6 @@ const styles = StyleSheet.create({
   playerStatusIconCorrect: { backgroundColor: colors.success[500] },
   playerStatusIconWrong: { backgroundColor: colors.error[500] },
   playerStatusIconText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  playerName: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
-  crown: { fontSize: 14 },
   playerScores: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   scoreTag: {
     paddingHorizontal: 8,

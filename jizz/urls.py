@@ -39,13 +39,14 @@ router.register(r'countries', CountryViewSet, 'countries')
 router.register(r'country-challenges', CountryChallengeViewSet, basename='country-challenge')
 
 def apple_app_site_association(request):
-    """iOS Universal Links configuration."""
+    """iOS Universal Links: so https://birdr.pro/join/* opens in the app.
+    Replace TEAM_ID with your Apple Team ID (e.g. ABC123XYZ)."""
     return JsonResponse({
         "applinks": {
             "apps": [],
             "details": [
                 {
-                    "appID": "TEAM_ID.pro.birdr.mobile",
+                    "appID": "TEAM_ID.pro.birdr.app",
                     "paths": ["/join/*"]
                 }
             ]
@@ -54,13 +55,15 @@ def apple_app_site_association(request):
 
 
 def android_asset_links(request):
-    """Android App Links verification."""
+    """Android App Links: so https://birdr.pro/join/* opens in the app.
+    Replace SHA256_FINGERPRINT_PLACEHOLDER with your signing cert SHA-256 fingerprint (colon-separated).
+    Get it with: keytool -list -v -keystore your.keystore -alias youralias"""
     return JsonResponse([
         {
             "relation": ["delegate_permission/common.handle_all_urls"],
             "target": {
                 "namespace": "android_app",
-                "package_name": "pro.birdr.mobile",
+                "package_name": "pro.birdr.app",
                 "sha256_cert_fingerprints": [
                     "SHA256_FINGERPRINT_PLACEHOLDER"
                 ]
@@ -74,11 +77,17 @@ def join_challenge_redirect(request, token):
     return HttpResponseRedirect(f'birdr://join/challenge/{token}')
 
 
+def join_game_redirect(request, token):
+    """Redirect /join/<game_token> to app deep link. Opens app when user taps link in browser."""
+    return HttpResponseRedirect(f'birdr://join/{token}')
+
+
 urlpatterns = [
     path('.well-known/apple-app-site-association', apple_app_site_association),
     path('.well-known/assetlinks.json', android_asset_links),
 
     path('join/challenge/<str:token>/', join_challenge_redirect, name='join-challenge'),
+    path('join/<str:token>/', join_game_redirect, name='join-game'),
 
     path('admin/', admin.site.urls),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),

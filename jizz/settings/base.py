@@ -28,7 +28,14 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'localhost',
-    'jizz.be'
+    'jizz.be',
+    'www.jizz.be',
+    'birdr.pro',
+    'www.birdr.pro',
+    'birdr.nl',
+    'www.birdr.nl',
+    'goedloek.nl',
+    'www.goedloek.nl',
 ]
 
 

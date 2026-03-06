@@ -2,6 +2,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse, HttpResponseRedirect
+
+
+from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import path, re_path, include
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
@@ -38,6 +41,12 @@ router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
 router.register(r'country-challenges', CountryChallengeViewSet, basename='country-challenge')
 
+
+class AppDeepLinkRedirect(HttpResponseRedirect):
+    """Redirect to birdr:// deep links. Django only allows http/https by default."""
+    allowed_schemes = ['http', 'https', 'birdr']
+
+
 def apple_app_site_association(request):
     """iOS Universal Links: so https://birdr.pro/join/* opens in the app.
     Content is read from jizz/well-known/apple-app-site-association so nginx can alias to the same file."""
@@ -62,12 +71,12 @@ def android_asset_links(request):
 
 def join_challenge_redirect(request, token):
     """Redirect /join/challenge/<token> to app deep link (for desktop fallback)."""
-    return HttpResponseRedirect(f'birdr://join/challenge/{token}')
+    return AppDeepLinkRedirect(f'birdr://join/challenge/{token}')
 
 
 def join_game_redirect(request, token):
     """Redirect /join/<game_token> to app deep link. Opens app when user taps link in browser."""
-    return HttpResponseRedirect(f'birdr://join/{token}')
+    return AppDeepLinkRedirect(f'birdr://join/{token}')
 
 
 urlpatterns = [

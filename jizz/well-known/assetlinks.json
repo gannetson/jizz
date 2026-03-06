@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pro.birdr.app",
+      "sha256_cert_fingerprints": [
+        "EF:F1:D0:B6:67:A2:F3:D1:59:9A:2F:4B:D1:C0:90:AA:DD:31:30:98:39:9E:CB:3B:BD:72:97:FE:2A:FE:C4:ED"
+      ]
+    }
+  }
+]

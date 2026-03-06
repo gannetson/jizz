@@ -40,36 +40,24 @@ router.register(r'country-challenges', CountryChallengeViewSet, basename='countr
 
 def apple_app_site_association(request):
     """iOS Universal Links: so https://birdr.pro/join/* opens in the app.
-    Replace TEAM_ID with your Apple Team ID (e.g. ABC123XYZ)."""
-    return JsonResponse({
-        "applinks": {
-            "apps": [],
-            "details": [
-                {
-                    "appID": "TEAM_ID.pro.birdr.app",
-                    "paths": ["/join/*"]
-                }
-            ]
-        }
-    }, content_type="application/json")
+    Content is read from jizz/well-known/apple-app-site-association so nginx can alias to the same file."""
+    import json
+    from pathlib import Path
+    path = Path(__file__).resolve().parent / "well-known" / "apple-app-site-association"
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return JsonResponse(data, content_type="application/json")
 
 
 def android_asset_links(request):
     """Android App Links: so https://birdr.pro/join/* opens in the app.
-    Replace SHA256_FINGERPRINT_PLACEHOLDER with your signing cert SHA-256 fingerprint (colon-separated).
-    Get it with: keytool -list -v -keystore your.keystore -alias youralias"""
-    return JsonResponse([
-        {
-            "relation": ["delegate_permission/common.handle_all_urls"],
-            "target": {
-                "namespace": "android_app",
-                "package_name": "pro.birdr.app",
-                "sha256_cert_fingerprints": [
-                    "SHA256_FINGERPRINT_PLACEHOLDER"
-                ]
-            }
-        }
-    ], safe=False, content_type="application/json")
+    Content is read from jizz/well-known/assetlinks.json so nginx can alias to the same file."""
+    import json
+    from pathlib import Path
+    path = Path(__file__).resolve().parent / "well-known" / "assetlinks.json"
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return JsonResponse(data, safe=False, content_type="application/json")
 
 
 def join_challenge_redirect(request, token):

@@ -1403,4 +1403,6 @@ class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):
         )
 
     def create(self, request, *args, **kwargs):
+        # Response already includes full game via CountryGameSerializer.game (GameSerializer).
+        # Do not re-serialize response.data["game"]: it is a dict, not a Game instance.
         return super().create(request, *args, **kwargs)

@@ -194,8 +194,6 @@ export async function getNextChallengeLevel(
   });
 
   if (!response.ok) {
-    alert(response.ok)
-    alert("Oepsie")
     const msg = data.detail ?? data.error ?? data.message ?? 'Failed to get next level';
     throw new Error(typeof msg === 'string' ? msg : 'Failed to get next level');
   }

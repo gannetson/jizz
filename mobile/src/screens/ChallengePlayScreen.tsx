@@ -207,19 +207,13 @@ export function ChallengePlayScreen() {
     if (!token) return;
     setNextLevelLoading(true);
     try {
-      alert("Go")
       await getNextChallengeLevel(challengeId, token);
-      alert("Going")
       const challenge = await loadCountryChallenge(token, { cacheBust: true });
-      alert("Okidoki")
       const levels = challenge?.levels ?? [];
-      alert("levels")
       const newLevel = levels.find(
         (l) => l.game?.token !== gameToken && (l.game?.scores?.[0]?.answers?.length ?? 0) === 0
       ) ?? levels[levels.length - 1];
-      alert("Level")
       const newGameToken = newLevel?.game?.token;
-      alert('newGameToken')
       if (newGameToken) {
         (navigation as any).replace('ChallengeLevelIntro', {
           challengeId,

@@ -3,7 +3,7 @@
     "name": "Birdr",
     "slug": "birdr",
     "scheme": "birdr",
-    "version": "1.2.0",
+    "version": "1.23.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "pro.birdr.app",
-      "buildNumber": "19",
+      "buildNumber": "23",
       "icon": "./assets/icon.png",
       "associatedDomains": ["applinks:birdr.pro"]
     },
@@ -26,7 +26,8 @@
         "backgroundColor": "#ffffff"
       },
       "package": "pro.birdr.app",
-      "versionCode": 19,
+      "versionCode": 23,
+      "versionName": "Barnacle Goose",
       "intentFilters": [
         {
           "action": "VIEW",

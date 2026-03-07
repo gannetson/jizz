@@ -10,8 +10,10 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useTranslation } from '../i18n/TranslationContext';
+import { useAuth } from '../context/AuthContext';
 import { flagMediaAsReview } from '../api/flagMedia';
 import { colors } from '../theme';
 
@@ -44,6 +46,7 @@ type Props = {
 
 export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess }: Props) {
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
   const [checkboxes, setCheckboxes] = useState<Record<CheckboxKey, boolean>>({
     wrong_species: false,
     no_bird_visible: false,
@@ -83,7 +86,9 @@ export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess
   };
 
   const handleSubmit = async () => {
-    if (!media?.id) {
+    const mediaId = media?.id;
+    if (!mediaId) {
+      Alert.alert(t('error') || 'Error', t('problem_flagging') || 'No media selected.');
       onClose();
       return;
     }
@@ -98,11 +103,12 @@ export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess
 
     setSubmitting(true);
     try {
-      await flagMediaAsReview(media.id, playerToken, description);
+      await flagMediaAsReview(mediaId, playerToken ?? undefined, description, isAuthenticated);
       onSuccess?.();
       onClose();
-    } catch {
-      // Could show alert with t('problem_flagging')
+    } catch (err: any) {
+      const message = err?.message ?? err?.toString?.() ?? 'Request failed';
+      Alert.alert(t('error') || 'Error', (t('problem_flagging') || 'Could not flag media.') + '\n' + message);
     } finally {
       setSubmitting(false);
     }
@@ -112,61 +118,61 @@ export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.backdrop}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.keyboard}
-          >
-            <TouchableWithoutFeedback>
-              <View style={styles.card}>
-                <Text style={styles.title}>{t('flag_media_title')}</Text>
-                <Text style={styles.description}>{t('flag_modal_description')}</Text>
+      <View style={styles.backdrop}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdropTouchable} />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboard}
+          pointerEvents="box-none"
+        >
+          <View style={styles.card} pointerEvents="box-none">
+            <Text style={styles.title}>{t('flag_media_title')}</Text>
+            <Text style={styles.description}>{t('flag_modal_description')}</Text>
 
-                <ScrollView style={styles.checkboxList} keyboardShouldPersistTaps="handled">
-                  {CHECKBOX_KEYS.map((key) => (
-                    <TouchableOpacity
-                      key={key}
-                      style={styles.checkboxRow}
-                      onPress={() => toggle(key)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.checkbox, checkboxes[key] && styles.checkboxChecked]}>
-                        {checkboxes[key] ? <Text style={styles.checkmark}>✓</Text> : null}
-                      </View>
-                      <Text style={styles.checkboxLabel}>{getCheckboxLabel(key)}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+            <ScrollView style={styles.checkboxList} keyboardShouldPersistTaps="handled">
+              {CHECKBOX_KEYS.map((key) => (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.checkboxRow}
+                  onPress={() => toggle(key)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkbox, checkboxes[key] && styles.checkboxChecked]}>
+                    {checkboxes[key] ? <Text style={styles.checkmark}>✓</Text> : null}
+                  </View>
+                  <Text style={styles.checkboxLabel}>{getCheckboxLabel(key)}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-                <Text style={styles.hint}>{t('flag_description_explanation')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={message}
-                  onChangeText={setMessage}
-                  placeholder={t('flag_description')}
-                  placeholderTextColor={colors.primary[500]}
-                  multiline
-                  numberOfLines={3}
-                />
+            <Text style={styles.hint}>{t('flag_description_explanation')}</Text>
+            <TextInput
+              style={styles.input}
+              value={message}
+              onChangeText={setMessage}
+              placeholder={t('flag_description')}
+              placeholderTextColor={colors.primary[500]}
+              multiline
+              numberOfLines={3}
+            />
 
-                <View style={styles.footer}>
-                  <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-                    <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.flagBtn, submitting && styles.flagBtnDisabled]}
-                    onPress={handleSubmit}
-                    disabled={submitting}
-                  >
-                    <Text style={styles.flagBtnText}>{submitting ? '…' : t('flag')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+                <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.flagBtn, submitting && styles.flagBtnDisabled]}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                <Text style={styles.flagBtnText}>{submitting ? '…' : t('flag')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -179,22 +185,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
+  backdropTouchable: {
+    ...StyleSheet.absoluteFillObject,
+  },
   keyboard: { width: '100%', maxWidth: 400 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
-    maxHeight: '85%',
+    maxHeight: '100%',
   },
   title: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   description: { fontSize: 14, color: colors.primary[700], marginBottom: 16 },
-  checkboxList: { maxHeight: 220 },
+  checkboxList: { maxHeight: 420 },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.primary[200],
+    paddingVertical: 6,
   },
   checkbox: {
     width: 24,

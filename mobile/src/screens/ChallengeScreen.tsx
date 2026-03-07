@@ -123,8 +123,17 @@ export function ChallengeScreen() {
     return () => { cancelled = true; };
   }, [isAuthenticated, countries.length]);
 
+  // When we have a loaded challenge (e.g. returning to screen), default name to current challenge player
+  useEffect(() => {
+    if (challenge?.player?.name && !name) {
+      setName(challenge.player.name);
+    }
+  }, [challenge?.player?.name]);
+
+  const effectiveName = name || challenge?.player?.name || '';
+
   const handleStartChallenge = async () => {
-    if (!name.trim() || !country) {
+    if (!effectiveName.trim() || !country) {
       setError('Please enter your name and select a country.');
       return;
     }
@@ -133,7 +142,7 @@ export function ChallengeScreen() {
     setChallenge(null);
     try {
       await clearStoredChallengePlayerToken();
-      const player = await createChallengePlayer(name.trim(), language);
+      const player = await createChallengePlayer(effectiveName.trim(), language);
       await setStoredChallengePlayerToken(player.token);
       setPlayerToken(player.token);
       const c = await startCountryChallenge(country.code, player.token);
@@ -186,7 +195,7 @@ export function ChallengeScreen() {
         <Text style={styles.label}>Your name</Text>
         <TextInput
           style={styles.input}
-          value={name}
+          value={effectiveName}
           onChangeText={setName}
           placeholder="Your name"
           placeholderTextColor={colors.primary[500]}
@@ -206,7 +215,7 @@ export function ChallengeScreen() {
         <TouchableOpacity
           style={[styles.primaryButton, creating && styles.buttonDisabled]}
           onPress={handleStartChallenge}
-          disabled={creating || !name.trim() || !country}
+          disabled={creating || !effectiveName.trim() || !country}
           testID="countryChallenge.startChallenge"
           accessibilityLabel="Start challenge"
         >

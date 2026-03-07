@@ -60,6 +60,19 @@ location ^~ /country/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+# Join links (app + web fallback): use two regex locations so /join/.../web/ is SPA, the rest Django.
+# If you currently have "location ^~ /join/ { proxy_pass http://jizz; ... }", replace it with:
+location ~ ^/join/.+/web/?$ {
+    root /var/www/jizz/app/build;   # or your SPA build output
+    try_files $uri $uri/ /index.html;
+}
+location ~ ^/join/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
 ```
 
 Then keep your existing `location /` (SPA) and other blocks. Reload nginx: `sudo nginx -t && sudo systemctl reload nginx`.

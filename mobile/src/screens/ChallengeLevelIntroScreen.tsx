@@ -16,6 +16,7 @@ import {
   type CountryChallenge,
 } from '../api/challenge';
 import { colors } from '../theme';
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
 
 type ChallengeLevelIntroParams = {
   challengeId?: number;
@@ -153,12 +154,7 @@ export function ChallengeLevelIntroScreen() {
           <Text style={styles.jokersLabel}>Jokers this round:</Text>
           <View style={styles.jokersRow}>
             {Array.from({ length: level.challenge_level.jokers }).map((_, i) => (
-              <Text
-                key={i}
-                style={[styles.jokerHeart, styles.jokerHeartFull]}
-              >
-                ♥
-              </Text>
+              <FontAwesome5 key={i} name="heart" solid size={22} color={colors.primary[500]} />
             ))}
           </View>
           <TouchableOpacity

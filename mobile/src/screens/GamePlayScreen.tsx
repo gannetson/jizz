@@ -5,15 +5,13 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Image,
   ActivityIndicator,
   TextInput,
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Animated,
 } from 'react-native';
-import { Video, Audio } from 'expo-av';
+import { Audio } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
@@ -21,6 +19,7 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { AnswerFeedback } from '../components/AnswerFeedback';
 import { MediaCredits } from '../components/MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
+import { QuestionMediaView } from '../components/QuestionMediaView';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { apiUrl } from '../api/config';
@@ -54,7 +53,7 @@ export function GamePlayScreen() {
   const [mediaIndex, setMediaIndex] = useState<number>(0);
   const [flagModalVisible, setFlagModalVisible] = useState(false);
   const [flagMediaInfo, setFlagMediaInfo] = useState<FlagMediaInfo | null>(null);
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -95,8 +94,18 @@ export function GamePlayScreen() {
   }, [game?.ended, navigation, dailyChallengeId]);
 
   useEffect(() => {
-    if (question) setMediaIndex(question.sequence ?? 0);
+    if (question) setMediaIndex(question.number ?? 0);
   }, [question?.id]);
+
+  // Update header title with question progress: "Game - 1 of 10"
+  const totalQuestions = typeof game?.length === 'number' ? game.length : parseInt(String(game?.length ?? ''), 10) || 10;
+  const questionNum = question?.sequence ?? 0;
+  useEffect(() => {
+    const title = game && question && totalQuestions > 0
+      ? `Game - ${questionNum} of ${totalQuestions}`
+      : 'Game';
+    navigation.setOptions({ title });
+  }, [navigation, game, question, totalQuestions, questionNum]);
 
   // When playing daily challenge we skip lobby: join WebSocket and (if host) start game from here
   useEffect(() => {
@@ -146,7 +155,7 @@ export function GamePlayScreen() {
   }, [question?.id]);
 
   useEffect(() => {
-    setImageError(false);
+    setImageError(null);
   }, [question?.id, mediaIndex]);
 
   useEffect(() => {
@@ -206,7 +215,7 @@ export function GamePlayScreen() {
   };
 
   const imageUri = image?.url
-    ? (image.url.startsWith('http') ? image.url : apiUrl(image.url)).replace('/1800', '/900')
+    ? (image.url.startsWith('http') ? image.url : apiUrl(image.url))
     : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
 
@@ -252,6 +261,9 @@ export function GamePlayScreen() {
 
   const onFlagSuccess = () => {
     if (!question || !game) return;
+    setFlagModalVisible(false);
+    setFlagMediaInfo(null);
+    setImageError(null);
     let maxIndex = 0;
     if (mediaType === 'images' && question.images?.length) maxIndex = question.images.length - 1;
     else if (mediaType === 'video' && question.videos?.length) maxIndex = question.videos.length - 1;
@@ -315,85 +327,27 @@ export function GamePlayScreen() {
         />
       )}
 
-      <View style={styles.mediaWrap}>
-        {mediaType === 'images' && (
-          <>
-            {imageUri && !imageError ? (
-              <Image
-                source={{ uri: imageUri }}
-                style={styles.image}
-                resizeMode="contain"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <View style={styles.placeholder}>
-                <Text style={styles.placeholderText}>🖼</Text>
-                <Text style={styles.placeholderSubtext}>
-                  {currentMedia ? t('image_failed_to_load') : ''}
-                </Text>
-                {currentMedia && imageUri && __DEV__ && (
-                  <Text style={styles.placeholderDebug} numberOfLines={2}>
-                    {imageUri.length > 80 ? imageUri.slice(0, 80) + '…' : imageUri}
-                  </Text>
-                )}
-              </View>
-            )}
-            {currentMedia && (
-              <>
-                <View style={styles.creditsRow}>
-                  <MediaCredits media={image} />
-                  <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
-                    <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </>
-        )}
-        {mediaType === 'video' && videoUri && (
-          <>
-            <Video
-              source={{ uri: videoUri }}
-              style={styles.video}
-              useNativeControls
-              resizeMode="contain"
-              shouldPlay
-            />
-            <View style={styles.creditsRow}>
-              <MediaCredits media={video} />
-              <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
-                <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-        {mediaType === 'audio' && soundUri && (
-          <>
-            <Animated.View style={soundPlaying && pulsatingStyle}>
-              <TouchableOpacity
-                style={[styles.mediaLink, soundPlaying && styles.mediaLinkPlaying]}
-                onPress={playSound}
-              >
-                <Text style={[styles.mediaLinkText, soundPlaying && styles.mediaLinkTextPlaying]}>
-                  🔊 {t('play_sound')}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-            <View style={styles.creditsRow}>
-              <MediaCredits media={sound} />
-              <TouchableOpacity style={styles.flagLink} onPress={openFlagModal}>
-                <Text style={styles.flagLinkText}>🚩 {t('this_seems_wrong')}</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-        {showPlaceholder && !currentMedia && (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>🖼</Text>
-            <Text style={styles.placeholderSubtext}>{t('loading')}</Text>
-          </View>
-        )}
-      </View>
+      <QuestionMediaView
+        mediaType={mediaType as 'images' | 'video' | 'audio'}
+        imageUri={imageUri}
+        imageError={imageError}
+        onImageError={setImageError}
+        imageMedia={image && typeof image === 'object' ? image : undefined}
+        videoUri={videoUri}
+        videoMedia={video && typeof video === 'object' ? video : undefined}
+        soundUri={soundUri}
+        soundMedia={sound && typeof sound === 'object' ? sound : undefined}
+        onPlaySound={playSound}
+        soundPlaying={soundPlaying}
+        pulsatingStyle={pulsatingStyle}
+        onFlagPress={openFlagModal}
+        flagLabel={t('this_seems_wrong')}
+        showLoadingPlaceholder={!!(showPlaceholder && !currentMedia)}
+        loadingLabel={t('loading')}
+        imageFailedLabel={currentMedia ? t('image_failed_to_load') : ''}
+        playSoundLabel={`🔊 ${t('play_sound')}`}
+        containerStyle={styles.mediaWrap}
+      />
 
       <View style={styles.nextSection}>
         {done && answer ? (
@@ -437,7 +391,7 @@ export function GamePlayScreen() {
                 testID={i === 0 ? 'gamePlay.firstOption' : `gamePlay.option.${opt.id}`}
                 accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
-                <View style={styles.optionRow}>
+                <View style={styles.row}>
                   <Text style={[styles.optionText, styles.optionTextFlex]} numberOfLines={2}>
                     {speciesDisplayName(opt, lang)}
                   </Text>
@@ -682,6 +636,12 @@ const styles = StyleSheet.create({
   playerStatusIconWrong: { backgroundColor: colors.error[500] },
   playerStatusIconText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   playerScores: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   scoreTag: {
     paddingHorizontal: 8,
     paddingVertical: 4,

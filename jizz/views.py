@@ -1403,7 +1403,4 @@ class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):
         )
 
     def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        # Add game data to response
-        response.data["game"] = GameSerializer(response.data["game"]).data
-        return response
+        return super().create(request, *args, **kwargs)

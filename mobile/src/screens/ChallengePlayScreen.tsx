@@ -6,12 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Image,
   TextInput,
   FlatList,
-  Animated,
 } from 'react-native';
-import { Video, Audio, ResizeMode } from 'expo-av';
+import { Audio } from 'expo-av';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import {
   getChallengeQuestion,
@@ -31,6 +29,8 @@ import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { AnswerFeedback } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
+import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
+import { QuestionMediaView } from '../components/QuestionMediaView';
 import { useTranslation } from '../i18n/TranslationContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
@@ -71,6 +71,9 @@ export function ChallengePlayScreen() {
   const [restarting, setRestarting] = useState(false);
   const [nextLevelLoading, setNextLevelLoading] = useState(false);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
+  const [flagModalVisible, setFlagModalVisible] = useState(false);
+  const [flagMediaInfo, setFlagMediaInfo] = useState<FlagMediaInfo | null>(null);
+  const [challengePlayerToken, setChallengePlayerToken] = useState<string | undefined>(undefined);
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
   const [expertQuery, setExpertQuery] = useState('');
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -119,6 +122,13 @@ export function ChallengePlayScreen() {
   useEffect(() => {
     loadQuestion();
   }, [loadQuestion]);
+
+  useEffect(() => {
+    if (!gameToken) return;
+    getStoredChallengePlayerToken().then((token) => {
+      if (token) setChallengePlayerToken(token);
+    });
+  }, [gameToken]);
 
   /** Load level (jokers, progress) from challenge. Use cacheBust when we need fresh data (e.g. after new question). */
   const loadLevel = useCallback(async (cacheBust?: boolean) => {
@@ -197,12 +207,31 @@ export function ChallengePlayScreen() {
     if (!token) return;
     setNextLevelLoading(true);
     try {
+      alert("Go")
       await getNextChallengeLevel(challengeId, token);
-      navigation.goBack();
+      alert("Going")
+      const challenge = await loadCountryChallenge(token, { cacheBust: true });
+      alert("Okidoki")
+      const levels = challenge?.levels ?? [];
+      alert("levels")
+      const newLevel = levels.find(
+        (l) => l.game?.token !== gameToken && (l.game?.scores?.[0]?.answers?.length ?? 0) === 0
+      ) ?? levels[levels.length - 1];
+      alert("Level")
+      const newGameToken = newLevel?.game?.token;
+      alert('newGameToken')
+      if (newGameToken) {
+        (navigation as any).replace('ChallengeLevelIntro', {
+          challengeId,
+          gameToken: newGameToken,
+        });
+      } else {
+        navigation.goBack();
+      }
     } catch (_) {
       setNextLevelLoading(false);
     }
-  }, [challengeId, navigation]);
+  }, [challengeId, gameToken, navigation]);
 
   const pulsatingStyle = usePulsatingAnimation(soundPlaying);
   const lang = paramLanguage || 'en';
@@ -231,6 +260,47 @@ export function ChallengePlayScreen() {
       setSoundPlaying(true);
     } catch (_) {}
   }, [soundUri]);
+
+  const openFlagModal = useCallback(() => {
+    if (!question) return;
+    const idx = question.number ?? 0;
+    let mediaData: FlagMediaInfo | null = null;
+    if (mediaType === 'images' && question.images?.[idx]) {
+      const item = question.images[idx] as { id?: number; url: string; link?: string; contributor?: string };
+      mediaData = {
+        id: item.id ?? 0,
+        type: 'image',
+        url: item.url,
+        link: item.link,
+        contributor: item.contributor,
+        index: idx,
+      };
+    } else if (mediaType === 'video' && question.videos?.[idx]) {
+      const item = question.videos[idx] as { id?: number; url: string; link?: string; contributor?: string };
+      mediaData = {
+        id: item.id ?? 0,
+        type: 'video',
+        url: item.url,
+        link: item.link,
+        contributor: item.contributor,
+        index: idx,
+      };
+    } else if (mediaType === 'audio' && question.sounds?.[idx]) {
+      const item = question.sounds[idx] as { id?: number; url: string; link?: string; contributor?: string };
+      mediaData = {
+        id: item.id ?? 0,
+        type: 'audio',
+        url: item.url,
+        link: item.link,
+        contributor: item.contributor,
+        index: idx,
+      };
+    }
+    if (mediaData && mediaData.id) {
+      setFlagMediaInfo(mediaData);
+      setFlagModalVisible(true);
+    }
+  }, [question, mediaType]);
 
   const checkLevelEndAndNavigate = useCallback(async () => {
     const token = await getStoredChallengePlayerToken();
@@ -368,10 +438,10 @@ export function ChallengePlayScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="challengePlay.screen">
-      <Text style={styles.screenTitle}>{countryName} Challenge</Text>
+      <View style={styles.row}>
+      <Text style={styles.screenTitle}>{countryName}</Text>
       {level && level.challenge_level.jokers > 0 ? (
-        <View style={styles.jokersRow}>
-          <Text style={styles.jokersLabel}>{t('jokers_this_round')}</Text>
+        <View>
           <View style={styles.jokersHearts}>
             {Array.from({ length: level.challenge_level.jokers }).map((_, i) =>
               i < level.remaining_jokers ? (
@@ -383,6 +453,8 @@ export function ChallengePlayScreen() {
           </View>
         </View>
       ) : null}
+
+      </View>
       <View style={styles.mediaWrap}>
         {showFeedback && feedback !== null && (
           <AnswerFeedback
@@ -390,29 +462,22 @@ export function ChallengePlayScreen() {
             onAnimationComplete={() => setShowFeedback(false)}
           />
         )}
-        {mediaType === 'images' && imageUri && (
-          <Image source={{ uri: imageUri }} style={styles.mediaImage} resizeMode="contain" />
-        )}
-        {mediaType === 'video' && videoUri && (
-          <Video
-            source={{ uri: videoUri }}
-            style={styles.mediaVideo}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-          />
-        )}
-        {mediaType === 'audio' && soundUri && (
-          <Animated.View style={soundPlaying && pulsatingStyle}>
-            <TouchableOpacity
-              style={[styles.audioBtn, soundPlaying && styles.audioBtnPlaying]}
-              onPress={playSound}
-              testID="challengePlay.playSound"
-              accessibilityLabel="Play sound"
-            >
-              <Text style={[styles.audioBtnText, soundPlaying && styles.audioBtnTextPlaying]}>Play sound</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+        <QuestionMediaView
+          mediaType={mediaType}
+          imageUri={imageUri}
+          imageMedia={image}
+          videoUri={videoUri}
+          videoMedia={video}
+          soundUri={soundUri}
+          soundMedia={sound}
+          onPlaySound={playSound}
+          soundPlaying={soundPlaying}
+          pulsatingStyle={pulsatingStyle}
+          onFlagPress={openFlagModal}
+          flagLabel={t('this_seems_wrong')}
+          playSoundLabel={`🔊 ${t('play_sound')}`}
+          containerStyle={styles.challengeMediaWrap}
+        />
       </View>
 
       {answerResult !== null ? (
@@ -579,7 +644,7 @@ export function ChallengePlayScreen() {
                   : result === 'open' || result === 'incorrect'
                     ? colors.primary[300]
                     : colors.primary[600];
-                const size = 26;
+                const size = 20;
                 return (
                   <View key={i} style={isCurrent ? styles.progressIconCurrentWrap : undefined}>
                     {result === 'open' && (
@@ -608,6 +673,12 @@ export function ChallengePlayScreen() {
         language={lang}
         playerToken={undefined}
       />
+      <FlagMediaModal
+        visible={flagModalVisible}
+        onClose={() => { setFlagModalVisible(false); setFlagMediaInfo(null); }}
+        media={flagMediaInfo}
+        playerToken={challengePlayerToken}
+      />
     </ScrollView>
   );
 }
@@ -620,15 +691,20 @@ const styles = StyleSheet.create({
   link: { fontSize: 16, color: colors.primary[500], fontWeight: '600', marginTop: 12 },
   backLink: { marginTop: 16 },
   mediaWrap: { marginBottom: 16 },
+  challengeMediaWrap: { marginBottom: 16 },
   mediaImage: { width: '100%', height: 240, borderRadius: 8 },
   mediaVideo: { width: '100%', height: 240, borderRadius: 8 },
-  nextSection: { marginTop: 16, marginBottom: 8 },
+  nextSection: { marginTop: 0, marginBottom: 12 },
   levelFailedText: { fontSize: 18, fontWeight: '600', color: colors.primary[800], marginBottom: 12 },
   levelCompleteTitle: { fontSize: 20, fontWeight: '700', color: colors.primary[800], marginBottom: 8 },
   levelCompleteDescription: { fontSize: 15, color: colors.primary[700], marginBottom: 16 },
   jokersRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  jokersLabel: { fontSize: 15, color: colors.primary[700], marginRight: 10 },
-  jokersHearts: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  row: {     flexDirection: 'row',
+    width: '100%',
+    alignItems: 'top',
+    justifyContent: 'space-between',
+  },
+  jokersHearts: { flexDirection: 'row', alignItems: 'right', gap: 6 },
   primaryButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 16,
@@ -648,13 +724,13 @@ const styles = StyleSheet.create({
   audioBtnPlaying: { backgroundColor: colors.primary[500] },
   audioBtnText: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
   audioBtnTextPlaying: { color: colors.primary[50] },
-  optionsSection: { marginTop: 24, gap: 12 },
+  optionsSection: { marginTop: 12, gap: 12 },
   optionButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   optionButtonDisabled: { opacity: 0.7 },
   optionButtonText: { fontSize: 16, fontWeight: '600', color: colors.primary[50] },

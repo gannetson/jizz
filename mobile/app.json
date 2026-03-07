@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Birdr",
-    "slug": "birdr-mobile",
+    "slug": "birdr",
+    "scheme": "birdr",
     "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "birdr",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "splash": {
@@ -43,6 +43,7 @@
       ]
     },
     "plugins": [
+      "expo-dev-client",
       "expo-asset",
       [
         "expo-image-picker",

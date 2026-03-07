@@ -3,22 +3,17 @@ pluginManagement {
 }
 plugins { id("com.facebook.react.settings") }
 
+// Android build requires Node 18+ (React Native CLI and Expo autolinking use modern JS).
+// Run from terminal: nvm use 22 && npx expo run:android   OR   ./scripts/run-android.sh
+def nodeVersionOut = ["node", "--version"].execute((String[])null, rootDir).text.trim()
+def nodeMajorMatcher = (nodeVersionOut =~ /v?(\d+)/)
+def nodeMajor = nodeMajorMatcher.find() ? nodeMajorMatcher.group(1).toInteger() : 0
+if (nodeMajor > 0 && nodeMajor < 18) {
+  throw new GradleException("Android build requires Node 18+. Current: " + nodeVersionOut + ".\n\nRun: ./scripts/run-android.sh   or   nvm use 22 && npx expo run:android")
+}
+
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
-    ex.autolinkLibrariesFromCommand()
-  } else {
-    def command = [
-      'node',
-      '--no-warnings',
-      '--eval',
-      'require(require.resolve(\'expo-modules-autolinking\', { paths: [require.resolve(\'expo/package.json\')] }))(process.argv.slice(1))',
-      'react-native-config',
-      '--json',
-      '--platform',
-      'android'
-    ].toList()
-    ex.autolinkLibrariesFromCommand(command)
-  }
+  ex.autolinkLibrariesFromCommand()
 }
 
 rootProject.name = 'Birdr'
@@ -26,7 +21,7 @@ rootProject.name = 'Birdr'
 dependencyResolutionManagement {
   versionCatalogs {
     reactAndroidLibs {
-      from(files(new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), "../gradle/libs.versions.toml")))
+      from(files(file("gradle/libs.versions.toml")))
     }
   }
 }

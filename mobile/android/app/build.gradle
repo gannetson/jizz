@@ -19,9 +19,6 @@ react {
     cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
     bundleCommand = "export:embed"
 
-    // Embed the JS bundle in debug builds so the app runs without Metro ("Unable to load script" fix).
-    debuggableVariants = []
-
     /* Folders */
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
@@ -94,9 +91,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "Tundra Bean Goose"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionCode 19
+        versionName "1.2.0"
     }
     signingConfigs {
         debug {
@@ -105,19 +101,15 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            storeFile file('upload-keystore.jks')
-            storePassword '35vliegensvlug'
-            keyAlias 'upload'
-            keyPassword '35vliegensvlug'
-        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.release
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
@@ -181,10 +173,4 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-
-    androidTestImplementation "androidx.test:core:1.5.0"
-    androidTestImplementation "androidx.test:rules:1.5.0"
-    androidTestImplementation "androidx.test:runner:1.5.2"
-    androidTestImplementation "androidx.test.ext:junit:1.1.5"
-    androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
 }

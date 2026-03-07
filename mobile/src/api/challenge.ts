@@ -190,8 +190,12 @@ export async function getNextChallengeLevel(
     method: 'POST',
     headers: playerAuthHeaders(playerToken),
   });
-  const data = await response.json().catch(() => ({}));
+  const data = await response.json().catch((e) => {
+  });
+
   if (!response.ok) {
+    alert(response.ok)
+    alert("Oepsie")
     const msg = data.detail ?? data.error ?? data.message ?? 'Failed to get next level';
     throw new Error(typeof msg === 'string' ? msg : 'Failed to get next level');
   }

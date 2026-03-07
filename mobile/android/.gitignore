@@ -12,11 +12,5 @@ local.properties
 *.hprof
 .cxx/
 
-# Signing - do not commit
-app/debug.keystore
-debug.keystore
-*.jks
-*.keystore
-
 # Bundle artifacts
 *.jsbundle

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Open in Birdr</title>
+  <style>
+    body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; max-width: 360px; margin: 0 auto; }
+    a { color: #2d7d46; }
+    .fallback { margin-top: 1.5rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <p>Opening Birdr…</p>
+  <p class="fallback">App not installed? <a href="{{ fallback_url }}" id="web-link">Continue in browser</a></p>
+  <script>
+    var d = '{{ deep_link|escapejs }}';
+    var fallback = '{{ fallback_url|escapejs }}';
+    window.location.href = d;
+    setTimeout(function() { window.location.href = fallback; }, 2500);
+  </script>
+</body>
+</html>

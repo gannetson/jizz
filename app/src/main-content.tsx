@@ -70,7 +70,9 @@ export const MainContent = () => {
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>
             <Route path="/join/challenge/:inviteToken" element={<JoinChallengePage />} />
+            <Route path="/join/challenge/:inviteToken/web" element={<JoinChallengePage />} />
             <Route path="/join/:gameCode" element={<JoinPage/>}/>
+            <Route path='/join/:gameCode/web' element={<JoinPage/>}/>
             <Route path='/about/' element={<AboutPage/>}/>
             <Route path='/privacy/' element={<PrivacyPage/>}/>
             <Route path='/challenge/' element={<ChallengePage />}/>

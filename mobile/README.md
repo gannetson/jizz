@@ -14,7 +14,7 @@ npm install
 ## Run
 
 - **Development:** `npm start` then press `i` for iOS or `a` for Android in the terminal, or scan the QR code with Expo Go.
-- **Android:** `npm run android` (generates native project if needed).
+- **Android:** `npm run android` (generates native project if needed). **Requires Node 18+ on PATH** (Gradle uses it for autolinking). If your default `node` is older, run `nvm use 22` first, or use `./scripts/run-android.sh`.
 - **iOS:** `npm run ios` (requires Mac and Xcode).
 
 ### iOS device (iPad / iPhone)

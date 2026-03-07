@@ -55,13 +55,14 @@ export default function AppNavigator() {
     <>
       <Stack.Navigator
         screenOptions={{
-          header: ({ route }) => (
+          header: ({ route, options }) => (
             <AppHeader
               routeName={route.name}
               title={
-                route.name === 'Home'
+                options.title ??
+                (route.name === 'Home'
                   ? 'Birdr'
-                  : SCREENS.find((s) => s.name === route.name)?.title ?? route.name
+                  : SCREENS.find((s) => s.name === route.name)?.title ?? route.name)
               }
             />
           ),

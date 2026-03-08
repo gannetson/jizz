@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
@@ -26,7 +27,7 @@ export function AppHeader({ title, routeName }: AppHeaderProps) {
 
   const renderUserIcon = () => {
     if (!isAuthenticated) {
-      return <Text style={styles.icon}>👤</Text>;
+      return <FontAwesome5 name="user" solid={false} size={20} color={colors.primary[800]} />;
     }
     if (avatarUrl) {
       return (
@@ -50,7 +51,7 @@ export function AppHeader({ title, routeName }: AppHeaderProps) {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityLabel="Open menu"
       >
-        <Text style={styles.icon}>☰</Text>
+        <FontAwesome5 name="bars" solid={false} size={20} color={colors.primary[800]} />
       </TouchableOpacity>
       <View style={styles.center}>
         <Text style={styles.title} numberOfLines={1}>

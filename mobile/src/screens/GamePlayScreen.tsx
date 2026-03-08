@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,14 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
-  Modal,
-  FlatList,
-  Pressable,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { AutocompleteDropdown } from 'react-native-autocomplete-dropdown';
+import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -52,15 +50,14 @@ export function GamePlayScreen() {
   const [dailyChallengeLoadTimeout, setDailyChallengeLoadTimeout] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
-  const [expertQuery, setExpertQuery] = useState('');
   const [mediaIndex, setMediaIndex] = useState<number>(0);
   const [flagModalVisible, setFlagModalVisible] = useState(false);
   const [flagMediaInfo, setFlagMediaInfo] = useState<FlagMediaInfo | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
-  const [expertSuggestionsVisible, setExpertSuggestionsVisible] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const expertDropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
   const [soundPlaying, setSoundPlaying] = useState(false);
 
   const pulsatingStyle = usePulsatingAnimation(soundPlaying);
@@ -161,8 +158,8 @@ export function GamePlayScreen() {
   }, [question?.id]);
 
   useEffect(() => {
-    setExpertQuery('');
     setSubmittingId(null);
+    expertDropdownRef.current?.clear();
   }, [question?.id]);
 
   useEffect(() => {
@@ -287,11 +284,14 @@ export function GamePlayScreen() {
   const hasOptions = !!(question?.options && question.options.length > 0);
   const showExpertInput = isExpert && !hasOptions;
 
-  const filteredExpertSpecies = expertQuery.trim()
-    ? expertSpecies.filter((s) =>
-        speciesDisplayName(s, lang).toLowerCase().includes(expertQuery.trim().toLowerCase())
-      ).slice(0, 80)
-    : expertSpecies.slice(0, 30);
+  const expertDropdownDataSet = useMemo(
+    () =>
+      expertSpecies.map((s) => ({
+        id: String(s.id),
+        title: speciesDisplayName(s, lang),
+      })),
+    [expertSpecies, lang]
+  );
 
   const currentMedia = image || video || sound;
   const showPlaceholder = (mediaType === 'images' && (!imageUri || imageError)) ||
@@ -437,18 +437,38 @@ export function GamePlayScreen() {
             style={styles.expertInputWrap}
           >
             <Text style={styles.label}>{t('start_typing_answer')}</Text>
-            <TextInput
-              style={styles.expertInput}
-              value={expertQuery}
-              onChangeText={setExpertQuery}
-              onFocus={() => setExpertSuggestionsVisible(true)}
-              placeholder={t('species_name_placeholder')}
-              placeholderTextColor={colors.primary[500]}
-              autoCapitalize="none"
-              autoCorrect={false}
+            <AutocompleteDropdown
+              controller={expertDropdownRef}
+              dataSet={expertDropdownDataSet}
+              onSelectItem={(item) => {
+                if (item) {
+                  const species = expertSpecies.find((s) => String(s.id) === item.id);
+                  if (species) {
+                    handleAnswer(species);
+                    expertDropdownRef.current?.clear();
+                  }
+                }
+              }}
+              loading={expertSpecies.length === 0}
+              minChars={2}
+              useFilter
               editable={!answer && submittingId === null}
-              testID="gamePlay.expertInput"
-              accessibilityLabel="Species name"
+              closeOnSubmit
+              clearOnFocus={false}
+              showClear
+              emptyResultText={t('type_to_search')}
+              suggestionsListMaxHeight={320}
+              textInputProps={{
+                placeholder: t('species_name_placeholder'),
+                placeholderTextColor: colors.primary[500],
+                testID: 'gamePlay.expertInput',
+                accessibilityLabel: 'Species name',
+                autoCapitalize: 'none',
+                autoCorrect: false,
+              }}
+              containerStyle={styles.expertDropdownContainer}
+              inputContainerStyle={styles.expertInput}
+              suggestionsListTextStyle={styles.expertItemText}
             />
             {submittingId !== null && (
               <View style={styles.expertSubmitting}>
@@ -456,56 +476,6 @@ export function GamePlayScreen() {
                 <Text style={styles.expertSubmittingText}>{t('submitting') || 'Submitting...'}</Text>
               </View>
             )}
-            <Modal
-              visible={expertSuggestionsVisible && !answer && submittingId === null}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setExpertSuggestionsVisible(false)}
-            >
-              <Pressable style={styles.expertSuggestionsBackdrop} onPress={() => setExpertSuggestionsVisible(false)}>
-                <View style={styles.expertSuggestionsCard}>
-                  <Pressable onPress={(e) => e.stopPropagation()}>
-                    <View style={styles.expertSuggestionsHeader}>
-                      <Text style={styles.expertSuggestionsTitle}>{t('type_to_search')}</Text>
-                      <TouchableOpacity
-                        hitSlop={12}
-                        onPress={() => setExpertSuggestionsVisible(false)}
-                        style={styles.expertSuggestionsClose}
-                      >
-                        <Text style={styles.expertSuggestionsCloseText}>✕</Text>
-                      </TouchableOpacity>
-                    </View>
-                    {expertSpecies.length === 0 ? (
-                      <Text style={styles.expertSuggestionsHint}>{t('loading_species')}</Text>
-                    ) : filteredExpertSpecies.length === 0 ? (
-                      <Text style={styles.expertSuggestionsHint}>{t('type_to_search')}</Text>
-                    ) : null}
-                    <FlatList
-                      data={filteredExpertSpecies}
-                      keyExtractor={(s) => String(s.id)}
-                      keyboardShouldPersistTaps="handled"
-                      style={styles.expertSuggestionsList}
-                      renderItem={({ item }) => (
-                        <TouchableOpacity
-                          style={styles.expertItem}
-                          onPress={() => {
-                            handleAnswer(item);
-                            setExpertQuery('');
-                            setExpertSuggestionsVisible(false);
-                          }}
-                          testID={`gamePlay.expertOption.${item.id}`}
-                          accessibilityLabel={speciesDisplayName(item, lang)}
-                        >
-                          <Text style={styles.expertItemText} numberOfLines={1}>
-                            {speciesDisplayName(item, lang)}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    />
-                  </Pressable>
-                </View>
-              </Pressable>
-            </Modal>
           </KeyboardAvoidingView>
         )
       ) : (
@@ -615,6 +585,7 @@ const styles = StyleSheet.create({
   flagLinkText: { fontSize: 13, color: colors.error[500] },
   label: { fontSize: 14, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },
   expertInputWrap: { marginBottom: 0 },
+  expertDropdownContainer: { marginBottom: 8 },
   expertInput: {
     borderWidth: 1,
     borderColor: colors.primary[300],

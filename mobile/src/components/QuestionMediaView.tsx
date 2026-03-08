@@ -77,6 +77,18 @@ export function QuestionMediaView({
     (mediaType === 'video' && videoUri) ||
     (mediaType === 'audio' && soundUri);
 
+    function wikimediaMp4(url: string, quality = "480p") {
+      // iOS doesn't support webm, ogv, ogg video; use Wikimedia transcoded mov
+      const match = url.match(/.*commons\/(.+\/.+\/.+\.(webm|ogv|ogg))$/i)
+      if (!match) return url
+
+      const path = match[1]
+      const filename = path.split("/").pop()
+      return`https://upload.wikimedia.org/wikipedia/commons/transcoded/${path}/${filename}.144p.mjpeg.mov`
+    }
+    
+    videoUri = Platform.OS === "ios" && videoUri? wikimediaMp4(videoUri) : videoUri
+
   // Configure audio session for video playback on iOS so video has sound and native controls work
   React.useEffect(() => {
     if (mediaType !== 'video' || !videoUri) return;
@@ -145,7 +157,9 @@ export function QuestionMediaView({
             style={[styles.video, videoHeight != null && { height: videoHeight }]}
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
-            shouldPlay={Platform.OS !== 'ios'}
+            shouldPlay
+            onError={(e)=>alert("oeps")}
+            isLooping={false}
           />
           {renderCreditsRow()}
         </>

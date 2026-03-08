@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
+import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
 import { MenuProvider } from './src/context/MenuContext';
 import { GameProvider } from './src/context/GameContext';
 import { GameWebSocketProvider } from './src/context/GameWebSocketContext';
@@ -30,6 +31,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <NavigationContainer>
+        <AutocompleteDropdownContextProvider>
         <AuthProvider>
           <ProfileProvider>
             <TranslationProvider>
@@ -45,6 +47,7 @@ export default function App() {
             </TranslationProvider>
           </ProfileProvider>
         </AuthProvider>
+        </AutocompleteDropdownContextProvider>
       </NavigationContainer>
     </SafeAreaProvider>
   );

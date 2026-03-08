@@ -29,17 +29,18 @@ export function GameResultsScreen() {
     player?.id === (game?.host as { id?: number })?.id;
 
   const handlePlayAgain = async () => {
+    // Replace so Results unmounts before we clear state (avoids "fewer hooks" re-render)
+    (navigation as any).replace('Start');
     await clearGame();
-    (navigation as any).navigate('Start');
   };
 
   const handleBackToDailyChallenge = async () => {
-    await clearGame();
     if (dailyChallengeId != null) {
-      (navigation as any).navigate('DailyChallengeDetail', { challengeId: dailyChallengeId });
+      (navigation as any).replace('DailyChallengeDetail', { challengeId: dailyChallengeId });
     } else {
-      (navigation as any).navigate('Start');
+      (navigation as any).replace('Start');
     }
+    await clearGame();
   };
 
   const handleRematch = () => {
@@ -48,7 +49,7 @@ export function GameResultsScreen() {
     sendRematch();
   };
 
-  // When host receives rematch_invitation: close socket, clear state, load new game, navigate to Lobby
+  // When host receives rematch_invitation: close socket, clear state, load new game, replace to Lobby
   useEffect(() => {
     if (!rematchInvitation || !isHost || !player) return;
     const token = rematchInvitation.new_game_token;
@@ -59,7 +60,10 @@ export function GameResultsScreen() {
       await clearGame();
       const g = await loadGame(token);
       setIsRematchLoading(false);
-      if (g) (navigation as any).navigate('Lobby');
+      if (g) {
+        setGame(g);
+        (navigation as any).replace('Lobby');
+      }
     };
     doJoin();
   }, [rematchInvitation?.new_game_token, isHost, player]);
@@ -71,7 +75,10 @@ export function GameResultsScreen() {
     await clearGame();
     const g = await loadGame(rematchInvitation.new_game_token);
     clearRematchInvitation();
-    if (g) (navigation as any).navigate('Lobby');
+    if (g) {
+      setGame(g);
+      (navigation as any).replace('Lobby');
+    }
   };
 
   const sortedPlayers = [...(players || [])].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));

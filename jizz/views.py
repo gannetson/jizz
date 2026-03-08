@@ -4,7 +4,7 @@ from django.db.models import Case, When, Value, Prefetch, F, Q
 from django.db.models.aggregates import Count, Min
 from django.db.models.functions import RowNumber
 from django.db.models.expressions import Window
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.views.generic import DetailView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
@@ -837,6 +837,8 @@ class OAuthCompleteView(APIView):
             query_params['error'] = ['authentication_failed']
             new_query = urlencode(query_params, doseq=True)
             new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+            if parsed.scheme and parsed.scheme not in ('http', 'https'):
+                return HttpResponse(status=302, headers={'Location': new_url})
             return redirect(new_url)
         
         # If OAuth was successful, the user should now be authenticated
@@ -1008,7 +1010,10 @@ class OAuthCompleteView(APIView):
             query_params['refresh_token'] = [refresh_token]
             new_query = urlencode(query_params, doseq=True)
             new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
-            
+
+            # Django's redirect() disallows non-http(s) schemes; use 302 + Location for app deep link (e.g. birdr://)
+            if parsed.scheme and parsed.scheme not in ('http', 'https'):
+                return HttpResponse(status=302, headers={'Location': new_url})
             return redirect(new_url)
         
         # If authentication failed, redirect with error
@@ -1018,6 +1023,9 @@ class OAuthCompleteView(APIView):
         new_query = urlencode(query_params, doseq=True)
         new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
         
+        # Django's redirect() disallows non-http(s) schemes; use 302 + Location for app deep link (e.g. birdr://)
+        if parsed.scheme and parsed.scheme not in ('http', 'https'):
+            return HttpResponse(status=302, headers={'Location': new_url})
         return redirect(new_url)
 
 

@@ -7,8 +7,9 @@ import {
   Image,
   ViewStyle,
   Animated,
+  Platform,
 } from 'react-native';
-import { Video } from 'expo-av';
+import { Video, Audio, ResizeMode } from 'expo-av';
 import { MediaCredits } from './MediaCredits';
 import { colors } from '../theme';
 
@@ -42,6 +43,10 @@ export type QuestionMediaViewProps = {
   playSoundLabel?: string;
   /** Optional container style override */
   containerStyle?: ViewStyle;
+  /** Optional fixed height for image (e.g. for tablet layout) */
+  imageHeight?: number;
+  /** Optional fixed height for video (e.g. for tablet layout) */
+  videoHeight?: number;
 };
 
 export function QuestionMediaView({
@@ -64,11 +69,25 @@ export function QuestionMediaView({
   imageFailedLabel = '',
   playSoundLabel = '🔊 Play sound',
   containerStyle,
+  imageHeight,
+  videoHeight,
 }: QuestionMediaViewProps) {
   const hasMedia =
     (mediaType === 'images' && (imageUri || imageError !== undefined)) ||
     (mediaType === 'video' && videoUri) ||
     (mediaType === 'audio' && soundUri);
+
+  // Configure audio session for video playback on iOS so video has sound and native controls work
+  React.useEffect(() => {
+    if (mediaType !== 'video' || !videoUri) return;
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: false,
+      allowsRecordingIOS: false,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    }).catch(() => {});
+  }, [mediaType, videoUri]);
 
   const creditsMedia =
     mediaType === 'images' ? imageMedia : mediaType === 'video' ? videoMedia : soundMedia;
@@ -90,7 +109,7 @@ export function QuestionMediaView({
         <>
           {imageUri && !imageError ? (
             <Image
-              style={styles.image}
+              style={[styles.image, imageHeight != null && { height: imageHeight }]}
               resizeMode="contain"
               source={{
                 uri: imageUri,
@@ -107,7 +126,7 @@ export function QuestionMediaView({
               }}
             />
           ) : imageError !== undefined || (imageUri && imageError) ? (
-            <View style={styles.placeholder}>
+            <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
               <Text style={styles.placeholderText}>🖼</Text>
               <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
               {imageError ? (
@@ -123,10 +142,10 @@ export function QuestionMediaView({
         <>
           <Video
             source={{ uri: videoUri }}
-            style={styles.video}
+            style={[styles.video, videoHeight != null && { height: videoHeight }]}
             useNativeControls
-            resizeMode="contain"
-            shouldPlay
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={Platform.OS !== 'ios'}
           />
           {renderCreditsRow()}
         </>
@@ -164,7 +183,7 @@ export function QuestionMediaView({
       )}
 
       {showLoadingPlaceholder && !hasMedia && (
-        <View style={styles.placeholder}>
+        <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
           <Text style={styles.placeholderText}>🖼</Text>
           <Text style={styles.placeholderSubtext}>{loadingLabel}</Text>
         </View>

@@ -7,9 +7,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   TextInput,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  Modal,
+  FlatList,
+  Pressable,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -56,11 +59,19 @@ export function GamePlayScreen() {
   const [imageError, setImageError] = useState<string | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
+  const [expertSuggestionsVisible, setExpertSuggestionsVisible] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const [soundPlaying, setSoundPlaying] = useState(false);
 
   const pulsatingStyle = usePulsatingAnimation(soundPlaying);
   const lang = game?.language || (player as any)?.language;
+
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isWide = screenWidth >= 600;
+  const maxMediaHeight = isWide ? Math.round(screenHeight * 0.5) : undefined;
+  const mediaHeight = maxMediaHeight;
+  const videoHeight = maxMediaHeight;
+  const optionWidth = isWide ? (screenWidth - 24 * 2 - 12) / 2 : undefined;
 
   // When coming from daily challenge with gameToken/playerToken in params, ensure we have game and player (context may not have updated yet)
   const dailyLoadCancelled = useRef(false);
@@ -279,8 +290,8 @@ export function GamePlayScreen() {
   const filteredExpertSpecies = expertQuery.trim()
     ? expertSpecies.filter((s) =>
         speciesDisplayName(s, lang).toLowerCase().includes(expertQuery.trim().toLowerCase())
-      )
-    : expertSpecies.slice(0, 50);
+      ).slice(0, 80)
+    : expertSpecies.slice(0, 30);
 
   const currentMedia = image || video || sound;
   const showPlaceholder = (mediaType === 'images' && (!imageUri || imageError)) ||
@@ -346,7 +357,9 @@ export function GamePlayScreen() {
         loadingLabel={t('loading')}
         imageFailedLabel={currentMedia ? t('image_failed_to_load') : ''}
         playSoundLabel={`🔊 ${t('play_sound')}`}
-        containerStyle={styles.mediaWrap}
+        containerStyle={StyleSheet.flatten(isWide ? [styles.mediaWrap, { minHeight: Math.round(screenHeight * 0.5) }] : styles.mediaWrap)}
+        imageHeight={mediaHeight}
+        videoHeight={videoHeight}
       />
 
       <View style={styles.nextSection}>
@@ -362,32 +375,23 @@ export function GamePlayScreen() {
       </View>
 
       {hasOptions ? (
-        <View style={styles.options}>
+        <View style={[styles.options, isWide && styles.optionsWide]}>
           {question.options!.map((opt, i) => {
             const isChosen = answer?.answer?.id === opt.id;
             const isCorrect = answer?.species?.id === opt.id;
             const isWrong = answer && !answer.correct && answer.answer?.id === opt.id;
-            if (answer) {
-              const variant = isCorrect ? 'correct' : isWrong || isChosen ? 'wrong' : 'revealed';
-              const icon = isCorrect ? 'correct' : isWrong || isChosen ? 'wrong' : undefined;
-              return (
-                <SpeciesViewButton
-                  key={i}
-                  label={speciesDisplayName(opt, lang)}
-                  onPress={() => setMediaSpecies(opt as SpeciesMediaData)}
-                  variant={variant}
-                  icon={icon}
-                />
-              );
-            }
-            const isSubmitting = submittingId === opt.id;
-            const isDisabled = submittingId !== null;
-            return (
-                <TouchableOpacity
-                key={i}
-                style={[styles.optionButton, isDisabled && !isSubmitting && styles.optionDisabled]}
+            const optionContent = answer ? (
+              <SpeciesViewButton
+                label={speciesDisplayName(opt, lang)}
+                onPress={() => setMediaSpecies(opt as SpeciesMediaData)}
+                variant={isCorrect ? 'correct' : isWrong || isChosen ? 'wrong' : 'revealed'}
+                icon={isCorrect ? 'correct' : isWrong || isChosen ? 'wrong' : undefined}
+              />
+            ) : (
+              <TouchableOpacity
+                style={[styles.optionButton, submittingId !== null && !(submittingId === opt.id) && styles.optionDisabled]}
                 onPress={() => handleAnswer(opt)}
-                disabled={isDisabled}
+                disabled={submittingId !== null}
                 testID={i === 0 ? 'gamePlay.firstOption' : `gamePlay.option.${opt.id}`}
                 accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
@@ -395,10 +399,18 @@ export function GamePlayScreen() {
                   <Text style={[styles.optionText, styles.optionTextFlex]} numberOfLines={2}>
                     {speciesDisplayName(opt, lang)}
                   </Text>
-                  {isSubmitting && <ActivityIndicator size="small" color="#fff" />}
+                  {submittingId === opt.id && <ActivityIndicator size="small" color="#fff" />}
                 </View>
               </TouchableOpacity>
             );
+            if (isWide && optionWidth != null) {
+              return (
+                <View key={i} style={[styles.optionButtonWrapper, { width: optionWidth }]}>
+                  {optionContent}
+                </View>
+              );
+            }
+            return <React.Fragment key={i}>{optionContent}</React.Fragment>;
           })}
         </View>
       ) : showExpertInput ? (
@@ -420,17 +432,23 @@ export function GamePlayScreen() {
             )}
           </View>
         ) : (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.expertInputWrap}
+          >
             <Text style={styles.label}>{t('start_typing_answer')}</Text>
             <TextInput
               style={styles.expertInput}
               value={expertQuery}
               onChangeText={setExpertQuery}
+              onFocus={() => setExpertSuggestionsVisible(true)}
               placeholder={t('species_name_placeholder')}
               placeholderTextColor={colors.primary[500]}
               autoCapitalize="none"
               autoCorrect={false}
               editable={!answer && submittingId === null}
+              testID="gamePlay.expertInput"
+              accessibilityLabel="Species name"
             />
             {submittingId !== null && (
               <View style={styles.expertSubmitting}>
@@ -438,41 +456,63 @@ export function GamePlayScreen() {
                 <Text style={styles.expertSubmittingText}>{t('submitting') || 'Submitting...'}</Text>
               </View>
             )}
-            <View style={styles.expertListWrap}>
-              <FlatList
-                data={submittingId !== null ? [] : filteredExpertSpecies}
-                keyExtractor={(s) => String(s.id)}
-                keyboardShouldPersistTaps="handled"
-                style={styles.expertList}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.expertItem}
-                    onPress={() => {
-                      handleAnswer(item);
-                      setExpertQuery('');
-                    }}
-                  >
-                    <Text style={styles.expertItemText} numberOfLines={1}>
-                      {speciesDisplayName(item, lang)}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  expertSpecies.length === 0 ? (
-                    <Text style={styles.muted}>{t('loading_species')}</Text>
-                  ) : (
-                    <Text style={styles.muted}>{t('type_to_search')}</Text>
-                  )
-                }
-              />
-            </View>
+            <Modal
+              visible={expertSuggestionsVisible && !answer && submittingId === null}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setExpertSuggestionsVisible(false)}
+            >
+              <Pressable style={styles.expertSuggestionsBackdrop} onPress={() => setExpertSuggestionsVisible(false)}>
+                <View style={styles.expertSuggestionsCard}>
+                  <Pressable onPress={(e) => e.stopPropagation()}>
+                    <View style={styles.expertSuggestionsHeader}>
+                      <Text style={styles.expertSuggestionsTitle}>{t('type_to_search')}</Text>
+                      <TouchableOpacity
+                        hitSlop={12}
+                        onPress={() => setExpertSuggestionsVisible(false)}
+                        style={styles.expertSuggestionsClose}
+                      >
+                        <Text style={styles.expertSuggestionsCloseText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {expertSpecies.length === 0 ? (
+                      <Text style={styles.expertSuggestionsHint}>{t('loading_species')}</Text>
+                    ) : filteredExpertSpecies.length === 0 ? (
+                      <Text style={styles.expertSuggestionsHint}>{t('type_to_search')}</Text>
+                    ) : null}
+                    <FlatList
+                      data={filteredExpertSpecies}
+                      keyExtractor={(s) => String(s.id)}
+                      keyboardShouldPersistTaps="handled"
+                      style={styles.expertSuggestionsList}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.expertItem}
+                          onPress={() => {
+                            handleAnswer(item);
+                            setExpertQuery('');
+                            setExpertSuggestionsVisible(false);
+                          }}
+                          testID={`gamePlay.expertOption.${item.id}`}
+                          accessibilityLabel={speciesDisplayName(item, lang)}
+                        >
+                          <Text style={styles.expertItemText} numberOfLines={1}>
+                            {speciesDisplayName(item, lang)}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  </Pressable>
+                </View>
+              </Pressable>
+            </Modal>
           </KeyboardAvoidingView>
         )
       ) : (
         <Text style={styles.muted}>Free answer not implemented.</Text>
       )}
 
-      {answer && players.length > 0 && (
+      {players.length > 0 && (
         <View style={styles.playersSection}>
           <Text style={styles.sectionTitle}>{t('scores')}</Text>
           {players.map((p, i) => (
@@ -497,9 +537,9 @@ export function GamePlayScreen() {
                 {p.is_host ? <Text style={styles.crown}>👑</Text> : null}
               </View>
               <View style={styles.playerScores}>
-                {p.ranking != null && (
+                {!!p.last_answer?.score && (
                   <View style={styles.scoreTag}>
-                    <Text style={styles.scoreTagText}>#{p.ranking} {t('high_score')}</Text>
+                    <Text style={styles.scoreTagText}>{'+'}{p.last_answer?.score}</Text>
                   </View>
                 )}
                 <View style={styles.scoreTotal}>
@@ -574,6 +614,7 @@ const styles = StyleSheet.create({
   flagLink: { marginTop: 8 },
   flagLinkText: { fontSize: 13, color: colors.error[500] },
   label: { fontSize: 14, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },
+  expertInputWrap: { marginBottom: 0 },
   expertInput: {
     borderWidth: 1,
     borderColor: colors.primary[300],
@@ -583,13 +624,47 @@ const styles = StyleSheet.create({
     color: colors.primary[800],
     marginBottom: 8,
   },
-  expertListWrap: { maxHeight: 240, marginBottom: 16 },
-  expertList: { flexGrow: 0 },
+  expertListWrap: { marginBottom: 16 },
+  expertSuggestionsBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  expertSuggestionsCard: {
+    maxHeight: '60%',
+    minHeight: 200,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  expertSuggestionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  expertSuggestionsTitle: { fontSize: 14, fontWeight: '600', color: colors.primary[700] },
+  expertSuggestionsClose: { padding: 4 },
+  expertSuggestionsCloseText: { fontSize: 18, color: colors.primary[500] },
+  expertSuggestionsHint: {
+    fontSize: 14,
+    color: colors.primary[500],
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  expertSuggestionsList: { maxHeight: 320 },
   expertItem: { paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.primary[200] },
+  expertItemDisabled: { opacity: 0.6 },
   expertItemText: { fontSize: 16, color: colors.primary[800] },
-  expertSubmitting: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
+  expertListEmpty: { fontSize: 14, color: colors.primary[500], paddingVertical: 16, paddingHorizontal: 12 },
+  expertSubmitting: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, marginBottom: 8 },
   expertSubmittingText: { fontSize: 14, color: colors.primary[600] },
   options: { gap: 12 },
+  optionsWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  optionButtonWrapper: { marginBottom: 0 },
   optionButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 14,
@@ -646,9 +721,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: colors.primary[200],
+    backgroundColor: colors.success[50],
   },
-  scoreTagText: { fontSize: 12, color: colors.primary[800] },
+  scoreTagText: { fontSize: 14, color: colors.primary[800] },
   scoreTagGreen: {
     paddingHorizontal: 8,
     paddingVertical: 4,

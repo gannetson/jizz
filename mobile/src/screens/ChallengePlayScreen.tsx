@@ -7,7 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   TextInput,
-  FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
@@ -173,6 +174,10 @@ export function ChallengePlayScreen() {
 
   useEffect(() => {
     setSoundPlaying(false);
+  }, [question?.id]);
+
+  useEffect(() => {
+    setExpertQuery('');
   }, [question?.id]);
 
   const handleRestartLevel = useCallback(async () => {
@@ -595,32 +600,52 @@ export function ChallengePlayScreen() {
             </>
           ) : (
             <>
-              <Text style={styles.expertLabel}>Type species name</Text>
-              <TextInput
-                style={styles.expertInput}
-                value={expertQuery}
-                onChangeText={setExpertQuery}
-                placeholder="Species name..."
-                placeholderTextColor={colors.primary[500]}
-                testID="challengePlay.expertInput"
-              />
-              <FlatList
-                data={filteredSpecies}
-                keyExtractor={(item) => String(item.id)}
-                style={styles.speciesList}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.optionButton, submitting && styles.optionButtonDisabled]}
-                    onPress={() => giveAnswer(item)}
-                    disabled={submitting}
-                    testID={`challengePlay.expertOption.${item.id}`}
-                    accessibilityLabel={speciesDisplayName(item, lang)}
-                  >
-                    <Text style={styles.optionButtonText}>{speciesDisplayName(item, lang)}</Text>
-                  </TouchableOpacity>
+              <Text style={styles.expertLabel}>{t('start_typing_answer')}</Text>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={styles.expertInputWrap}
+              >
+                <TextInput
+                  style={styles.expertInput}
+                  value={expertQuery}
+                  onChangeText={setExpertQuery}
+                  placeholder={t('species_name_placeholder')}
+                  placeholderTextColor={colors.primary[500]}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!submitting}
+                  testID="challengePlay.expertInput"
+                  accessibilityLabel="Species name"
+                />
+                {submitting && (
+                  <View style={styles.expertSubmitting}>
+                    <ActivityIndicator size="small" color={colors.primary[500]} />
+                    <Text style={styles.expertSubmittingText}>{t('submitting') || 'Submitting…'}</Text>
+                  </View>
                 )}
-              />
+                <View style={styles.speciesListWrap}>
+                  {expertSpecies.length === 0 && filteredSpecies.length === 0 ? (
+                    <Text style={styles.speciesListEmpty}>{t('loading_species')}</Text>
+                  ) : filteredSpecies.length === 0 ? (
+                    <Text style={styles.speciesListEmpty}>{t('type_to_search')}</Text>
+                  ) : (
+                    filteredSpecies.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[styles.optionButton, styles.speciesListItem, submitting && styles.optionButtonDisabled]}
+                        onPress={() => giveAnswer(item)}
+                        disabled={submitting}
+                        testID={`challengePlay.expertOption.${item.id}`}
+                        accessibilityLabel={speciesDisplayName(item, lang)}
+                      >
+                        <Text style={styles.optionButtonText} numberOfLines={1}>
+                          {speciesDisplayName(item, lang)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+              </KeyboardAvoidingView>
             </>
           )}
         </View>
@@ -695,10 +720,10 @@ const styles = StyleSheet.create({
   jokersRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   row: {     flexDirection: 'row',
     width: '100%',
-    alignItems: 'top',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  jokersHearts: { flexDirection: 'row', alignItems: 'right', gap: 6 },
+  jokersHearts: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   primaryButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 16,
@@ -729,6 +754,7 @@ const styles = StyleSheet.create({
   optionButtonDisabled: { opacity: 0.7 },
   optionButtonText: { fontSize: 16, fontWeight: '600', color: colors.primary[50] },
   expertSection: { marginTop: 24 },
+  expertInputWrap: { marginBottom: 0 },
   expertLabel: { fontSize: 16, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },
   expertInput: {
     borderWidth: 1,
@@ -737,9 +763,13 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: colors.primary[800],
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  speciesList: { maxHeight: 320 },
+  expertSubmitting: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, marginBottom: 8 },
+  expertSubmittingText: { fontSize: 14, color: colors.primary[600] },
+  speciesListWrap: { marginBottom: 16 },
+  speciesListEmpty: { fontSize: 14, color: colors.primary[500], paddingVertical: 16, paddingHorizontal: 12 },
+  speciesListItem: { marginBottom: 8 },
   screenTitle: { fontSize: 20, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
   progressSection: { marginTop: 24, marginBottom: 16 },
   progressHeading: { fontSize: 18, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },

@@ -29,9 +29,11 @@ export function GameResultsScreen() {
     player?.id === (game?.host as { id?: number })?.id;
 
   const handlePlayAgain = async () => {
-    // Replace so Results unmounts before we clear state (avoids "fewer hooks" re-render)
+    // Replace so Results unmounts; defer clearGame so it runs after navigation commits (avoids "fewer hooks")
     (navigation as any).replace('Start');
-    await clearGame();
+    requestAnimationFrame(() => {
+      clearGame();
+    });
   };
 
   const handleBackToDailyChallenge = async () => {
@@ -40,7 +42,9 @@ export function GameResultsScreen() {
     } else {
       (navigation as any).replace('Start');
     }
-    await clearGame();
+    requestAnimationFrame(() => {
+      clearGame();
+    });
   };
 
   const handleRematch = () => {

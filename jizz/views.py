@@ -809,6 +809,9 @@ class OAuthCompleteView(APIView):
         
         # Get the redirect URI from session (stored during OAuth initiation) or request or use default
         redirect_uri = request.session.get('social_auth_redirect_uri') or request.GET.get('redirect_uri') or settings.SOCIAL_AUTH_LOGIN_REDIRECT_URL
+        # Apple: we stored the app callback (birdr://) separately; redirect user there with tokens
+        if request.session.get('social_auth_app_callback'):
+            redirect_uri = request.session['social_auth_app_callback']
         
         # Call the social_django complete view to finish OAuth
         # This will authenticate the user and create/update the social auth association
@@ -827,6 +830,8 @@ class OAuthCompleteView(APIView):
         except Exception as e:
             logger.error(f"OAuth completion failed: {e}", exc_info=True)
             # If OAuth completion failed, redirect with error
+            if 'social_auth_app_callback' in request.session:
+                del request.session['social_auth_app_callback']
             parsed = urlparse(redirect_uri)
             query_params = parse_qs(parsed.query)
             query_params['error'] = ['authentication_failed']
@@ -993,6 +998,8 @@ class OAuthCompleteView(APIView):
             # Clear the redirect URI from session
             if 'social_auth_redirect_uri' in request.session:
                 del request.session['social_auth_redirect_uri']
+            if 'social_auth_app_callback' in request.session:
+                del request.session['social_auth_app_callback']
             
             # Redirect to frontend with tokens in URL
             parsed = urlparse(redirect_uri)

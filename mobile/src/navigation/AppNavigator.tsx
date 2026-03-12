@@ -14,6 +14,8 @@ import { GamePlayScreen } from '../screens/GamePlayScreen';
 import { GameResultsScreen } from '../screens/GameResultsScreen';
 import { MediaReviewScreen } from '../screens/MediaReviewScreen';
 import { LoginScreen } from '../screens/LoginScreen';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { MyGamesScreen } from '../screens/MyGamesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ChallengeScreen } from '../screens/ChallengeScreen';
@@ -45,6 +47,8 @@ const SCREENS = [
   { name: 'MediaReview', title: 'Review media', component: MediaReviewScreen },
   { name: 'Login', title: 'Login', component: LoginScreen },
   { name: 'Register', title: 'Register', component: LoginScreen },
+  { name: 'ForgotPassword', title: 'Forgot password', component: ForgotPasswordScreen },
+  { name: 'ResetPassword', title: 'Reset password', component: ResetPasswordScreen },
   { name: 'Lobby', title: 'Game Lobby', component: LobbyScreen },
   { name: 'GamePlay', title: 'Game', component: GamePlayScreen },
   { name: 'GameResults', title: 'Results', component: GameResultsScreen },

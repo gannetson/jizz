@@ -19,7 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { getProfile, updateProfile, updateProfileAvatar, getAvatarUrl, type UserProfile } from '../api/profile';
+import { getProfile, updateProfile, updateProfileAvatar, getAvatarUrl, deleteAccount, type UserProfile } from '../api/profile';
 import { loadCountries, type Country } from '../api/countries';
 import { loadLanguages, type Language } from '../api/languages';
 import { colors } from '../theme';
@@ -27,7 +27,7 @@ import { colors } from '../theme';
 export function ProfileScreen() {
   const { t, locale, setLocale } = useTranslation();
   const navigation = useNavigation();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { refreshProfile } = useProfile();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,7 @@ export function ProfileScreen() {
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [avatarPreviewUri, setAvatarPreviewUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const loadProfile = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -130,6 +131,33 @@ export function ProfileScreen() {
       setUploadingAvatar(false);
     }
   }, [t]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      t('delete_account_confirm_title'),
+      t('delete_account_confirm_message'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete_account_button'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingAccount(true);
+              setError(null);
+              await deleteAccount();
+              await logout();
+              (navigation as any).replace('Start');
+            } catch (e: any) {
+              setError(e?.message ?? 'Failed to delete account');
+            } finally {
+              setDeletingAccount(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [t, logout, navigation]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -293,6 +321,20 @@ export function ProfileScreen() {
         )}
       </TouchableOpacity>
 
+      <View style={styles.deleteSection}>
+        <TouchableOpacity
+          style={[styles.deleteAccountButton, deletingAccount && styles.deleteAccountButtonDisabled]}
+          onPress={handleDeleteAccount}
+          disabled={deletingAccount}
+        >
+          {deletingAccount ? (
+            <ActivityIndicator color={colors.error[500]} size="small" />
+          ) : (
+            <Text style={styles.deleteAccountButtonText}>{t('delete_account')}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <Modal visible={languageModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => setLanguageModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
@@ -449,6 +491,13 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.7 },
   saveButtonText: { color: colors.primary[50], fontSize: 18, fontWeight: '600' },
+  deleteSection: { marginTop: 32, alignItems: 'center' },
+  deleteAccountButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  deleteAccountButtonDisabled: { opacity: 0.7 },
+  deleteAccountButtonText: { fontSize: 16, color: colors.error[500], fontWeight: '500' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },

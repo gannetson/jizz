@@ -142,3 +142,41 @@ export async function isAuthenticated(): Promise<boolean> {
   const t = await getAccessToken();
   return !!t;
 }
+
+/** Request password reset email. Link in email goes to frontend_url (e.g. https://birdr.pro for web reset page). */
+export async function requestPasswordReset(
+  email: string,
+  frontendUrl?: string
+): Promise<void> {
+  const url = apiUrl('/api/password-reset/');
+  const body: { email: string; frontend_url?: string } = { email };
+  if (frontendUrl) body.frontend_url = frontendUrl;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg = data.detail ?? data.email?.[0] ?? data.error ?? data.message ?? 'Failed to send reset email';
+    throw { message: typeof msg === 'string' ? msg : 'Failed to send reset email' };
+  }
+}
+
+/** Confirm password reset with token from email link. */
+export async function confirmPasswordReset(
+  uid: string,
+  token: string,
+  newPassword: string
+): Promise<void> {
+  const response = await fetch(apiUrl('/api/password-reset/confirm/'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid, token, new_password: newPassword }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg = data.error ?? data.detail ?? data.message ?? 'Invalid or expired reset link';
+    throw { message: typeof msg === 'string' ? msg : 'Invalid or expired reset link' };
+  }
+}

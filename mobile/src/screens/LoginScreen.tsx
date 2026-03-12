@@ -12,11 +12,13 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { getSocialLoginUrl } from '../api/auth';
 import { OAuthWebViewModal } from '../components/OAuthWebViewModal';
 import { colors } from '../theme';
 
 export function LoginScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute<{ params?: { mode?: 'login' | 'register' }; name?: string }>();
   const auth = useAuth();
@@ -116,6 +118,14 @@ export function LoginScreen() {
           placeholderTextColor={colors.primary[400]}
           secureTextEntry
         />
+        {isLogin && (
+          <TouchableOpacity
+            style={styles.forgotLink}
+            onPress={() => (navigation as any).navigate('ForgotPassword')}
+          >
+            <Text style={styles.forgotLinkText}>{t('forgot_password')}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[styles.primaryButton, loading && styles.buttonDisabled]}
           onPress={handleEmailSubmit}
@@ -208,6 +218,8 @@ const styles = StyleSheet.create({
     color: colors.primary[800],
     marginBottom: 16,
   },
+  forgotLink: { alignSelf: 'flex-end', marginBottom: 8 },
+  forgotLinkText: { fontSize: 14, color: colors.primary[500] },
   primaryButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 14,

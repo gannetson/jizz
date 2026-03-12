@@ -165,6 +165,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'info@birdr.pro')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', 'info@birdr.pro')
 
+# Password reset link expiry (seconds; default_token_generator uses this)
+PASSWORD_RESET_TIMEOUT = 86400  # 24 hours
+
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',

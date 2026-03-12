@@ -9,7 +9,7 @@ type Props = {
   size?: number;
 };
 
-export function StarRating({ rating, onRating, count = 5, size = 24 }: Props) {
+export function StarRating({ rating, onRating, count = 5, size = 32 }: Props) {
   return (
     <View style={styles.row}>
       {Array.from({ length: count }, (_, i) => {

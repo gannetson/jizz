@@ -118,7 +118,7 @@ export function UserMenuModal() {
                 </TouchableOpacity>
               ))}
               <View style={styles.separator} />
-              {isAuthenticated ? (
+              {isAuthenticated && (
                 <TouchableOpacity
                   style={[styles.menuItem, styles.logout]}
                   onPress={async () => {
@@ -128,16 +128,6 @@ export function UserMenuModal() {
                   }}
                 >
                   <Text style={styles.logoutLabel}>Logout</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.menuItem, styles.logout]}
-                  onPress={() => {
-                    closeUserMenu();
-                    (navigation as any).navigate('Home');
-                  }}
-                >
-                  <Text style={styles.logoutLabel}>Close</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity

@@ -1255,6 +1255,19 @@ class ProfileView(APIView):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    def delete(self, request):
+        """
+        Delete the authenticated user's account.
+        Unlinks all players (and their scores/games) from the user so that data is kept;
+        then deletes the user and related profile/social data.
+        """
+        from .models import Player
+
+        # Unlink all players from this user so player/scores/games are preserved
+        Player.objects.filter(user=request.user).update(user=None)
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class PasswordResetRequestView(APIView):
     """

@@ -3,6 +3,7 @@ package pro.birdr.app
 import android.os.Build
 import android.os.Bundle
 
+import androidx.activity.enableEdgeToEdge
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,11 @@ import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
+    // Edge-to-edge: verplicht op Android 15+ (SDK 35), ook compatibel met oudere versies.
+    // Zorgt dat de app tot onder de status- en navigatiebalk tekent; insets worden
+    // afgehandeld door SafeAreaProvider/useSafeAreaInsets in React Native.
+    enableEdgeToEdge()
+
     // Set the theme to AppTheme BEFORE onCreate to support
     // coloring the background, status bar, and navigation bar.
     // This is required for expo-splash-screen.

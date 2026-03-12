@@ -28,6 +28,13 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const resetParams = parseResetPasswordUrl(url);
+      if (resetParams) {
+        handled.current = url;
+        navigation.navigate('ResetPassword', { uid: resetParams.uid, token: resetParams.token });
+        return;
+      }
+
       const challengeInviteToken = parseChallengeInviteUrl(url);
       if (challengeInviteToken) {
         handled.current = url;
@@ -88,6 +95,22 @@ function parseGameJoinUrl(url: string): string | null {
     if (match) return match[1];
   } catch {}
 
+  return null;
+}
+
+/** Parse password reset URL; returns { uid, token } or null. */
+function parseResetPasswordUrl(url: string): { uid: string; token: string } | null {
+  // birdr://reset-password/{uid}/{token}
+  const schemeMatch = url.match(/^birdr:\/\/reset-password\/([^/]+)\/([^/?#]+)/);
+  if (schemeMatch) return { uid: schemeMatch[1], token: schemeMatch[2] };
+
+  // https://birdr.pro/reset-password/{uid}/{token}/
+  const base = API_BASE_URL.replace(/\/$/, '');
+  if (url.startsWith(base + '/reset-password/')) {
+    const path = url.slice(base.length).replace(/[?#].*$/, '').replace(/\/+$/, '');
+    const match = path.match(/^\/reset-password\/([^/]+)\/([^/]+)$/);
+    if (match) return { uid: match[1], token: match[2] };
+  }
   return null;
 }
 

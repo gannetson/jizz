@@ -98,8 +98,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 25
-        versionName "Barnacle Goose"
+        versionCode 26
+        versionName "Snow Goose"
     }
     signingConfigs {
         debug {
@@ -160,6 +160,9 @@ android {
 }
 
 dependencies {
+    // Edge-to-edge (Android 15+): insets en compatibiliteit met oudere versies
+    implementation("androidx.activity:activity-ktx:1.8.2")
+
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

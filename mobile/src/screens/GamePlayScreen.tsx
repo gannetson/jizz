@@ -29,6 +29,7 @@ import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import type { Species } from '../types/game';
 import * as playerApi from '../api/player';
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
 
 function speciesDisplayName(s: Species, lang?: string): string {
   if (s.name_translated) return s.name_translated;
@@ -504,7 +505,7 @@ export function GamePlayScreen() {
                   </View>
                 )}
                 <Text style={styles.playerName}>{p.name}</Text>
-                {p.is_host ? <Text style={styles.crown}>👑</Text> : null}
+                {p.is_host ? <FontAwesome5 name="chess-king" solid={false} size={20} color={colors.primary[800]} /> : null}
               </View>
               <View style={styles.playerScores}>
                 {!!p.last_answer?.score && (

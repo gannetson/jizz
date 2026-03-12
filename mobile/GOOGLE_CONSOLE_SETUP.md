@@ -107,6 +107,30 @@ npx expo run:android
 
 Use the same keystore you used to get the SHA-1 (e.g. don’t switch from local debug to EAS build without adding EAS’s SHA-1 as well).
 
+---
+
+### Fix DEVELOPER_ERROR when the app is installed from the **Play Store**
+
+If Google Sign-In works in the **emulator / local debug** but shows **DEVELOPER_ERROR** when you install the app from the **Play Store**, the Play Store build is signed with a **different certificate** than your debug (or upload) keystore. You must register the **Play App Signing** certificate’s SHA-1.
+
+**Where to get the SHA-1 for the Play Store build**
+
+1. Open [Google Play Console](https://play.google.com/console/) and select your app **Birdr**.
+2. Go to **Release** → **Setup** → **App signing** (or **Setup** → **App integrity**).
+3. Under **App signing key certificate**, copy the **SHA-1 certificate fingerprint** (and optionally **SHA-256**).
+   - If you use **Google Play App Signing**, this is the key Google uses to sign the APKs/AABs that users download. This is the SHA-1 you need.
+4. In [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Credentials**, open your **Android** OAuth 2.0 Client ID (package `pro.birdr.app`).
+5. Click **Add fingerprint** and paste the **SHA-1** from Play Console. Save.
+6. Wait a few minutes for propagation, then try Google Sign-In again in the app installed from the Play Store.
+
+**Summary**
+
+| Build you're testing | SHA-1 to add in Google Cloud Android client |
+|----------------------|------------------------------------------------|
+| Local / emulator (debug) | From `./gradlew signingReport` → **debug** variant |
+| EAS / CI build        | From EAS credentials or your upload keystore  |
+| **Play Store install** | From **Play Console → App signing → App signing key certificate** |
+
 **Checklist**
 
 - [ ] Android OAuth client has **Package name** `pro.birdr.app` (not pro.birdr.mobile).  

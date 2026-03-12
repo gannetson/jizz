@@ -58,7 +58,7 @@ export function FeedbackForm() {
     <View style={styles.card}>
       <Text style={styles.title}>Feedback</Text>
       <Text style={styles.prompt}>Do you like this app?</Text>
-      <StarRating rating={rating} onRating={setRating} count={5} size={20} />
+      <StarRating rating={rating} onRating={setRating} count={5} size={24} />
       <Text style={styles.label}>
         Comments / suggestions <Text style={styles.optional}>(optional)</Text>
       </Text>

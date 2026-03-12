@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+{% block object-tools-items %}
+{{ block.super }}
+{% if original and original.pk and original.email %}
+<li>
+  <a href="{% url 'admin:auth_user_resend_welcome' original.pk %}" class="historylink">Resend welcome mail</a>
+</li>
+{% endif %}
+{% endblock %}

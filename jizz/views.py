@@ -1042,11 +1042,7 @@ class RegisterView(APIView):
     def post(self, request):
         from .serializers import UserRegistrationSerializer
         from .models import UserProfile
-        from django.core.mail import EmailMultiAlternatives
-        from django.template.loader import render_to_string
-        from django.conf import settings
-        import html2text
-        
+
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -1055,38 +1051,11 @@ class RegisterView(APIView):
                 UserProfile.objects.get_or_create(user=user)
                 
                 # Send welcome email
-                try:
-                    frontend_url = request.data.get('frontend_url', request.build_absolute_uri('/').rstrip('/'))
-                    if 'localhost' in frontend_url or '127.0.0.1' in frontend_url:
-                        frontend_url = 'http://localhost:3000'
-                    
-                    subject = 'Welcome to Birdr!'
-                    
-                    # Render HTML template
-                    html_content = render_to_string('emails/welcome.html', {
-                        'username': user.username,
-                        'user_email': user.email,
-                        'site_url': frontend_url,
-                    })
-                    
-                    # Convert HTML to plain text automatically
-                    h = html2text.HTML2Text()
-                    h.ignore_links = False
-                    h.body_width = 0  # Don't wrap lines
-                    text_content = h.handle(html_content)
-                    
-                    # Create email message
-                    email_message = EmailMultiAlternatives(
-                        subject=subject,
-                        body=text_content,
-                        from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'info@birdr.pro',
-                        to=[user.email],
-                    )
-                    email_message.attach_alternative(html_content, "text/html")
-                    email_message.send()
-                except Exception as e:
-                    # Don't fail registration if email sending fails
-                    pass
+                frontend_url = request.data.get('frontend_url', request.build_absolute_uri('/').rstrip('/'))
+                if 'localhost' in frontend_url or '127.0.0.1' in frontend_url:
+                    frontend_url = 'http://localhost:3000'
+                from jizz.notifications import send_welcome_email
+                send_welcome_email(user, site_url=frontend_url)
                 
                 refresh = RefreshToken.for_user(user)
                 return Response({

@@ -10,6 +10,38 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def send_welcome_email(user, site_url=None):
+    """Send the welcome email to a user (e.g. after registration or from admin resend)."""
+    if not user.email:
+        logger.warning('Cannot send welcome email: user %s has no email', user.username)
+        return False
+    site_url = site_url or getattr(settings, 'SITE_URL', 'https://birdr.pro')
+    try:
+        subject = 'Welcome to Birdr!'
+        html_content = render_to_string('emails/welcome.html', {
+            'username': user.username,
+            'user_email': user.email,
+            'site_url': site_url.rstrip('/'),
+        })
+        h = html2text.HTML2Text()
+        h.ignore_links = False
+        h.body_width = 0
+        text_content = h.handle(html_content)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'info@birdr.pro')
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=from_email,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, 'text/html')
+        msg.send()
+        return True
+    except Exception as e:
+        logger.warning('Welcome email failed for user %s: %s', user.username, e)
+        return False
+
+
 def send_push_to_user(user, title, body, data=None):
     """Send push notification to all devices of the user. Uses Expo Push API if SEND_PUSH_NOTIFICATIONS True."""
     from jizz.models import DeviceToken

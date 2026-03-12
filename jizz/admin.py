@@ -18,6 +18,7 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
                          Update, CountryGame, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken)
+from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
 from media.models import Media
@@ -48,6 +49,7 @@ admin.site.unregister(User)
 class UserAdmin(BaseUserAdmin):
     inlines = [UserProfileInline]
     list_display = ['username', 'email', 'first_name', 'last_name', 'avatar_preview', 'is_staff', 'date_joined']
+    actions = ['resend_welcome_email']
 
     def avatar_preview(self, obj):
         try:
@@ -61,6 +63,40 @@ class UserAdmin(BaseUserAdmin):
             pass
         return '-'
     avatar_preview.short_description = 'Avatar'
+
+    @admin.action(description='Resend welcome mail')
+    def resend_welcome_email(self, request, queryset):
+        sent = 0
+        skipped = 0
+        for user in queryset:
+            if not user.email:
+                skipped += 1
+                continue
+            if send_welcome_email(user):
+                sent += 1
+            else:
+                skipped += 1
+        if sent:
+            self.message_user(request, f'Welcome email sent to {sent} user(s).', messages.SUCCESS)
+        if skipped:
+            self.message_user(request, f'Skipped or failed for {skipped} user(s) (no email or send failed).', messages.WARNING)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path('<int:object_id>/resend-welcome/', self.admin_site.admin_view(self.resend_welcome_view), name='auth_user_resend_welcome'),
+        ]
+        return custom + urls
+
+    def resend_welcome_view(self, request, object_id):
+        from django.shortcuts import get_object_or_404
+        user = get_object_or_404(User, pk=object_id)
+        if send_welcome_email(user):
+            self.message_user(request, f'Welcome email sent to {user.email}.', messages.SUCCESS)
+        else:
+            self.message_user(request, f'Failed to send welcome email (no email or error).', messages.ERROR)
+        return HttpResponseRedirect(reverse('admin:auth_user_change', args=[object_id]))
+
 
 
 class CountrySpeciesInline(admin.TabularInline):

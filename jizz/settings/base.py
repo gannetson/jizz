@@ -299,3 +299,6 @@ LOGGING = {
         },
     },
 }
+
+DKIM_KEY = "dkim-key"
+DEFAULT_FROM_EMAIL = "Birdr <info@birdr.pro>"

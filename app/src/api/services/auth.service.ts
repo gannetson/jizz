@@ -1,5 +1,5 @@
 import axios from '../axios-config';
-import { getApiBaseUrl } from '../baseUrl';
+import { getApiBaseUrl, getSocialLoginBaseUrl } from '../baseUrl';
 
 export interface LoginCredentials {
   email: string;
@@ -86,11 +86,13 @@ class AuthService {
   }
 
   /**
-   * Get the OAuth redirect URL for social login
-   * This redirects to Django's social auth endpoint
+   * Get the OAuth redirect URL for social login.
+   * Uses getSocialLoginBaseUrl() so in local dev the browser hits the backend directly;
+   * that way the session cookie and Google's callback URL match and "Session value state missing" is avoided.
    */
   getSocialLoginUrl(provider: 'google-oauth2' | 'apple-id', redirectUri: string): string {
-    return `${this.baseURL}/auth/login/${provider}/?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const oauthBase = getSocialLoginBaseUrl();
+    return `${oauthBase}/auth/login/${provider}/?redirect_uri=${encodeURIComponent(redirectUri)}`;
   }
 
   /**

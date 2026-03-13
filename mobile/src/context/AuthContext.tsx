@@ -112,6 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       }
+      // Sign out first so the next signIn() shows the account picker (allows switching Google accounts)
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        // Ignore
+      }
       const result = await GoogleSignin.signIn();
       if (result.type !== 'success' || !result.data?.idToken) {
         if (result.type === 'cancelled') return false;
@@ -129,6 +135,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithApple = useCallback(async () => {});
 
   const logout = useCallback(async () => {
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // Ignore: user may not have signed in with Google
+    }
+    try {
+      await GoogleSignin.revokeAccess();
+    } catch {
+      // Ignore
+    }
     await authApi.clearTokens();
     setIsAuthenticated(false);
   }, []);

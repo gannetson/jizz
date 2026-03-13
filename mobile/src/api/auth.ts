@@ -29,8 +29,8 @@ export async function loginWithEmail(email: string, password: string): Promise<T
     throw { message: typeof msg === 'string' ? msg : 'Login failed' };
   }
   return {
-    access: data.access,
-    refresh: data.refresh,
+    access: data.access ?? data.access_token,
+    refresh: data.refresh ?? data.refresh_token,
   };
 }
 
@@ -54,8 +54,8 @@ export async function register(
     throw { message: typeof msg === 'string' ? msg : 'Registration failed' };
   }
   return {
-    access: data.access,
-    refresh: data.refresh,
+    access: data.access ?? data.access_token,
+    refresh: data.refresh ?? data.refresh_token,
   };
 }
 

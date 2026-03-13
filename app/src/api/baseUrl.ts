@@ -23,6 +23,26 @@ export function getApiBaseUrl(): string {
   return process.env.REACT_APP_API_URL || window.location.origin;
 }
 
+/**
+ * Base URL for the OAuth start (e.g. /auth/login/google-oauth2/).
+ * Must be the same host that receives the OAuth callback, so the session cookie is sent.
+ * In local dev we use the backend URL directly so login and callback both hit the same origin.
+ */
+export function getSocialLoginBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env.REACT_APP_API_URL || 'https://birdr.pro';
+  }
+  if (window.Capacitor?.isNativePlatform?.()) {
+    return process.env.REACT_APP_API_URL || 'https://birdr.pro';
+  }
+  const isLocalDev =
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocalDev) {
+    return process.env.REACT_APP_API_URL || 'http://127.0.0.1:8050';
+  }
+  return getApiBaseUrl();
+}
+
 /** Full URL for an API path (e.g. apiUrl('/api/player/') for fetch and relative paths). */
 export function apiUrl(path: string): string {
   const base = getApiBaseUrl();

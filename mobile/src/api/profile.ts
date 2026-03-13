@@ -83,3 +83,17 @@ export async function updateProfileAvatar(uri: string, fileName: string = 'avata
   }
   return resData as UserProfile;
 }
+
+/** Delete the current user's account. Unlinks players/scores/games; then removes the account. */
+export async function deleteAccount(): Promise<void> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(apiUrl('/api/profile/'), {
+    method: 'DELETE',
+    headers: headers as Record<string, string>,
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const msg = data.detail ?? data.error ?? data.message ?? 'Failed to delete account';
+    throw new Error(typeof msg === 'string' ? msg : 'Failed to delete account');
+  }
+}

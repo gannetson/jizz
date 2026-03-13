@@ -28,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'localhost',
+    '127.0.0.1',  # OAuth callback must use same host as login start; add for local dev
     'jizz.be',
     'www.jizz.be',
     'birdr.pro',
@@ -62,6 +63,13 @@ INSTALLED_APPS = [
     'social_django',
     'rest_framework_social_oauth2',
 ]
+
+# Use database sessions so OAuth state survives redirects and is shared across processes (e.g. runserver + Daphne).
+# Prevents "Session value state missing" when Google redirects back to /auth/complete/.
+# Run `manage.py migrate` so the session table exists.
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+# Ensure session cookie is sent when Google redirects (GET) back to our callback.
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

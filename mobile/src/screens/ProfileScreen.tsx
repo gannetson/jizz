@@ -146,8 +146,12 @@ export function ProfileScreen() {
               setDeletingAccount(true);
               setError(null);
               await deleteAccount();
-              await logout();
-              (navigation as any).replace('Start');
+              // Always logout and go to Start so the app is in a logged-out state.
+              try {
+                await logout();
+              } finally {
+                (navigation as any).replace('Start');
+              }
             } catch (e: any) {
               setError(e?.message ?? 'Failed to delete account');
             } finally {

@@ -1,4 +1,21 @@
-# Google Login in Production
+# Google Login (Production and Local)
+
+For Google OAuth to work you need: correct **nginx** (production) or **proxy** (local) so the callback URL and session cookie use the same host, **Django** settings, and **Google Cloud Console** redirect URIs.
+
+## Local development (React app)
+
+The React app uses **getSocialLoginBaseUrl()** so that in local dev the OAuth start URL is the **backend** (e.g. `http://127.0.0.1:8050`). That way the session cookie and Google's callback URL use the same host and "Session value state missing" is avoided.
+
+1. When you click "Continue with Google" on `http://localhost:3000`, the app sends you to `http://127.0.0.1:8050/auth/login/google-oauth2/?redirect_uri=http://localhost:3000/login/google`. The backend sets the session cookie for `127.0.0.1:8050` and redirects to Google. Google then redirects back to `http://127.0.0.1:8050/auth/complete/google-oauth2/...`, the browser sends the cookie, and the backend completes the flow and redirects to `http://localhost:3000/login/google?access_token=...&refresh_token=...`.
+
+2. In **Google Cloud Console** → Credentials → your OAuth 2.0 Client ID → **Authorized redirect URIs**, add:
+   - **`http://127.0.0.1:8050/auth/complete/google-oauth2/`** (if your Django backend runs on port 8050; use your actual backend port).
+
+3. Ensure your Django backend is running on the same host/port (e.g. `127.0.0.1:8050`). If you use a different port (e.g. 8000), set **`REACT_APP_API_URL=http://127.0.0.1:8000`** so the OAuth link and redirect URI match.
+
+---
+
+## Production
 
 For Google OAuth to work in production you need: correct **nginx** proxy headers, **Django** settings (see `jizz/settings/production.py`), and **Google Cloud Console** redirect URIs.
 

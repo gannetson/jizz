@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.urls import path, re_path, include
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
+from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
     GameDetailView, QuestionDetailView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
@@ -91,12 +92,12 @@ urlpatterns = [
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
     re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),
 
+    # JWT token routes must come before the social oauth2 include, so POST /token/ (username+password login) is handled by JWT, not OAuth2
+    path('token/', EmailOrUsernameTokenObtainPairView.as_view(), name='token-obtain-pair'),
+    path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token-refresh'),
     path('token/', include('rest_framework_social_oauth2.urls')),
     path('auth/complete/<str:backend>/', OAuthCompleteView.as_view(), name='oauth-complete'),
     path('auth/', include('social_django.urls', namespace='social')),
-
-    path('token/', jwt_views.TokenObtainPairView.as_view(), name ='token-obtain-pair'),
-    path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name ='token-refresh'),
 
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/profile/', ProfileView.as_view(), name='profile'),

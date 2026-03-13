@@ -87,6 +87,98 @@ class RegisterViewTestCase(TestCase):
         self.assertIn('error', response.data)
 
 
+class RegisterAndLoginTestCase(TestCase):
+    """Full flow: register then login (POST /token/) and verify JWT works for /api/profile/."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_register_then_login_with_username_returns_tokens(self):
+        """Register then POST /token/ with username+password returns access and refresh."""
+        r = self.client.post(
+            '/api/register/',
+            {'username': 'loguser', 'email': 'loguser@example.com', 'password': 'securepass123'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertIn('access', r.data)
+        self.assertIn('refresh', r.data)
+        token = self.client.post(
+            '/token/',
+            {'username': 'loguser', 'password': 'securepass123'},
+            format='json',
+        )
+        self.assertEqual(token.status_code, status.HTTP_200_OK)
+        self.assertIn('access', token.data)
+        self.assertIn('refresh', token.data)
+        access = token.data['access']
+        self.assertIsInstance(access, str)
+        self.assertGreater(len(access), 10)
+
+    def test_register_then_login_with_email_like_mobile(self):
+        """Mobile sends username=email; register with email as username then login with email."""
+        r = self.client.post(
+            '/api/register/',
+            {
+                'username': 'mobile@example.com',
+                'email': 'mobile@example.com',
+                'password': 'securepass123',
+            },
+            format='json',
+        )
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        # Login with email as username (what mobile app does)
+        token = self.client.post(
+            '/token/',
+            {'username': 'mobile@example.com', 'password': 'securepass123'},
+            format='json',
+        )
+        self.assertEqual(token.status_code, status.HTTP_200_OK, msg=token.data.get('detail', token.data))
+        self.assertIn('access', token.data)
+        access = token.data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+        profile = self.client.get('/api/profile/')
+        self.assertEqual(profile.status_code, status.HTTP_200_OK)
+        self.assertEqual(profile.data['email'], 'mobile@example.com')
+
+    def test_login_with_username_then_profile_works(self):
+        """Existing user can login with username and use token for profile."""
+        User.objects.create_user(username='u1', email='u1@example.com', password='pass12345')
+        token = self.client.post(
+            '/token/',
+            {'username': 'u1', 'password': 'pass12345'},
+            format='json',
+        )
+        self.assertEqual(token.status_code, status.HTTP_200_OK)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.data["access"]}')
+        profile = self.client.get('/api/profile/')
+        self.assertEqual(profile.status_code, status.HTTP_200_OK)
+        self.assertEqual(profile.data['username'], 'u1')
+
+    def test_login_with_email_then_profile_works(self):
+        """Existing user can login with email (POST /token/ username=email) and use token for profile."""
+        User.objects.create_user(username='u2', email='u2@example.com', password='pass12345')
+        token = self.client.post(
+            '/token/',
+            {'username': 'u2@example.com', 'password': 'pass12345'},
+            format='json',
+        )
+        self.assertEqual(token.status_code, status.HTTP_200_OK, msg=token.data.get('detail', token.data))
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.data["access"]}')
+        profile = self.client.get('/api/profile/')
+        self.assertEqual(profile.status_code, status.HTTP_200_OK)
+        self.assertEqual(profile.data['email'], 'u2@example.com')
+
+    def test_login_wrong_password_returns_401(self):
+        User.objects.create_user(username='u3', email='u3@example.com', password='pass12345')
+        token = self.client.post(
+            '/token/',
+            {'username': 'u3@example.com', 'password': 'wrong'},
+            format='json',
+        )
+        self.assertEqual(token.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class ProfileViewTestCase(TestCase):
     """Tests for GET/PUT /api/profile/."""
 

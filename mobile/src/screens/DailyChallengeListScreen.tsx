@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { listDailyChallenges, type DailyChallenge } from '../api/dailyChallenge';
 import { colors } from '../theme';
 
 export function DailyChallengeListScreen() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,12 +33,12 @@ export function DailyChallengeListScreen() {
       const list = await listDailyChallenges();
       setChallenges(list);
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to load');
+      setError(e?.message ?? t('failed_load'));
       setChallenges([]);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,8 +59,8 @@ export function DailyChallengeListScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
     >
-      <Text style={styles.title}>Daily challenge</Text>
-      <Text style={styles.hint}>Play a short quiz every day for 7 days. Compete with friends or play solo.</Text>
+      <Text style={styles.title}>{t('daily_challenge')}</Text>
+      <Text style={styles.hint}>{t('daily_challenge_hint')}</Text>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -70,14 +72,14 @@ export function DailyChallengeListScreen() {
         style={styles.primaryButton}
         onPress={() => (navigation as any).navigate('DailyChallengeCreate')}
       >
-        <Text style={styles.primaryButtonText}>New challenge</Text>
+        <Text style={styles.primaryButtonText}>{t('new_challenge')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>My challenges</Text>
+      <Text style={styles.sectionTitle}>{t('my_challenges')}</Text>
       {loading && challenges.length === 0 ? (
         <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loader} />
       ) : challenges.length === 0 ? (
-        <Text style={styles.muted}>No challenges yet. Start one above.</Text>
+        <Text style={styles.muted}>{t('no_challenges_yet')}</Text>
       ) : (
         challenges.map((c) => (
           <TouchableOpacity

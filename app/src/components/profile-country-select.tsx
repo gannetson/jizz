@@ -1,69 +1,27 @@
-import { useMemo } from "react";
-import { Select, Portal, createListCollection } from "@chakra-ui/react";
+import { useContext } from "react";
 import { useIntl } from "react-intl";
+import AppContext from "../core/app-context";
+import { getCountryDisplayName } from "../data/country-names-nl";
+import CountryCombobox from "./country-combobox";
 
 interface CountrySelectProps {
-  countries: any[];
+  countries: { code: string; name: string }[];
   value: string | null;
   onChange: (value: string | null) => void;
 }
 
 export const ProfileCountrySelect = ({ countries, value, onChange }: CountrySelectProps) => {
   const intl = useIntl();
-  // Ensure countries is always an array
   const countriesArray = Array.isArray(countries) ? countries : [];
-  
-  const collection = useMemo(() => {
-    const items = countriesArray.map((c, index) => ({
-      label: c.name,
-      value: c.name,
-      original: c,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [countriesArray]);
-
-  const selectedCountry = countriesArray.find((c) => c.code === value);
-  const selectedValue = selectedCountry ? selectedCountry.name : undefined;
-
-  const handleValueChange = (details: { value: string[] }) => {
-    const selectedName = details.value[0];
-    const selectedCountry = countriesArray.find((c) => c.name === selectedName);
-    if (selectedCountry) {
-      onChange(selectedCountry.code);
-    } else {
-      onChange(null);
-    }
-  };
+  const selectedCountry = countriesArray.find((c) => c.code === value) ?? null;
 
   return (
-    <Select.Root
-      collection={collection}
-      value={selectedValue ? [selectedValue] : []}
-      onValueChange={handleValueChange}
-    >
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger>
-          <Select.ValueText placeholder={intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' })} />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          <Select.Indicator />
-        </Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content>
-            {collection.items.map((item: any) => (
-              <Select.Item key={item.value} item={item}>
-                <Select.ItemIndicator />
-                <Select.ItemText>{item.label}</Select.ItemText>
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
+    <CountryCombobox
+      countries={countriesArray}
+      value={selectedCountry}
+      onChange={(c) => onChange(c?.code ?? null)}
+      allowEmpty
+      emptyLabel={intl.formatMessage({ id: "none", defaultMessage: "None" })}
+    />
   );
 };
-

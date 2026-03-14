@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   VStack,
@@ -17,11 +17,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { gamesService, GameDetailWithAnswers, QuestionWithAnswer } from "../api/services/games.service";
 import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
+import AppContext from "../core/app-context";
+import { getCountryDisplayName } from "../data/country-names-nl";
 import { format } from "date-fns";
 
 export const GameDetailPage = () => {
   const navigate = useNavigate();
   const { token } = useParams<{ token: string }>();
+  const { language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
   const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +155,7 @@ export const GameDetailPage = () => {
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={1}>
-                    <Heading size="md">{game.country?.name || 'Unknown Country'}</Heading>
+                    <Heading size="md">{game.country ? getCountryDisplayName(game.country, locale) : 'Unknown Country'}</Heading>
                     <Text fontSize="sm" color="gray.600">
                       {formatDate(game.created)}
                     </Text>

@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { loadScores, Score } from '../api/scores';
 import { loadCountries } from '../api/countries';
+import { useTranslation } from '../i18n/TranslationContext';
+import { getCountryDisplayName } from '../i18n/countryNames';
 import type { Country } from '../api/countries';
 import { colors } from '../theme';
 
@@ -24,38 +26,32 @@ function countryCodeToFlag(code: string): string {
   return String.fromCodePoint(a + c1, a + c2);
 }
 
-const MEDIA_LABELS: Record<string, string> = {
-  images: 'Images',
-  audio: 'Sounds',
-  video: 'Videos',
-};
-
 const MEDIA_ICON: Record<string, string> = {
   images: '📷',
   audio: '🔊',
   video: '🎥',
 };
 
-const LEVEL_OPTIONS = [
-  { value: '', label: 'Any level' },
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'advanced', label: 'Advanced' },
-  { value: 'expert', label: 'Expert' },
+const LEVEL_VALUES = [
+  { value: '', labelKey: 'any_level' },
+  { value: 'beginner', labelKey: 'beginner' },
+  { value: 'advanced', labelKey: 'advanced' },
+  { value: 'expert', labelKey: 'expert' },
 ];
 
-const LENGTH_OPTIONS = [
-  { value: '', label: 'Any length' },
-  { value: '10', label: '10' },
-  { value: '20', label: '20' },
-  { value: '50', label: '50' },
-  { value: '100', label: '100' },
+const LENGTH_VALUES = [
+  { value: '', labelKey: 'any_length' },
+  { value: '10', valueLabel: '10' },
+  { value: '20', valueLabel: '20' },
+  { value: '50', valueLabel: '50' },
+  { value: '100', valueLabel: '100' },
 ];
 
-const MEDIA_OPTIONS = [
-  { value: '', label: 'Any media' },
-  { value: 'images', label: 'Images' },
-  { value: 'audio', label: 'Sounds' },
-  { value: 'video', label: 'Videos' },
+const MEDIA_VALUES = [
+  { value: '', labelKey: 'any_media' },
+  { value: 'images', labelKey: 'images' },
+  { value: 'audio', labelKey: 'sounds' },
+  { value: 'video', labelKey: 'videos' },
 ];
 
 type FilterSelectProps<T> = {
@@ -66,7 +62,7 @@ type FilterSelectProps<T> = {
   options: { value: T; label: string }[];
 };
 
-function FilterSelect<T extends string>({ label, value, displayLabel, onSelect, options }: FilterSelectProps<T>) {
+function FilterSelect<T extends string>({ label, value, displayLabel, onSelect, options, closeLabel }: FilterSelectProps<T> & { closeLabel?: string }) {
   const [visible, setVisible] = useState(false);
   return (
     <>
@@ -99,7 +95,7 @@ function FilterSelect<T extends string>({ label, value, displayLabel, onSelect, 
               )}
             />
             <TouchableOpacity style={styles.modalClose} onPress={() => setVisible(false)}>
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{closeLabel ?? 'Close'}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -108,10 +104,11 @@ function FilterSelect<T extends string>({ label, value, displayLabel, onSelect, 
   );
 }
 
-function ScoreCard({ score }: { score: Score }) {
+function ScoreCard({ score, mediaLabels, locale }: { score: Score; mediaLabels: Record<string, string>; locale: string }) {
   const flag = countryCodeToFlag(score.country?.code ?? '');
   const mediaIcon = MEDIA_ICON[score.media] ?? '?';
-  const mediaLabel = MEDIA_LABELS[score.media] ?? score.media;
+  const mediaLabel = mediaLabels[score.media] ?? score.media;
+  const countryName = score.country ? getCountryDisplayName(score.country, locale) : '';
   return (
     <View style={styles.card}>
       <View style={styles.cardMain}>
@@ -119,7 +116,7 @@ function ScoreCard({ score }: { score: Score }) {
         <View style={styles.cardCenter}>
           <Text style={styles.cardName} numberOfLines={1}>{score.name}</Text>
           <View style={styles.cardMeta}>
-            <Text style={styles.cardMetaText}>{flag} {score.country?.name ?? ''}</Text>
+            <Text style={styles.cardMetaText}>{flag} {countryName}</Text>
             <Text style={styles.cardMetaDot}> · </Text>
             <Text style={styles.cardMetaText}>{mediaIcon} {mediaLabel}</Text>
             <Text style={styles.cardMetaDot}> · </Text>
@@ -133,6 +130,7 @@ function ScoreCard({ score }: { score: Score }) {
 }
 
 export function ScoresScreen() {
+  const { t, locale } = useTranslation();
   const [scores, setScores] = useState<Score[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,50 +155,62 @@ export function ScoresScreen() {
       .finally(() => setLoading(false));
   }, [country, level, length, media]);
 
+  const levelOptions = LEVEL_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
+  const lengthOptions = LENGTH_VALUES.map((o) => ({
+    value: o.value,
+    label: 'labelKey' in o ? t((o as { labelKey: string }).labelKey) : (o as { valueLabel: string }).valueLabel,
+  }));
+  const mediaOptions = MEDIA_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
   const countryOptions = [
-    { value: '', label: 'All countries' },
-    ...countries.map((c) => ({ value: c.code, label: c.name })),
+    { value: '', label: t('all_countries') },
+    ...countries.map((c) => ({ value: c.code, label: getCountryDisplayName(c, locale) })),
   ];
 
-  const countryDisplayLabel = country ? country.name : 'All countries';
-  const levelDisplayLabel = LEVEL_OPTIONS.find((o) => o.value === level)?.label ?? 'Any level';
-  const lengthDisplayLabel = LENGTH_OPTIONS.find((o) => o.value === length)?.label ?? 'Any length';
-  const mediaDisplayLabel = MEDIA_OPTIONS.find((o) => o.value === media)?.label ?? 'Any media';
+  const countryDisplayLabel = country ? getCountryDisplayName(country, locale) : t('all_countries');
+  const levelDisplayLabel = levelOptions.find((o) => o.value === level)?.label ?? t('any_level');
+  const lengthDisplayLabel = lengthOptions.find((o) => o.value === length)?.label ?? t('any_length');
+  const mediaDisplayLabel = mediaOptions.find((o) => o.value === media)?.label ?? t('any_media');
+
+  const mediaLabels: Record<string, string> = { images: t('images'), audio: t('sounds'), video: t('videos') };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>High scores</Text>
+      <Text style={styles.title}>{t('high_scores')}</Text>
 
       <View style={styles.filterRow}>
         <FilterSelect
-          label="Country"
+          label={t('country')}
           value={country?.code ?? ''}
           displayLabel={countryDisplayLabel}
           onSelect={(code) => setCountry(code ? countries.find((c) => c.code === code) ?? null : null)}
           options={countryOptions}
+          closeLabel={t('close')}
         />
         <FilterSelect
-          label="Media"
+          label={t('media')}
           value={media}
           displayLabel={mediaDisplayLabel}
           onSelect={setMedia}
-          options={MEDIA_OPTIONS}
+          options={mediaOptions}
+          closeLabel={t('close')}
         />
       </View>
       <View style={styles.filterRow}>
         <FilterSelect
-          label="Level"
+          label={t('level')}
           value={level}
           displayLabel={levelDisplayLabel}
           onSelect={setLevel}
-          options={LEVEL_OPTIONS}
+          options={levelOptions}
+          closeLabel={t('close')}
         />
         <FilterSelect
-          label="Length"
+          label={t('length')}
           value={length}
           displayLabel={lengthDisplayLabel}
           onSelect={setLength}
-          options={LENGTH_OPTIONS}
+          options={lengthOptions}
+          closeLabel={t('close')}
         />
       </View>
 
@@ -209,11 +219,11 @@ export function ScoresScreen() {
           <ActivityIndicator size="large" color={colors.primary[500]} />
         </View>
       ) : scores.length === 0 ? (
-        <Text style={styles.empty}>No scores found.</Text>
+        <Text style={styles.empty}>{t('no_scores_found')}</Text>
       ) : (
         <View style={styles.list}>
           {scores.map((s, i) => (
-            <ScoreCard key={`${s.ranking}-${s.name}-${s.score}-${i}`} score={s} />
+            <ScoreCard key={`${s.ranking}-${s.name}-${s.score}-${i}`} score={s} mediaLabels={mediaLabels} locale={locale} />
           ))}
         </View>
       )}

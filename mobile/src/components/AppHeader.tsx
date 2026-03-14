@@ -7,6 +7,7 @@ import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
 
 type AppHeaderProps = {
@@ -16,6 +17,7 @@ type AppHeaderProps = {
 
 export function AppHeader({ title, routeName }: AppHeaderProps) {
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, undefined>, string>>();
+  const { t } = useTranslation();
   const { openUserMenu, openLeftMenu, setCurrentRouteName } = useMenu();
   const { isAuthenticated } = useAuth();
   const { avatarUrl, initials } = useProfile();
@@ -49,7 +51,7 @@ export function AppHeader({ title, routeName }: AppHeaderProps) {
         style={styles.sideButton}
         onPress={openLeftMenu}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        accessibilityLabel="Open menu"
+        accessibilityLabel={t('open_menu')}
       >
         <FontAwesome5 name="bars" solid={false} size={20} color={colors.primary[800]} />
       </TouchableOpacity>

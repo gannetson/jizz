@@ -65,9 +65,9 @@ export function LobbyScreen() {
   if (!game || !player) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>No game or player. Start a game from the Start screen.</Text>
+        <Text style={styles.errorText}>{t('no_game_or_player')}</Text>
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Start')}>
-          <Text style={styles.buttonText}>Go to Start</Text>
+          <Text style={styles.buttonText}>{t('go_to_start')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -77,7 +77,7 @@ export function LobbyScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title} testID="lobby.title">Game Lobby</Text>
+      <Text style={styles.title} testID="lobby.title">{t('game_lobby')}</Text>
       <Text style={styles.hint}>
         {t('explain_mpg') || 'You can play against other players by sharing the game link. To play solo, start the game now.'}
       </Text>
@@ -85,7 +85,7 @@ export function LobbyScreen() {
       {!connected && (
         <View style={styles.row}>
           <ActivityIndicator size="small" color={colors.primary[500]} />
-          <Text style={styles.connecting}> Connecting…</Text>
+          <Text style={styles.connecting}> {t('connecting')}</Text>
         </View>
       )}
 
@@ -96,16 +96,16 @@ export function LobbyScreen() {
             onPress={() => { setStarting(true); startGame(); }}
             disabled={starting || !connected}
             testID="lobby.startGame"
-            accessibilityLabel="Start game"
+            accessibilityLabel={t('start_game')}
           >
             {starting ? (
               <ActivityIndicator size="small" color={colors.primary[50]} />
             ) : (
-              <Text style={styles.primaryButtonText}>Start game</Text>
+              <Text style={styles.primaryButtonText}>{t('start_game')}</Text>
             )}
           </TouchableOpacity>
         ) : (
-          <Text style={styles.muted}>Waiting for host to start the game.</Text>
+          <Text style={styles.muted}>{t('waiting_for_host')}</Text>
         )}
       </View>
 
@@ -139,9 +139,9 @@ export function LobbyScreen() {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>{t('players') || 'Players'} ({players.length})</Text>
+      <Text style={styles.sectionTitle}>{t('players')} ({players.length})</Text>
       {players.length === 0 ? (
-        <Text style={styles.muted}>No other players yet.</Text>
+        <Text style={styles.muted}>{t('no_other_players_yet')}</Text>
       ) : (
         players.map((p, i) => (
           <View key={i} style={styles.playerCard}>
@@ -163,7 +163,7 @@ export function LobbyScreen() {
 
       {topScores.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>{t('high_score') || 'High scores'}</Text>
+          <Text style={styles.sectionTitle}>{t('high_scores')}</Text>
           {topScores.map((s, i) => (
             <View key={`${s.ranking}-${s.name}-${i}`} style={styles.hsCard}>
               <Text style={styles.hsRank}>#{s.ranking}</Text>

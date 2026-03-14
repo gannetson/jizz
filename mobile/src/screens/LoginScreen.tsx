@@ -34,7 +34,7 @@ export function LoginScreen() {
 
   const handleEmailSubmit = async () => {
     if (!email.trim() || !password) {
-      setError('Please enter email and password.');
+      setError(t('please_enter_email_password'));
       return;
     }
     setError(null);
@@ -47,7 +47,7 @@ export function LoginScreen() {
       }
       (navigation as any).goBack();
     } catch (e: any) {
-      setError(e?.message ?? 'Authentication failed. Please try again.');
+      setError(e?.message ?? t('auth_failed'));
     } finally {
       setLoading(false);
     }
@@ -80,7 +80,7 @@ export function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>{isLogin ? 'Login' : 'Register'}</Text>
+        <Text style={styles.title}>{isLogin ? t('login') : t('register')}</Text>
         {error ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>
@@ -88,33 +88,33 @@ export function LoginScreen() {
         ) : null}
         {!isLogin && (
           <>
-            <Text style={styles.label}>Username (optional)</Text>
+            <Text style={styles.label}>{t('username_optional')}</Text>
             <TextInput
               style={styles.input}
               value={username}
               onChangeText={setUsername}
-              placeholder="Choose a username"
+              placeholder={t('choose_username')}
               placeholderTextColor={colors.primary[400]}
               autoCapitalize="none"
             />
           </>
         )}
-        <Text style={styles.label}>Email</Text>
+        <Text style={styles.label}>{t('email')}</Text>
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
-          placeholder="Enter your email"
+          placeholder={t('enter_email')}
           placeholderTextColor={colors.primary[400]}
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <Text style={styles.label}>Password</Text>
+        <Text style={styles.label}>{t('password')}</Text>
         <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
-          placeholder="Enter your password"
+          placeholder={t('enter_password')}
           placeholderTextColor={colors.primary[400]}
           secureTextEntry
         />
@@ -134,7 +134,7 @@ export function LoginScreen() {
           {loading ? (
             <ActivityIndicator color={colors.primary[50]} />
           ) : (
-            <Text style={styles.primaryButtonText}>{isLogin ? 'Login' : 'Register'}</Text>
+            <Text style={styles.primaryButtonText}>{isLogin ? t('login') : t('register')}</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -142,11 +142,11 @@ export function LoginScreen() {
           onPress={() => { setIsLogin(!isLogin); setError(null); }}
         >
           <Text style={styles.toggleText}>
-            {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
+            {isLogin ? t('no_account_register') : t('have_account_login')}
           </Text>
         </TouchableOpacity>
 
-        <Text style={styles.divider}>Or continue with</Text>
+        <Text style={styles.divider}>{t('or_continue_with')}</Text>
 
         <TouchableOpacity
           style={[styles.socialButton, styles.googleButton, socialLoading && styles.buttonDisabled]}
@@ -160,7 +160,7 @@ export function LoginScreen() {
               if (__DEV__) {
                 console.error('[Google sign-in]', e?.message, e?.code ?? '', e);
               }
-              setError(e?.message ?? 'Google sign-in failed.');
+              setError(e?.message ?? t('google_sign_in_failed'));
             } finally {
               setSocialLoading(null);
             }
@@ -172,7 +172,7 @@ export function LoginScreen() {
           ) : (
             <>
               <Text style={styles.socialIcon}>G</Text>
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
+              <Text style={styles.socialButtonText}>{t('continue_with_google')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -186,7 +186,7 @@ export function LoginScreen() {
           ) : (
             <>
               <Text style={[styles.socialIcon, styles.appleIcon]}></Text>
-              <Text style={[styles.socialButtonText, styles.appleButtonText]}>Continue with Apple</Text>
+              <Text style={[styles.socialButtonText, styles.appleButtonText]}>{t('continue_with_apple')}</Text>
             </>
           )}
         </TouchableOpacity>

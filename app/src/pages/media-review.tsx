@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import {
   Box,
   Flex,
@@ -12,21 +12,23 @@ import {
   Select,
   Portal,
   createListCollection,
-  ListRoot, ListItem
+  ListRoot,
+  ListItem,
 } from '@chakra-ui/react';
 import { Page } from '../shared/components/layout';
 import { FormattedMessage, useIntl } from 'react-intl';
 import AppContext from '../core/app-context';
 import type { Species } from '../core/app-context';
-import { MediaServiceImpl, MediaItem, SpeciesReviewStatsResponse, type ReviewLevel } from '../api/services/media.service';
+import { MediaServiceImpl, MediaItem, SpeciesWithMedia, SpeciesReviewStatsResponse, type ReviewLevel } from '../api/services/media.service';
 import SpeciesCombobox from '../components/species-combobox';
 import { ApiClient, apiClient } from '../api/client';
 import { authService } from '../api/services/auth.service';
 import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
-import {useParams} from "react-router-dom"
-import { FaArrowAltCircleRight, FaTrophy } from "react-icons/fa";
+import CountryCombobox from '../components/country-combobox';
+import { useParams } from 'react-router-dom';
+import { FaArrowAltCircleRight, FaChevronDown, FaChevronRight, FaTrophy } from "react-icons/fa";
 import { FaQuestion } from "react-icons/fa";
 import Confetti from "react-confetti";
 import { keyframes } from "@emotion/react";
@@ -50,7 +52,7 @@ const glowKeyframes = keyframes`
 
 export const MediaReviewPage = () => {
   const { countryCode } = useParams<{ countryCode: string }>();
-  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [speciesWithMedia, setSpeciesWithMedia] = useState<SpeciesWithMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -58,7 +60,6 @@ export const MediaReviewPage = () => {
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [reviewedItems, setReviewedItems] = useState<Map<number, 'approved' | 'rejected' | 'not_sure'>>(new Map());
-  const [loadedItemIds, setLoadedItemIds] = useState<Set<number>>(new Set());
   const [selectedCountry, setSelectedCountry] = useState<string>(countryCode ?? '');
   const [speciesStats, setSpeciesStats] = useState<SpeciesReviewStatsResponse | null>(null);
   const [speciesStatsLoading, setSpeciesStatsLoading] = useState(true);
@@ -70,6 +71,27 @@ export const MediaReviewPage = () => {
   const [selectedSpecies, setSelectedSpecies] = useState<Species | null>(null);
   const [reviewLevel, setReviewLevel] = useState<ReviewLevel>('fast');
   const [tenApprovedSpeciesName, setTenApprovedSpeciesName] = useState<string | null>(null);
+  const reviewStatsRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollToNextRef = useRef(false);
+  const SCROLL_OFFSET_TOP = 80;
+
+  const STORAGE_KEY = 'media-review-instructions-collapsed';
+  const [instructionsCollapsed, setInstructionsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem(STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const setInstructionsCollapsedWithStorage = useCallback((value: boolean) => {
+    setInstructionsCollapsed(value);
+    try {
+      localStorage.setItem(STORAGE_KEY, String(value));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
@@ -111,16 +133,6 @@ export const MediaReviewPage = () => {
     return () => { cancelled = true; };
   }, [selectedCountry, languageParam]);
 
-  const countryCollection = useMemo(() => {
-    const items = countries.map((c, index) => ({
-      label: c.name,
-      value: c.code,
-      original: c,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [countries]);
-
   const mediaTypeCollection = useMemo(
     () =>
       createListCollection({
@@ -145,7 +157,7 @@ export const MediaReviewPage = () => {
     [intl]
   );
 
-  const loadMedia = useCallback(
+  const loadSpecies = useCallback(
     async (
       page: number = 1,
       reset: boolean = false,
@@ -157,57 +169,38 @@ export const MediaReviewPage = () => {
       try {
         if (reset) {
           setLoading(true);
-          setLoadedItemIds(new Set());
-          setMedia([]);
+          setSpeciesWithMedia([]);
         } else {
           setLoadingMore(true);
         }
 
-        const data = await mediaService.getMedia(mediaType, page, countryCode, languageParam, speciesId, level);
-      
-      // Use functional updates to access current state
-      setLoadedItemIds(currentLoadedIds => {
-        // Filter out items we've already loaded (including reviewed ones)
-        const newItems = data.results.filter(item => !currentLoadedIds.has(item.id));
-        
+        const data = await mediaService.getMediaReviewSpecies(mediaType, page, countryCode, languageParam, speciesId, level);
+
         if (reset) {
-          setMedia(newItems);
-          return new Set(newItems.map(item => item.id));
+          setSpeciesWithMedia(data.results);
         } else {
-          // Filter out duplicates
-          setMedia(prev => {
-            const existingIds = new Set(prev.map(m => m.id));
-            const filtered = newItems.filter(item => !existingIds.has(item.id));
-            return [...prev, ...filtered];
-          });
-          
-          // Update loaded IDs
-          const updated = new Set(currentLoadedIds);
-          newItems.forEach(item => updated.add(item.id));
-          return updated;
+          setSpeciesWithMedia((prev) => [...prev, ...data.results]);
         }
-      });
-      
-      setHasNextPage(data.next !== null);
-      setCurrentPage(page);
-    } catch (error) {
-      console.error('Error loading media:', error);
-      toaster.create({
-        title: intl.formatMessage({ id: 'error loading media', defaultMessage: 'Error loading media' }),
-        colorPalette: 'error',
-        duration: 4000,
-      });
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  },
+        setHasNextPage(data.next !== null);
+        setCurrentPage(page);
+      } catch (error) {
+        console.error('Error loading media:', error);
+        toaster.create({
+          title: intl.formatMessage({ id: 'error loading media', defaultMessage: 'Error loading media' }),
+          colorPalette: 'error',
+          duration: 4000,
+        });
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
     [intl, languageParam]
   );
 
   useEffect(() => {
-    loadMedia(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
-  }, [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam, loadMedia]);
+    loadSpecies(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
+  }, [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam, loadSpecies]);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,11 +219,24 @@ export const MediaReviewPage = () => {
     return () => { cancelled = true; };
   }, [selectedCountry, selectedMediaType, languageParam]);
 
+  // After removing a species (10 approved), scroll to review stats with offset below top menu
+  useEffect(() => {
+    if (!shouldScrollToNextRef.current) return;
+    shouldScrollToNextRef.current = false;
+    const el = reviewStatsRef.current;
+    if (el) {
+      requestAnimationFrame(() => {
+        const top = el.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET_TOP;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      });
+    }
+  }, [speciesWithMedia]);
+
   const loadMore = useCallback(() => {
     if (!loadingMore && hasNextPage) {
-      loadMedia(currentPage + 1, false, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
+      loadSpecies(currentPage + 1, false, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
     }
-  }, [currentPage, loadingMore, hasNextPage, loadMedia, selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]);
+  }, [currentPage, loadingMore, hasNextPage, loadSpecies, selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -286,12 +292,34 @@ export const MediaReviewPage = () => {
       return;
     }
 
-    const item = media.find((m) => m.id === mediaId) ?? selectedMedia;
-    const speciesId = item?.species_id;
-    const speciesName = item?.species_name;
+    const item =
+      selectedMedia?.id === mediaId
+        ? selectedMedia
+        : speciesWithMedia.flatMap((s) => s.media).find((m) => m.id === mediaId);
+    if (!item) return;
+    const speciesId = item.species_id;
+    const speciesName = item.species_name;
 
     // Mark as reviewed immediately for visual feedback
     setReviewedItems(prev => new Map(prev).set(mediaId, reviewType));
+
+    // Optimistic update of in-memory species counts and media review_type
+    setSpeciesWithMedia((prev) =>
+      prev.map((s) =>
+        s.id !== speciesId
+          ? s
+          : {
+              ...s,
+              unreviewed: Math.max(0, s.unreviewed - 1),
+              approved: s.approved + (reviewType === 'approved' ? 1 : 0),
+              rejected: s.rejected + (reviewType === 'rejected' ? 1 : 0),
+              not_sure: s.not_sure + (reviewType === 'not_sure' ? 1 : 0),
+              media: s.media.map((m) =>
+                m.id === mediaId ? { ...m, review_type: reviewType } : m
+              ),
+            }
+      )
+    );
 
     try {
       // When authenticated (JWT), do not send player_token; backend uses request.user
@@ -370,7 +398,7 @@ export const MediaReviewPage = () => {
         setTimeout(() => setCelebrationSpeciesName(null), 12000);
       }
 
-      // Fast mode: when 10th media approved for this species (using updated approved count), celebrate and reload
+      // Fast mode: when 10th media approved for this species, celebrate and hide that species from the list
       if (
         reviewLevel === 'fast' &&
         reviewType === 'approved' &&
@@ -382,7 +410,8 @@ export const MediaReviewPage = () => {
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 6000);
         setTimeout(() => setTenApprovedSpeciesName(null), 12000);
-        loadMedia(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id ?? undefined, reviewLevel);
+        shouldScrollToNextRef.current = true;
+        setSpeciesWithMedia((prev) => prev.filter((s) => s.id !== speciesId));
       }
 
       // Close dialog if this item was selected
@@ -527,7 +556,7 @@ export const MediaReviewPage = () => {
                 {tenApprovedSpeciesName}
               </Text>
               <Text fontSize="lg" opacity={0.95}>
-                <FormattedMessage id="ten approved message" defaultMessage="Loading next species..." />
+                <FormattedMessage id="ten approved message" defaultMessage="Species complete! Scroll for more." />
               </Text>
               <Button
                 mt={6}
@@ -550,58 +579,76 @@ export const MediaReviewPage = () => {
       </Page.Header>
       <Page.Body>
           <Box backgroundColor={'blue.100'} borderColor={'blue.700'} color={'blue.700'} border={'2px solid'} padding={4}>
-            <Text fontWeight={'bold'}>
-              <FormattedMessage id={'media review intro'} defaultMessage={"Great that you are here and thank you for helping out improving the Birdr app!"} />
-            </Text>
-            <Text pt={2}>
-              <FormattedMessage
-                id={'media review more'}
-                defaultMessage={"To collect over one million images of birds I used and automated script. I tried to make it really smart, so it will collect the right pictures. Unfortunately it is not smart enough :-(. There are pictures of low quality, that have multiple species, nests, feathers or even just something completely different. Appears we still need that 'human touch'! That's were you come in. Here's how you can help."} />
-            </Text>
-
-            <Text fontWeight={'bold'} pt={4}>
+            <Flex
+              as="button"
+              width="100%"
+              textAlign="left"
+              alignItems="center"
+              gap={2}
+              cursor="pointer"
+              fontWeight="bold"
+              _hover={{ opacity: 0.9 }}
+              onClick={() => setInstructionsCollapsedWithStorage(!instructionsCollapsed)}
+            >
+              <Icon as={instructionsCollapsed ? FaChevronRight : FaChevronDown} fontSize="sm" />
               <FormattedMessage id={'media review instruction title'} defaultMessage={"Instructions"} />
-            </Text>
-            <ListRoot pt={2} as='ol' listStyle={'cirlce'} gap={2}>
-              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
-                <FaArrowAltCircleRight />
-                <FormattedMessage
-                  id={'media review instructions 1'}
-                  defaultMessage={"Select a country in top right corner"} />
-                </ListItem>
-              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
-                <FaArrowAltCircleRight />
-                <FormattedMessage
-                  id={'media review instructions 2'}
-                  defaultMessage={"Scroll trough the list"} />
-              </ListItem>
-              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
-                <FaArrowAltCircleRight />
-                <FormattedMessage
-                  id={'media review instructions 3'}
-                  defaultMessage={"For each picture, hover over. Optional: Click it if you want to see the full image."} />
-              </ListItem>
-              <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
-                <FaArrowAltCircleRight />
-                <Box>
-                <FormattedMessage
-                  id={'media review instructions 4'}
-                  defaultMessage={"Click {ok} if the picture is ok, {question} if you don't know or {bad} if it should be removed."}
-                  values={{
-                    ok: (
-                      <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
-                    ),
-                    question: (
-                      <Icon as={FaQuestion} boxSize={5} color="orange.600" display="inline" verticalAlign="middle" mx={0.5} />
-                    ),
-                    bad: (
-                      <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
-                    ),
-                  }}
-                />
-                </Box>
-              </ListItem>
-            </ListRoot>
+            </Flex>
+            {!instructionsCollapsed && (
+              <>
+                <Text fontWeight={'bold'} pt={2}>
+                  <FormattedMessage id={'media review intro'} defaultMessage={"Great that you are here and thank you for helping out improving the Birdr app!"} />
+                </Text>
+                <Text pt={2}>
+                  <FormattedMessage
+                    id={'media review more'}
+                    defaultMessage={"To collect over one million images of birds I used and automated script. I tried to make it really smart, so it will collect the right pictures. Unfortunately it is not smart enough :-(. There are pictures of low quality, that have multiple species, nests, feathers or even just something completely different. Appears we still need that 'human touch'! That's were you come in. Here's how you can help."} />
+                </Text>
+
+                <Text fontWeight={'bold'} pt={4}>
+                  <FormattedMessage id={'media review instruction title'} defaultMessage={"Instructions"} />
+                </Text>
+                <ListRoot pt={2} as='ol' listStyle={'cirlce'} gap={2}>
+                  <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                    <FaArrowAltCircleRight />
+                    <FormattedMessage
+                      id={'media review instructions 1'}
+                      defaultMessage={"Select a country in top right corner"} />
+                  </ListItem>
+                  <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                    <FaArrowAltCircleRight />
+                    <FormattedMessage
+                      id={'media review instructions 2'}
+                      defaultMessage={"Scroll trough the list"} />
+                  </ListItem>
+                  <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                    <FaArrowAltCircleRight />
+                    <FormattedMessage
+                      id={'media review instructions 3'}
+                      defaultMessage={"For each picture, hover over. Optional: Click it if you want to see the full image."} />
+                  </ListItem>
+                  <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
+                    <FaArrowAltCircleRight />
+                    <Box>
+                    <FormattedMessage
+                      id={'media review instructions 4'}
+                      defaultMessage={"Click {ok} if the picture is ok, {question} if you don't know or {bad} if it should be removed."}
+                      values={{
+                        ok: (
+                          <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
+                        ),
+                        question: (
+                          <Icon as={FaQuestion} boxSize={5} color="orange.600" display="inline" verticalAlign="middle" mx={0.5} />
+                        ),
+                        bad: (
+                          <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
+                        ),
+                      }}
+                    />
+                    </Box>
+                  </ListItem>
+                </ListRoot>
+              </>
+            )}
           </Box>
           <Flex gap={3} alignItems="center" flexWrap="wrap" mt={4} mb={4}>
             <Box minW="160px">
@@ -648,7 +695,7 @@ export const MediaReviewPage = () => {
                 <Select.HiddenSelect />
                 <Select.Control>
                   <Select.Trigger>
-                    <Select.ValueText placeholder={intl.formatMessage({ id: 'review level fast', defaultMessage: 'Level...' })} />
+                    <Select.ValueText placeholder={intl.formatMessage({ id: 'review level placeholder', defaultMessage: 'Level...' })} />
                   </Select.Trigger>
                   <Select.IndicatorGroup>
                     <Select.Indicator />
@@ -669,36 +716,12 @@ export const MediaReviewPage = () => {
               </Select.Root>
             </Box>
             <Box minW="200px">
-              <Select.Root
-                collection={countryCollection}
-                value={selectedCountry ? [selectedCountry] : []}
-                onValueChange={(details: { value: string[] }) => {
-                  const countryCode = details.value[0] || '';
-                  setSelectedCountry(countryCode);
-                }}
-              >
-                <Select.HiddenSelect />
-                <Select.Control>
-                  <Select.Trigger>
-                    <Select.ValueText placeholder={intl.formatMessage({ id: 'select country placeholder', defaultMessage: 'Select country...' })} />
-                  </Select.Trigger>
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                  </Select.IndicatorGroup>
-                </Select.Control>
-                <Portal>
-                  <Select.Positioner>
-                    <Select.Content>
-                      {countryCollection.items.map((item: any) => (
-                        <Select.Item key={item.value} item={item}>
-                          <Select.ItemIndicator />
-                          <Select.ItemText>{item.label}</Select.ItemText>
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Positioner>
-                </Portal>
-              </Select.Root>
+              <CountryCombobox
+                countries={countries}
+                value={selectedCountry ? (countries.find((c) => c.code === selectedCountry) ?? null) : null}
+                onChange={(c) => setSelectedCountry(c?.code ?? '')}
+                allowEmpty
+              />
             </Box>
             {selectedCountry && (
               <Box minW="220px">
@@ -717,7 +740,7 @@ export const MediaReviewPage = () => {
             )}
           </Flex>
           {!speciesStatsLoading && speciesStats && (
-            <Flex gap={6} mt={4} mb={4} flexWrap="wrap" fontWeight="bold">
+            <Flex ref={reviewStatsRef} gap={6} mt={4} mb={4} flexWrap="wrap" fontWeight="bold">
               <Text color="green.700">
                 <FormattedMessage id="species reviewed" defaultMessage="{count} reviewed" values={{ count: speciesStats.summary.reviewed ?? 0 }} />
               </Text>
@@ -736,56 +759,27 @@ export const MediaReviewPage = () => {
           <Text><FormattedMessage id="loading" defaultMessage="Loading..." /></Text>
         ) : (
           <Box>
-            {(() => {
-              // Group media by species_id
-              const groupedBySpecies = media.reduce((acc, item) => {
-                const speciesId = item.species_id;
-                if (!acc[speciesId]) {
-                  acc[speciesId] = {
-                    speciesId,
-                    speciesName: item.species_name,
-                    items: [],
-                  };
-                }
-                acc[speciesId].items.push(item);
-                return acc;
-              }, {} as Record<number, { speciesId: number; speciesName: string; items: MediaItem[] }>);
-
-              // Sort by species_id
-              const sortedSpecies = Object.values(groupedBySpecies).sort(
-                (a, b) => a.speciesId - b.speciesId
-              );
-
-              const speciesStatsMap = speciesStats?.species
-                ? Object.fromEntries(speciesStats.species.map((s) => [s.id, s]))
-                : null;
-
-              return sortedSpecies.map((group) => {
-                const stats = speciesStatsMap?.[group.speciesId];
-                return (
-                <Box key={group.speciesId} mb={8}>
+            {speciesWithMedia.map((group) => (
+                <Box key={group.id} mb={8}>
                   <Heading size="md" mb={2} color="gray.700">
-                    {group.speciesName}
+                    {group.name}
                   </Heading>
-                  {stats != null && (
-                    <Text fontSize="sm" color="gray.600" mb={4}>
-                      <FormattedMessage
-                        id="species review stats line"
-                        defaultMessage="{total} media · {unreviewed} unreviewed · {approved} approved · {rejected} rejected · {notSure} not sure"
-                        values={{
-                          total: stats.total_media,
-                          unreviewed: stats.unreviewed,
-                          approved: stats.approved,
-                          rejected: stats.rejected,
-                          notSure: stats.not_sure,
-                        }}
-                      />
-                    </Text>
-                  )}
-                  {!stats && <Box mb={4} />}
+                  <Text fontSize="sm" color="gray.600" mb={4}>
+                    <FormattedMessage
+                      id="species review stats line"
+                      defaultMessage="{total} media · {unreviewed} unreviewed · {approved} approved · {rejected} rejected · {notSure} not sure"
+                      values={{
+                        total: group.total_media,
+                        unreviewed: group.unreviewed,
+                        approved: group.approved,
+                        rejected: group.rejected,
+                        notSure: group.not_sure,
+                      }}
+                    />
+                  </Text>
                   <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={4}>
-                    {group.items.map((item) => {
-                const reviewType = reviewedItems.get(item.id);
+                    {group.media.map((item) => {
+                const reviewType = reviewedItems.get(item.id) ?? item.review_type ?? undefined;
                 const isReviewed = reviewType !== undefined;
 
                 // Determine overlay color based on review type
@@ -965,11 +959,9 @@ export const MediaReviewPage = () => {
                     })}
                   </SimpleGrid>
                 </Box>
-                );
-              });
-            })()}
+            ))}
 
-            {media.length === 0 && !loading && (
+            {speciesWithMedia.length === 0 && !loading && (
               <Text textAlign="center" mt={8}>
                 <FormattedMessage id={'no media found'} defaultMessage={'No media found'} />
               </Text>

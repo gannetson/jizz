@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { loadUpdates, Update } from '../api/updates';
 import { ReactionForm } from '../components/ReactionForm';
+import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
 
 function formatDate(s: string) {
@@ -13,7 +14,7 @@ function formatDate(s: string) {
   }
 }
 
-function UpdateCard({ update, onReactionPosted }: { update: Update; onReactionPosted?: () => void }) {
+function UpdateCard({ update, onReactionPosted, authorFallback }: { update: Update; onReactionPosted?: () => void; authorFallback: string }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -21,7 +22,7 @@ function UpdateCard({ update, onReactionPosted }: { update: Update; onReactionPo
       </View>
       <Text style={styles.cardMessage}>{update.message}</Text>
       <View style={styles.cardFooter}>
-        <Text style={styles.cardAuthor}>{update.user?.first_name ?? update.user?.username ?? 'Birdr'}</Text>
+        <Text style={styles.cardAuthor}>{update.user?.first_name ?? update.user?.username ?? authorFallback}</Text>
         <Text style={styles.cardDate}>{formatDate(update.created)}</Text>
       </View>
       <ReactionForm update={update} onReactionPosted={onReactionPosted} />
@@ -30,6 +31,7 @@ function UpdateCard({ update, onReactionPosted }: { update: Update; onReactionPo
 }
 
 export function UpdatesScreen() {
+  const { t } = useTranslation();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function UpdatesScreen() {
     setLoading(true);
     loadUpdates()
       .then(setUpdates)
-      .catch((e) => setError(e.message ?? 'Failed to load updates'))
+      .catch((e) => setError(e.message ?? t('error_load_updates')))
       .finally(() => setLoading(false));
   };
 
@@ -64,15 +66,16 @@ export function UpdatesScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Updates</Text>
+      <Text style={styles.screenTitle}>{t('updates')}</Text>
       {updates.length === 0 ? (
-        <Text style={styles.emptyText}>No updates yet.</Text>
+        <Text style={styles.emptyText}>{t('no_updates_yet')}</Text>
       ) : (
         updates.map((u) => (
           <UpdateCard
             key={u.id}
             update={u}
             onReactionPosted={load}
+            authorFallback={t('app_name')}
           />
         ))
       )}

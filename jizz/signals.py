@@ -18,7 +18,8 @@ def create_initial_country_game(sender, instance, created, **kwargs):
             include_rare=initial_level.include_rare,
             include_escapes=initial_level.include_escapes,
             tax_order=initial_level.tax_order,
-            host=instance.player
+            host=instance.player,
+            language=getattr(instance.player, 'language', 'en') or 'en',
         )
         
         # Create the country game linking everything together

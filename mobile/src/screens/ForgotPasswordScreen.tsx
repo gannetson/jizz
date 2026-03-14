@@ -26,7 +26,7 @@ export function ForgotPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!email.trim()) {
-      setError('Please enter your email.');
+      setError(t('please_enter_email'));
       return;
     }
     setError(null);
@@ -35,7 +35,7 @@ export function ForgotPasswordScreen() {
       await requestPasswordReset(email.trim(), API_BASE_URL.replace(/\/$/, ''));
       setSuccess(true);
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to send reset link.');
+      setError(e?.message ?? t('failed_send_reset_link'));
     } finally {
       setLoading(false);
     }
@@ -65,12 +65,12 @@ export function ForgotPasswordScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
-        <Text style={styles.label}>Email</Text>
+        <Text style={styles.label}>{t('email')}</Text>
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
-          placeholder="Enter your email"
+          placeholder={t('enter_email')}
           placeholderTextColor={colors.primary[400]}
           keyboardType="email-address"
           autoCapitalize="none"

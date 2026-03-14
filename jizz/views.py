@@ -81,6 +81,7 @@ from jizz.serializers import (
     PlayerScoreListSerializer,
     PlayerScoreSerializer,
     SpeciesReviewStatsSerializer,
+    SpeciesWithMediaReviewSerializer,
     PlayerSerializer,
     QuestionSerializer,
     SpeciesDetailSerializer,
@@ -309,6 +310,13 @@ class MediaPagination(PageNumberPagination):
     max_page_size = 100
 
 
+class SpeciesReviewPagination(PageNumberPagination):
+    """Paginate by species (default 3 per page) for media-review."""
+    page_size = 3
+    page_size_query_param = 'page_size'
+    max_page_size = 20
+
+
 class MediaListView(ListAPIView):
     """List media for review. level=fast|full|thorough. fast: species not fully reviewed and <10 approved; full: species not fully reviewed; thorough: all media with review_status."""
     serializer_class = MediaSerializer
@@ -466,6 +474,102 @@ class SpeciesReviewStatsView(APIView):
             },
             'species': serializer.data,
         })
+
+
+class MediaReviewSpeciesListView(APIView):
+    """List species for media review with all media embedded. Paginated by species (default 3 per page).
+    Filter: country, type, level (fast=species with <10 approved), optional species id.
+    """
+    permission_classes = [AllowAny]
+    pagination_class = SpeciesReviewPagination
+
+    def get(self, request):
+        from jizz.models import CountrySpecies
+
+        level = request.query_params.get('level', 'fast')
+        media_type = request.query_params.get('type', 'image')
+        country_code = request.query_params.get('country')
+        species_id_param = request.query_params.get('species')
+
+        qs = (
+            Species.objects
+            .filter(media__type=media_type)
+            .distinct()
+            .annotate(
+                total_media=Count('media', filter=Q(media__type=media_type), distinct=True),
+                media_with_review=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__id__isnull=False),
+                    distinct=True,
+                ),
+                approved_media=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__review_type='approved'),
+                    distinct=True,
+                ),
+                rejected_media=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__review_type='rejected'),
+                    distinct=True,
+                ),
+                not_sure_media=Count(
+                    'media',
+                    filter=Q(media__type=media_type, media__reviews__review_type='not_sure'),
+                    distinct=True,
+                ),
+            )
+            .filter(total_media__gt=0)
+            .order_by('id')
+        )
+        if country_code:
+            country_species_ids = CountrySpecies.objects.exclude(
+                status__in=['introduced', 'extirpated', 'uncertain', 'unknown']
+            ).filter(country__code=country_code.upper()).values_list('species_id', flat=True)
+            qs = qs.filter(id__in=country_species_ids)
+        if species_id_param:
+            try:
+                qs = qs.filter(id=int(species_id_param))
+            except (ValueError, TypeError):
+                pass
+
+        if level == 'fast':
+            qs = qs.filter(approved_media__lt=10, media_with_review__lt=F('total_media'))
+        elif level == 'full':
+            qs = qs.filter(media_with_review__lt=F('total_media'))
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        if page is None:
+            return paginator.get_paginated_response([])
+
+        species_ids = [s.id for s in page]
+        media_qs = (
+            Media.objects
+            .filter(species_id__in=species_ids, type=media_type, hide=False)
+            .prefetch_related('reviews')
+            .order_by('species_id', '-created')
+        )
+        media_by_species = {}
+        for m in media_qs:
+            media_by_species.setdefault(m.species_id, []).append(m)
+
+        results = []
+        for s in page:
+            media_list = media_by_species.get(s.id, [])
+            unreviewed = s.total_media - s.media_with_review
+            results.append({
+                'species': s,
+                'total_media': s.total_media,
+                'unreviewed': unreviewed,
+                'approved': s.approved_media,
+                'rejected': s.rejected_media,
+                'not_sure': s.not_sure_media,
+                'media': media_list,
+            })
+        serializer = SpeciesWithMediaReviewSerializer(
+            results, many=True, context={'request': request}
+        )
+        return paginator.get_paginated_response(serializer.data)
 
 
 class GameListView(ListCreateAPIView, GetPlayerMixin):
@@ -1390,6 +1494,7 @@ class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):
             include_escapes=challenge_level.include_escapes,
             tax_order=challenge_level.tax_order,
             host=country_challenge.player,
+            language=getattr(country_challenge.player, 'language', 'en') or 'en',
         )
 
         # Save the country game using the serializer

@@ -17,7 +17,13 @@ type Props = {
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
   const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
-  const [language, setLanguage] = useState<string>('en');
+  const [language, setLanguage] = useState<string>(() => {
+    try {
+      return localStorage.getItem('birdr-language') || 'en';
+    } catch {
+      return 'en';
+    }
+  });
   const [taxOrder, setTaxOrder] = useState<TaxOrder | undefined>();
   const [taxFamily, setTaxFamily] = useState<TaxFamily | undefined>();
   const [loading, setLoading] = useState(false)
@@ -68,10 +74,35 @@ const AppContextProvider: FC<Props> = ({children}) => {
   useEffect(() => {
     if (authService.getAccessToken()) {
       profileService.getProfile()
-        .then(setProfile)
+        .then((p) => {
+          setProfile(p);
+          // Sync language from profile if user never set it in this browser
+          try {
+            if (p.language && !localStorage.getItem('birdr-language')) {
+              setLanguage(p.language);
+              localStorage.setItem('birdr-language', p.language);
+            }
+          } catch {
+            /* ignore */
+          }
+        })
         .catch(() => setProfile(null));
     } else {
       setProfile(null);
+    }
+  }, []);
+
+  const setUserPreferredLanguage = useCallback((lang: string) => {
+    setLanguage(lang);
+    try {
+      localStorage.setItem('birdr-language', lang);
+    } catch {
+      /* ignore */
+    }
+    if (authService.getAccessToken()) {
+      profileService.updateProfile({ language: lang })
+        .then((updated) => setProfile(updated))
+        .catch(() => {});
     }
   }, []);
 
@@ -481,6 +512,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setCountry,
       language,
       setLanguage,
+      setUserPreferredLanguage,
       speciesLanguage,
       multiplayer,
       setMultiplayer,

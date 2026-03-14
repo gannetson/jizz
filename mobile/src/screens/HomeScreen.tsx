@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { loadUpdates, Update } from '../api/updates';
 import { ReactionForm } from '../components/ReactionForm';
 import { FeedbackForm } from '../components/FeedbackForm';
@@ -29,6 +30,7 @@ function formatDate(s: string) {
 
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [updates, setUpdates] = useState<Update[]>([]);
 
@@ -46,39 +48,39 @@ export function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.welcome}>Welcome</Text>
+      <Text style={styles.welcome}>{t('welcome')}</Text>
       {!isAuthenticated && (
         <View style={styles.signUpSection}>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.primaryButtonText}>Sign up</Text>
+            <Text style={styles.primaryButtonText}>{t('sign_up')}</Text>
           </TouchableOpacity>
-          <Text style={styles.signUpSubtext}>Sign up to track your progress</Text>
+          <Text style={styles.signUpSubtext}>{t('sign_up_track_progress')}</Text>
         </View>
       )}
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => navigation.navigate('Start')}
         testID="home.startNewGame"
-        accessibilityLabel="Start a new game"
+        accessibilityLabel={t('start_new_game')}
       >
-        <Text style={styles.primaryButtonText}>Start a new game</Text>
+        <Text style={styles.primaryButtonText}>{t('start_new_game')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => navigation.navigate('Challenge')}
         testID="home.countryChallenge"
-        accessibilityLabel="Country challenge"
+        accessibilityLabel={t('country_challenge')}
       >
-        <Text style={styles.primaryButtonText}>Country challenge</Text>
+        <Text style={styles.primaryButtonText}>{t('country_challenge')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.ghostButton}
         onPress={() => navigation.navigate('Scores')}
       >
-        <Text style={styles.ghostButtonText}>High scores</Text>
+        <Text style={styles.ghostButtonText}>{t('high_scores')}</Text>
       </TouchableOpacity>
       <FeedbackForm />
       {updates.length > 0 && (
@@ -88,7 +90,7 @@ export function HomeScreen() {
           </View>
           <Text style={styles.updateCardMessage} numberOfLines={3}>{updates[0].message}</Text>
           <View style={styles.updateCardFooter}>
-            <Text style={styles.updateCardMeta}>{updates[0].user?.first_name ?? 'Birdr'}</Text>
+            <Text style={styles.updateCardMeta}>{updates[0].user?.first_name ?? t('app_name')}</Text>
             <Text style={styles.updateCardDate}>{formatDate(updates[0].created)}</Text>
           </View>
           <View style={styles.updateCardReactions}>
@@ -100,7 +102,7 @@ export function HomeScreen() {
         style={styles.ghostButton}
         onPress={() => navigation.navigate('Updates')}
       >
-        <Text style={styles.ghostButtonText}>More updates</Text>
+        <Text style={styles.ghostButtonText}>{t('more_updates')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

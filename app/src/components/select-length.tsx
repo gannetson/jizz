@@ -2,9 +2,11 @@ import {useContext} from "react";
 import AppContext from "../core/app-context";
 import {Box, Flex, Heading, RadioGroup, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
+import { getCountryDisplayName } from "../data/country-names-nl";
 
 export const SelectLength = () => {
-  const {length, setLength, country} = useContext(AppContext);
+  const { length, setLength, country, language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
 
   const onChange = (value: string) => {
     setLength && setLength(value)
@@ -20,7 +22,7 @@ export const SelectLength = () => {
           <FormattedMessage
             id={'how many questions'}
             defaultMessage={'How many questions do you want to answer?'}
-            values={{count: country.count, country: country.name}}
+            values={{ count: country.count, country: getCountryDisplayName(country, locale) }}
           />
         </Text>
       )}

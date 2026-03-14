@@ -15,29 +15,33 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { getProfile } from '../api/profile';
 import { loadCountries } from '../api/countries';
 import { loadLanguages } from '../api/languages';
 import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
+import { getCountryDisplayName } from '../i18n/countryNames';
+import { getLanguageDisplayName } from '../i18n/languageNames';
 import { colors } from '../theme';
 
 const LEVELS = [
-  { value: 'beginner', label: 'Beginner', sub: 'Very easy multiple choice' },
-  { value: 'advanced', label: 'Advanced', sub: 'Multiple choice with similar species' },
-  { value: 'expert', label: 'Expert', sub: 'Text input (with auto complete)' },
+  { value: 'beginner', labelKey: 'beginner', subKey: 'very_easy_multiple_choice' },
+  { value: 'advanced', labelKey: 'advanced', subKey: 'multiple_choice_similar' },
+  { value: 'expert', labelKey: 'expert', subKey: 'text_input_autocomplete' },
 ];
 
 const LENGTHS = ['10', '20', '50', '100'];
 
 const MEDIA = [
-  { value: 'images', label: 'Pictures' },
-  { value: 'audio', label: 'Sounds' },
-  { value: 'video', label: 'Videos' },
+  { value: 'images', labelKey: 'pictures' },
+  { value: 'audio', labelKey: 'sounds' },
+  { value: 'video', labelKey: 'videos' },
 ];
 
 export function StartScreen() {
   const navigation = useNavigation();
+  const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
   const {
     playerName,
@@ -67,6 +71,8 @@ export function StartScreen() {
   const [countriesLoaded, setCountriesLoaded] = useState(false);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [languageSearch, setLanguageSearch] = useState('');
 
   useEffect(() => {
     loadCountries().then((list) => {
@@ -81,6 +87,26 @@ export function StartScreen() {
     loadLanguages().then(setLanguages);
     loadStoredPlayer();
   }, []);
+
+  const sortedCountries = React.useMemo(
+    () => [...countries].sort((a, b) => getCountryDisplayName(a, locale).localeCompare(getCountryDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    [countries, locale]
+  );
+  const filteredCountries = React.useMemo(() => {
+    if (!countrySearch.trim()) return sortedCountries;
+    const q = countrySearch.trim().toLowerCase();
+    return sortedCountries.filter((c) => getCountryDisplayName(c, locale).toLowerCase().includes(q));
+  }, [sortedCountries, countrySearch, locale]);
+
+  const sortedLanguages = React.useMemo(
+    () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    [languages, locale]
+  );
+  const filteredLanguages = React.useMemo(() => {
+    if (!languageSearch.trim()) return sortedLanguages;
+    const q = languageSearch.trim().toLowerCase();
+    return sortedLanguages.filter((l) => getLanguageDisplayName(l, locale).toLowerCase().includes(q));
+  }, [sortedLanguages, languageSearch, locale]);
 
   // When logged in, prefill player name, country and species language from profile
   useEffect(() => {
@@ -108,11 +134,11 @@ export function StartScreen() {
 
   const handleStart = async () => {
     if (!playerName.trim()) {
-      Alert.alert('Missing name', "What's your name? You can pick any name you want.");
+      Alert.alert(t('missing_name'), t('whats_your_name'));
       return;
     }
     if (!country) {
-      Alert.alert('Select country', 'Please select a country.');
+      Alert.alert(t('select_country'), t('please_select_country'));
       return;
     }
     try {
@@ -120,13 +146,13 @@ export function StartScreen() {
       if (game) {
         (navigation as any).navigate('Lobby');
       } else {
-        Alert.alert('Error', 'Could not create game. Please try again.');
+        Alert.alert(t('error'), t('could_not_create_game'));
       }
     } catch (e: any) {
       const message = e?.name === 'AbortError'
-        ? 'Request timed out. Check your connection and try again.'
-        : (e?.message || 'Could not create game. Please try again.');
-      Alert.alert('Error', message);
+        ? t('request_timed_out')
+        : (e?.message || t('could_not_create_game'));
+      Alert.alert(t('error'), message);
     }
   };
 
@@ -140,71 +166,85 @@ export function StartScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title} testID="start.title" accessibilityLabel="Start a new game screen title">Start a new game</Text>
+      <Text style={styles.title} testID="start.title" accessibilityLabel={t('start_new_game')}>{t('start_new_game')}</Text>
       <Text style={styles.hint}>
-        To get a high score, identify the birds correctly and be fast! After each answer you see how many points you got.
+        {t('start_hint')}
       </Text>
 
-      <Text style={styles.label}>Player name</Text>
+      <Text style={styles.label}>{t('player_name')}</Text>
       <TextInput
         style={styles.input}
         value={playerName || player?.name || ''}
         onChangeText={setPlayerName}
-        placeholder="Your name"
+        placeholder={t('your_name')}
         placeholderTextColor={colors.primary[500]}
         testID="start.playerName"
-        accessibilityLabel="Player name"
+        accessibilityLabel={t('player_name')}
       />
 
-      <Text style={styles.label}>Country</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="start.selectCountry" accessibilityLabel="Select country">
-        <Text style={styles.selectButtonText}>{country?.name ?? 'Select country...'}</Text>
+      <Text style={styles.label}>{t('select_country')}</Text>
+      <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="start.selectCountry" accessibilityLabel={t('select_country')}>
+        <Text style={styles.selectButtonText}>{country ? getCountryDisplayName(country, locale) : t('select_country_dots')}</Text>
       </TouchableOpacity>
       <Modal visible={countryModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle} testID="start.modal.countryTitle">Select country</Text>
+            <Text style={styles.modalTitle} testID="start.modal.countryTitle">{t('select_country')}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search')}
+              placeholderTextColor={colors.primary[400]}
+              value={countrySearch}
+              onChangeText={setCountrySearch}
+            />
             <FlatList
-              data={countries}
+              data={filteredCountries}
               keyExtractor={(c) => c.code}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, country?.code === item.code && styles.modalItemSelected]}
-                  onPress={() => { setCountry(item); setCountryModalVisible(false); }}
+                  onPress={() => { setCountry(item); setCountryModalVisible(false); setCountrySearch(''); }}
                 >
-                  <Text style={[styles.modalItemText, country?.code === item.code && styles.modalItemTextSelected]}>{item.name}</Text>
+                  <Text style={[styles.modalItemText, country?.code === item.code && styles.modalItemTextSelected]}>{getCountryDisplayName(item, locale)}</Text>
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)} testID="start.modal.closeCountry" accessibilityLabel="Close">
-              <Text style={styles.modalCloseText}>Close</Text>
+            <TouchableOpacity style={styles.modalClose} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }} testID="start.modal.closeCountry" accessibilityLabel={t('close')}>
+              <Text style={styles.modalCloseText}>{t('close')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
-      <Text style={styles.label}>Language (species names)</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="start.selectLanguage" accessibilityLabel="Select language">
-        <Text style={styles.selectButtonText}>{languages.find((l) => l.code === language)?.name ?? 'Select language...'}</Text>
+      <Text style={styles.label}>{t('language_species_names')}</Text>
+      <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="start.selectLanguage" accessibilityLabel={t('select_language')}>
+        <Text style={styles.selectButtonText}>{getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language_dots')}</Text>
       </TouchableOpacity>
       <Modal visible={languageModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => setLanguageModalVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle} testID="start.modal.languageTitle">Select language</Text>
+            <Text style={styles.modalTitle} testID="start.modal.languageTitle">{t('select_language')}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search')}
+              placeholderTextColor={colors.primary[400]}
+              value={languageSearch}
+              onChangeText={setLanguageSearch}
+            />
             <FlatList
-              data={languages}
+              data={filteredLanguages}
               keyExtractor={(l) => l.code}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
-                  onPress={() => { setLanguage(item.code); setLanguageModalVisible(false); }}
+                  onPress={() => { setLanguage(item.code); setLanguageModalVisible(false); setLanguageSearch(''); }}
                 >
-                  <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{item.name}</Text>
+                  <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{getLanguageDisplayName(item, locale)}</Text>
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)} testID="start.modal.closeLanguage" accessibilityLabel="Close">
-              <Text style={styles.modalCloseText}>Close</Text>
+            <TouchableOpacity style={styles.modalClose} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }} testID="start.modal.closeLanguage" accessibilityLabel={t('close')}>
+              <Text style={styles.modalCloseText}>{t('close')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -215,32 +255,32 @@ export function StartScreen() {
         onPress={handleStart}
         disabled={loading || !country || !playerName.trim()}
         testID="start.startGame"
-        accessibilityLabel="Start a new game"
+        accessibilityLabel={t('start_new_game')}
       >
         {loading ? (
           <ActivityIndicator color={colors.primary[50]} />
         ) : (
-          <Text style={styles.startButtonText}>Start a new game</Text>
+          <Text style={styles.startButtonText}>{t('start_new_game')}</Text>
         )}
       </TouchableOpacity>
 
-      <Text style={styles.label}>Include rare species</Text>
+      <Text style={styles.label}>{t('include_rare_species')}</Text>
       <View style={styles.row}>
         <TouchableOpacity
           style={[styles.chip, includeRare && styles.chipSelected]}
           onPress={() => setIncludeRare(true)}
         >
-          <Text style={[styles.chipText, includeRare && styles.chipTextSelected]}>Yes</Text>
+          <Text style={[styles.chipText, includeRare && styles.chipTextSelected]}>{t('yes')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.chip, !includeRare && styles.chipSelected]}
           onPress={() => setIncludeRare(false)}
         >
-          <Text style={[styles.chipText, !includeRare && styles.chipTextSelected]}>No</Text>
+          <Text style={[styles.chipText, !includeRare && styles.chipTextSelected]}>{t('no')}</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.label}>Questions</Text>
+      <Text style={styles.label}>{t('questions')}</Text>
       <View style={styles.pickerRow}>
         {LENGTHS.map((l) => (
           <TouchableOpacity
@@ -253,19 +293,19 @@ export function StartScreen() {
         ))}
       </View>
 
-      <Text style={styles.label}>Level</Text>
+      <Text style={styles.label}>{t('level')}</Text>
       {LEVELS.map((l) => (
         <TouchableOpacity
           key={l.value}
           style={[styles.levelRow, level === l.value && styles.levelRowSelected]}
           onPress={() => setLevel(l.value)}
         >
-          <Text style={[styles.levelLabel, level === l.value && styles.levelLabelSelected]}>{l.label}</Text>
-          <Text style={[styles.levelSub, level === l.value && styles.levelSubSelected]}>{l.sub}</Text>
+          <Text style={[styles.levelLabel, level === l.value && styles.levelLabelSelected]}>{t(l.labelKey)}</Text>
+          <Text style={[styles.levelSub, level === l.value && styles.levelSubSelected]}>{t(l.subKey)}</Text>
         </TouchableOpacity>
       ))}
 
-      <Text style={styles.label}>Media type</Text>
+      <Text style={styles.label}>{t('media')}</Text>
       <View style={styles.mediaRow}>
         {MEDIA.map((m) => (
           <TouchableOpacity
@@ -276,26 +316,26 @@ export function StartScreen() {
               if (m.value !== 'audio') setSoundsScope('all');
             }}
           >
-            <Text style={[styles.chipText, mediaType === m.value && styles.chipTextSelected]}>{m.label}</Text>
+            <Text style={[styles.chipText, mediaType === m.value && styles.chipTextSelected]}>{t(m.labelKey)}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {mediaType === 'audio' && (
         <>
-          <Text style={styles.label}>Sounds</Text>
+          <Text style={styles.label}>{t('sounds')}</Text>
           <View style={styles.pickerRow}>
             <TouchableOpacity
               style={[styles.chip, soundsScope === 'all' && styles.chipSelected]}
               onPress={() => setSoundsScope('all')}
             >
-              <Text style={[styles.chipText, soundsScope === 'all' && styles.chipTextSelected]}>All birds</Text>
+              <Text style={[styles.chipText, soundsScope === 'all' && styles.chipTextSelected]}>{t('all_birds')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.chip, soundsScope === 'passerines' && styles.chipSelected]}
               onPress={() => setSoundsScope('passerines')}
             >
-              <Text style={[styles.chipText, soundsScope === 'passerines' && styles.chipTextSelected]}>Passerines</Text>
+              <Text style={[styles.chipText, soundsScope === 'passerines' && styles.chipTextSelected]}>{t('passerines')}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -367,6 +407,15 @@ const styles = StyleSheet.create({
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    color: colors.primary[800],
+    marginBottom: 8,
+  },
   modalItem: { paddingVertical: 14, paddingHorizontal: 8 },
   modalItemSelected: { backgroundColor: colors.primary[100] },
   modalItemText: { fontSize: 16, color: colors.primary[800] },

@@ -17,16 +17,16 @@ import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 
-const USER_MENU_ITEMS: { route: string; label: string }[] = [
-  { route: 'MyGames', label: 'My Games' },
-  { route: 'Settings', label: 'Profile' },
-  { route: 'MediaReview', label: 'Review media' },
+const USER_MENU_ITEMS: { route: string; labelKey: string }[] = [
+  { route: 'MyGames', labelKey: 'my_games' },
+  { route: 'Settings', labelKey: 'profile' },
 ];
 
 export function UserMenuModal() {
@@ -34,6 +34,7 @@ export function UserMenuModal() {
   const { userMenuVisible, closeUserMenu } = useMenu();
   const { isAuthenticated, logout } = useAuth();
   const { profile, avatarUrl, initials } = useProfile();
+  const { t, locale, setLocale } = useTranslation();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
 
@@ -77,18 +78,35 @@ export function UserMenuModal() {
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={(e) => e.stopPropagation()}>
             <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingTop: Math.max(56, insets.top) }]}>
-              <Text style={styles.sectionTitle}>Account</Text>
+              <Text style={styles.sectionTitle}>{t('account')}</Text>
+              <View style={styles.languageRow}>
+                <View style={styles.languageChips}>
+                  <TouchableOpacity
+                    style={[styles.languageChip, locale === 'en' && styles.languageChipSelected]}
+                    onPress={() => setLocale('en')}
+                  >
+                    <Text style={[styles.languageChipText, locale === 'en' && styles.languageChipTextSelected]}>English</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.languageChip, locale === 'nl' && styles.languageChipSelected]}
+                    onPress={() => setLocale('nl')}
+                  >
+                    <Text style={[styles.languageChipText, locale === 'nl' && styles.languageChipTextSelected]}>Nederlands</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.separator} />
               {!isAuthenticated ? (
                 <>
                   <TouchableOpacity style={styles.menuItem} onPress={() => handleItem('Login')}>
-                    <Text style={styles.menuLabel}>Login</Text>
+                    <Text style={styles.menuLabel}>{t('login')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.menuItem} onPress={() => handleItem('Register')}>
-                    <Text style={styles.menuLabel}>Register</Text>
+                    <Text style={styles.menuLabel}>{t('register')}</Text>
                   </TouchableOpacity>
                   <View style={styles.separator} />
                   <Text style={styles.hint}>
-                    Login to save your progress and compete on leaderboards
+                    {t('login_to_save_progress')}
                   </Text>
                 </>
               ) : (
@@ -103,9 +121,9 @@ export function UserMenuModal() {
                     )}
                   </View>
                   <Text style={styles.userName} numberOfLines={1}>
-                    {profile?.username || profile?.email || 'Logged in'}
+                    {profile?.username || profile?.email || t('logged_in')}
                   </Text>
-                  <Text style={styles.hint}>You are logged in.</Text>
+                  <Text style={styles.hint}>{t('you_are_logged_in')}</Text>
                 </View>
               )}
               {USER_MENU_ITEMS.map((item) => (
@@ -114,7 +132,7 @@ export function UserMenuModal() {
                   style={styles.menuItem}
                   onPress={() => handleItem(item.route)}
                 >
-                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Text style={styles.menuLabel}>{t(item.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
               <View style={styles.separator} />
@@ -127,14 +145,14 @@ export function UserMenuModal() {
                     (navigation as any).navigate('Home');
                   }}
                 >
-                  <Text style={styles.logoutLabel}>Logout</Text>
+                  <Text style={styles.logoutLabel}>{t('logout')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={[styles.menuItem, styles.exitItem]}
                 onPress={handleExit}
               >
-                <Text style={styles.exitLabel}>Close app</Text>
+                <Text style={styles.exitLabel}>{t('close_app')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </Pressable>
@@ -246,5 +264,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary[800],
+  },
+  languageRow: {
+    marginBottom: 4,
+  },
+  languageLabel: {
+    fontSize: 14,
+    color: colors.primary[600],
+    marginBottom: 8,
+  },
+  languageChips: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  languageChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    backgroundColor: 'transparent',
+  },
+  languageChipSelected: {
+    backgroundColor: colors.primary[500],
+    borderColor: colors.primary[500],
+  },
+  languageChipText: {
+    fontSize: 15,
+    color: colors.primary[800],
+  },
+  languageChipTextSelected: {
+    color: colors.primary[50],
+    fontWeight: '600',
   },
 });

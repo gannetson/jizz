@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   VStack,
@@ -19,7 +19,8 @@ import { FormattedMessage } from "react-intl";
 import { gamesService, GameDetailWithAnswers, QuestionWithAnswer } from "../api/services/games.service";
 import { format } from "date-fns";
 import ReactPlayer from "react-player";
-import { Species } from "../core/app-context";
+import AppContext, { Species } from "../core/app-context";
+import { getCountryDisplayName } from "../data/country-names-nl";
 import { SpeciesButton } from "./species-button";
 import { ComparisonButton } from "./comparison-button";
 import { MediaCredits } from "./media-credits";
@@ -42,6 +43,8 @@ type GameDetailModalProps = {
 };
 
 export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalProps) => {
+  const { language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
   const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -204,7 +207,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                     <VStack align="stretch" gap={3}>
                       <HStack justify="space-between" align="start">
                         <VStack align="start" gap={1}>
-                          <Heading size="md">{game.country?.name || 'Unknown Country'}</Heading>
+                          <Heading size="md">{game.country ? getCountryDisplayName(game.country, locale) : 'Unknown Country'}</Heading>
                           <Text fontSize="sm" color="gray.600">
                             {formatDate(game.created)}
                           </Text>

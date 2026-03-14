@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   Box,
   VStack,
   HStack,
   Text,
 } from "@chakra-ui/react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { format } from "date-fns";
-import { Game } from "../core/app-context";
+import AppContext, { Game } from "../core/app-context";
+import { getCountryDisplayName } from "../data/country-names-nl";
 import { GameDetailModal } from "./game-detail-modal";
 
 type GameRowProps = {
@@ -20,6 +21,9 @@ type GameRowProps = {
  */
 export const GameRow = ({ game }: GameRowProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const intl = useIntl();
+  const { language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
 
   const formatDate = (dateString: string) => {
     try {
@@ -62,7 +66,7 @@ export const GameRow = ({ game }: GameRowProps) => {
           <HStack justify="space-between" align="start">
             <VStack align="start" gap={1}>
               <Text fontWeight="bold" fontSize="lg">
-                {game.country?.name || 'Unknown Country'}
+                {game.country ? getCountryDisplayName(game.country, locale) : intl.formatMessage({ id: 'unknown country', defaultMessage: 'Unknown Country' })}
               </Text>
               <Text fontSize="sm" color="gray.600">
                 {formatDate(game.created)}

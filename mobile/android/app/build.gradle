@@ -98,8 +98,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 26
-        versionName "Snow Goose"
+        versionCode 27
+        versionName "Ross's Goose"
     }
     signingConfigs {
         debug {

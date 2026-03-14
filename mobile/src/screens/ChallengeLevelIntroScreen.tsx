@@ -15,6 +15,7 @@ import {
   clearStoredChallengePlayerToken,
   type CountryChallenge,
 } from '../api/challenge';
+import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
 
@@ -25,6 +26,7 @@ type ChallengeLevelIntroParams = {
 
 export function ChallengeLevelIntroScreen() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<{ ChallengeLevelIntro: ChallengeLevelIntroParams }, 'ChallengeLevelIntro'>>();
   const { challengeId: paramChallengeId, gameToken: paramGameToken } = route.params ?? {};
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export function ChallengeLevelIntroScreen() {
             await clearStoredChallengePlayerToken();
             setChallenge(null);
             setPlayerToken(null);
-            setError(e?.message ?? 'Failed to load challenge');
+            setError(e?.message ?? t('failed_load_challenge'));
           }
         } else {
           if (!cancelled) {
@@ -70,7 +72,7 @@ export function ChallengeLevelIntroScreen() {
         if (!cancelled) setLoading(false);
       })();
       return () => { cancelled = true; };
-    }, [navigation, paramGameToken])
+    }, [navigation, paramGameToken, t])
   );
 
   const level = paramGameToken
@@ -108,7 +110,7 @@ export function ChallengeLevelIntroScreen() {
       const c = await loadCountryChallenge(playerToken);
       setChallenge(c);
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to continue');
+      setError(e?.message ?? t('failed_continue_challenge'));
     } finally {
       setNextLevelLoading(false);
     }
@@ -118,7 +120,7 @@ export function ChallengeLevelIntroScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
-        <Text style={styles.muted}>Loading…</Text>
+        <Text style={styles.muted}>{t('loading')}</Text>
       </View>
     );
   }
@@ -126,9 +128,9 @@ export function ChallengeLevelIntroScreen() {
   if (!challenge || !level) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.muted}>No challenge found.</Text>
+        <Text style={styles.muted}>{t('no_challenge_found')}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backLink}>
-          <Text style={styles.link}>Back</Text>
+          <Text style={styles.link}>{t('back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -147,11 +149,11 @@ export function ChallengeLevelIntroScreen() {
           <Text style={styles.subtitle}>
             Round {level.challenge_level.sequence + 1} – {level.challenge_level.title}
           </Text>
-          <Text style={styles.sectionLabel}>What is this level about?</Text>
+          <Text style={styles.sectionLabel}>{t('what_is_level_about')}</Text>
           <Text style={styles.description}>
             {level.challenge_level.description}
           </Text>
-          <Text style={styles.jokersLabel}>Jokers this round:</Text>
+          <Text style={styles.jokersLabel}>{t('jokers_this_round')}</Text>
           <View style={styles.jokersRow}>
             {Array.from({ length: level.challenge_level.jokers }).map((_, i) => (
               <FontAwesome5 key={i} name="heart" solid size={22} color={colors.primary[500]} />
@@ -161,58 +163,58 @@ export function ChallengeLevelIntroScreen() {
             style={styles.primaryButton}
             onPress={handleStartLevel}
             testID="countryChallenge.startLevel"
-            accessibilityLabel="Start Level"
+            accessibilityLabel={t('start_level')}
           >
-            <Text style={styles.primaryButtonText}>Start Level</Text>
+            <Text style={styles.primaryButtonText}>{t('start_level')}</Text>
           </TouchableOpacity>
         </>
       ) : effectiveStatus === 'failed' ? (
         <>
           <Text style={[styles.title, styles.failedTitle]}>
-            Failed! Round {level.challenge_level.sequence + 1} – {level.challenge_level.title}
+            {t('failed_round_title', { seq: String(level.challenge_level.sequence + 1), title: level.challenge_level.title })}
           </Text>
           <Text style={styles.description}>
-            Ouch! That was one wrong answer too many...
+            {t('failed_message')}
           </Text>
           <TouchableOpacity
             style={[styles.primaryButton, nextLevelLoading && styles.buttonDisabled]}
             onPress={handleRestartOrNextLevel}
             disabled={nextLevelLoading}
             testID="countryChallenge.restartLevel"
-            accessibilityLabel="Restart Level"
+            accessibilityLabel={t('restart_level')}
           >
             {nextLevelLoading ? (
               <ActivityIndicator color={colors.primary[50]} />
             ) : (
-              <Text style={styles.primaryButtonText}>Restart Level</Text>
+              <Text style={styles.primaryButtonText}>{t('restart_level')}</Text>
             )}
           </TouchableOpacity>
         </>
       ) : effectiveStatus === 'passed' ? (
         <>
           <Text style={styles.title}>
-            Congratulations! Level {level.challenge_level.sequence + 1} completed!
+            {t('congratulations_level', { seq: String(level.challenge_level.sequence + 1) })}
           </Text>
           <Text style={styles.description}>
-            Well done! Ready for the next challenge?
+            {t('well_done_next')}
           </Text>
           <TouchableOpacity
             style={[styles.primaryButton, nextLevelLoading && styles.buttonDisabled]}
             onPress={handleRestartOrNextLevel}
             disabled={nextLevelLoading}
             testID="countryChallenge.nextLevel"
-            accessibilityLabel="Next Level"
+            accessibilityLabel={t('next_level')}
           >
             {nextLevelLoading ? (
               <ActivityIndicator color={colors.primary[50]} />
             ) : (
-              <Text style={styles.primaryButtonText}>Next Level</Text>
+              <Text style={styles.primaryButtonText}>{t('next_level')}</Text>
             )}
           </TouchableOpacity>
         </>
       ) : (
         <>
-          <Text style={styles.title}>Level in progress</Text>
+          <Text style={styles.title}>{t('level_in_progress')}</Text>
           {(() => {
             const answersCount = level?.game?.scores?.[0]?.answers?.length ?? 0;
             const total = typeof level?.game?.length === 'number' ? level.game.length : Number(level?.game?.length) || 0;
@@ -220,7 +222,7 @@ export function ChallengeLevelIntroScreen() {
             if (total > 0 && currentQuestion <= total) {
               return (
                 <Text style={styles.questionProgress}>
-                  Question {currentQuestion} of {total}
+                  {t('question_of', { current: String(currentQuestion), total: String(total) })}
                 </Text>
               );
             }
@@ -230,9 +232,9 @@ export function ChallengeLevelIntroScreen() {
             style={styles.primaryButton}
             onPress={handleStartLevel}
             testID="countryChallenge.continue"
-            accessibilityLabel="Continue"
+            accessibilityLabel={t('continue')}
           >
-            <Text style={styles.primaryButtonText}>Continue</Text>
+            <Text style={styles.primaryButtonText}>{t('continue')}</Text>
           </TouchableOpacity>
         </>
       )}

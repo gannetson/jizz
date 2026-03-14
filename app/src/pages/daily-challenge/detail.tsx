@@ -25,9 +25,12 @@ import { Page } from "../../shared/components/layout";
 import AppContext from "../../core/app-context";
 import { useContext } from "react";
 import { format } from "date-fns";
+import { getCountryDisplayName } from "../../data/country-names-nl";
 
 export const DailyChallengeDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
   const navigate = useNavigate();
   const { loadGame, setPlayer, loadPlayer } = useContext(AppContext);
   const [challenge, setChallenge] = useState<DailyChallenge | null>(null);
@@ -147,7 +150,7 @@ export const DailyChallengeDetailPage = () => {
     <Page>
       <Page.Header>
         <Heading color="gray.800" size="lg" m={0}>
-          {challenge.country?.name ?? "Challenge"} · {challenge.duration_days} days
+          {challenge.country ? getCountryDisplayName(challenge.country, locale) : "Challenge"} · {challenge.duration_days} days
         </Heading>
         <Text fontSize="sm" color="gray.600" mt={1}>
           {challenge.creator_username} · {challenge.media} · {challenge.length} questions · {challenge.status}

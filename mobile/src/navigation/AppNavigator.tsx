@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppHeader } from '../components/AppHeader';
+import { useTranslation } from '../i18n/TranslationContext';
 import { UserMenuModal } from '../components/UserMenuModal';
 import { LeftMenuModal } from '../components/LeftMenuModal';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -28,48 +29,48 @@ import { DailyChallengeCreateScreen } from '../screens/DailyChallengeCreateScree
 
 const Stack = createNativeStackNavigator();
 
-const SCREENS = [
-  { name: 'Home', title: 'Birdr', component: HomeScreen },
-  { name: 'Start', title: 'New game', component: StartScreen },
-  { name: 'Scores', title: 'High scores', component: ScoresScreen },
-  { name: 'Challenge', title: 'Country challenge', component: ChallengeScreen },
-  { name: 'ChallengeLevelIntro', title: 'Level', component: ChallengeLevelIntroScreen },
-  { name: 'DailyChallenge', title: 'Daily challenge', component: DailyChallengeListScreen },
-  { name: 'DailyChallengeDetail', title: 'Daily challenge', component: DailyChallengeDetailScreen },
-  { name: 'DailyChallengeCreate', title: 'New daily challenge', component: DailyChallengeCreateScreen },
-  { name: 'ChallengePlay', title: 'Challenge', component: ChallengePlayScreen },
-  { name: 'Updates', title: 'Updates', component: UpdatesScreen },
-  { name: 'Help', title: 'Help', component: HelpOverviewScreen },
-  { name: 'HelpDetail', title: 'Help', component: HelpDetailScreenWrapper },
-  { name: 'MyGames', title: 'My Games', component: MyGamesScreen },
-  { name: 'GameDetail', title: 'Game details', component: GameDetailScreen },
-  { name: 'Settings', title: 'Profile', component: ProfileScreen },
-  { name: 'MediaReview', title: 'Review media', component: MediaReviewScreen },
-  { name: 'Login', title: 'Login', component: LoginScreen },
-  { name: 'Register', title: 'Register', component: LoginScreen },
-  { name: 'ForgotPassword', title: 'Forgot password', component: ForgotPasswordScreen },
-  { name: 'ResetPassword', title: 'Reset password', component: ResetPasswordScreen },
-  { name: 'Lobby', title: 'Game Lobby', component: LobbyScreen },
-  { name: 'GamePlay', title: 'Game', component: GamePlayScreen },
-  { name: 'GameResults', title: 'Results', component: GameResultsScreen },
+const SCREENS: { name: string; titleKey: string; component: React.ComponentType<any> }[] = [
+  { name: 'Home', titleKey: 'app_name', component: HomeScreen },
+  { name: 'Start', titleKey: 'new_game', component: StartScreen },
+  { name: 'Scores', titleKey: 'high_scores', component: ScoresScreen },
+  { name: 'Challenge', titleKey: 'country_challenge', component: ChallengeScreen },
+  { name: 'ChallengeLevelIntro', titleKey: 'level', component: ChallengeLevelIntroScreen },
+  { name: 'DailyChallenge', titleKey: 'daily_challenge', component: DailyChallengeListScreen },
+  { name: 'DailyChallengeDetail', titleKey: 'daily_challenge', component: DailyChallengeDetailScreen },
+  { name: 'DailyChallengeCreate', titleKey: 'new_daily_challenge', component: DailyChallengeCreateScreen },
+  { name: 'ChallengePlay', titleKey: 'country_challenge', component: ChallengePlayScreen },
+  { name: 'Updates', titleKey: 'updates', component: UpdatesScreen },
+  { name: 'Help', titleKey: 'help', component: HelpOverviewScreen },
+  { name: 'HelpDetail', titleKey: 'help', component: HelpDetailScreenWrapper },
+  { name: 'MyGames', titleKey: 'my_games', component: MyGamesScreen },
+  { name: 'GameDetail', titleKey: 'game_details', component: GameDetailScreen },
+  { name: 'Settings', titleKey: 'profile', component: ProfileScreen },
+  { name: 'MediaReview', titleKey: 'review_media', component: MediaReviewScreen },
+  { name: 'Login', titleKey: 'login', component: LoginScreen },
+  { name: 'Register', titleKey: 'register', component: LoginScreen },
+  { name: 'ForgotPassword', titleKey: 'forgot_password', component: ForgotPasswordScreen },
+  { name: 'ResetPassword', titleKey: 'reset_password', component: ResetPasswordScreen },
+  { name: 'Lobby', titleKey: 'game_lobby', component: LobbyScreen },
+  { name: 'GamePlay', titleKey: 'game', component: GamePlayScreen },
+  { name: 'GameResults', titleKey: 'results', component: GameResultsScreen },
 ];
 
 export default function AppNavigator() {
+  const { t } = useTranslation();
   return (
     <>
       <Stack.Navigator
         screenOptions={{
-          header: ({ route, options }) => (
-            <AppHeader
-              routeName={route.name}
-              title={
-                options.title ??
-                (route.name === 'Home'
-                  ? 'Birdr'
-                  : SCREENS.find((s) => s.name === route.name)?.title ?? route.name)
-              }
-            />
-          ),
+          header: ({ route }) => {
+            const screen = SCREENS.find((s) => s.name === route.name);
+            const title = screen ? t(screen.titleKey) : route.name;
+            return (
+              <AppHeader
+                routeName={route.name}
+                title={title}
+              />
+            );
+          },
         }}
       >
         {SCREENS.map((screen) => (
@@ -77,7 +78,6 @@ export default function AppNavigator() {
             key={screen.name}
             name={screen.name}
             component={screen.component}
-            options={{ title: screen.title }}
           />
         ))}
       </Stack.Navigator>

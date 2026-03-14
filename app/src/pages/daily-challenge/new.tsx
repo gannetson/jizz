@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   VStack,
   Text,
@@ -19,6 +19,8 @@ import {
 } from "../../api/services/daily-challenge.service";
 import { UseCountries } from "../../user/use-countries";
 import { Page } from "../../shared/components/layout";
+import AppContext from "../../core/app-context";
+import { getCountryDisplayName } from "../../data/country-names-nl";
 
 const MEDIA_OPTIONS = [
   { value: "images", label: "Images" },
@@ -34,6 +36,8 @@ const LEVEL_OPTIONS = [
 
 export const DailyChallengeNewPage = () => {
   const navigate = useNavigate();
+  const { language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
   const { countries } = UseCountries();
   const filteredCountries = Array.isArray(countries) ? countries.filter((c) => !c.code.includes("NL-NH")) : [];
   const [countryCode, setCountryCode] = useState<string>("");
@@ -121,7 +125,7 @@ export const DailyChallengeNewPage = () => {
                 <option value="">Select country</option>
                 {filteredCountries.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.name}
+                    {getCountryDisplayName(c, locale)}
                   </option>
                 ))}
               </select>

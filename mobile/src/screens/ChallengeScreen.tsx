@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -9,7 +10,6 @@ import {
   Modal,
   Pressable,
   FlatList,
-  TextInput,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { loadCountries, type Country } from '../api/countries';
@@ -24,11 +24,15 @@ import {
   type CountryChallenge,
 } from '../api/challenge';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { getProfile } from '../api/profile';
+import { getCountryDisplayName } from '../i18n/countryNames';
+import { getLanguageDisplayName } from '../i18n/languageNames';
 import { colors } from '../theme';
 
 export function ChallengeScreen() {
   const navigation = useNavigation();
+  const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +46,30 @@ export function ChallengeScreen() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [languageSearch, setLanguageSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [nextLevelLoading, setNextLevelLoading] = useState(false);
+
+  const sortedCountries = React.useMemo(
+    () => [...countries].sort((a, b) => getCountryDisplayName(a, locale).localeCompare(getCountryDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    [countries, locale]
+  );
+  const filteredCountries = React.useMemo(() => {
+    if (!countrySearch.trim()) return sortedCountries;
+    const q = countrySearch.trim().toLowerCase();
+    return sortedCountries.filter((c) => getCountryDisplayName(c, locale).toLowerCase().includes(q));
+  }, [sortedCountries, countrySearch, locale]);
+
+  const sortedLanguages = React.useMemo(
+    () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    [languages, locale]
+  );
+  const filteredLanguages = React.useMemo(() => {
+    if (!languageSearch.trim()) return sortedLanguages;
+    const q = languageSearch.trim().toLowerCase();
+    return sortedLanguages.filter((l) => getLanguageDisplayName(l, locale).toLowerCase().includes(q));
+  }, [sortedLanguages, languageSearch, locale]);
 
   const loadChallenge = useCallback(async (token: string) => {
     try {
@@ -51,10 +77,10 @@ export function ChallengeScreen() {
       setChallenge(c);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to load challenge');
+      setError(e?.message ?? t('failed_load_challenge'));
       setChallenge(null);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -80,7 +106,7 @@ export function ChallengeScreen() {
             await clearStoredChallengePlayerToken();
             setChallenge(null);
             setPlayerToken(null);
-            setError(e?.message ?? 'Failed to load challenge');
+            setError(e?.message ?? t('failed_load_challenge'));
           }
         } else {
           if (!cancelled) {
@@ -134,7 +160,7 @@ export function ChallengeScreen() {
 
   const handleStartChallenge = async () => {
     if (!effectiveName.trim() || !country) {
-      setError('Please enter your name and select a country.');
+      setError(t('please_enter_name_country'));
       return;
     }
     setCreating(true);
@@ -153,7 +179,7 @@ export function ChallengeScreen() {
         gameToken: gameToken ?? undefined,
       });
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to start challenge');
+      setError(e?.message ?? t('failed_start_challenge'));
     } finally {
       setCreating(false);
     }
@@ -171,12 +197,14 @@ export function ChallengeScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
-        <Text style={styles.muted}>Loading challenge…</Text>
+        <Text style={styles.muted}>{t('loading_challenge')}</Text>
       </View>
     );
   }
 
   const level = challenge?.levels?.[0];
+
+  const hasChallenge = Boolean(challenge?.country?.name && level?.challenge_level?.title);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -186,81 +214,127 @@ export function ChallengeScreen() {
         </View>
       ) : null}
 
-      {/* First step: create form (name, country, language) – always shown */}
-      <View style={styles.createSection}>
-        <Text style={styles.title} testID="countryChallenge.title" accessibilityLabel="Country challenge">Country challenge</Text>
-        <Text style={styles.hint}>
-          You will run through different levels. Some easy and some quite difficult.
-        </Text>
-        <Text style={styles.label}>Your name</Text>
-        <TextInput
-          style={styles.input}
-          value={effectiveName}
-          onChangeText={setName}
-          placeholder="Your name"
-          placeholderTextColor={colors.primary[500]}
-          testID="countryChallenge.nameInput"
-          accessibilityLabel="Your name"
-        />
-        <Text style={styles.label}>Language (species names)</Text>
-        <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="countryChallenge.selectLanguage" accessibilityLabel="Select language">
-          <Text style={styles.selectButtonText}>
-            {languages.find((l) => l.code === language)?.name ?? 'Select language'}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.label}>Country</Text>
-        <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="countryChallenge.selectCountry" accessibilityLabel="Select country">
-          <Text style={styles.selectButtonText}>{country?.name ?? 'Select country'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.primaryButton, creating && styles.buttonDisabled]}
-          onPress={handleStartChallenge}
-          disabled={creating || !effectiveName.trim() || !country}
-          testID="countryChallenge.startChallenge"
-          accessibilityLabel="Start challenge"
-        >
-          {creating ? (
-            <ActivityIndicator color={colors.primary[50]} />
-          ) : (
-            <Text style={styles.primaryButtonText}>Start challenge</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-      {challenge?.country?.name && level?.challenge_level?.title ? (
-        <View style={[styles.levelSection, styles.levelSectionDivider]}>
-          <Text>
-            {challenge.country.name} – {level.challenge_level.title}
-          </Text>
-          {(() => {
-            const answersCount = level?.game?.scores?.[0]?.answers?.length ?? 0;
-            const total = typeof level?.game?.length === 'number' ? level.game.length : Number(level?.game?.length) || 0;
-            if (answersCount > 0 && total > 0) {
-              const currentQuestion = answersCount + 1;
-              if (currentQuestion <= total) {
-                return (
-                  <Text style={styles.inProgressSummary}>Question {currentQuestion} of {total}</Text>
-                );
+      {hasChallenge ? (
+        <>
+          <View style={styles.levelSection}>
+            <Text style={styles.levelSectionTitle}>
+              {challenge?.country?.name} – {level?.challenge_level?.title}
+            </Text>
+            {(() => {
+              const answersCount = level?.game?.scores?.[0]?.answers?.length ?? 0;
+              const total = typeof level?.game?.length === 'number' ? level.game.length : Number(level?.game?.length) || 0;
+              if (answersCount > 0 && total > 0) {
+                const currentQuestion = answersCount + 1;
+                if (currentQuestion <= total) {
+                  return (
+                    <Text style={styles.inProgressSummary}>{t('question_of', { current: String(currentQuestion), total: String(total) })}</Text>
+                  );
+                }
               }
-            }
-            return null;
-          })()}
+              return null;
+            })()}
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleContinueToChallenge}
+              testID="countryChallenge.continueToChallenge"
+              accessibilityLabel={t('continue_challenge')}
+            >
+              <Text style={styles.primaryButtonText}>{t('continue_challenge')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.createSection, styles.levelSectionDivider]}>
+            <Text style={styles.subtitle}>{t('start_new_challenge')}</Text>
+            <Text style={styles.label}>{t('your_name')}</Text>
+            <TextInput
+              style={styles.input}
+              value={effectiveName}
+              onChangeText={setName}
+              placeholder={t('your_name')}
+              placeholderTextColor={colors.primary[500]}
+              testID="countryChallenge.nameInput"
+              accessibilityLabel={t('your_name')}
+            />
+            <Text style={styles.label}>{t('language_species_names')}</Text>
+            <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="countryChallenge.selectLanguage" accessibilityLabel={t('select_language')}>
+              <Text style={styles.selectButtonText}>
+                {getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language')}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.label}>{t('select_country')}</Text>
+            <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="countryChallenge.selectCountry" accessibilityLabel={t('select_country')}>
+              <Text style={styles.selectButtonText}>{country ? getCountryDisplayName(country, locale) : t('select_country')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryButton, creating && styles.buttonDisabled]}
+              onPress={handleStartChallenge}
+              disabled={creating || !effectiveName.trim() || !country}
+              testID="countryChallenge.startChallenge"
+              accessibilityLabel={t('start_new_challenge')}
+            >
+              {creating ? (
+                <ActivityIndicator color={colors.primary[600]} />
+              ) : (
+                <Text style={styles.secondaryButtonText}>{t('start_new_challenge')}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <View style={styles.createSection}>
+          <Text style={styles.title} testID="countryChallenge.title" accessibilityLabel={t('country_challenge')}>{t('country_challenge')}</Text>
+          <Text style={styles.hint}>
+            {t('challenge_level_hint')}
+          </Text>
+          <Text style={styles.label}>{t('your_name')}</Text>
+          <TextInput
+            style={styles.input}
+            value={effectiveName}
+            onChangeText={setName}
+            placeholder={t('your_name')}
+            placeholderTextColor={colors.primary[500]}
+            testID="countryChallenge.nameInput"
+            accessibilityLabel={t('your_name')}
+          />
+          <Text style={styles.label}>{t('language_species_names')}</Text>
+          <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="countryChallenge.selectLanguage" accessibilityLabel={t('select_language')}>
+            <Text style={styles.selectButtonText}>
+              {getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language')}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.label}>{t('select_country')}</Text>
+          <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="countryChallenge.selectCountry" accessibilityLabel={t('select_country')}>
+            <Text style={styles.selectButtonText}>{country ? getCountryDisplayName(country, locale) : t('select_country')}</Text>
+          </TouchableOpacity>
           <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleContinueToChallenge}
-            testID="countryChallenge.continueToChallenge"
-            accessibilityLabel="Continue to your challenge"
+            style={[styles.primaryButton, creating && styles.buttonDisabled]}
+            onPress={handleStartChallenge}
+            disabled={creating || !effectiveName.trim() || !country}
+            testID="countryChallenge.startChallenge"
+            accessibilityLabel={t('start_challenge')}
           >
-            <Text style={styles.secondaryButtonText}>Continue to your challenge</Text>
+            {creating ? (
+              <ActivityIndicator color={colors.primary[50]} />
+            ) : (
+              <Text style={styles.primaryButtonText}>{t('start_challenge')}</Text>
+            )}
           </TouchableOpacity>
         </View>
-      ) : null}
+      )}
 
       <Modal visible={countryModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle} testID="countryChallenge.modal.countryTitle">Select country</Text>
+            <Text style={styles.modalTitle} testID="countryChallenge.modal.countryTitle">{t('select_country')}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search')}
+              placeholderTextColor={colors.primary[400]}
+              value={countrySearch}
+              onChangeText={setCountrySearch}
+            />
             <FlatList
-              data={countries}
+              data={filteredCountries}
               keyExtractor={(c) => c.code}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -268,29 +342,37 @@ export function ChallengeScreen() {
                   onPress={() => {
                     setCountry(item);
                     setCountryModalVisible(false);
+                    setCountrySearch('');
                   }}
                   testID={`countryChallenge.modal.country.${item.code}`}
-                  accessibilityLabel={item.name}
+                  accessibilityLabel={getCountryDisplayName(item, locale)}
                 >
                   <Text style={[styles.modalItemText, country?.code === item.code && styles.modalItemTextSelected]}>
-                    {item.name}
+                    {getCountryDisplayName(item, locale)}
                   </Text>
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setCountryModalVisible(false)} testID="countryChallenge.modal.countryClose" accessibilityLabel="Close country modal">
-              <Text style={styles.modalCloseText}>Close</Text>
+            <TouchableOpacity style={styles.modalClose} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }} testID="countryChallenge.modal.countryClose" accessibilityLabel={t('close_modal_country')}>
+              <Text style={styles.modalCloseText}>{t('close')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
       <Modal visible={languageModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => setLanguageModalVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle} testID="countryChallenge.modal.languageTitle">Select language</Text>
+            <Text style={styles.modalTitle} testID="countryChallenge.modal.languageTitle">{t('select_language')}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search')}
+              placeholderTextColor={colors.primary[400]}
+              value={languageSearch}
+              onChangeText={setLanguageSearch}
+            />
             <FlatList
-              data={languages}
+              data={filteredLanguages}
               keyExtractor={(l) => l.code}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -298,18 +380,19 @@ export function ChallengeScreen() {
                   onPress={() => {
                     setLanguage(item.code);
                     setLanguageModalVisible(false);
+                    setLanguageSearch('');
                   }}
                   testID={`countryChallenge.modal.language.${item.code}`}
-                  accessibilityLabel={item.name}
+                  accessibilityLabel={getLanguageDisplayName(item, locale)}
                 >
                   <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>
-                    {item.name}
+                    {getLanguageDisplayName(item, locale)}
                   </Text>
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setLanguageModalVisible(false)} testID="countryChallenge.modal.languageClose" accessibilityLabel="Close language modal">
-              <Text style={styles.modalCloseText}>Close</Text>
+            <TouchableOpacity style={styles.modalClose} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }} testID="countryChallenge.modal.languageClose" accessibilityLabel={t('close_modal_language')}>
+              <Text style={styles.modalCloseText}>{t('close')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -376,6 +459,15 @@ const styles = StyleSheet.create({
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    color: colors.primary[800],
+    marginBottom: 8,
+  },
   modalItem: { paddingVertical: 14, paddingHorizontal: 8 },
   modalItemSelected: { backgroundColor: colors.primary[100] },
   modalItemText: { fontSize: 16, color: colors.primary[800] },

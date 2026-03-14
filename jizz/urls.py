@@ -15,7 +15,7 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     ReactionView, \
     AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
-    MediaListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
+    MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
 from jizz.daily_challenge_views import (
     FriendsListView,
@@ -132,6 +132,7 @@ urlpatterns = [
 
 
     re_path(r"^api/media/$", MediaListView.as_view(), name="media-list"),
+    re_path(r"^api/media-review-species/$", MediaReviewSpeciesListView.as_view(), name="media-review-species"),
     re_path(r"^api/review-media/$", ReviewMediaView.as_view(), name="review-media-create"),
     re_path(r"^api/flag-media/$", FlagMediaView.as_view(), name="flag-media-create"),
     re_path(r"^api/species-review-stats/$", SpeciesReviewStatsView.as_view(), name="species-review-stats"),

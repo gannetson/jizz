@@ -33,22 +33,22 @@ export function ResetPasswordScreen() {
 
   useEffect(() => {
     if (!uid || !token) {
-      setError('Invalid reset link. Please request a new password reset.');
+      setError(t('invalid_reset_link'));
     }
-  }, [uid, token]);
+  }, [uid, token, t]);
 
   const handleSubmit = async () => {
     setError(null);
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('passwords_do_not_match'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('password_min_length'));
       return;
     }
     if (!uid || !token) {
-      setError('Invalid reset link.');
+      setError(t('invalid_reset_link'));
       return;
     }
     setLoading(true);
@@ -57,7 +57,7 @@ export function ResetPasswordScreen() {
       setSuccess(true);
       setTimeout(() => (navigation as any).replace('Login'), 2000);
     } catch (e: any) {
-      setError(e?.message ?? 'Invalid or expired link. Request a new reset.');
+      setError(e?.message ?? t('invalid_or_expired_link'));
     } finally {
       setLoading(false);
     }

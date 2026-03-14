@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGame } from '../context/GameContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { postFeedback } from '../api/feedback';
 import { StarRating } from './StarRating';
 import { colors } from '../theme';
@@ -16,6 +17,7 @@ import { colors } from '../theme';
 const PLAYER_TOKEN_KEY = 'player-token';
 
 export function FeedbackForm() {
+  const { t } = useTranslation();
   const { player } = useGame();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -36,10 +38,10 @@ export function FeedbackForm() {
         setComment('');
         setTimeout(() => setSubmitted(false), 3000);
       } else {
-        setError('Failed to submit feedback. Please try again.');
+        setError(t('error_submit_feedback'));
       }
     } catch {
-      setError('Failed to submit feedback. Please try again.');
+      setError(t('error_submit_feedback'));
     } finally {
       setSubmitting(false);
     }
@@ -48,23 +50,23 @@ export function FeedbackForm() {
   if (submitted) {
     return (
       <View style={[styles.card, styles.cardThanks]}>
-        <Text style={styles.thanksTitle}>Thanks!</Text>
-        <Text style={styles.thanksMessage}>Thank you for your feedback!</Text>
+        <Text style={styles.thanksTitle}>{t('thanks')}</Text>
+        <Text style={styles.thanksMessage}>{t('thanks_feedback_message')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Feedback</Text>
-      <Text style={styles.prompt}>Do you like this app?</Text>
+      <Text style={styles.title}>{t('feedback')}</Text>
+      <Text style={styles.prompt}>{t('do_you_like_app')}</Text>
       <StarRating rating={rating} onRating={setRating} count={5} size={24} />
       <Text style={styles.label}>
-        Comments / suggestions <Text style={styles.optional}>(optional)</Text>
+        {t('comments_optional')}
       </Text>
       <TextInput
         style={styles.input}
-        placeholder="Your feedback..."
+        placeholder={t('your_feedback_placeholder')}
         placeholderTextColor={colors.primary[400]}
         value={comment}
         onChangeText={setComment}
@@ -80,7 +82,7 @@ export function FeedbackForm() {
         {submitting ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.submitText}>Submit</Text>
+          <Text style={styles.submitText}>{t('submit')}</Text>
         )}
       </TouchableOpacity>
     </View>

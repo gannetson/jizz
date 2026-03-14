@@ -1,13 +1,12 @@
 import {Box, Heading} from "@chakra-ui/react";
-import {UseCountries} from "../user/use-countries";
-// Select removed - not used in this component
-import {useContext, useEffect} from "react";
+import {useContext} from "react";
 import AppContext, {Species} from "../core/app-context";
-import {FormattedMessage} from "react-intl"
-
+import {FormattedMessage} from "react-intl";
+import { getCountryDisplayName } from "../data/country-names-nl";
 
 const CountrySummary = () => {
-  const {country, species} = useContext(AppContext);
+  const { country, species, language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
 
 
   const speciesCount = species?.length || 0
@@ -30,7 +29,7 @@ const CountrySummary = () => {
         <FormattedMessage
           id={'country summary'}
           defaultMessage={'{country} has {speciesCount} species, in {orderCount} orders and {familyCount} families.'}
-          values={{country: country.name, speciesCount, orderCount, familyCount}} />
+          values={{ country: getCountryDisplayName(country, locale), speciesCount, orderCount, familyCount }} />
       </Box>
 
     ) : (

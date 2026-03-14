@@ -1,19 +1,27 @@
 import { Flex, Link, Button, VStack, Text, Separator, Avatar } from "@chakra-ui/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../../api/services/auth.service";
 import { profileService, UserProfile, getAvatarUrl } from "../../../api/services/profile.service";
+import AppContext from "../../../core/app-context";
 
 type UserMenuProps = {
   onOpenLoginModal?: (mode: 'login' | 'register') => void;
 };
 
+const INTERFACE_LANG_EN = 'en';
+const INTERFACE_LANG_NL = 'nl';
+
 export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
   const navigate = useNavigate();
+  const { language, setUserPreferredLanguage } = useContext(AppContext);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  const interfaceLang = language === 'nl' ? INTERFACE_LANG_NL : INTERFACE_LANG_EN;
+  const setInterfaceLang = (lang: string) => setUserPreferredLanguage?.(lang) ?? undefined;
 
   const checkAuth = async () => {
     // Check if user is authenticated
@@ -62,12 +70,38 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
     window.location.reload();
   };
 
+  const languageToggle = (
+    <Flex gap={2} alignItems="center" flexWrap="wrap">
+      <Text fontSize="sm" color="gray.600" mr={1}>
+        <FormattedMessage id="language" defaultMessage="Language" />:
+      </Text>
+      <Button
+        size="sm"
+        variant={interfaceLang === INTERFACE_LANG_EN ? 'solid' : 'outline'}
+        colorPalette={interfaceLang === INTERFACE_LANG_EN ? 'primary' : 'gray'}
+        onClick={() => setInterfaceLang(INTERFACE_LANG_EN)}
+      >
+        English
+      </Button>
+      <Button
+        size="sm"
+        variant={interfaceLang === INTERFACE_LANG_NL ? 'solid' : 'outline'}
+        colorPalette={interfaceLang === INTERFACE_LANG_NL ? 'primary' : 'gray'}
+        onClick={() => setInterfaceLang(INTERFACE_LANG_NL)}
+      >
+        Nederlands
+      </Button>
+    </Flex>
+  );
+
   if (!isAuthenticated) {
     return (
       <VStack gap={4} align="stretch" fontSize="lg">
         <Text fontSize="xl" fontWeight="bold" mb={2}>
           <FormattedMessage id="account" defaultMessage="Account" />
         </Text>
+        {languageToggle}
+        <Separator />
         <Button
           variant="ghost"
           justifyContent="flex-start"
@@ -120,6 +154,7 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
         </Flex>
       </Flex>
       
+      {languageToggle}
       <Separator />
       
       <Link href="/my-games" textDecoration="none">

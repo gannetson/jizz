@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   VStack,
   Text,
@@ -15,9 +15,13 @@ import { useNavigate } from "react-router-dom";
 import { listDailyChallenges, type DailyChallenge } from "../../api/services/daily-challenge.service";
 import { authService } from "../../api/services/auth.service";
 import { Page } from "../../shared/components/layout";
+import AppContext from "../../core/app-context";
+import { getCountryDisplayName } from "../../data/country-names-nl";
 
 export const DailyChallengeListPage = () => {
   const navigate = useNavigate();
+  const { language } = useContext(AppContext);
+  const locale = language === 'nl' ? 'nl' : 'en';
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +123,7 @@ export const DailyChallengeListPage = () => {
                   _hover={{ bg: "gray.100" }}
                 >
                   <Text fontWeight="600">
-                    {c.country?.name ?? c.id} · {c.media} · {c.length} questions
+                    {c.country ? getCountryDisplayName(c.country, locale) : c.id} · {c.media} · {c.length} questions
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={1}>
                     {c.creator_username} · {c.status} · {c.participants?.length ?? 0} players

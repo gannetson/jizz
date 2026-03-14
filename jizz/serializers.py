@@ -126,6 +126,48 @@ class SpeciesReviewStatsSerializer(serializers.Serializer):
         return obj.total_media - obj.media_with_review
 
 
+class MediaForReviewSerializer(MediaSerializer):
+    """Media serializer with review_type for embedding in species (approved/rejected/not_sure or null)."""
+    review_type = serializers.SerializerMethodField()
+
+    def get_review_type(self, obj):
+        reviews = list(obj.reviews.all())
+        review = max(reviews, key=lambda r: r.id) if reviews else None
+        return review.review_type if review else None
+
+    class Meta(MediaSerializer.Meta):
+        fields = MediaSerializer.Meta.fields + ('review_type',)
+
+
+class SpeciesWithMediaReviewSerializer(serializers.Serializer):
+    """Species with review stats and all media embedded for media-review page."""
+    id = serializers.IntegerField(source='species.id')
+    name = serializers.SerializerMethodField()
+    total_media = serializers.IntegerField()
+    unreviewed = serializers.IntegerField()
+    approved = serializers.IntegerField()
+    rejected = serializers.IntegerField()
+    not_sure = serializers.IntegerField()
+    media = serializers.SerializerMethodField()
+
+    def get_name(self, obj):
+        request = self.context.get('request')
+        language = request and request.query_params.get('language')
+        species = obj['species']
+        if language:
+            try:
+                sn = SpeciesName.objects.get(species=species, language_id=language)
+                return sn.name
+            except SpeciesName.DoesNotExist:
+                pass
+        return species.name
+
+    def get_media(self, obj):
+        return MediaForReviewSerializer(
+            obj['media'], many=True, context=self.context
+        ).data
+
+
 class FamilyListSerializer(serializers.ModelSerializer):
     count = serializers.IntegerField(read_only=True)
 

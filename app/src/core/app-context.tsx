@@ -232,6 +232,8 @@ type SharedState = {
   setCountry: Dispatch<SetStateAction<Country>>
   language?: string
   setLanguage?: Dispatch<SetStateAction<string>>
+  /** Set interface + species language and persist to localStorage and profile (if authenticated). */
+  setUserPreferredLanguage?: (lang: string) => void
   /** Language for species names (profile > player > en). Use for species lists and media. */
   speciesLanguage?: string
   multiplayer?: string
@@ -279,7 +281,8 @@ const AppContext = createContext<SharedState>({
   getNewChallengeQuestion: async () => {},
   challengeQuestion: undefined,
   selectChallengeAnswer: async () => { return { correct: false } as Answer },
-  getNewChallengLevel: async () => {}
+  getNewChallengLevel: async () => {},
+  setUserPreferredLanguage: () => {}
 });
 
 export default AppContext;

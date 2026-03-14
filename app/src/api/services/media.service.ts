@@ -25,6 +25,8 @@ export interface MediaItem {
   created: string;
   /** Present when level=thorough */
   review_status?: MediaItemReviewStatus | null;
+  /** Present when loaded via media-review-species: single review type for this item */
+  review_type?: 'approved' | 'rejected' | 'not_sure' | null;
 }
 
 export interface PaginatedMediaResponse {
@@ -32,6 +34,25 @@ export interface PaginatedMediaResponse {
   next: string | null;
   previous: string | null;
   results: MediaItem[];
+}
+
+/** Species with all its media embedded (from media-review-species API). */
+export interface SpeciesWithMedia {
+  id: number;
+  name: string;
+  total_media: number;
+  unreviewed: number;
+  approved: number;
+  rejected: number;
+  not_sure: number;
+  media: MediaItem[];
+}
+
+export interface PaginatedSpeciesWithMediaResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: SpeciesWithMedia[];
 }
 
 export interface SpeciesReviewStats {
@@ -57,6 +78,8 @@ export interface SpeciesReviewStatsResponse {
 
 export interface MediaService {
   getMedia(type?: string, page?: number, countryCode?: string, language?: string, speciesId?: number, level?: ReviewLevel): Promise<PaginatedMediaResponse>;
+  /** Species paginated by 3, each with all media embedded. Same filters as getMedia. */
+  getMediaReviewSpecies(type?: string, page?: number, countryCode?: string, language?: string, speciesId?: number, level?: ReviewLevel): Promise<PaginatedSpeciesWithMediaResponse>;
   /** Pass playerToken when using a game player; omit when authenticated as a user (JWT). */
   reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
   getSpeciesReviewStats(countryCode?: string, mediaType?: string, language?: string): Promise<SpeciesReviewStatsResponse>;
@@ -78,6 +101,14 @@ export class MediaServiceImpl implements MediaService {
     }
     const response = await this.client.get<PaginatedMediaResponse>(url);
     return response;
+  }
+
+  async getMediaReviewSpecies(type: string = 'image', page: number = 1, countryCode?: string, language?: string, speciesId?: number, level: ReviewLevel = 'fast'): Promise<PaginatedSpeciesWithMediaResponse> {
+    const params = new URLSearchParams({ type, page: String(page), level });
+    if (countryCode) params.set('country', countryCode);
+    if (language) params.set('language', language);
+    if (speciesId != null) params.set('species', String(speciesId));
+    return this.client.get<PaginatedSpeciesWithMediaResponse>(`/api/media-review-species/?${params.toString()}`);
   }
 
   async reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown> {

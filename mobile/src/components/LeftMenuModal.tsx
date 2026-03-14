@@ -13,26 +13,27 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 
-const MENU_ITEMS: { route: string; label: string }[] = [
-  { route: 'Home', label: 'Home' },
-  { route: 'Start', label: 'New game' },
-  { route: 'Scores', label: 'High scores' },
-  { route: 'Challenge', label: 'Country challenge' },
-  // { route: 'DailyChallenge', label: 'Daily challenge' },
-  { route: 'Updates', label: 'Updates' },
-  { route: 'Help', label: 'Help' },
-  { route: 'Privacy', label: 'Privacy' },
-  { route: 'About', label: 'About Birdr' },
+const MENU_ITEMS: { route: string; labelKey: string }[] = [
+  { route: 'Home', labelKey: 'home' },
+  { route: 'Start', labelKey: 'new_game' },
+  { route: 'Scores', labelKey: 'high_scores' },
+  { route: 'Challenge', labelKey: 'country_challenge' },
+  { route: 'Updates', labelKey: 'updates' },
+  { route: 'Help', labelKey: 'help' },
+  { route: 'Privacy', labelKey: 'privacy' },
+  { route: 'About', labelKey: 'about_birdr' },
 ];
 
 export function LeftMenuModal() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { leftMenuVisible, closeLeftMenu, currentRouteName } = useMenu();
   const slideAnim = useRef(new Animated.Value(-PANEL_WIDTH)).current;
 
@@ -82,23 +83,24 @@ export function LeftMenuModal() {
             >
               {MENU_ITEMS.map((item) => {
                 const isFocused = currentRoute === item.route;
+                const label = t(item.labelKey);
                 return (
                   <TouchableOpacity
                     key={item.route}
                     style={[styles.item, isFocused && styles.itemFocused]}
                     onPress={() => handleItem(item.route)}
                     accessibilityRole="button"
-                    accessibilityLabel={item.label}
+                    accessibilityLabel={label}
                   >
-                    <Text style={[styles.label, isFocused && styles.labelFocused]}>{item.label}</Text>
+                    <Text style={[styles.label, isFocused && styles.labelFocused]}>{label}</Text>
                   </TouchableOpacity>
                 );
               })}
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Data: eBird</Text>
-                <Text style={styles.footerText}>Media: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto</Text>
-                <Text style={styles.footerText}>Developed by GoedLoek</Text>
-                <Text style={styles.footerText}>Contact: info@goedloek.nl</Text>
+                <Text style={styles.footerText}>{t('data_ebird')}</Text>
+                <Text style={styles.footerText}>{t('media_credits')}</Text>
+                <Text style={styles.footerText}>{t('developed_by')}</Text>
+                <Text style={styles.footerText}>{t('contact')}</Text>
               </View>
             </ScrollView>
           </Pressable>

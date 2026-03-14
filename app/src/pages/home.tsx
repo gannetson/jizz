@@ -77,8 +77,8 @@ const HomePage = () => {
             </Button>
              <Flex
               gap={3}
-              flexDirection={"column"}
-              justifyItems={"pace-evenly"}
+              flexDirection={"row"}
+              justifyContent={"space-evenly"}
               alignItems={"center"}
               mt={4}
             >

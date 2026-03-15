@@ -1,0 +1,47 @@
+# iOS build (compile-only). Ensures Pods install and native build succeeds.
+# Add this job to your workflow or run on push to mobile/ when you need iOS CI.
+name: iOS build
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/ios-build.yml'
+  pull_request:
+    branches: ['**']
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/ios-build.yml'
+
+jobs:
+  ios-build:
+    runs-on: macos-14
+    timeout-minutes: 45
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Install CocoaPods
+        working-directory: mobile
+        run: npx pod-install
+
+      - name: Build iOS (Debug, simulator)
+        working-directory: mobile/ios
+        run: |
+          xcodebuild -workspace Birdr.xcworkspace -scheme Birdr \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO

@@ -218,7 +218,10 @@ export function ChallengeScreen() {
         <>
           <View style={styles.levelSection}>
             <Text style={styles.levelSectionTitle}>
-              {challenge?.country?.name} – {level?.challenge_level?.title}
+              {challenge?.country?.name} - Level {(level?.challenge_level?.sequence || 0)  + 1}
+            </Text>
+            <Text style={styles.levelSectionDescription}>
+              {level?.challenge_level?.title}
             </Text>
             {(() => {
               const answersCount = level?.game?.scores?.[0]?.answers?.length ?? 0;
@@ -413,6 +416,7 @@ const styles = StyleSheet.create({
   levelSectionDivider: { marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: colors.primary[200] },
   inProgressSummary: { fontSize: 15, color: colors.primary[700], marginTop: 4, marginBottom: 4 },
   levelSectionTitle: { fontSize: 18, fontWeight: '600', color: colors.primary[700], marginBottom: 12 },
+  levelSectionDescription: { fontSize: 18, fontWeight: '400', fontStyle: 'italic', color: colors.primary[700], marginBottom: 12 },
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 8 },
   failedTitle: { color: colors.error[500] },
   subtitle: { fontSize: 18, fontWeight: '600', color: colors.primary[700], marginTop: 12 },

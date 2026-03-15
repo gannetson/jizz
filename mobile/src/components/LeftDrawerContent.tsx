@@ -2,7 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
+import Constants from 'expo-constants';
 import { colors } from '../theme';
+
+const APP_VERSION = Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—';
 
 const MENU_ITEMS: { route: string; label: string }[] = [
   { route: 'Home', label: 'Home' },
@@ -51,6 +54,7 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
         })}
       </View>
       <View style={styles.footer}>
+        <Text style={styles.footerText}>Version {APP_VERSION}</Text>
         <Text style={styles.footerText}>Data: eBird</Text>
         <Text style={styles.footerText}>Media: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto</Text>
         <Text style={styles.footerText}>Developed by GoedLoek</Text>

@@ -13,8 +13,11 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
+
+const APP_VERSION = Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
@@ -97,6 +100,7 @@ export function LeftMenuModal() {
                 );
               })}
               <View style={styles.footer}>
+                <Text style={styles.footerText}>Version {APP_VERSION}</Text>
                 <Text style={styles.footerText}>{t('data_ebird')}</Text>
                 <Text style={styles.footerText}>{t('media_credits')}</Text>
                 <Text style={styles.footerText}>{t('developed_by')}</Text>

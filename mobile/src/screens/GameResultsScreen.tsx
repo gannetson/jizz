@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
+
+const REMATCH_TIMEOUT_MS = 20000;
 
 export function GameResultsScreen() {
   const { t } = useTranslation();
@@ -18,10 +20,14 @@ export function GameResultsScreen() {
     clearQuestion,
     sendRematch,
     rematchInvitation,
+    rematchError,
     clearRematchInvitation,
+    clearRematchError,
   } = useGameWebSocket();
 
   const [isRematchLoading, setIsRematchLoading] = useState(false);
+  const [rematchTimeoutMessage, setRematchTimeoutMessage] = useState<string | null>(null);
+  const rematchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isHost =
     players?.find((p) => p.is_host && (p.name === player?.name || p.id === player?.id)) !== undefined ||
@@ -49,19 +55,45 @@ export function GameResultsScreen() {
 
   const handleRematch = () => {
     if (!game || !player) return;
+    clearRematchError();
+    setRematchTimeoutMessage(null);
     setIsRematchLoading(true);
+    if (rematchTimeoutRef.current) clearTimeout(rematchTimeoutRef.current);
+    rematchTimeoutRef.current = setTimeout(() => {
+      rematchTimeoutRef.current = null;
+      setIsRematchLoading(false);
+      setRematchTimeoutMessage(t('rematch_timeout') || 'Request timed out. Try again.');
+    }, REMATCH_TIMEOUT_MS);
     sendRematch();
   };
+
+  // Clear loading when we get an error from backend
+  useEffect(() => {
+    if (rematchError) {
+      setRematchTimeoutMessage(null);
+      setIsRematchLoading(false);
+      if (rematchTimeoutRef.current) {
+        clearTimeout(rematchTimeoutRef.current);
+        rematchTimeoutRef.current = null;
+      }
+    }
+  }, [rematchError]);
 
   // When host receives rematch_invitation: close socket, clear state, load new game, replace to Lobby
   useEffect(() => {
     if (!rematchInvitation || !isHost || !player) return;
+    if (rematchTimeoutRef.current) {
+      clearTimeout(rematchTimeoutRef.current);
+      rematchTimeoutRef.current = null;
+    }
     const token = rematchInvitation.new_game_token;
-    clearRematchInvitation(); // clear immediately so we don't run again
+    clearRematchInvitation();
+    clearRematchError();
+    setRematchTimeoutMessage(null);
     const doJoin = async () => {
       joinGame(null, null, setGame);
       clearQuestion();
-      await clearGame();
+      // Avoid clearGame() here: it sets game=null and can cause "fewer hooks" re-render before replace
       const g = await loadGame(token);
       setIsRematchLoading(false);
       if (g) {
@@ -72,11 +104,17 @@ export function GameResultsScreen() {
     doJoin();
   }, [rematchInvitation?.new_game_token, isHost, player]);
 
+  useEffect(() => {
+    return () => {
+      if (rematchTimeoutRef.current) clearTimeout(rematchTimeoutRef.current);
+    };
+  }, []);
+
   const handleJoinRematch = async () => {
     if (!rematchInvitation || !player) return;
     joinGame(null, null, setGame);
     clearQuestion();
-    await clearGame();
+    // Avoid clearGame() before replace to prevent "fewer hooks" re-render
     const g = await loadGame(rematchInvitation.new_game_token);
     clearRematchInvitation();
     if (g) {
@@ -119,6 +157,9 @@ export function GameResultsScreen() {
           ))
         )}
       </View>
+      {(rematchError || rematchTimeoutMessage) ? (
+          <Text style={styles.errorText} testID="gameResults.rematchError">{rematchError || rematchTimeoutMessage}</Text>
+        ) : null}
       <View style={styles.buttons}>
         {dailyChallengeId != null && (
           <TouchableOpacity style={styles.outlineButton} onPress={handleBackToDailyChallenge}>
@@ -158,6 +199,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 24, paddingBottom: 48 },
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 20 },
+  errorText: { fontSize: 14, color: colors.error[500], marginBottom: 12 },
   list: { marginBottom: 24 },
   playerCard: {
     flexDirection: 'row',

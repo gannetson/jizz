@@ -24,7 +24,9 @@ type GameWebSocketContextType = {
   connected: boolean;
   sendRematch: () => void;
   rematchInvitation: { new_game_token: string; host_name: string } | null;
+  rematchError: string | null;
   clearRematchInvitation: () => void;
+  clearRematchError: () => void;
 };
 
 type Species = { id: number; name?: string; name_nl?: string; name_latin?: string; name_translated?: string };
@@ -38,16 +40,21 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const [answer, setAnswer] = useState<Answer | undefined>(undefined);
   const [connected, setConnected] = useState(false);
   const [rematchInvitation, setRematchInvitation] = useState<{ new_game_token: string; host_name: string } | null>(null);
+  const [rematchError, setRematchError] = useState<string | null>(null);
   const playerTokenRef = useRef<string>('');
   const setGameRef = useRef<((g: Game | null) => void) | null>(null);
   const gameTokenRef = useRef<string>('');
   const currentSocketRef = useRef<WebSocket | null>(null);
 
   const clearRematchInvitation = useCallback(() => setRematchInvitation(null), []);
+  const clearRematchError = useCallback(() => setRematchError(null), []);
 
   const sendRematch = useCallback(() => {
+    setRematchError(null);
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ action: 'rematch', player_token: playerTokenRef.current }));
+    } else {
+      setRematchError('Not connected. Try again.');
     }
   }, [socket]);
 
@@ -131,11 +138,17 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             setAnswer(message.answer as Answer);
             break;
           case 'rematch_invitation':
+            setRematchError(null);
             if (message.new_game_token && message.host_name != null) {
               setRematchInvitation({
                 new_game_token: message.new_game_token,
                 host_name: message.host_name,
               });
+            }
+            break;
+          case 'error':
+            if (message.message) {
+              setRematchError(message.message);
             }
             break;
           default:
@@ -189,7 +202,9 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         connected,
         sendRematch,
         rematchInvitation,
+        rematchError,
         clearRematchInvitation,
+        clearRematchError,
       }}
     >
       {children}

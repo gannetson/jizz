@@ -2,6 +2,8 @@
 
 React Native (Expo) app for Birdr, with the same structure as the web app in `/app`: home page, top bar with left drawer (main menu) and right user menu.
 
+**Expo SDK 53** (React 19, React Native 0.79). Use **Node 22+** for install and builds.
+
 ## Setup
 
 Requires **Node 22+**.
@@ -141,6 +143,18 @@ For **production** you must sign release builds with your own keystore:
    Then run the same commands:
    - `npm run build:android:release` → APK for testing or direct distribution.
    - `npm run build:android:aab` → AAB for Play Store.
+
+### EAS Build: use keystore from `android/app/`
+
+Release builds via EAS are configured to use the **local** keystore at `android/app/upload-keystore.jks` (see `android/app/keystore.properties` for alias and passwords). `eas.json` has `credentialsSource: "local"` for Android, and `credentials.json` in the project root points to that keystore.
+
+- **`npm run build:android`** and **`npm run build:android:push`** use **`eas build --platform android --profile production --local`** so the build runs on your machine and can read `credentials.json` and `android/app/upload-keystore.jks`. Then **`npm run push:android`** submits the latest build to the Play Store.
+
+- **EAS cloud builds:** `credentials.json` and `*.jks` are in `.gitignore`, so they are not uploaded. Either use the local scripts above, or upload the keystore once with **`eas credentials --platform android`** (choose “Use existing keystore”, upload `android/app/upload-keystore.jks`, use passwords from `keystore.properties`). After that you can use **`npm run build:android:cloud`** for cloud builds with remote credentials.
+
+### Google Play: 16 KB page size support
+
+Google Play requires apps targeting Android 15+ to support 16 KB memory page sizes. This project uses **Expo SDK 53** with **React Native 0.79** and **NDK 28**, so native libs are built with 16 KB alignment. **`useLegacyPackaging false`** in `android/app/build.gradle` keeps that alignment in the AAB.
 
 ### Useful commands
 

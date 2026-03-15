@@ -98,8 +98,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 27
-        versionName "Ross's Goose"
+        versionCode 34
+        versionName "Tundra Swan"
     }
     signingConfigs {
         debug {
@@ -131,7 +131,8 @@ android {
     }
     packagingOptions {
         jniLibs {
-            useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
+            // false = preserve 16 KB alignment from NDK 28 (required for Play 16 KB page size)
+            useLegacyPackaging false
         }
     }
     androidResources {

@@ -3,7 +3,7 @@
     "name": "Birdr",
     "slug": "birdr",
     "scheme": "birdr",
-    "version": "1.27.0",
+    "version": "1.34.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "pro.birdr.app",
-      "buildNumber": "27",
+      "buildNumber": "34",
       "icon": "./assets/icon.png",
       "associatedDomains": [
         "applinks:birdr.pro"
@@ -28,7 +28,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "pro.birdr.app",
-      "versionCode": 27,
+      "versionCode": 34,
       "intentFilters": [
         {
           "action": "VIEW",

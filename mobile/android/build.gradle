@@ -9,7 +9,7 @@ buildscript {
         kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.25'
         agpVersion = findProperty('android.agpVersion') ?: '8.6.0'
 
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "28.0.13004108"
     }
     repositories {
         google()

@@ -5,7 +5,7 @@ from django.test import TransactionTestCase
 from django.db import transaction
 from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from jizz.models import Game, Player, Answer, Species, Country, CountrySpecies, PlayerScore
 from media.models import Media
 from jizz.asgi import application
@@ -284,6 +284,93 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(msg.get('action'), 'error')
             self.assertIn('player_token', msg.get('message', ''))
             await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_rematch_as_host_returns_invitation_with_mock(self):
+        """Test that rematch action by host sends rematch_invitation when create_rematch_game succeeds (mocked)."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+        new_game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+
+        async def async_test():
+            with patch('jizz.rematch.create_rematch_game', return_value=(new_game, self.player1)):
+                communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+                connected, _ = await communicator.connect()
+                self.assertTrue(connected)
+                await communicator.send_json_to({
+                    'action': 'join_game',
+                    'player_token': str(self.player1.token),
+                })
+                try:
+                    while True:
+                        await communicator.receive_json_from(timeout=2.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
+                    pass
+                await communicator.send_json_to({
+                    'action': 'rematch',
+                    'player_token': str(self.player1.token),
+                })
+                msg = await communicator.receive_json_from(timeout=5.0)
+                self.assertEqual(msg.get('action'), 'rematch_invitation', f"Expected rematch_invitation, got {msg}")
+                self.assertEqual(msg.get('new_game_token'), new_game.token)
+                self.assertEqual(msg.get('host_name'), self.player1.name)
+                await communicator.disconnect()
+
+        asyncio.run(async_test())
+
+    def test_websocket_rematch_as_non_host_returns_error_with_mock(self):
+        """Test that rematch action by non-host sends error when create_rematch_game raises (mocked)."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+        PlayerScore.objects.get_or_create(player=self.player1, game=game)
+        PlayerScore.objects.get_or_create(player=self.player2, game=game)
+
+        async def async_test():
+            with patch('jizz.rematch.create_rematch_game', side_effect=ValueError("Only the host can start a rematch")):
+                communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+                connected, _ = await communicator.connect()
+                self.assertTrue(connected)
+                await communicator.send_json_to({
+                    'action': 'join_game',
+                    'player_token': str(self.player2.token),
+                })
+                try:
+                    while True:
+                        await communicator.receive_json_from(timeout=2.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
+                    pass
+                await communicator.send_json_to({
+                    'action': 'rematch',
+                    'player_token': str(self.player2.token),
+                })
+                msg = await communicator.receive_json_from(timeout=5.0)
+                self.assertEqual(msg.get('action'), 'error', f"Expected error, got {msg}")
+                self.assertIn('message', msg)
+                self.assertIn('host', msg['message'].lower())
+                await communicator.disconnect()
 
         asyncio.run(async_test())
 

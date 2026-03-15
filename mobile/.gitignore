@@ -18,6 +18,7 @@ web-build/
 .env.development.local
 .env.test.local
 .env.production.local
+credentials.json
 *.jks
 *.keystore
 *.p8

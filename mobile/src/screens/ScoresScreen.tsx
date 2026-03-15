@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   Modal,
   Pressable,
   FlatList,
+  RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { loadScores, Score } from '../api/scores';
 import { loadCountries } from '../api/countries';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -134,6 +136,7 @@ export function ScoresScreen() {
   const [scores, setScores] = useState<Score[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [country, setCountry] = useState<Country | null>(null);
   const [level, setLevel] = useState('');
   const [length, setLength] = useState('');
@@ -143,17 +146,42 @@ export function ScoresScreen() {
     loadCountries().then((list) => setCountries(list));
   }, []);
 
-  useEffect(() => {
+  const fetchScores = useCallback((opts?: { cacheBust?: boolean }) => {
     setLoading(true);
     loadScores({
       country: country?.code ?? undefined,
       level: level || undefined,
       length: length || undefined,
       media: media || undefined,
+      cacheBust: opts?.cacheBust,
     })
       .then(setScores)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+  }, [country?.code, level, length, media]);
+
+  useEffect(() => {
+    fetchScores();
   }, [country, level, length, media]);
+
+  const isFirstFocus = useRef(true);
+  // Refetch when screen gains focus again (e.g. after playing a game) so new scores show
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false;
+        return;
+      }
+      fetchScores({ cacheBust: true });
+    }, [fetchScores])
+  );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchScores({ cacheBust: true });
+  }, [fetchScores]);
 
   const levelOptions = LEVEL_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
   const lengthOptions = LENGTH_VALUES.map((o) => ({
@@ -174,8 +202,26 @@ export function ScoresScreen() {
   const mediaLabels: Record<string, string> = { images: t('images'), audio: t('sounds'), video: t('videos') };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{t('high_scores')}</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary[500]]} />
+      }
+    >
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>{t('high_scores')}</Text>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={onRefresh}
+          disabled={loading || refreshing}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.refreshButtonText, (loading || refreshing) && styles.refreshButtonDisabled]}>
+            {refreshing ? t('loading') ?? 'Loading…' : t('refresh') ?? 'Refresh'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.filterRow}>
         <FilterSelect
@@ -234,7 +280,18 @@ export function ScoresScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 16, paddingBottom: 48 },
-  title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 16 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.primary[800] },
+  refreshButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: colors.primary[100],
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+  },
+  refreshButtonText: { fontSize: 15, fontWeight: '600', color: colors.primary[700] },
+  refreshButtonDisabled: { opacity: 0.6 },
   filterRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   filterButton: {
     flex: 1,

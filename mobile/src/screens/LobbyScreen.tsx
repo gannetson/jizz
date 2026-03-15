@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Linking } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useGame } from '../context/GameContext';
@@ -16,6 +16,8 @@ const LOBBY_POLL_INTERVAL_MS = 3000;
 export function LobbyScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const route = useRoute();
+  const rematchToken = (route.params as { rematch_game_token?: string })?.rematch_game_token;
   const { game, player, setGame, loadGame: loadGameFromApi } = useGame();
   const { players, question, startGame, joinGame, connected } = useGameWebSocket();
 
@@ -23,6 +25,13 @@ export function LobbyScreen() {
   const [copied, setCopied] = useState(false);
   const [topScores, setTopScores] = useState<Score[]>([]);
   const [refreshedGameScores, setRefreshedGameScores] = useState<MultiPlayer[]>([]);
+
+  // When arriving from "Join rematch", ensure we have the new game in context (param overrides stale context)
+  useEffect(() => {
+    if (!rematchToken || !player?.token) return;
+    if (game?.token === rematchToken) return;
+    loadGameFromApi(rematchToken).then((g) => g && setGame(g));
+  }, [rematchToken, player?.token, game?.token, loadGameFromApi, setGame]);
 
   useEffect(() => {
     if (!game?.token || !player?.token) return;

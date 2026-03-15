@@ -10,7 +10,8 @@ import {
   Pressable,
   Animated,
 } from 'react-native';
-import { Video, Audio } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { getGameDetail, type GameDetailWithAnswers, type QuestionWithAnswer } from '../api/myGames';
 import { apiUrl } from '../api/config';
@@ -200,12 +201,7 @@ export function GameDetailScreen() {
                     />
                   )}
                   {q.media_item.type === 'video' && (
-                    <Video
-                      source={{ uri: q.media_item.url.startsWith('http') ? q.media_item.url : apiUrl(q.media_item.url) }}
-                      style={styles.mediaVideo}
-                      useNativeControls
-                      resizeMode="contain"
-                    />
+                    <GameDetailVideo uri={q.media_item.url.startsWith('http') ? q.media_item.url : apiUrl(q.media_item.url)} />
                   )}
                   {q.media_item.type === 'audio' && (
                     <AudioPlayer uri={q.media_item.url.startsWith('http') ? q.media_item.url : apiUrl(q.media_item.url)} />
@@ -263,8 +259,33 @@ export function GameDetailScreen() {
   );
 }
 
+function GameDetailVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (p) => p.play());
+  return (
+    <VideoView
+      player={player}
+      style={styles.mediaVideo}
+      nativeControls={true}
+      contentFit="contain"
+    />
+  );
+}
+
 function AudioPlayer({ uri }: { uri: string }) {
-git }
+  const player = useAudioPlayer(uri);
+  const status = useAudioPlayerStatus(player);
+  const toggle = () => (status.playing ? player.pause() : player.play());
+  return (
+    <TouchableOpacity
+      style={[styles.audioBtn, status.playing && styles.audioBtnPlaying]}
+      onPress={toggle}
+    >
+      <Text style={[styles.audioBtnText, status.playing && styles.audioBtnTextPlaying]}>
+        {status.playing ? '⏸  Pause' : '▶  Play'}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },

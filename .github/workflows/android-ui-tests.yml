@@ -14,8 +14,8 @@ on:
 
 jobs:
   android-ui-tests:
-    # macos-13 is more reliable for Android emulator (macos-14 often gives "device not found")
-    runs-on: macos-13
+    # macos-14 (macos-13 is deprecated/unsupported). If emulator is flaky, try ubuntu-latest.
+    runs-on: macos-14
     timeout-minutes: 30
     continue-on-error: true
     steps:

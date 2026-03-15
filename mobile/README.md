@@ -19,6 +19,23 @@ npm install
 - **Android:** `npm run android` (generates native project if needed). **Requires Node 22+ on PATH** (Gradle uses it for autolinking). If the build fails with *Process 'command 'node'' finished with non-zero exit value 1*, run `nvm use 22` in the same terminal and retry, or from `android/` run `./run-with-node22.sh app:assembleDebug` (see Android section).
 - **iOS:** `npm run ios` (requires Mac and Xcode).
 
+### Opening the iOS project in Xcode
+
+If you open **`mobile/ios/Birdr.xcodeproj`** in Xcode and see an error like **"Unable to open base configuration reference file ... Pods-Birdr.release.xcconfig"**, the CocoaPods dependencies haven’t been installed in that copy of the project. Fix it by running `pod install` in the **same** `ios` folder that Xcode is using (e.g. the path shown in the error):
+
+```bash
+cd mobile/ios   # or cd /Volumes/workspace/repository/mobile/ios if that’s where you opened from
+pod install
+```
+
+Then open the **workspace** (not the project) so Xcode sees the Pods:
+
+```bash
+open mobile/ios/Birdr.xcworkspace
+```
+
+Or in Xcode: **File → Open** → choose `Birdr.xcworkspace`. Always use the `.xcworkspace` when working with CocoaPods.
+
 ### iOS device (iPad / iPhone)
 
 To run on a **physical device** (e.g. connected iPad):

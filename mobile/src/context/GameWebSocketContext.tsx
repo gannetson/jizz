@@ -7,7 +7,7 @@ import React, {
   useState,
   ReactNode,
 } from 'react';
-import type { Game } from '../api/games';
+import { getCurrentQuestion, type Game } from '../api/games';
 import type { Player } from '../api/player';
 import type { Question, Answer, MultiPlayer } from '../types/game';
 import { getWebSocketUrl } from '../api/config';
@@ -45,6 +45,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const setGameRef = useRef<((g: Game | null) => void) | null>(null);
   const gameTokenRef = useRef<string>('');
   const currentSocketRef = useRef<WebSocket | null>(null);
+  const languageCodeRef = useRef<string>('en');
 
   const clearRematchInvitation = useCallback(() => setRematchInvitation(null), []);
   const clearRematchError = useCallback(() => setRematchError(null), []);
@@ -52,16 +53,22 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const sendRematch = useCallback(() => {
     setRematchError(null);
     if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ action: 'rematch', player_token: playerTokenRef.current }));
+      sendAction({ action: 'rematch', player_token: playerTokenRef.current });
     } else {
       setRematchError('Not connected. Try again.');
     }
-  }, [socket]);
+  }, [socket, sendAction]);
 
+  // Payloads match web app (websocket-context-provider) and backend (jizz/consumers.py).
   const sendAction = useCallback(
     (payload: Record<string, unknown>) => {
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(payload));
+        socket.send(
+          JSON.stringify({
+            ...payload,
+            language_code: languageCodeRef.current,
+          })
+        );
       }
     },
     [socket]
@@ -97,6 +104,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     playerTokenRef.current = player.token;
     setGameRef.current = setGame;
     gameTokenRef.current = game.token;
+    languageCodeRef.current = player.language || 'en';
 
     const url = getWebSocketUrl(`/mpg/${game.token}`);
     const ws = new WebSocket(url);
@@ -105,11 +113,12 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     ws.onopen = () => {
       if (currentSocketRef.current !== ws) return;
       setConnected(true);
+      // Same payload as web app: join_game + player_token + language_code
       ws.send(
         JSON.stringify({
           action: 'join_game',
           player_token: player.token,
-          language_code: player.language || 'en',
+          language_code: languageCodeRef.current,
         })
       );
     };
@@ -128,6 +137,12 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             }
             break;
           case 'game_started':
+            // Fallback: fetch current question so non-host clients leave lobby even if new_question was missed
+            getCurrentQuestion(gameTokenRef.current).then((q) => {
+              if (q && q.game?.token === gameTokenRef.current) {
+                setQuestion(q as Question);
+              }
+            }).catch(() => {});
             break;
           case 'game_updated':
             if (message.game?.token === gameTokenRef.current && setGameRef.current) {

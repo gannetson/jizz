@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -9,6 +9,9 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { API_BASE_URL } from '../api/config';
 import { loadScores, type Score } from '../api/scores';
 import { colors } from '../theme';
+import type { MultiPlayer } from '../types/game';
+
+const LOBBY_POLL_INTERVAL_MS = 3000;
 
 export function LobbyScreen() {
   const { t } = useTranslation();
@@ -19,6 +22,7 @@ export function LobbyScreen() {
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [topScores, setTopScores] = useState<Score[]>([]);
+  const [refreshedGameScores, setRefreshedGameScores] = useState<MultiPlayer[]>([]);
 
   useEffect(() => {
     if (!game?.token || !player?.token) return;
@@ -28,9 +32,41 @@ export function LobbyScreen() {
 
   useEffect(() => {
     if (game?.token) {
-      loadGameFromApi(game.token).then((g) => g && setGame(g));
+      loadGameFromApi(game.token).then((g) => {
+        if (g && g.scores?.length) {
+          setRefreshedGameScores(
+            g.scores.map((s, i) => ({
+              id: s.id ?? i,
+              name: s.name,
+              score: s.score,
+              is_host: s.is_host,
+            }))
+          );
+        }
+        if (g) setGame(g);
+      });
     }
   }, [game?.token]);
+
+  // Poll game so host sees new joiners even if WebSocket update_players was missed
+  useEffect(() => {
+    if (!game?.token || !connected) return;
+    const interval = setInterval(() => {
+      loadGameFromApi(game.token).then((g) => {
+        if (g?.scores?.length) {
+          setRefreshedGameScores(
+            g.scores.map((s, i) => ({
+              id: s.id ?? i,
+              name: s.name,
+              score: s.score,
+              is_host: s.is_host,
+            }))
+          );
+        }
+      });
+    }, LOBBY_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [game?.token, connected, loadGameFromApi]);
 
   useEffect(() => {
     if (question && game?.token && question.game?.token === game.token) {
@@ -74,6 +110,11 @@ export function LobbyScreen() {
   }
 
   const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
+
+  // Prefer WebSocket players; use polled game.scores when it has more (host may have missed update_players)
+  const displayPlayers = useMemo(() => {
+    return refreshedGameScores.length > players.length ? refreshedGameScores : players;
+  }, [players, refreshedGameScores]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -139,11 +180,11 @@ export function LobbyScreen() {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>{t('players')} ({players.length})</Text>
-      {players.length === 0 ? (
+      <Text style={styles.sectionTitle}>{t('players')} ({displayPlayers.length})</Text>
+      {displayPlayers.length === 0 ? (
         <Text style={styles.muted}>{t('no_other_players_yet')}</Text>
       ) : (
-        players.map((p, i) => (
+        displayPlayers.map((p, i) => (
           <View key={i} style={styles.playerCard}>
             <View style={styles.playerLeft}>
               <View style={styles.playerAvatar}>

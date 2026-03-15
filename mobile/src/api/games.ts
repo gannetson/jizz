@@ -1,6 +1,15 @@
 import { apiUrl } from './config';
 import type { Country } from './countries';
 import type { Player } from './player';
+import type { Question } from '../types/game';
+
+export type GameScore = {
+  id?: number;
+  name: string;
+  score?: number;
+  ranking?: number;
+  is_host?: boolean;
+};
 
 export type Game = {
   token: string;
@@ -12,7 +21,7 @@ export type Game = {
   host?: { id: number; name: string; token?: string };
   ended?: boolean;
   current_highscore?: { name: string; score?: number };
-  scores?: Array<{ name: string; score?: number; ranking?: number }>;
+  scores?: GameScore[];
 };
 
 type CreateGameBody = {
@@ -65,4 +74,19 @@ export async function loadGame(token: string): Promise<Game | null> {
   if (!response.ok) return null;
   const data = await response.json();
   return data as Game;
+}
+
+/**
+ * Get the current (active) question for an MPG game.
+ * Used when we receive game_started so we can show the first question even if new_question was missed.
+ */
+export async function getCurrentQuestion(gameToken: string): Promise<Question | null> {
+  const response = await fetch(apiUrl(`/api/games/${encodeURIComponent(gameToken)}/question`), {
+    method: 'GET',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  if (!data?.id || !data?.game?.token) return null;
+  return data as Question;
 }

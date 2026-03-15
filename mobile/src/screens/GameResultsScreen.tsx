@@ -93,12 +93,11 @@ export function GameResultsScreen() {
     const doJoin = async () => {
       joinGame(null, null, setGame);
       clearQuestion();
-      // Avoid clearGame() here: it sets game=null and can cause "fewer hooks" re-render before replace
       const g = await loadGame(token);
       setIsRematchLoading(false);
       if (g) {
-        setGame(g);
-        (navigation as any).replace('Lobby');
+        await new Promise((r) => setTimeout(r, 200));
+        (navigation as any).replace('Lobby', { rematch_game_token: token });
       }
     };
     doJoin();
@@ -114,12 +113,13 @@ export function GameResultsScreen() {
     if (!rematchInvitation || !player) return;
     joinGame(null, null, setGame);
     clearQuestion();
-    // Avoid clearGame() before replace to prevent "fewer hooks" re-render
-    const g = await loadGame(rematchInvitation.new_game_token);
+    const newToken = rematchInvitation.new_game_token;
     clearRematchInvitation();
+    const g = await loadGame(newToken);
     if (g) {
-      setGame(g);
-      (navigation as any).replace('Lobby');
+      // Wait for context to update so LobbyScreen mounts with the new game (not the old one)
+      await new Promise((r) => setTimeout(r, 200));
+      (navigation as any).replace('Lobby', { rematch_game_token: newToken });
     }
   };
 

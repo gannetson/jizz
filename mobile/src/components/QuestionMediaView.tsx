@@ -9,7 +9,8 @@ import {
   Animated,
   Platform,
 } from 'react-native';
-import { Video, Audio, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { setAudioModeAsync } from 'expo-audio';
 import { MediaCredits } from './MediaCredits';
 import { colors } from '../theme';
 
@@ -92,14 +93,17 @@ export function QuestionMediaView({
   // Configure audio session for video playback on iOS so video has sound and native controls work
   React.useEffect(() => {
     if (mediaType !== 'video' || !videoUri) return;
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: false,
-      allowsRecordingIOS: false,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
+    setAudioModeAsync({
+      playsInSilentMode: false,
+      allowsRecording: false,
+      shouldPlayInBackground: false,
+      interruptionMode: 'duckOthers',
     }).catch(() => {});
   }, [mediaType, videoUri]);
+
+  const videoPlayer = useVideoPlayer(mediaType === 'video' && videoUri ? videoUri : null, (player) => {
+    if (mediaType === 'video' && videoUri) player.play();
+  });
 
   const creditsMedia =
     mediaType === 'images' ? imageMedia : mediaType === 'video' ? videoMedia : soundMedia;
@@ -152,14 +156,11 @@ export function QuestionMediaView({
 
       {mediaType === 'video' && videoUri && (
         <>
-          <Video
-            source={{ uri: videoUri }}
+          <VideoView
+            player={videoPlayer}
             style={[styles.video, videoHeight != null && { height: videoHeight }]}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            onError={(e)=>alert("oeps")}
-            isLooping={false}
+            nativeControls={true}
+            contentFit="contain"
           />
           {renderCreditsRow()}
         </>

@@ -787,13 +787,52 @@ class GoogleLoginView(APIView):
             if not email:
                 raise ValueError("No email in token")
 
+            def _username_from_google(idinfo, email, exclude_user_id=None):
+                """Prefer full name from Google; else part before @; ensure unique with suffix."""
+                full = (idinfo.get("name") or "").strip()
+                if not full:
+                    given = (idinfo.get("given_name") or "").strip()
+                    family = (idinfo.get("family_name") or "").strip()
+                    full = " ".join([given, family]).strip()
+                if full:
+                    base = full[:150].strip()
+                else:
+                    base = (email.split("@")[0] or "user")[:150]
+                base = base or "user"
+                username = base
+                counter = 1
+                qs = User.objects.filter(username=username)
+                if exclude_user_id is not None:
+                    qs = qs.exclude(pk=exclude_user_id)
+                while qs.exists():
+                    suffix = f"_{counter}"
+                    username = (base[: 150 - len(suffix)] + suffix).strip()
+                    counter += 1
+                    qs = User.objects.filter(username=username)
+                    if exclude_user_id is not None:
+                        qs = qs.exclude(pk=exclude_user_id)
+                return username
+
             users = User.objects.filter(email__iexact=email).order_by("id")
             if users.count() == 0:
-                user = User.objects.create_user(username=email, email=email)
+                username = _username_from_google(idinfo, email)
+                user = User.objects.create_user(username=username, email=email)
+                if idinfo.get("given_name"):
+                    user.first_name = idinfo.get("given_name", "")[:150]
+                if idinfo.get("family_name"):
+                    user.last_name = idinfo.get("family_name", "")[:150]
+                user.save()
                 created = True
             elif users.count() == 1:
                 user = users.get()
                 created = False
+                if (user.username or "").lower() == email.lower():
+                    user.username = _username_from_google(idinfo, email, exclude_user_id=user.pk)
+                    if idinfo.get("given_name"):
+                        user.first_name = idinfo.get("given_name", "")[:150]
+                    if idinfo.get("family_name"):
+                        user.last_name = idinfo.get("family_name", "")[:150]
+                    user.save()
             else:
                 # Multiple users with same email (e.g. legacy data): use the first by id
                 logger.warning(
@@ -803,6 +842,13 @@ class GoogleLoginView(APIView):
                 )
                 user = users.first()
                 created = False
+                if (user.username or "").lower() == email.lower():
+                    user.username = _username_from_google(idinfo, email, exclude_user_id=user.pk)
+                    if idinfo.get("given_name"):
+                        user.first_name = idinfo.get("given_name", "")[:150]
+                    if idinfo.get("family_name"):
+                        user.last_name = idinfo.get("family_name", "")[:150]
+                    user.save()
 
             # Get or create profile and save Google avatar if user doesn't have one yet
             profile, _ = UserProfile.objects.get_or_create(

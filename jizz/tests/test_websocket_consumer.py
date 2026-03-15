@@ -311,27 +311,30 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         async def async_test():
             with patch('jizz.rematch.create_rematch_game', return_value=(new_game, self.player1)):
                 communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
-                connected, _ = await communicator.connect()
-                self.assertTrue(connected)
-                await communicator.send_json_to({
-                    'action': 'join_game',
-                    'player_token': str(self.player1.token),
-                })
-                # Drain initial messages (e.g. players list) with a few short receives; do not catch CancelledError
-                for _ in range(5):
-                    try:
-                        await communicator.receive_json_from(timeout=0.5)
-                    except (asyncio.TimeoutError, TimeoutError):
-                        break
-                await communicator.send_json_to({
-                    'action': 'rematch',
-                    'player_token': str(self.player1.token),
-                })
-                msg = await communicator.receive_json_from(timeout=5.0)
-                self.assertEqual(msg.get('action'), 'rematch_invitation', f"Expected rematch_invitation, got {msg}")
-                self.assertEqual(msg.get('new_game_token'), new_game.token)
-                self.assertEqual(msg.get('host_name'), self.player1.name)
-                await communicator.disconnect()
+                try:
+                    connected, _ = await communicator.connect()
+                    self.assertTrue(connected)
+                    await communicator.send_json_to({
+                        'action': 'join_game',
+                        'player_token': str(self.player1.token),
+                    })
+                    # Drain initial messages (e.g. players list) with a few short receives
+                    for _ in range(5):
+                        try:
+                            await communicator.receive_json_from(timeout=0.5)
+                        except (asyncio.TimeoutError, TimeoutError):
+                            break
+                    await communicator.send_json_to({
+                        'action': 'rematch',
+                        'player_token': str(self.player1.token),
+                    })
+                    msg = await communicator.receive_json_from(timeout=5.0)
+                    self.assertEqual(msg.get('action'), 'rematch_invitation', f"Expected rematch_invitation, got {msg}")
+                    self.assertEqual(msg.get('new_game_token'), new_game.token)
+                    self.assertEqual(msg.get('host_name'), self.player1.name)
+                finally:
+                    await communicator.disconnect()
+                    await asyncio.sleep(0.05)
 
         asyncio.run(async_test())
 
@@ -352,27 +355,30 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         async def async_test():
             with patch('jizz.rematch.create_rematch_game', side_effect=ValueError("Only the host can start a rematch")):
                 communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
-                connected, _ = await communicator.connect()
-                self.assertTrue(connected)
-                await communicator.send_json_to({
-                    'action': 'join_game',
-                    'player_token': str(self.player2.token),
-                })
-                # Drain initial messages; do not catch CancelledError so test runner cancellation propagates
-                for _ in range(5):
-                    try:
-                        await communicator.receive_json_from(timeout=0.5)
-                    except (asyncio.TimeoutError, TimeoutError):
-                        break
-                await communicator.send_json_to({
-                    'action': 'rematch',
-                    'player_token': str(self.player2.token),
-                })
-                msg = await communicator.receive_json_from(timeout=5.0)
-                self.assertEqual(msg.get('action'), 'error', f"Expected error, got {msg}")
-                self.assertIn('message', msg)
-                self.assertIn('host', msg['message'].lower())
-                await communicator.disconnect()
+                try:
+                    connected, _ = await communicator.connect()
+                    self.assertTrue(connected)
+                    await communicator.send_json_to({
+                        'action': 'join_game',
+                        'player_token': str(self.player2.token),
+                    })
+                    # Drain initial messages
+                    for _ in range(5):
+                        try:
+                            await communicator.receive_json_from(timeout=0.5)
+                        except (asyncio.TimeoutError, TimeoutError):
+                            break
+                    await communicator.send_json_to({
+                        'action': 'rematch',
+                        'player_token': str(self.player2.token),
+                    })
+                    msg = await communicator.receive_json_from(timeout=5.0)
+                    self.assertEqual(msg.get('action'), 'error', f"Expected error, got {msg}")
+                    self.assertIn('message', msg)
+                    self.assertIn('host', msg['message'].lower())
+                finally:
+                    await communicator.disconnect()
+                    await asyncio.sleep(0.05)
 
         asyncio.run(async_test())
 

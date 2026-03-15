@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import {
   getChallengeQuestion,
@@ -52,6 +52,24 @@ function speciesDisplayName(s: QuestionOption | Species, lang?: string): string 
   return o.name || o.name_latin || '';
 }
 
+/** Provides audio playback hooks only when mounted (past early returns). Avoids "fewer hooks" when restarting. */
+function ChallengePlayAudio({
+  soundUri,
+  children,
+}: {
+  soundUri: string | null;
+  children: (args: { playSound: () => void; soundPlaying: boolean; pulsatingStyle: ReturnType<typeof usePulsatingAnimation> }) => React.ReactNode;
+}) {
+  const audioPlayer = useAudioPlayer(soundUri ?? null);
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
+  const soundPlaying = audioStatus.playing;
+  const pulsatingStyle = usePulsatingAnimation(soundPlaying);
+  const playSound = useCallback(() => {
+    if (soundUri) audioPlayer.play();
+  }, [soundUri, audioPlayer]);
+  return <>{children({ playSound, soundPlaying, pulsatingStyle })}</>;
+}
+
 export function ChallengePlayScreen() {
   const { t } = useTranslation();
   const route = useRoute<RouteProp<{ ChallengePlay: ChallengePlayParams }, 'ChallengePlay'>>();
@@ -77,8 +95,6 @@ export function ChallengePlayScreen() {
   const [challengePlayerToken, setChallengePlayerToken] = useState<string | undefined>(undefined);
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
   const [expertQuery, setExpertQuery] = useState('');
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [soundPlaying, setSoundPlaying] = useState(false);
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
@@ -164,19 +180,6 @@ export function ChallengePlayScreen() {
   }, [question?.id, countryCode, paramLanguage]);
 
   useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
-        soundRef.current = null;
-      }
-    };
-  }, [question?.id]);
-
-  useEffect(() => {
-    setSoundPlaying(false);
-  }, [question?.id]);
-
-  useEffect(() => {
     setExpertQuery('');
   }, [question?.id]);
 
@@ -232,7 +235,6 @@ export function ChallengePlayScreen() {
     }
   }, [challengeId, gameToken, navigation]);
 
-  const pulsatingStyle = usePulsatingAnimation(soundPlaying);
   const lang = paramLanguage || 'en';
   const mediaType = gameMedia || (question?.game ? (question as any).game?.media : undefined) || 'images';
   const isExpert = gameLevel === 'expert' || (question as any)?.game?.level === 'expert';
@@ -241,24 +243,10 @@ export function ChallengePlayScreen() {
 
   const image = question?.images?.[question.number];
   const video = question?.videos?.[question.number];
-  const sound = question?.sounds?.[question.number];
+  const soundForAudio = question?.sounds?.[question?.number ?? 0];
+  const soundUri = soundForAudio?.url ? (soundForAudio.url.startsWith('http') ? soundForAudio.url : apiUrl(soundForAudio.url)) : null;
   const imageUri = image?.url ? (image.url.startsWith('http') ? image.url : apiUrl(image.url)).replace('/1800', '/900') : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
-  const soundUri = sound?.url ? (sound.url.startsWith('http') ? sound.url : apiUrl(sound.url)) : null;
-
-  const playSound = useCallback(async () => {
-    if (!soundUri) return;
-    try {
-      if (soundRef.current) await soundRef.current.unloadAsync();
-      const { sound: s } = await Audio.Sound.createAsync({ uri: soundUri });
-      s.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) setSoundPlaying(false);
-      });
-      soundRef.current = s;
-      await s.playAsync();
-      setSoundPlaying(true);
-    } catch (_) {}
-  }, [soundUri]);
 
   const openFlagModal = useCallback(() => {
     if (!question) return;
@@ -436,6 +424,8 @@ export function ChallengePlayScreen() {
   });
 
   return (
+    <ChallengePlayAudio soundUri={soundUri}>
+      {({ playSound, soundPlaying, pulsatingStyle }) => (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="challengePlay.screen">
       <View style={styles.row}>
       <Text style={styles.screenTitle}>{countryName}</Text>
@@ -699,6 +689,8 @@ export function ChallengePlayScreen() {
         playerToken={challengePlayerToken}
       />
     </ScrollView>
+      )}
+    </ChallengePlayAudio>
   );
 }
 

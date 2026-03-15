@@ -9,8 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AutocompleteDropdown } from 'react-native-autocomplete-dropdown';
 import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
@@ -38,6 +39,24 @@ function speciesDisplayName(s: Species, lang?: string): string {
   return s.name || s.name_latin || `Species ${s.id}`;
 }
 
+/** Provides audio playback hooks only when mounted (past early returns). Avoids "fewer hooks" when restarting. */
+function GamePlayAudio({
+  soundUri,
+  children,
+}: {
+  soundUri: string | null;
+  children: (args: { playSound: () => void; soundPlaying: boolean; pulsatingStyle: ReturnType<typeof usePulsatingAnimation> }) => React.ReactNode;
+}) {
+  const audioPlayer = useAudioPlayer(soundUri ?? null);
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
+  const soundPlaying = audioStatus.playing;
+  const pulsatingStyle = usePulsatingAnimation(soundPlaying);
+  const playSound = useCallback(() => {
+    if (soundUri) audioPlayer.play();
+  }, [soundUri, audioPlayer]);
+  return <>{children({ playSound, soundPlaying, pulsatingStyle })}</>;
+}
+
 export function GamePlayScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
@@ -57,11 +76,10 @@ export function GamePlayScreen() {
   const [imageError, setImageError] = useState<string | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
   const expertDropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
-  const [soundPlaying, setSoundPlaying] = useState(false);
 
-  const pulsatingStyle = usePulsatingAnimation(soundPlaying);
+  const mediaType = game?.media || 'images';
+  const currentIndex = mediaIndex;
   const lang = game?.language || (player as any)?.language;
 
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -150,15 +168,6 @@ export function GamePlayScreen() {
   }, [question?.id, game?.level, game?.language, (game as any)?.country?.code, (player as any)?.language]);
 
   useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
-        soundRef.current = null;
-      }
-    };
-  }, [question?.id]);
-
-  useEffect(() => {
     setSubmittingId(null);
     expertDropdownRef.current?.clear();
   }, [question?.id]);
@@ -167,30 +176,10 @@ export function GamePlayScreen() {
     setImageError(null);
   }, [question?.id, mediaIndex]);
 
-  useEffect(() => {
-    setSoundPlaying(false);
-  }, [question?.id, mediaIndex]);
-
-  const mediaType = game?.media || 'images';
-  const currentIndex = mediaIndex;
   const image = mediaType === 'images' && question?.images?.[currentIndex];
   const video = mediaType === 'video' && question?.videos?.[currentIndex];
-  const sound = mediaType === 'audio' && question?.sounds?.[currentIndex];
+  const sound = mediaType === 'audio' ? question?.sounds?.[currentIndex] : undefined;
   const soundUri = sound?.url ? (sound.url.startsWith('http') ? sound.url : apiUrl(sound.url)) : null;
-
-  const playSound = useCallback(async () => {
-    if (!soundUri) return;
-    try {
-      if (soundRef.current) await soundRef.current.unloadAsync();
-      const { sound: s } = await Audio.Sound.createAsync({ uri: soundUri });
-      s.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) setSoundPlaying(false);
-      });
-      soundRef.current = s;
-      await s.playAsync();
-      setSoundPlaying(true);
-    } catch (_) {}
-  }, [soundUri]);
 
   const langForDisplay = game?.language || (player as any)?.language;
   const expertDropdownDataSet = useMemo(
@@ -324,6 +313,8 @@ export function GamePlayScreen() {
   }
 
   return (
+    <GamePlayAudio soundUri={soundUri}>
+      {({ playSound, soundPlaying, pulsatingStyle }) => (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">
       <FlagMediaModal
         visible={flagModalVisible}
@@ -531,6 +522,8 @@ export function GamePlayScreen() {
         playerToken={(player as any)?.token}
       />
     </ScrollView>
+      )}
+    </GamePlayAudio>
   );
 }
 

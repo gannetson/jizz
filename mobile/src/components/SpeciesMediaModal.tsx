@@ -12,7 +12,8 @@ import {
   SafeAreaView,
   Animated,
 } from 'react-native';
-import { Video, Audio, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { MediaCredits } from './MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from './FlagMediaModal';
 import { apiUrl } from '../api/config';
@@ -61,37 +62,29 @@ function speciesTitle(s: SpeciesMediaData, lang?: string): string {
   return s.name || s.name_latin || `Species ${s.id}`;
 }
 
+function VideoItem({ uri, width }: { uri: string; width: number }) {
+  const player = useVideoPlayer(uri, (p: { play: () => void }) => {
+    p.play();
+  });
+  return (
+    <VideoView
+      player={player}
+      style={[styles.mediaVideo, { width }]}
+      nativeControls={true}
+      contentFit="contain"
+    />
+  );
+}
+
 function AudioPlayer({ uri }: { uri: string }) {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [playing, setPlaying] = useState(false);
+  const player = useAudioPlayer(uri);
+  const status = useAudioPlayerStatus(player);
+  const playing = status.playing;
   const pulsatingStyle = usePulsatingAnimation(playing);
 
-  useEffect(() => {
-    return () => {
-      if (sound) sound.unloadAsync().catch(() => {});
-    };
-  }, [sound]);
-
-  const toggle = async () => {
-    try {
-      if (playing && sound) {
-        await sound.pauseAsync();
-        setPlaying(false);
-        return;
-      }
-      if (sound) {
-        await sound.playAsync();
-        setPlaying(true);
-        return;
-      }
-      const { sound: s } = await Audio.Sound.createAsync({ uri });
-      s.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) setPlaying(false);
-      });
-      setSound(s);
-      await s.playAsync();
-      setPlaying(true);
-    } catch (_) {}
+  const toggle = () => {
+    if (playing) player.pause();
+    else player.play();
   };
 
   return (
@@ -248,12 +241,7 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
               videos.length > 0 ? (
                 videos.map((vid, idx) => (
                   <View key={idx} style={styles.mediaItem}>
-                    <Video
-                      source={{ uri: resolveUrl(vid.url) }}
-                      style={[styles.mediaVideo, { width: screenWidth - 48 }]}
-                      useNativeControls
-                      resizeMode={ResizeMode.CONTAIN}
-                    />
+                    <VideoItem uri={resolveUrl(vid.url)} width={screenWidth - 48} />
                     <View style={styles.mediaFooter}>
                       <MediaCredits media={vid} />
                       <TouchableOpacity onPress={() => setFlagMedia({ id: vid.id ?? 0, type: 'video', url: vid.url, contributor: vid.contributor })}>

@@ -234,8 +234,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,  # Temporarily disable to test if blacklisting is the issue
 }
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<YOUR_GOOGLE_CLIENT_ID>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<YOUR_GOOGLE_CLIENT_SECRET>'
+# Keep Google keys from env (set above); do not overwrite with placeholders
 SOCIAL_AUTH_APPLE_ID_CLIENT = SOCIAL_AUTH_APPLE_ID_CLIENT or '<YOUR_APPLE_CLIENT_ID>'
 if not (SOCIAL_AUTH_APPLE_ID_SECRET or '').strip().startswith('-----BEGIN'):
     SOCIAL_AUTH_APPLE_ID_SECRET = '<YOUR_APPLE_SECRET>'
@@ -269,9 +268,6 @@ EBIRD_API_TOKEN = os.environ.get('EBIRD_API_TOKEN', '')
 
 # eBird Status and Trends (for regional abundance CSV downloads); get key at https://ebird.org/st/request
 EBIRD_ST_ACCESS_KEY = os.environ.get('EBIRD_ST_ACCESS_KEY', '')
-
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'your-actual-google-client-id'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'your-actual-google-client-secret'
 
 # Ensure errors are visible in the server process (runserver, gunicorn, etc.)
 LOGGING = {

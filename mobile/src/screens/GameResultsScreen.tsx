@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
@@ -34,21 +34,21 @@ export function GameResultsScreen() {
     player?.name === (game?.host as { name?: string })?.name ||
     player?.id === (game?.host as { id?: number })?.id;
 
-  const handlePlayAgain = async () => {
-    // Replace so Results unmounts; defer clearGame so it runs after navigation commits (avoids "fewer hooks")
+  const handlePlayAgain = () => {
     (navigation as any).replace('Start');
-    requestAnimationFrame(() => {
+    // Run clearGame after navigation and unmount complete to avoid "Rendered fewer hooks than expected"
+    InteractionManager.runAfterInteractions(() => {
       clearGame();
     });
   };
 
-  const handleBackToDailyChallenge = async () => {
+  const handleBackToDailyChallenge = () => {
     if (dailyChallengeId != null) {
       (navigation as any).replace('DailyChallengeDetail', { challengeId: dailyChallengeId });
     } else {
       (navigation as any).replace('Start');
     }
-    requestAnimationFrame(() => {
+    InteractionManager.runAfterInteractions(() => {
       clearGame();
     });
   };

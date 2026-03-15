@@ -192,6 +192,16 @@ export function GamePlayScreen() {
     } catch (_) {}
   }, [soundUri]);
 
+  const langForDisplay = game?.language || (player as any)?.language;
+  const expertDropdownDataSet = useMemo(
+    () =>
+      expertSpecies.map((s) => ({
+        id: String(s.id),
+        title: speciesDisplayName(s, langForDisplay),
+      })),
+    [expertSpecies, langForDisplay]
+  );
+
   if (!game || !player) {
     return (
       <View style={styles.centered}>
@@ -284,15 +294,6 @@ export function GamePlayScreen() {
   const isExpert = game.level === 'expert';
   const hasOptions = !!(question?.options && question.options.length > 0);
   const showExpertInput = isExpert && !hasOptions;
-
-  const expertDropdownDataSet = useMemo(
-    () =>
-      expertSpecies.map((s) => ({
-        id: String(s.id),
-        title: speciesDisplayName(s, lang),
-      })),
-    [expertSpecies, lang]
-  );
 
   const currentMedia = image || video || sound;
   const showPlaceholder = (mediaType === 'images' && (!imageUri || imageError)) ||

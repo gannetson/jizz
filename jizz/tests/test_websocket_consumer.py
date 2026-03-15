@@ -317,11 +317,12 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                     'action': 'join_game',
                     'player_token': str(self.player1.token),
                 })
-                try:
-                    while True:
-                        await communicator.receive_json_from(timeout=2.0)
-                except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
-                    pass
+                # Drain initial messages (e.g. players list) with a few short receives; do not catch CancelledError
+                for _ in range(5):
+                    try:
+                        await communicator.receive_json_from(timeout=0.5)
+                    except (asyncio.TimeoutError, TimeoutError):
+                        break
                 await communicator.send_json_to({
                     'action': 'rematch',
                     'player_token': str(self.player1.token),
@@ -357,11 +358,12 @@ class WebSocketConsumerTestCase(TransactionTestCase):
                     'action': 'join_game',
                     'player_token': str(self.player2.token),
                 })
-                try:
-                    while True:
-                        await communicator.receive_json_from(timeout=2.0)
-                except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError):
-                    pass
+                # Drain initial messages; do not catch CancelledError so test runner cancellation propagates
+                for _ in range(5):
+                    try:
+                        await communicator.receive_json_from(timeout=0.5)
+                    except (asyncio.TimeoutError, TimeoutError):
+                        break
                 await communicator.send_json_to({
                     'action': 'rematch',
                     'player_token': str(self.player2.token),

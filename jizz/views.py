@@ -741,16 +741,45 @@ class GoogleLoginView(APIView):
             from google.oauth2 import id_token
             from google.auth.transport import requests as google_requests
 
-            client_id = getattr(
-                settings, "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", None
-            ) or ""
-            if not client_id or client_id.startswith("<") or client_id.startswith("your-"):
-                logger.warning("Google login: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY not set or placeholder")
-                return Response({"error": "Invalid token"}, status=400)
+            # Primary: Web client ID (same as app's GOOGLE_WEB_CLIENT_ID). Optional: extra IDs (e.g. iOS) to accept.
+            primary_key = (
+                getattr(settings, "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", None) or ""
+            ).strip()
+            extra_ids = getattr(settings, "SOCIAL_AUTH_GOOGLE_OAUTH2_ADDITIONAL_AUDIENCE", None) or []
+            if isinstance(extra_ids, str):
+                extra_ids = [e.strip() for e in extra_ids.split(",") if e.strip()]
+            allowed_client_ids = [primary_key] + [a for a in extra_ids if a and a != primary_key]
 
-            idinfo = id_token.verify_oauth2_token(
-                token, google_requests.Request(), client_id
-            )
+            if not primary_key or primary_key.startswith("<") or "your-" in primary_key.lower():
+                logger.warning(
+                    "Google login: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY not set or placeholder. "
+                    "Set it to your Google Cloud Web application client ID (same as app's GOOGLE_WEB_CLIENT_ID)."
+                )
+                return Response(
+                    {"error": "Invalid token", "message": "Server Google client ID not configured"},
+                    status=400,
+                )
+
+            idinfo = None
+            for cid in allowed_client_ids:
+                if not cid:
+                    continue
+                try:
+                    idinfo = id_token.verify_oauth2_token(
+                        token, google_requests.Request(), cid
+                    )
+                    break
+                except ValueError:
+                    continue
+            if idinfo is None:
+                logger.warning(
+                    "Google login: token verification failed for all client IDs. "
+                    "Ensure SOCIAL_AUTH_GOOGLE_OAUTH2_KEY matches the app Web client ID."
+                )
+                return Response(
+                    {"error": "Invalid token", "message": "Token verification failed (wrong client ID or expired)"},
+                    status=400,
+                )
             if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
                 raise ValueError("Wrong issuer")
 
@@ -758,9 +787,22 @@ class GoogleLoginView(APIView):
             if not email:
                 raise ValueError("No email in token")
 
-            user, created = User.objects.get_or_create(
-                email=email, defaults={"username": email}
-            )
+            users = User.objects.filter(email__iexact=email).order_by("id")
+            if users.count() == 0:
+                user = User.objects.create_user(username=email, email=email)
+                created = True
+            elif users.count() == 1:
+                user = users.get()
+                created = False
+            else:
+                # Multiple users with same email (e.g. legacy data): use the first by id
+                logger.warning(
+                    "Google login: multiple users with email %s (ids %s). Using first.",
+                    email,
+                    list(users.values_list("id", flat=True)),
+                )
+                user = users.first()
+                created = False
 
             # Get or create profile and save Google avatar if user doesn't have one yet
             profile, _ = UserProfile.objects.get_or_create(

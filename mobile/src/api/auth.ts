@@ -99,9 +99,13 @@ export async function loginWithGoogleToken(idToken: string): Promise<TokenRespon
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const msg = data.error ?? data.detail ?? data.message ?? 'Google sign-in failed';
+    const msg =
+      (typeof data.message === 'string' ? data.message : null) ??
+      data.error ??
+      data.detail ??
+      'Google sign-in failed';
     if (__DEV__) {
-      console.error('[Google login API]', response.status, data);
+      console.error('[Google sign-in]', response.status, data);
     }
     throw { message: typeof msg === 'string' ? msg : 'Google sign-in failed' };
   }

@@ -192,6 +192,28 @@ export function ProfileScreen() {
     }
   };
 
+  // All hooks must run on every render (before any early return).
+  const countryOptions = React.useMemo(() => {
+    const withDisplay = countries.map((c) => ({ ...c, displayName: getCountryDisplayName(c, locale) }));
+    withDisplay.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }));
+    return [{ code: '', name: t('none'), displayName: t('none') }, ...withDisplay];
+  }, [countries, locale, t]);
+  const filteredCountryOptions = React.useMemo(() => {
+    if (!countrySearch.trim()) return countryOptions;
+    const q = countrySearch.trim().toLowerCase();
+    return countryOptions.filter((o) => (o.displayName ?? o.name).toLowerCase().includes(q));
+  }, [countryOptions, countrySearch]);
+
+  const sortedLanguages = React.useMemo(
+    () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    [languages, locale]
+  );
+  const filteredLanguages = React.useMemo(() => {
+    if (!languageSearch.trim()) return sortedLanguages;
+    const q = languageSearch.trim().toLowerCase();
+    return sortedLanguages.filter((l) => getLanguageDisplayName(l, locale).toLowerCase().includes(q));
+  }, [sortedLanguages, languageSearch, locale]);
+
   if (!isAuthenticated) {
     return (
       <View style={styles.centered}>
@@ -214,28 +236,6 @@ export function ProfileScreen() {
   const languageLabel = selectedLanguage ? getLanguageDisplayName(selectedLanguage, locale) : language;
   const selectedCountry = countryCode ? countries.find((c) => c.code === countryCode) : null;
   const countryLabel = selectedCountry ? getCountryDisplayName(selectedCountry, locale) : t('none');
-
-  const countryOptions = React.useMemo(() => {
-    const withDisplay = countries.map((c) => ({ ...c, displayName: getCountryDisplayName(c, locale) }));
-    withDisplay.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }));
-    return [{ code: '', name: t('none'), displayName: t('none') }, ...withDisplay];
-  }, [countries, locale, t]);
-  const filteredCountryOptions = React.useMemo(() => {
-    if (!countrySearch.trim()) return countryOptions;
-    const q = countrySearch.trim().toLowerCase();
-    return countryOptions.filter((o) => (o.displayName ?? o.name).toLowerCase().includes(q));
-  }, [countryOptions, countrySearch]);
-
-  const sortedLanguages = React.useMemo(
-    () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
-    [languages, locale]
-  );
-  const filteredLanguages = React.useMemo(() => {
-    if (!languageSearch.trim()) return sortedLanguages;
-    const q = languageSearch.trim().toLowerCase();
-    return sortedLanguages.filter((l) => getLanguageDisplayName(l, locale).toLowerCase().includes(q));
-  }, [sortedLanguages, languageSearch, locale]);
-  const appLanguageLabel = locale === 'nl' ? 'Nederlands' : 'English';
   const displayName = username || profile?.email || '';
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
 

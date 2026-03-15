@@ -2,7 +2,7 @@
 
 React Native (Expo) app for Birdr, with the same structure as the web app in `/app`: home page, top bar with left drawer (main menu) and right user menu.
 
-**Expo SDK 53** (React 19, React Native 0.79). Use **Node 22+** for install and builds.
+**Expo SDK 54** (React 19.1, React Native 0.81). Use **Node 22+** for install and builds.
 
 ## Setup
 
@@ -16,7 +16,7 @@ npm install
 ## Run
 
 - **Development:** `npm start` then press `i` for iOS or `a` for Android in the terminal, or scan the QR code with Expo Go.
-- **Android:** `npm run android` (generates native project if needed). **Requires Node 18+ on PATH** (Gradle uses it for autolinking). If your default `node` is older, run `nvm use 22` first, or use `./scripts/run-android.sh`.
+- **Android:** `npm run android` (generates native project if needed). **Requires Node 22+ on PATH** (Gradle uses it for autolinking). If the build fails with *Process 'command 'node'' finished with non-zero exit value 1*, run `nvm use 22` in the same terminal and retry, or from `android/` run `./run-with-node22.sh app:assembleDebug` (see Android section).
 - **iOS:** `npm run ios` (requires Mac and Xcode).
 
 ### iOS device (iPad / iPhone)
@@ -50,7 +50,10 @@ This also copies the app icon from `assets/icon.png` into the native projects (i
 
 Then build a **debug APK for your phone**:
 
-Use **Node 22+** in the same terminal (Gradle runs `node` for autolinking; older Node causes build failures). If the build fails with "Process 'command 'node'' finished with non-zero exit value 1", the Gradle daemon was started with an older Node—run `./gradlew --stop` in `android/` then retry, or use `./run-with-node22.sh` (see Android UI tests below).
+Use **Node 22+** in the same terminal (Gradle runs `node` for autolinking; older Node causes build failures). If the build fails with **Process 'command 'node'' finished with non-zero exit value 1**, the Gradle daemon was started with an older Node. Fix by either:
+
+- **Option A:** Run `./gradlew --stop` in `android/`, then in a terminal where you’ve run `nvm use 22`, run `npm run build:android:debug` again.
+- **Option B:** From `mobile/android/`, run `./run-with-node22.sh app:assembleDebug` (wrapper puts Node 22 on PATH, then runs Gradle).
 
 ```bash
 nvm use 22   # must be run in this shell before the next command

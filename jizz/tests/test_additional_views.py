@@ -21,6 +21,9 @@ from jizz.models import (
 
 User = get_user_model()
 
+# Minimal valid Quill delta JSON (django-quill requires a "delta" key with "ops")
+QUILL_EMPTY = '{"delta": {"ops": [{"insert": "\\n"}]}, "html": "<p><br></p>"}'
+
 
 def _jwt_auth(client, user):
     """Set JWT Bearer token for the given user."""
@@ -36,10 +39,10 @@ class ApiPagesTestCase(TestCase):
         self.page = Page.objects.create(
             title='Help',
             slug='help',
-            content='{}',
+            content=QUILL_EMPTY,
             show=True,
         )
-        Page.objects.create(title='Hidden', slug='hidden', content='{}', show=False)
+        Page.objects.create(title='Hidden', slug='hidden', content=QUILL_EMPTY, show=False)
 
     def test_pages_list_returns_200(self):
         response = self.client.get('/api/pages/')

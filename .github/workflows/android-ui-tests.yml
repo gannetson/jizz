@@ -46,6 +46,20 @@ jobs:
           target: default
           arch: x86_64
           script: |
+            # Wait for emulator to be visible and booted (flaky on GH runners)
+            echo "Waiting for emulator..."
+            for i in $(seq 1 60); do
+              if adb devices | grep -q emulator && adb shell getprop sys.boot_completed 2>/dev/null | grep -q 1; then
+                echo "Emulator ready after ${i}s"
+                break
+              fi
+              if [ "$i" -eq 60 ]; then
+                echo "Emulator did not become ready in time"
+                adb devices -l
+                exit 1
+              fi
+              sleep 5
+            done
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0

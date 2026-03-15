@@ -154,7 +154,7 @@ Release builds via EAS are configured to use the **local** keystore at `android/
 
 ### Google Play: 16 KB page size support
 
-Google Play requires apps targeting Android 15+ to support 16 KB memory page sizes. This project uses **Expo SDK 53** with **React Native 0.79** and **NDK 28**, so native libs are built with 16 KB alignment. **`useLegacyPackaging false`** in `android/app/build.gradle` keeps that alignment in the AAB.
+Google Play requires apps targeting Android 15+ to support 16 KB memory page sizes. This project uses **Expo SDK 53** with **React Native 0.79** and **NDK 28**, so native libs are built with 16 KB alignment. **`useLegacyPackaging false`** in `android/app/build.gradle` keeps that alignment in the AAB. The config plugin **`plugins/withAndroid16Kb.js`** re-applies NDK 28 and packaging options when you run **`npx expo prebuild`**, so EAS cloud builds stay compliant. If Play still shows "ondersteunt geen geheugenpagina's van 16 KB", build the AAB with **`npm run build:android:aab`** (or EAS local) so the committed `android/` is used, then upload that AAB.
 
 ### Useful commands
 

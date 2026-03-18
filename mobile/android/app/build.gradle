@@ -92,8 +92,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 36
-        versionName "1.36.0"
+        versionCode 35
+        versionName "1.35.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -104,26 +104,15 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        // Use android/app/keys for keystore.properties and the .jks file
-        def keysAppDir = rootDir.toString() + "/keys"
-        def keystorePropsFile = file("${keysAppDir}/keystore.properties")
-        if (keystorePropsFile.exists()) {
-            def keystoreProps = new Properties()
-            keystoreProps.load(new FileInputStream(keystorePropsFile))
-            release {
-                storeFile file("${keysAppDir}/${keystoreProps['storeFile']}")
-                storePassword keystoreProps['storePassword']
-                keyAlias keystoreProps['keyAlias']
-                keyPassword keystoreProps['keyPassword']
-            }
-        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.findByName("release") ?: signingConfigs.debug
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

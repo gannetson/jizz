@@ -16,7 +16,7 @@ npm install
 ## Run
 
 - **Development:** `npm start` then press `i` for iOS or `a` for Android in the terminal, or scan the QR code with Expo Go.
-- **Android:** `npm run android` (generates native project if needed). **Requires Node 22+ on PATH** (Gradle uses it for autolinking). If the build fails with *Process 'command 'node'' finished with non-zero exit value 1*, run `nvm use 22` in the same terminal and retry, or from `android/` run `./run-with-node22.sh app:assembleDebug` (see Android section).
+- **Android:** `npm run android` (generates native project if needed). This uses `run-android-with-node22.sh` so Node 22 is on PATH when Gradle runs (required for autolinking). If you get *Process 'command 'node'' finished with non-zero exit value 1*, run `npm run android` again (the script stops the Gradle daemon so the next run uses Node 22). To run without the wrapper: `npm run android:expo` (ensure `nvm use 22` and `cd android && ./gradlew --stop` first).
 - **iOS:** `npm run ios` (requires Mac and Xcode).
 
 ### Opening the iOS project in Xcode
@@ -35,6 +35,8 @@ open mobile/ios/Birdr.xcworkspace
 ```
 
 Or in Xcode: **File → Open** → choose `Birdr.xcworkspace`. Always use the `.xcworkspace` when working with CocoaPods.
+
+**“Cannot find native module ExpoAudio” (or similar):** The JS bundle is trying to use a native module that isn’t in the app binary you’re running. Rebuild the native app (don’t just refresh Metro): `npx expo run:ios` or `npx expo run:android`. If you added a new native dependency recently, run `npx pod-install` then `npx expo run:ios`, or `npx expo prebuild --clean` then run again.
 
 ### iOS device (iPad / iPhone)
 

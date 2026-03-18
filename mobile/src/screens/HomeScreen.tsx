@@ -1,13 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Linking } from 'react-native';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { loadUpdates, Update } from '../api/updates';
-import { ReactionForm } from '../components/ReactionForm';
-import { FeedbackForm } from '../components/FeedbackForm';
 import { colors } from '../theme';
+
+const ANDROID_PACKAGE = 'pro.birdr.app';
+const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
+
+function getAppStoreReviewUrl(): string | null {
+  const appStoreId = Constants.expoConfig?.extra?.appStoreId as string | undefined;
+  if (appStoreId?.trim()) {
+    return `https://apps.apple.com/app/id${appStoreId.trim()}?action=write-review`;
+  }
+  return null;
+}
+
+function openStoreReview() {
+  if (Platform.OS === 'android') {
+    Linking.openURL(PLAY_STORE_URL);
+    return;
+  }
+  const url = getAppStoreReviewUrl();
+  if (url) {
+    Linking.openURL(url);
+  } else {
+    Linking.openURL('https://apps.apple.com/search?term=birdr');
+  }
+}
 
 type RootStackParamList = {
   Home: undefined;
@@ -37,14 +60,6 @@ export function HomeScreen() {
   useEffect(() => {
     loadUpdates().then(setUpdates).catch(() => {});
   }, []);
-
-  const appendReactionToFirstUpdate = (reaction: import('../api/updates').Reaction) => {
-    setUpdates((prev) => {
-      if (prev.length === 0) return prev;
-      const first = prev[0];
-      return [{ ...first, reactions: [...(first.reactions ?? []), reaction] }, ...prev.slice(1)];
-    });
-  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -82,7 +97,9 @@ export function HomeScreen() {
       >
         <Text style={styles.ghostButtonText}>{t('high_scores')}</Text>
       </TouchableOpacity>
-      <FeedbackForm />
+      <TouchableOpacity style={styles.ghostButton} onPress={openStoreReview}>
+        <Text style={styles.ghostButtonText}>{t('rate_or_review_app')}</Text>
+      </TouchableOpacity>
       {updates.length > 0 && (
         <View style={styles.updateCard}>
           <View style={styles.updateCardHeader}>
@@ -92,9 +109,6 @@ export function HomeScreen() {
           <View style={styles.updateCardFooter}>
             <Text style={styles.updateCardMeta}>{updates[0].user?.first_name ?? t('app_name')}</Text>
             <Text style={styles.updateCardDate}>{formatDate(updates[0].created)}</Text>
-          </View>
-          <View style={styles.updateCardReactions}>
-            <ReactionForm update={updates[0]} onReactionPosted={appendReactionToFirstUpdate} />
           </View>
         </View>
       )}

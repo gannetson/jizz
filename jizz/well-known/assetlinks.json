@@ -1,11 +1,15 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "pro.birdr.app",
       "sha256_cert_fingerprints": [
-        "EF:F1:D0:B6:67:A2:F3:D1:59:9A:2F:4B:D1:C0:90:AA:DD:31:30:98:39:9E:CB:3B:BD:72:97:FE:2A:FE:C4:ED"
+        "EF:F1:D0:B6:67:A2:F3:D1:59:9A:2F:4B:D1:C0:90:AA:DD:31:30:98:39:9E:CB:3B:BD:72:97:FE:2A:FE:C4:ED",
+        "FD:76:85:01:AD:97:88:B4:03:7B:E6:60:A9:5E:41:7A:30:F9:88:95:D6:4B:D7:31:92:41:CE:A8:18:00:C0:3A"
       ]
     }
   }

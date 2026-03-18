@@ -73,7 +73,8 @@
     "extra": {
       "eas": {
         "projectId": "b41359de-e747-4acd-b200-b7d8bb9520a5"
-      }
+      },
+      "appStoreId": ""
     }
   }
 }

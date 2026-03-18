@@ -206,6 +206,8 @@ else:
 # Key ID (kid) and Team ID must be strings; empty will break redirect flow
 SOCIAL_AUTH_APPLE_ID_KEY = str(os.environ.get('SOCIAL_AUTH_APPLE_ID_KEY', '') or '')
 SOCIAL_AUTH_APPLE_ID_TEAM = str(os.environ.get('SOCIAL_AUTH_APPLE_ID_TEAM', '') or '')
+# Bundle ID of the native iOS app; native Sign in with Apple uses this as token audience (default: pro.birdr.app)
+SOCIAL_AUTH_APPLE_ID_BUNDLE_ID = os.environ.get('SOCIAL_AUTH_APPLE_ID_BUNDLE_ID', 'pro.birdr.app')
 
 SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_AZUREAD_OAUTH2_KEY', '<YOUR_MICROSOFT_CLIENT_ID>')
 SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET', '<YOUR_MICROSOFT_SECRET>')

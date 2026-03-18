@@ -907,6 +907,10 @@ def _validate_apple_identity_token(identity_token):
     """
     Verify Apple Sign In identity_token (JWT) using Apple's public keys.
     Returns decoded payload with sub, email (optional), email_verified.
+
+    Accepts both:
+    - Web/Services ID (SOCIAL_AUTH_APPLE_ID_CLIENT) for browser OAuth
+    - Native bundle ID (SOCIAL_AUTH_APPLE_ID_BUNDLE_ID or pro.birdr.app) for iOS app
     """
     import jwt
     import requests
@@ -917,6 +921,12 @@ def _validate_apple_identity_token(identity_token):
     ) or getattr(settings, "SOCIAL_AUTH_APPLE_ID_SERVICES_ID", None)
     if not client_id:
         raise ValueError("SOCIAL_AUTH_APPLE_ID_CLIENT not configured")
+
+    # Native iOS sends bundle ID as audience; web sends Services ID. Accept both.
+    allowed_audiences = [client_id]
+    bundle_id = getattr(settings, "SOCIAL_AUTH_APPLE_ID_BUNDLE_ID", None) or "pro.birdr.app"
+    if bundle_id and bundle_id not in allowed_audiences:
+        allowed_audiences.append(bundle_id)
 
     unverified = jwt.get_unverified_header(identity_token)
     kid = unverified.get("kid")
@@ -936,7 +946,7 @@ def _validate_apple_identity_token(identity_token):
         public_key,
         algorithms=["RS256"],
         issuer="https://appleid.apple.com",
-        audience=client_id,
+        audience=allowed_audiences,
     )
     return payload
 

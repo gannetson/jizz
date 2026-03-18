@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "pro.birdr.app",
-      "buildNumber": "42",
+      "buildNumber": "43",
       "icon": "./assets/icon.png",
       "associatedDomains": [
         "applinks:birdr.pro"

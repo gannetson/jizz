@@ -35,8 +35,11 @@ jobs:
         run: npm ci
 
       - name: Install CocoaPods
-        working-directory: mobile
-        run: npx pod-install
+        working-directory: mobile/ios
+        run: |
+          pod install
+          # Ensure xcconfig exists so Xcode doesn't fail with "Unable to open base configuration reference file"
+          test -f "Pods/Target Support Files/Pods-Birdr/Pods-Birdr.release.xcconfig" || (echo "Pods xcconfig missing after pod install" && exit 1)
 
       - name: Build iOS (Debug, simulator)
         working-directory: mobile/ios

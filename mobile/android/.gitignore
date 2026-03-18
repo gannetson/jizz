@@ -12,5 +12,10 @@ local.properties
 *.hprof
 .cxx/
 
+# Signing keys (keep .jks/.keystore out of version control)
+keys/*.jks
+keys/*.keystore
+
 # Bundle artifacts
 *.jsbundle
+/keys/

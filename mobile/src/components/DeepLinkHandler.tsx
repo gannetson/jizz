@@ -77,22 +77,24 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
 function parseGameJoinUrl(url: string): string | null {
   // Don't treat join/challenge/... as game join
   if (url.includes('/join/challenge/')) return null;
-  // birdr://join/{token}  (game token is 8–10 lowercase letters)
-  const schemeMatch = url.match(/^birdr:\/\/join\/([a-z]{6,16})$/);
-  if (schemeMatch) return schemeMatch[1];
+  // Game token: ShortUUID (alphanumeric) or UUID-style, e.g. 1234, abc12xyz, or with hyphens
+  const tokenRegex = /^([a-z0-9-]{4,50})$/;
+  // birdr://join/{token}
+  const schemeMatch = url.match(/^birdr:\/\/join\/([a-z0-9-]+)$/);
+  if (schemeMatch && tokenRegex.test(schemeMatch[1])) return schemeMatch[1];
 
-  // https://birdr.pro/join/{token}
+  // https://birdr.pro/join/{token} or https://birdr.pro/join/{token}/
   const base = API_BASE_URL.replace(/\/$/, '');
   if (url.startsWith(base + '/join/')) {
-    const path = url.slice(base.length).replace(/[?#].*$/, '');
-    const match = path.match(/^\/join\/([a-z]{6,16})/);
-    if (match) return match[1];
+    const path = url.slice(base.length).replace(/[?#].*$/, '').replace(/\/+$/, '');
+    const match = path.match(/^\/join\/([a-z0-9-]+)$/);
+    if (match && tokenRegex.test(match[1])) return match[1];
   }
 
   try {
     const parsed = new URL(url);
-    const match = parsed.pathname.match(/^\/join\/([a-z]{6,16})$/);
-    if (match) return match[1];
+    const match = parsed.pathname.replace(/\/+$/, '').match(/^\/join\/([a-z0-9-]+)$/);
+    if (match && tokenRegex.test(match[1])) return match[1];
   } catch {}
 
   return null;

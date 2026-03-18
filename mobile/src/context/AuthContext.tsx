@@ -19,12 +19,17 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/** After storing auth tokens, link any existing player token to this account. */
+/**
+ * After login/sign-up: if the user had been playing anonymously (we have a stored player token),
+ * link that player to their account so progress is kept. If there is no stored player token
+ * (e.g. they signed up before ever playing), we do nothing — when they create a player later
+ * via createPlayer(..., accessToken), the backend already links it (POST /api/player/ with Auth).
+ */
 async function linkStoredPlayerToAccount(): Promise<void> {
   try {
     const accessToken = await authApi.getAccessToken();
-    const playerToken = await AsyncStorage.getItem(playerApi.PLAYER_TOKEN_STORAGE_KEY);
-    if (accessToken && playerToken) {
+    const playerToken = (await AsyncStorage.getItem(playerApi.PLAYER_TOKEN_STORAGE_KEY))?.trim();
+    if (accessToken && playerToken && playerToken.length >= 4) {
       await playerApi.linkPlayerToAccount(accessToken, playerToken);
     }
   } catch {

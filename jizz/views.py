@@ -251,10 +251,9 @@ class PlayerCreateView(CreateAPIView):
 
     def perform_create(self, serializer):
         ip = self.get_client_ip(self.request)
-        # Connect player to authenticated user if available
-        user = None
-        if self.request.user and self.request.user.is_authenticated:
-            user = self.request.user
+        # If the request is authenticated (e.g. Bearer token), the new player is linked to that user.
+        # No need to call /api/player/link/ later — link is only for linking an *existing* anonymous player.
+        user = self.request.user if (self.request.user and self.request.user.is_authenticated) else None
         return serializer.save(ip=ip, user=user)
 
 
@@ -280,6 +279,14 @@ class PlayerLinkView(APIView):
     def post(self, request):
         player_token = (request.data or {}).get("player_token") or (request.data or {}).get("token")
         if not player_token or not isinstance(player_token, str):
+            import logging
+            logging.getLogger(__name__).warning("PlayerLinkView: missing or invalid player_token")
+            return Response(
+                {"error": "Missing player_token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        player_token = player_token.strip()
+        if not player_token:
             return Response(
                 {"error": "Missing player_token"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1064,8 +1071,8 @@ class OAuthCompleteView(APIView):
             except Exception as e:
                 logger.warning(f"Error accessing UserSocialAuth: {e}")
             
-            # If we have an access token but no user details, fetch them from Google API
-            if social_user and social_user.extra_data and 'access_token' in social_user.extra_data:
+            # Only fetch user details from Google API when this is Google OAuth (not Apple)
+            if backend == 'google-oauth2' and social_user and social_user.extra_data and 'access_token' in social_user.extra_data:
                 access_token = social_user.extra_data.get('access_token')
                 if access_token and not extra_data.get('name') and not extra_data.get('picture'):
                     try:
@@ -1075,17 +1082,15 @@ class OAuthCompleteView(APIView):
                         response = requests.get(google_user_info_url, headers=headers, timeout=10)
                         if response.status_code == 200:
                             google_data = response.json()
-                            # Merge Google data into extra_data
                             extra_data.update(google_data)
-                            # Also update the UserSocialAuth model
                             social_user.extra_data.update(google_data)
                             social_user.save()
                     except Exception as e:
                         logger.warning(f"Error fetching user details from Google API: {e}")
             
-            # Update user profile with Google data if available
+            # Update user profile from social data (Google or Apple extra_data)
             if extra_data:
-                logger.info(f"Updating user profile with Google data: {list(extra_data.keys())}")
+                logger.info(f"Updating user profile with {backend} data: {list(extra_data.keys())}")
                 
                 # Update first_name and last_name first
                 updated = False

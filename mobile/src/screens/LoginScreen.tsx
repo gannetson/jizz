@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,17 @@ export function LoginScreen() {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [oauthModalVisible, setOauthModalVisible] = useState(false);
   const [oauthAuthUrl, setOauthAuthUrl] = useState('');
+  const wasAuthenticatedRef = useRef(auth.isAuthenticated);
+
+  // Close login modal/screen when user successfully logs in (e.g. OAuth redirect handled by DeepLinkHandler)
+  useEffect(() => {
+    const justLoggedIn = auth.isAuthenticated && !wasAuthenticatedRef.current;
+    wasAuthenticatedRef.current = auth.isAuthenticated;
+    if (justLoggedIn) {
+      setOauthModalVisible(false);
+      (navigation as any).goBack();
+    }
+  }, [auth.isAuthenticated, navigation]);
 
   const handleEmailSubmit = async () => {
     if (!email.trim() || !password) {
@@ -63,12 +74,8 @@ export function LoginScreen() {
   };
 
   const handleOAuthRedirect = async (url: string): Promise<boolean> => {
-    const ok = await auth.handleOAuthRedirect(url);
-    if (ok) {
-      setOauthModalVisible(false);
-      (navigation as any).goBack();
-    }
-    return ok;
+    return auth.handleOAuthRedirect(url);
+    // Modal/screen close is handled by useEffect when isAuthenticated becomes true
   };
 
   return (

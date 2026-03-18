@@ -25,7 +25,6 @@ function UpdateCard({ update, onReactionPosted, authorFallback }: { update: Upda
         <Text style={styles.cardAuthor}>{update.user?.first_name ?? update.user?.username ?? authorFallback}</Text>
         <Text style={styles.cardDate}>{formatDate(update.created)}</Text>
       </View>
-      <ReactionForm update={update} onReactionPosted={onReactionPosted} />
     </View>
   );
 }

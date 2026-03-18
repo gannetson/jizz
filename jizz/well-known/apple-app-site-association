@@ -4,7 +4,7 @@
     "details": [
       {
         "appID": "Z886G5H7D2.pro.birdr.app",
-        "paths": ["/join/*"]
+        "paths": ["/join/*", "/join/challenge/*"]
       }
     ]
   }

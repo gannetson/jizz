@@ -958,23 +958,59 @@ class AppleLoginView(APIView):
 
         sub = payload.get("sub")
         email = payload.get("email")
+        if not email and isinstance(user_data, dict):
+            ed = user_data.get("email")
+            email = ed if isinstance(ed, str) and ed.strip() else None
         if not sub:
             return Response({"error": "Invalid token"}, status=400)
+
+        # Optional name from native client (only sent on first sign-in)
+        name_obj = (user_data or {}).get("name") if isinstance(user_data, dict) else None
+        first_name = ""
+        last_name = ""
+        if isinstance(name_obj, dict):
+            first_name = (name_obj.get("firstName") or "").strip() if name_obj.get("firstName") is not None else ""
+            last_name = (name_obj.get("lastName") or "").strip() if name_obj.get("lastName") is not None else ""
+            # Never store the literal string "null"
+            if first_name == "null":
+                first_name = ""
+            if last_name == "null":
+                last_name = ""
 
         from social_django.models import UserSocialAuth
 
         social = UserSocialAuth.objects.filter(provider="apple-id", uid=sub).first()
         if social:
             user = social.user
+            # Update name/email from client if we have them and user doesn't
+            if first_name or last_name:
+                if first_name and not user.first_name:
+                    user.first_name = first_name
+                if last_name and not user.last_name:
+                    user.last_name = last_name
+                user.save(update_fields=["first_name", "last_name"])
+            if email and not (user.email or "").strip():
+                user.email = email
+                user.save(update_fields=["email"])
         else:
             # First-time Apple sign-in: create or link user
             if email:
                 user, created = User.objects.get_or_create(
                     email=email,
-                    defaults={"username": email},
+                    defaults={
+                        "username": email,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                    },
                 )
+                if not created and (first_name or last_name):
+                    if first_name and not user.first_name:
+                        user.first_name = first_name
+                    if last_name and not user.last_name:
+                        user.last_name = last_name
+                    user.save(update_fields=["first_name", "last_name"])
             else:
-                # Apple may hide email; use sub as unique username
+                # Apple may hide email; use sub as unique username (never "null")
                 username = f"apple_{sub}"
                 if len(username) > 150:
                     username = username[:150]
@@ -983,7 +1019,11 @@ class AppleLoginView(APIView):
                 while User.objects.filter(username=username).exists():
                     username = f"{base_username}_{counter}"
                     counter += 1
-                user = User.objects.create(username=username)
+                user = User.objects.create(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
 
             UserSocialAuth.objects.get_or_create(
                 provider="apple-id",

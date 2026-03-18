@@ -185,7 +185,25 @@ export function LoginScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.socialButton, styles.appleButton, socialLoading && styles.buttonDisabled]}
-          onPress={() => openSocialLogin('apple-id')}
+          onPress={async () => {
+            setError(null);
+            if (Platform.OS === 'ios') {
+              setSocialLoading('apple');
+              try {
+                const didLogin = await auth.loginWithApple();
+                if (didLogin) (navigation as any).goBack();
+              } catch (e: any) {
+                if (__DEV__) {
+                  console.error('[Apple sign-in]', e?.message, e?.code ?? '', e);
+                }
+                setError(e?.message ?? t('auth_failed'));
+              } finally {
+                setSocialLoading(null);
+              }
+            } else {
+              openSocialLogin('apple-id');
+            }
+          }}
           disabled={!!socialLoading}
         >
           {socialLoading === 'apple' ? (

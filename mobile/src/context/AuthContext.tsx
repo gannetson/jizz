@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authApi from '../api/auth';
 import * as playerApi from '../api/player';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 type AuthContextType = {
   isAuthenticated: boolean;
@@ -11,7 +12,7 @@ type AuthContextType = {
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, username?: string) => Promise<void>;
   loginWithGoogle: () => Promise<boolean>;
-  loginWithApple: () => Promise<void>;
+  loginWithApple: () => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   handleOAuthRedirect: (url: string) => Promise<boolean>;
@@ -137,7 +138,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw e;
     }
   }, []);
-  const loginWithApple = useCallback(async () => {});
+  const loginWithApple = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS !== 'ios') {
+      // Android: use web OAuth flow from LoginScreen (openSocialLogin('apple-id'))
+      return false;
+    }
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) {
+        throw new Error('Apple Sign In did not return an identity token.');
+      }
+      const tokens = await authApi.loginWithAppleToken(credential.identityToken, {
+        email: credential.email ?? undefined,
+        fullName: credential.fullName
+          ? {
+              givenName: credential.fullName.givenName ?? undefined,
+              familyName: credential.fullName.familyName ?? undefined,
+            }
+          : undefined,
+      });
+      await authApi.storeTokens(tokens);
+      setIsAuthenticated(true);
+      linkStoredPlayerToAccount();
+      return true;
+    } catch (e: any) {
+      if (e?.code === 'ERR_REQUEST_CANCELED') {
+        return false;
+      }
+      throw e;
+    }
+  }, []);
 
   const logout = useCallback(async () => {
     try {

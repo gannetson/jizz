@@ -90,6 +90,43 @@ export async function convertOAuthToken(
   };
 }
 
+/** Log in with Apple identity token (from native Sign in with Apple on iOS). Stays in-app, no browser. */
+export async function loginWithAppleToken(identityToken: string, user?: { email?: string | null; fullName?: { givenName?: string; familyName?: string } | null }): Promise<TokenResponse> {
+  const response = await fetch(apiUrl('/api/apple-login/'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identity_token: identityToken,
+      ...(user && (user.email || user.fullName) && {
+        user: {
+          email: (user.email && String(user.email).trim()) || undefined,
+          name: user.fullName
+            ? {
+                firstName: (user.fullName.givenName != null && String(user.fullName.givenName).trim()) || '',
+                lastName: (user.fullName.familyName != null && String(user.fullName.familyName).trim()) || '',
+              }
+            : undefined,
+        },
+      }),
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg =
+      (typeof data.error === 'string' ? data.error : null) ??
+      data.detail ??
+      'Apple sign-in failed';
+    if (__DEV__) {
+      console.error('[Apple sign-in]', response.status, data);
+    }
+    throw { message: typeof msg === 'string' ? msg : 'Apple sign-in failed' };
+  }
+  return {
+    access: data.access,
+    refresh: data.refresh,
+  };
+}
+
 /** Log in with a Google ID token (from native in-app Google Sign-In). Stays in-app, no browser. */
 export async function loginWithGoogleToken(idToken: string): Promise<TokenResponse> {
   const response = await fetch(apiUrl('/api/google-login/'), {

@@ -56,6 +56,8 @@ To run on a **physical device** (e.g. connected iPad):
 
 **“No bundle URL present”:** The app loads JavaScript from Metro on your Mac. Ensure Metro is running (`npm start`) and the device is on the same network; the app uses your Mac’s IP (embedded at build time) to connect to `http://<mac-ip>:8081`.
 
+**Sign in with Apple (error 1000 / ERR_REQUEST_UNKNOWN):** This often happens on the **iOS Simulator**. Sign in with Apple is unreliable in the simulator; test it on a **physical device**. On the device, ensure the app has the “Sign in with Apple” capability (it’s in `Birdr.entitlements` and enabled via `usesAppleSignIn` in `app.json`) and that the App ID in the Apple Developer portal has Sign in with Apple enabled.
+
 ## Generate native projects (Android + iOS)
 
 To get full `android/` and `ios/` folders (use **Node 22+**):

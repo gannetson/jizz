@@ -170,6 +170,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (e?.code === 'ERR_REQUEST_CANCELED') {
         return false;
       }
+      // Error 1000 / -7026 often occur on Simulator; Sign in with Apple is unreliable there
+      if (e?.code === 'ERR_REQUEST_UNKNOWN') {
+        throw new Error(
+          'Apple Sign In failed. If you’re on the Simulator, try a real device. Otherwise check that you’re signed into an Apple ID in Settings and that the app has Sign in with Apple enabled.'
+        );
+      }
       throw e;
     }
   }, []);

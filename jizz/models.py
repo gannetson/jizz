@@ -53,6 +53,20 @@ class Question(models.Model):
         return f'{self.game} - {self.species}'
 
 
+class QuestionMediaReady(models.Model):
+    """Client reports when primary media finished loading; scoring time uses ready_at instead of question.created."""
+
+    player = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='question_media_ready')
+    question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name='media_ready')
+    ready_at = models.DateTimeField()
+
+    class Meta:
+        unique_together = [('player', 'question')]
+
+    def __str__(self):
+        return f'{self.player} Q{self.question_id} @ {self.ready_at}'
+
+
 class QuestionOption(models.Model):
     question = models.ForeignKey('jizz.Question', on_delete=models.CASCADE)
     species = models.ForeignKey('jizz.Species', on_delete=models.CASCADE)
@@ -608,7 +622,15 @@ class Answer(models.Model):
     score = models.IntegerField(default=0)
 
     def calculate_score(self):
-        time_taken = (now() - self.question.created).total_seconds()
+        start = self.question.created
+        ready = QuestionMediaReady.objects.filter(
+            question=self.question,
+            player=self.player_score.player,
+        ).first()
+        if ready and ready.ready_at:
+            start = max(start, ready.ready_at)
+        time_taken = (now() - start).total_seconds()
+        time_taken = max(0.0, time_taken)
         max_score = 500
         min_score = 100
         score = min_score + (max_score - min_score) * math.exp(-time_taken / 10)

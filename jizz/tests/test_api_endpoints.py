@@ -13,6 +13,7 @@ from jizz.models import (
     Player,
     PlayerScore,
     Question,
+    QuestionMediaReady,
     Answer,
     Species,
     CountrySpecies,
@@ -303,6 +304,53 @@ class ApiQuestionDetailTestCase(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class QuestionMediaReadyApiTestCase(TestCase):
+    """POST /api/questions/<id>/media-ready/ — scoring start after media load."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        self.species = Species.objects.create(name='S', name_latin='S', code='S01')
+        CountrySpecies.objects.create(country=self.country, species=self.species, status='native')
+        Media.objects.create(species=self.species, type='image', url='https://x.com/1.jpg', source='test')
+        self.player = Player.objects.create(name='P', language='en')
+        self.game = Game.objects.create(
+            country=self.country, level='beginner', length=5, media='images',
+            host=self.player, include_rare=True,
+        )
+        self.question = self.game.add_question()
+        PlayerScore.objects.get_or_create(player=self.player, game=self.game)
+
+    def test_media_ready_returns_200(self):
+        response = self.client.post(
+            f'/api/questions/{self.question.id}/media-ready/',
+            {'player_token': self.player.token},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get('ok'))
+        self.assertTrue(
+            QuestionMediaReady.objects.filter(player=self.player, question=self.question).exists()
+        )
+
+    def test_media_ready_requires_player_token(self):
+        response = self.client.post(
+            f'/api/questions/{self.question.id}/media-ready/',
+            {},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_media_ready_forbidden_if_player_not_in_game(self):
+        other = Player.objects.create(name='O', language='en')
+        response = self.client.post(
+            f'/api/questions/{self.question.id}/media-ready/',
+            {'player_token': other.token},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class ApiFlagTestCase(TestCase):

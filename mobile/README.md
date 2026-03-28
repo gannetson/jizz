@@ -135,6 +135,8 @@ Right now release is signed with the **debug keystore**, so you can build withou
   ```
   Output: `android/app/build/outputs/bundle/release/app-release.aab`
 
+Do **not** use `./gradlew clean` before the AAB if you hit CMake **GLOB mismatch** / missing `codegen/jni` errors: Gradle’s native **clean** can fail when those folders were never generated. For a **full fresh build**, use **`npm run build:android:aab:rebuild`** (removes `android/app/.cxx` and `android/app/build`, then `bundleRelease`). If Play Console still shows an old **versionCode**, bump it in `android/app/build.gradle` and `app.json`, rebuild, and upload the AAB whose **file time** matches the build—not an old copy from elsewhere.
+
 You can upload the AAB to Play Console (Internal testing track or Production). For **internal testing** you can also use the release APK and share it directly.
 
 ### Production: sign with your own keystore

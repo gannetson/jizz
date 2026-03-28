@@ -90,3 +90,17 @@ export async function getCurrentQuestion(gameToken: string): Promise<Question | 
   if (!data?.id || !data?.game?.token) return null;
   return data as Question;
 }
+
+/** Tell the server primary media has loaded so score timing starts from now (not question.created). */
+export async function postQuestionMediaReady(questionId: number, playerToken: string): Promise<void> {
+  const response = await fetch(apiUrl(`/api/questions/${questionId}/media-ready/`), {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player_token: playerToken }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const msg = data.error ?? data.detail ?? 'media-ready failed';
+    throw new Error(typeof msg === 'string' ? msg : 'media-ready failed');
+  }
+}

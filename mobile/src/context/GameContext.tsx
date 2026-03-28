@@ -95,6 +95,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!p) {
       p = await createPlayer();
       if (!p) return null;
+    } else {
+      const trimmed = playerName.trim();
+      if (!trimmed) return null;
+      if (trimmed !== p.name || language !== p.language) {
+        const accessToken = await authApi.getAccessToken();
+        const updated = await playerApi.updatePlayer(
+          p.token,
+          { name: trimmed, language },
+          accessToken
+        );
+        if (!updated) return null;
+        p = updated;
+        setPlayer(updated);
+      }
     }
     if (!country) return null;
     setLoading(true);
@@ -120,7 +134,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
     return null;
-  }, [player, country, language, level, length, mediaType, soundsScope, includeRare, createPlayer]);
+  }, [player, playerName, country, language, level, length, mediaType, soundsScope, includeRare, createPlayer]);
 
   const clearGame = useCallback(async () => {
     await AsyncStorage.removeItem(GAME_TOKEN_KEY);

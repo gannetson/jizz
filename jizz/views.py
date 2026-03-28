@@ -47,6 +47,7 @@ from .serializers import (
 
 from jizz.models import (
     Answer,
+    QuestionMediaReady,
     Country,
     CountryChallenge,
     CountrySpecies,
@@ -633,6 +634,30 @@ class AnswerDetail(RetrieveAPIView):
         return self.queryset.filter(
             player_score__player__token=self.kwargs["token"], question=self.kwargs["question"]
         ).first()
+
+
+class QuestionMediaReadyView(APIView):
+    """POST when client has finished loading primary media; server records time for score calculation."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        from django.utils import timezone
+
+        player_token = request.data.get('player_token')
+        if not player_token:
+            return Response({'error': 'player_token required'}, status=400)
+        question = get_object_or_404(Question, pk=pk)
+        player = get_object_or_404(Player, token=player_token)
+        if not PlayerScore.objects.filter(player=player, game=question.game).exists():
+            return Response({'error': 'Player is not in this game'}, status=403)
+        ts = timezone.now()
+        QuestionMediaReady.objects.update_or_create(
+            player=player,
+            question=question,
+            defaults={'ready_at': ts},
+        )
+        return Response({'ok': True, 'ready_at': ts.isoformat()})
 
 
 class QuestionDetailView(RetrieveUpdateAPIView):

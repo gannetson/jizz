@@ -48,6 +48,8 @@ export type QuestionMediaViewProps = {
   imageHeight?: number;
   /** Optional fixed height for video (e.g. for tablet layout) */
   videoHeight?: number;
+  /** Called when primary media is ready to interact with (image decoded, video playable, or audio UI shown). Use to avoid starting the answer timer before load. */
+  onMediaReady?: () => void;
 };
 
 export function QuestionMediaView({
@@ -72,7 +74,19 @@ export function QuestionMediaView({
   containerStyle,
   imageHeight,
   videoHeight,
+  onMediaReady,
 }: QuestionMediaViewProps) {
+  const mediaReadyOnce = React.useRef(false);
+  const fireMediaReady = React.useCallback(() => {
+    if (!onMediaReady || mediaReadyOnce.current) return;
+    mediaReadyOnce.current = true;
+    onMediaReady();
+  }, [onMediaReady]);
+
+  React.useEffect(() => {
+    mediaReadyOnce.current = false;
+  }, [imageUri, videoUri, soundUri, mediaType]);
+
   const hasMedia =
     (mediaType === 'images' && (imageUri || imageError !== undefined)) ||
     (mediaType === 'video' && videoUri) ||
@@ -105,6 +119,23 @@ export function QuestionMediaView({
     if (mediaType === 'video' && videoUri) player.play();
   });
 
+  React.useEffect(() => {
+    if (mediaType === 'video' && videoUri && onMediaReady) {
+      const sub = videoPlayer.addListener('statusChange', ({ status }: { status: string }) => {
+        if (status === 'readyToPlay') fireMediaReady();
+      });
+      return () => sub.remove();
+    }
+  }, [mediaType, videoUri, videoPlayer, onMediaReady, fireMediaReady]);
+
+  React.useEffect(() => {
+    if (mediaType === 'audio' && soundUri) fireMediaReady();
+  }, [mediaType, soundUri, fireMediaReady]);
+
+  React.useEffect(() => {
+    if (mediaType === 'images' && !imageUri) fireMediaReady();
+  }, [mediaType, imageUri, fireMediaReady]);
+
   const creditsMedia =
     mediaType === 'images' ? imageMedia : mediaType === 'video' ? videoMedia : soundMedia;
   const showCreditsAndFlag = hasMedia;
@@ -133,12 +164,14 @@ export function QuestionMediaView({
                   'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
                 },
               }}
+              onLoad={() => fireMediaReady()}
               onError={(e) => {
                 const message =
                   (e as any)?.error?.message ||
                   (e as any)?.nativeEvent?.error ||
                   'Unknown image error';
                 onImageError?.(message);
+                fireMediaReady();
               }}
             />
           ) : imageError !== undefined || (imageUri && imageError) ? (

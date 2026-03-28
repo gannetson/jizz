@@ -23,6 +23,7 @@
     "build:android:debug": "cd android && ./run-with-node22.sh app:assembleDebug -x lint -x test",
     "build:android:release": "cd android && ./gradlew assembleRelease",
     "build:android:aab": "cd android && ./gradlew bundleRelease",
+    "build:android:aab:rebuild": "bash scripts/android-aab-rebuild.sh",
     "print-sha1": "cd android && ./gradlew signingReport",
     "make-icon": "node scripts/make-icon-transparent.cjs",
     "test": "jest"

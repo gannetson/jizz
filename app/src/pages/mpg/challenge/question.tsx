@@ -1,5 +1,5 @@
 import {Box, Button, Flex, Heading, Icon, Image, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, CardRoot} from "@chakra-ui/react"
-import {useContext, useEffect, useState} from "react"
+import {useContext, useEffect, useState, useCallback, useRef} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { AnswerFeedback } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
 import SpeciesCombobox from "../../../components/species-combobox"
+import { postQuestionMediaReady } from "../../../api/question-media-ready"
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
 
@@ -33,6 +34,8 @@ export const ChallengeQuestion = () => {
   const [isCorrect, setIsCorrect] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<Answer | null>(null)
+  const [mediaReady, setMediaReady] = useState(false)
+  const mediaPostedForQuestionId = useRef<number | null>(null)
   const rotate = keyframes`
     from {
       transform: rotate(360deg)
@@ -49,7 +52,19 @@ export const ChallengeQuestion = () => {
       getNewChallengeQuestion()
     }
   }, [question, level])
-  
+
+  useEffect(() => {
+    mediaPostedForQuestionId.current = null
+    setMediaReady(false)
+  }, [question?.id])
+
+  const notifyMediaReady = useCallback(() => {
+    setMediaReady(true)
+    if (!question?.id || !player?.token) return
+    if (mediaPostedForQuestionId.current === question.id) return
+    mediaPostedForQuestionId.current = question.id
+    postQuestionMediaReady(question.id, player.token).catch(() => {})
+  }, [question?.id, player?.token])
 
   const game = countryChallenge?.levels[0].game
 
@@ -157,14 +172,17 @@ export const ChallengeQuestion = () => {
                 url={question.videos[question.number].url}
                 controls={true}
                 playing={true}
+                onReady={notifyMediaReady}
               />
             </>
           )}
           {game.media === 'images' && (
             <Image
               src={question.images[question.number].url.replace('/1800', '/900')}
+              onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
+                notifyMediaReady()
               }}
             />
 
@@ -177,6 +195,7 @@ export const ChallengeQuestion = () => {
                 url={question.sounds[question.number].url}
                 controls={true}
                 playing={true}
+                onReady={notifyMediaReady}
               />
             </Box>
 
@@ -201,7 +220,7 @@ export const ChallengeQuestion = () => {
                   <Button 
                     key={key} 
                     onClick={() => giveAnswer(option)} 
-                    disabled={loading} 
+                    disabled={loading || !mediaReady} 
                     colorPalette={response?.species?.id === option.id ? 'success' : response?.answer?.id === option.id ? 'error' : 'primary'}
                   >
                     <SpeciesName species={option}/>
@@ -221,6 +240,7 @@ export const ChallengeQuestion = () => {
             playerLanguage={player?.language}
             onSelect={giveAnswer}
             loading={loading}
+            isDisabled={!mediaReady}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
           />

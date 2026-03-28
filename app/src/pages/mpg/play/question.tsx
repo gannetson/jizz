@@ -11,7 +11,7 @@ import {
   Text,
   useDisclosure
 } from "@chakra-ui/react"
-import React, {useContext, useState, useEffect} from "react"
+import React, {useContext, useState, useEffect, useCallback, useRef} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -29,6 +29,7 @@ import {PlayerItem} from "./player-item"
 import {useNavigate} from "react-router-dom"
 import SpeciesCombobox from "../../../components/species-combobox"
 import { ComparisonButton } from "../../../components/comparison-button"
+import { postQuestionMediaReady } from "../../../api/question-media-ready"
 
 export const QuestionComponent = () => {
   const {species, player, game, speciesLanguage} = useContext(AppContext)
@@ -46,6 +47,8 @@ export const QuestionComponent = () => {
   const [showFeedback, setShowFeedback] = useState(false)
   // Local state for media index (after flagging). null = use question.sequence so we don't flash first image on reload.
   const [mediaIndex, setMediaIndex] = useState<number | null>(null)
+  const [mediaReady, setMediaReady] = useState(false)
+  const mediaPostedKey = useRef<string | null>(null)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
   const navigate = useNavigate()
@@ -65,6 +68,22 @@ export const QuestionComponent = () => {
       setMediaIndex(question.sequence ?? 0)
     }
   }, [question?.id]) // Reset when question ID changes
+
+  const currentMediaIndex = mediaIndex ?? question?.sequence ?? 0
+
+  useEffect(() => {
+    mediaPostedKey.current = null
+    setMediaReady(false)
+  }, [question?.id, currentMediaIndex])
+
+  const notifyMediaReady = useCallback(() => {
+    setMediaReady(true)
+    if (!question?.id || !player?.token) return
+    const key = `${question.id}-${currentMediaIndex}`
+    if (mediaPostedKey.current === key) return
+    mediaPostedKey.current = key
+    postQuestionMediaReady(question.id, player.token).catch(() => {})
+  }, [question?.id, player?.token, currentMediaIndex])
 
   const selectAnswer = async (species?: Species) => {
     setShowFeedback(false)
@@ -100,9 +119,6 @@ export const QuestionComponent = () => {
       </Box>
     )
   }
-
-  // Use question.sequence when mediaIndex not yet synced to avoid showing first image briefly on reload
-  const currentMediaIndex = mediaIndex ?? question?.sequence ?? 0
 
   const flagMedia = () => {
     if (!question || !game) return
@@ -255,6 +271,7 @@ export const QuestionComponent = () => {
               url={question.videos[currentMediaIndex].url}
               controls={true}
               playing={true}
+              onReady={notifyMediaReady}
             />
             <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
               <MediaCredits media={question.videos[currentMediaIndex]} />
@@ -266,8 +283,10 @@ export const QuestionComponent = () => {
           <>
             <Image
               src={question.images[currentMediaIndex].url.replace('/1800', '/900')}
+              onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
+                notifyMediaReady()
               }}
             />
             <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
@@ -289,6 +308,7 @@ export const QuestionComponent = () => {
                 url={question.sounds[currentMediaIndex].url}
                 controls={true}
                 playing={true}
+                onReady={notifyMediaReady}
               />
               <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
                 <MediaCredits media={question.sounds[currentMediaIndex]} />
@@ -321,7 +341,7 @@ export const QuestionComponent = () => {
                 )
               } else {
                 return (
-                  <Button colorPalette={'primary'} key={key} onClick={() => selectAnswer(option)}>
+                  <Button colorPalette={'primary'} key={key} onClick={() => selectAnswer(option)} disabled={!mediaReady}>
                     <SpeciesName species={option}/>
                   </Button>
                 )
@@ -355,6 +375,7 @@ export const QuestionComponent = () => {
             species={species || []}
             playerLanguage={speciesLanguage ?? player?.language}
             onSelect={(selected) => selectAnswer(selected)}
+            isDisabled={!mediaReady}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
           />

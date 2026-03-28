@@ -26,6 +26,7 @@ import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesM
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { apiUrl } from '../api/config';
 import { getSpeciesForCountry } from '../api/species';
+import { postQuestionMediaReady } from '../api/games';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import type { Species } from '../types/game';
@@ -74,6 +75,8 @@ export function GamePlayScreen() {
   const [flagModalVisible, setFlagModalVisible] = useState(false);
   const [flagMediaInfo, setFlagMediaInfo] = useState<FlagMediaInfo | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  /** Answers disabled until primary media has loaded (fair vs slow CDNs); server score still uses question.created — see backend if you add scoring_started_at. */
+  const [mediaReady, setMediaReady] = useState(false);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const expertDropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
@@ -175,6 +178,10 @@ export function GamePlayScreen() {
   useEffect(() => {
     setImageError(null);
   }, [question?.id, mediaIndex]);
+
+  useEffect(() => {
+    setMediaReady(false);
+  }, [question?.id, mediaIndex, mediaType]);
 
   const image = mediaType === 'images' && question?.images?.[currentIndex];
   const video = mediaType === 'video' && question?.videos?.[currentIndex];
@@ -353,6 +360,13 @@ export function GamePlayScreen() {
         containerStyle={StyleSheet.flatten(isWide ? [styles.mediaWrap, { minHeight: Math.round(screenHeight * 0.5) }] : styles.mediaWrap)}
         imageHeight={mediaHeight}
         videoHeight={videoHeight}
+        onMediaReady={() => {
+          setMediaReady(true);
+          const tok = (player as { token?: string })?.token;
+          if (question?.id && tok) {
+            postQuestionMediaReady(question.id, tok).catch(() => {});
+          }
+        }}
       />
 
       <View style={styles.nextSection}>
@@ -382,9 +396,12 @@ export function GamePlayScreen() {
               />
             ) : (
               <TouchableOpacity
-                style={[styles.optionButton, submittingId !== null && !(submittingId === opt.id) && styles.optionDisabled]}
+                style={[
+                  styles.optionButton,
+                  ((submittingId !== null && !(submittingId === opt.id)) || !mediaReady) && styles.optionDisabled,
+                ]}
                 onPress={() => handleAnswer(opt)}
-                disabled={submittingId !== null}
+                disabled={submittingId !== null || !mediaReady}
                 testID={i === 0 ? 'gamePlay.firstOption' : `gamePlay.option.${opt.id}`}
                 accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
@@ -445,7 +462,7 @@ export function GamePlayScreen() {
               loading={expertSpecies.length === 0}
               minChars={2}
               useFilter
-              editable={!answer && submittingId === null}
+              editable={!answer && submittingId === null && mediaReady}
               closeOnSubmit
               clearOnFocus={false}
               showClear

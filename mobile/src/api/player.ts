@@ -57,6 +57,43 @@ export async function getPlayer(token: string): Promise<Player | null> {
 }
 
 /**
+ * PATCH player name/language so scores and server state match the start screen.
+ * Uses JWT when logged in (same as createPlayer); otherwise Bearer player token.
+ */
+export async function updatePlayer(
+  playerToken: string,
+  body: { name: string; language: string },
+  accessToken?: string | null
+): Promise<Player | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PLAYER_REQUEST_TIMEOUT_MS);
+  try {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (accessToken?.trim()) {
+      headers['Authorization'] = `Bearer ${accessToken.trim()}`;
+    } else {
+      headers['Authorization'] = `Bearer ${playerToken}`;
+    }
+    const response = await fetch(apiUrl(`/api/player/${playerToken}/`), {
+      method: 'PATCH',
+      signal: controller.signal,
+      headers,
+      body: JSON.stringify(body),
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data as Player;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
+}
+
+/**
  * Link an existing player (by token) to the currently logged-in user. Call after login.
  */
 export async function linkPlayerToAccount(

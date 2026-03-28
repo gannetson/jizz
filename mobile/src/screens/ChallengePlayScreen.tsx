@@ -22,6 +22,7 @@ import {
   type QuestionOption,
   type CountryGameLevel,
 } from '../api/challenge';
+import { postQuestionMediaReady } from '../api/games';
 import { getSpeciesForCountry } from '../api/species';
 import { apiUrl } from '../api/config';
 import type { Species } from '../types/game';
@@ -95,6 +96,7 @@ export function ChallengePlayScreen() {
   const [challengePlayerToken, setChallengePlayerToken] = useState<string | undefined>(undefined);
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
   const [expertQuery, setExpertQuery] = useState('');
+  const [mediaReady, setMediaReady] = useState(false);
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
@@ -139,6 +141,10 @@ export function ChallengePlayScreen() {
   useEffect(() => {
     loadQuestion();
   }, [loadQuestion]);
+
+  useEffect(() => {
+    setMediaReady(false);
+  }, [question?.id]);
 
   useEffect(() => {
     if (!gameToken) return;
@@ -466,6 +472,17 @@ export function ChallengePlayScreen() {
           flagLabel={t('this_seems_wrong')}
           playSoundLabel={`🔊 ${t('play_sound')}`}
           containerStyle={styles.challengeMediaWrap}
+          onMediaReady={() => {
+            setMediaReady(true);
+            if (!question?.id) return;
+            const run = async () => {
+              const token = challengePlayerToken ?? (await getStoredChallengePlayerToken());
+              if (token) {
+                postQuestionMediaReady(question.id, token).catch(() => {});
+              }
+            };
+            void run();
+          }}
         />
       </View>
 
@@ -554,9 +571,9 @@ export function ChallengePlayScreen() {
             options.map((opt, idx) => (
               <TouchableOpacity
                 key={opt.id}
-                style={[styles.optionButton, submitting && styles.optionButtonDisabled]}
+                style={[styles.optionButton, (submitting || !mediaReady) && styles.optionButtonDisabled]}
                 onPress={() => giveAnswer(opt)}
-                disabled={submitting}
+                disabled={submitting || !mediaReady}
                 testID={idx === 0 ? 'challengePlay.firstOption' : `challengePlay.option.${opt.id}`}
                 accessibilityLabel={idx === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
@@ -603,7 +620,7 @@ export function ChallengePlayScreen() {
                   placeholderTextColor={colors.primary[500]}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!submitting}
+                  editable={!submitting && mediaReady}
                   testID="challengePlay.expertInput"
                   accessibilityLabel="Species name"
                 />
@@ -622,9 +639,9 @@ export function ChallengePlayScreen() {
                     filteredSpecies.map((item) => (
                       <TouchableOpacity
                         key={item.id}
-                        style={[styles.optionButton, styles.speciesListItem, submitting && styles.optionButtonDisabled]}
+                        style={[styles.optionButton, styles.speciesListItem, (submitting || !mediaReady) && styles.optionButtonDisabled]}
                         onPress={() => giveAnswer(item)}
-                        disabled={submitting}
+                        disabled={submitting || !mediaReady}
                         testID={`challengePlay.expertOption.${item.id}`}
                         accessibilityLabel={speciesDisplayName(item, lang)}
                       >

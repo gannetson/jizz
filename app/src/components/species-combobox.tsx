@@ -20,6 +20,8 @@ type Props = {
   emptyMessage?: ReactNode
   loadingMessage?: ReactNode
   resetInputOnSelect?: boolean
+  /** When false, user cannot answer until media has loaded (server score timing). */
+  isDisabled?: boolean
 }
 
 const defaultPlaceholderKey = "type species"
@@ -45,6 +47,7 @@ export const SpeciesCombobox = ({
   emptyMessage,
   loadingMessage,
   resetInputOnSelect = true,
+  isDisabled = false,
 }: Props) => {
   const intl = useIntl()
   const speciesArray = Array.isArray(species) ? species : []
@@ -125,6 +128,7 @@ export const SpeciesCombobox = ({
         noOptionsMessage={noOptionsMessage}
         loadingMessage={loadingMessageText}
         autoFocus={autoFocus}
+        isDisabled={isDisabled}
         styles={customStyles}
       />
     </Box>

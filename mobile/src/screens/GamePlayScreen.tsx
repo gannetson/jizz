@@ -127,15 +127,20 @@ export function GamePlayScreen() {
     if (question) setMediaIndex(question.number ?? 0);
   }, [question?.id]);
 
-  // Update header title with question progress: "Game - 1 of 10"
+  // Title bar: "Game - 4 of 10" (see AppNavigator: custom header respects options.title)
   const totalQuestions = typeof game?.length === 'number' ? game.length : parseInt(String(game?.length ?? ''), 10) || 10;
   const questionNum = question?.sequence ?? 0;
   useEffect(() => {
-    const title = game && question && totalQuestions > 0
-      ? `Game - ${questionNum} of ${totalQuestions}`
-      : 'Game';
+    const title =
+      game && question && totalQuestions > 0 && questionNum > 0
+        ? t('game_title_progress', {
+            game: t('game'),
+            current: questionNum,
+            total: totalQuestions,
+          })
+        : t('game');
     navigation.setOptions({ title });
-  }, [navigation, game, question, totalQuestions, questionNum]);
+  }, [navigation, game, question, totalQuestions, questionNum, t]);
 
   // When playing daily challenge we skip lobby: join WebSocket and (if host) start game from here
   useEffect(() => {

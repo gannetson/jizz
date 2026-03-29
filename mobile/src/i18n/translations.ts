@@ -259,6 +259,8 @@ export const translations: Record<string, Record<string, string>> = {
     challenge_level_hint: 'You will run through different levels. Some easy and some quite difficult.',
     language_species_names: 'Language (species names)',
     question_of: 'Question {current} of {total}',
+    /** Title bar during play: "Game - 4 of 10" */
+    game_title_progress: '{game} - {current} of {total}',
     close_modal_country: 'Close country modal',
     close_modal_language: 'Close language modal',
     loading_challenge: 'Loading challenge…',
@@ -544,6 +546,7 @@ export const translations: Record<string, Record<string, string>> = {
     challenge_level_hint: 'Je doorloopt verschillende levels. Sommige makkelijk, sommige best lastig.',
     language_species_names: 'Taal (soortnamen)',
     question_of: 'Vraag {current} van {total}',
+    game_title_progress: '{game} - {current} van {total}',
     close_modal_country: 'Landmodaal sluiten',
     close_modal_language: 'Taalmodaal sluiten',
     loading_challenge: 'Uitdaging laden…',

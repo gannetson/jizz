@@ -78,7 +78,11 @@ export function LobbyScreen() {
   }, [game?.token, connected, loadGameFromApi]);
 
   useEffect(() => {
-    if (question && game?.token && question.game?.token === game.token) {
+    if (!question?.id || !game?.token) return;
+    const qt = question.game?.token;
+    const sameGame =
+      qt == null || String(qt).trim() === '' || String(qt).trim() === String(game.token).trim();
+    if (sameGame) {
       (navigation as any).navigate('GamePlay');
     }
   }, [question, game?.token, navigation]);
@@ -107,6 +111,12 @@ export function LobbyScreen() {
     Linking.openURL(url).catch(() => {});
   }, [gameLink, t]);
 
+  // Prefer WebSocket players; use polled game.scores when it has more (host may have missed update_players)
+  // Must run before any early return — same hook order every render.
+  const displayPlayers = useMemo(() => {
+    return refreshedGameScores.length > players.length ? refreshedGameScores : players;
+  }, [players, refreshedGameScores]);
+
   if (!game || !player) {
     return (
       <View style={styles.centered}>
@@ -119,11 +129,6 @@ export function LobbyScreen() {
   }
 
   const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
-
-  // Prefer WebSocket players; use polled game.scores when it has more (host may have missed update_players)
-  const displayPlayers = useMemo(() => {
-    return refreshedGameScores.length > players.length ? refreshedGameScores : players;
-  }, [players, refreshedGameScores]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
   useState,
-  ReactNode,
+  type ReactNode,
 } from 'react';
 import { getCurrentQuestion, type Game } from '../api/games';
 import type { Player } from '../api/player';
@@ -31,6 +31,22 @@ type GameWebSocketContextType = {
 
 type Species = { id: number; name?: string; name_nl?: string; name_latin?: string; name_translated?: string };
 
+function tokensEqual(a: string | undefined | null, b: string | undefined | null): boolean {
+  if (a == null || b == null) return false;
+  return String(a).trim() === String(b).trim();
+}
+
+/** Single MPG socket per app — accept question if game token missing or matches (avoids RN/JSON edge cases). */
+function questionBelongsToSocketGame(
+  question: { game?: { token?: string } } | undefined,
+  socketGameToken: string
+): boolean {
+  if (!question?.id) return false;
+  const qt = question.game?.token;
+  if (qt == null || String(qt).trim() === '') return true;
+  return tokensEqual(qt, socketGameToken);
+}
+
 const GameWebSocketContext = createContext<GameWebSocketContextType | undefined>(undefined);
 
 export function GameWebSocketProvider({ children }: { children: ReactNode }) {
@@ -46,33 +62,58 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const gameTokenRef = useRef<string>('');
   const currentSocketRef = useRef<WebSocket | null>(null);
   const languageCodeRef = useRef<string>('en');
+  const socketRef = useRef<WebSocket | undefined>(undefined);
+  /** Actions sent before the socket is OPEN (e.g. start_game race right after connect). */
+  const pendingActionsRef = useRef<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    socketRef.current = socket;
+  }, [socket]);
 
   const clearRematchInvitation = useCallback(() => setRematchInvitation(null), []);
   const clearRematchError = useCallback(() => setRematchError(null), []);
 
-  const sendRematch = useCallback(() => {
-    setRematchError(null);
-    if (socket?.readyState === WebSocket.OPEN) {
-      sendAction({ action: 'rematch', player_token: playerTokenRef.current });
-    } else {
-      setRematchError('Not connected. Try again.');
-    }
-  }, [socket, sendAction]);
+  const flushPendingActions = useCallback((ws: WebSocket) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    const queued = pendingActionsRef.current;
+    pendingActionsRef.current = [];
+    queued.forEach((payload) => {
+      ws.send(
+        JSON.stringify({
+          ...payload,
+          language_code: languageCodeRef.current,
+        })
+      );
+    });
+  }, []);
 
   // Payloads match web app (websocket-context-provider) and backend (jizz/consumers.py).
   const sendAction = useCallback(
     (payload: Record<string, unknown>) => {
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(
+      const ws = socketRef.current;
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(
           JSON.stringify({
             ...payload,
             language_code: languageCodeRef.current,
           })
         );
+        return;
       }
+      pendingActionsRef.current.push(payload);
     },
-    [socket]
+    []
   );
+
+  const sendRematch = useCallback(() => {
+    setRematchError(null);
+    const ws = socketRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      sendAction({ action: 'rematch', player_token: playerTokenRef.current });
+    } else {
+      setRematchError('Not connected. Try again.');
+    }
+  }, [sendAction]);
 
   const startGame = useCallback(() => {
     sendAction({ action: 'start_game', player_token: playerTokenRef.current });
@@ -121,6 +162,8 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
           language_code: languageCodeRef.current,
         })
       );
+      // Deliver any actions queued while CONNECTING (e.g. host taps Start immediately).
+      flushPendingActions(ws);
     };
 
     ws.onmessage = (event) => {
@@ -132,20 +175,31 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             break;
           case 'new_question':
             setAnswer(undefined);
-            if (message.question && message.question.game?.token === gameTokenRef.current) {
+            if (questionBelongsToSocketGame(message.question, gameTokenRef.current)) {
               setQuestion(message.question as Question);
             }
             break;
           case 'game_started':
-            // Fallback: fetch current question so non-host clients leave lobby even if new_question was missed
-            getCurrentQuestion(gameTokenRef.current).then((q) => {
-              if (q && q.game?.token === gameTokenRef.current) {
-                setQuestion(q as Question);
-              }
-            }).catch(() => {});
+            // Fallback: fetch current question if new_question was missed (e.g. socket reconnect race).
+            // Retry with delays: server may still be running add_question after game_started is broadcast.
+            {
+              const token = gameTokenRef.current;
+              const apply = (q: Question | null) => {
+                if (token !== gameTokenRef.current) return;
+                if (q && questionBelongsToSocketGame(q, token)) {
+                  setQuestion(q);
+                }
+              };
+              [0, 280, 900].forEach((delay) => {
+                setTimeout(() => {
+                  if (token !== gameTokenRef.current) return;
+                  getCurrentQuestion(token).then(apply).catch(() => {});
+                }, delay);
+              });
+            }
             break;
           case 'game_updated':
-            if (message.game?.token === gameTokenRef.current && setGameRef.current) {
+            if (tokensEqual(message.game?.token, gameTokenRef.current) && setGameRef.current) {
               setGameRef.current(message.game as Game);
             }
             break;
@@ -184,11 +238,28 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     };
 
     setSocket(ws);
-  }, []);
+  }, [flushPendingActions]);
 
   const joinGame = useCallback(
     (game: Game | null, player: Player | null, setGame: (g: Game | null) => void) => {
+      const canJoin = !!(game && player && game.token && player.token);
+      if (canJoin) {
+        setGameRef.current = setGame;
+        // Avoid closing a healthy socket (React Strict Mode double-mount, duplicate effects).
+        // Closing here drops in-flight new_question when the host starts.
+        const wsBusy =
+          socket &&
+          (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING);
+        if (
+          wsBusy &&
+          tokensEqual(gameTokenRef.current, game.token) &&
+          tokensEqual(playerTokenRef.current, player.token)
+        ) {
+          return;
+        }
+      }
       if (socket) {
+        pendingActionsRef.current = [];
         currentSocketRef.current = null;
         socket.close();
         setSocket(undefined);
@@ -196,7 +267,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
       setQuestion(undefined);
       setAnswer(undefined);
       setPlayers([]);
-      if (game && player && game.token && player.token) {
+      if (canJoin && game && player) {
         connectSocket(game, player, setGame);
       }
     },

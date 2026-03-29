@@ -2,7 +2,7 @@ import React, {FC, ReactNode, useContext, useEffect, useRef, useState} from 'rea
 import AppContext, {Answer, Game, MultiPlayer, Player, Question, Species} from "./app-context";
 import WebsocketContext from "./websocket-context"
 import { toaster } from "@/components/ui/toaster"
-import { validateQuestionForGame, getCurrentGameToken } from './game-token-validator'
+import { validateQuestionForGame } from './game-token-validator'
 import { getWebSocketUrl } from '../api/baseUrl'
 
 type Props = {
@@ -168,21 +168,15 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
             setAnswer(undefined)
           }
           const question: Question = message.question
-          
-          // Get the authoritative current game token (from context, fallback to socket)
-          const contextGameToken = getCurrentGameToken(game, gameToken)
-          
-          // Validate question belongs to the current game using centralized validator
-          // Check against both socket token (connection) and context token (current state)
-          if (validateQuestionForGame(question, socketGameToken) && 
-              validateQuestionForGame(question, contextGameToken || undefined)) {
+          // Trust the socket's game only. React context/localStorage can lag behind the WS connection
+          // (stale closure in this handler), which used to drop valid new_question for guests.
+          if (validateQuestionForGame(question, socketGameToken)) {
             console.log('Setting question for game:', socketGameToken)
             setQuestion(question)
           } else {
             console.log('Ignoring new_question - validation failed:', {
               questionToken: question.game?.token,
               socketToken: socketGameToken,
-              contextToken: contextGameToken
             })
           }
           break
@@ -190,16 +184,13 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           notify('Game started')
           break
         case 'game_updated':
-          // Only update game if it matches the socket's game token and current game
           const updatedGame = message.game as Game
-          const contextGameTokenForUpdate = getCurrentGameToken(game, gameToken)
-          if (updatedGame.token === socketGameToken && updatedGame.token === contextGameTokenForUpdate) {
+          if (updatedGame.token === socketGameToken) {
             setGame(updatedGame)
           } else {
             console.log('Ignoring game_updated - token mismatch:', {
               updatedGameToken: updatedGame.token,
               socketToken: socketGameToken,
-              contextToken: contextGameTokenForUpdate
             })
           }
           break

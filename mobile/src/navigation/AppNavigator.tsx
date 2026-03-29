@@ -61,9 +61,14 @@ export default function AppNavigator() {
     <>
       <Stack.Navigator
         screenOptions={{
-          header: ({ route }) => {
+          header: ({ route, options }) => {
             const screen = SCREENS.find((s) => s.name === route.name);
-            const title = screen ? t(screen.titleKey) : route.name;
+            const defaultTitle = screen ? t(screen.titleKey) : route.name;
+            // Screens can call navigation.setOptions({ title }) (e.g. GamePlay progress)
+            const title =
+              options.title != null && String(options.title).trim() !== ''
+                ? String(options.title)
+                : defaultTitle;
             return (
               <AppHeader
                 routeName={route.name}

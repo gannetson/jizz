@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -48,6 +48,8 @@ export function ProfileScreen() {
   const [avatarPreviewUri, setAvatarPreviewUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  /** True after user changes species language in the modal; blocks loadProfile from overwriting before save. */
+  const speciesLanguageDirtyRef = useRef(false);
 
   const loadProfile = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -178,6 +180,7 @@ export function ProfileScreen() {
         timezone: timezone?.trim() || undefined,
         country_code: countryCode ?? undefined,
       });
+      speciesLanguageDirtyRef.current = false;
       const updated = await getProfile();
       setProfile(updated);
       setUsername(updated.username);
@@ -374,6 +377,7 @@ export function ProfileScreen() {
                 <TouchableOpacity
                   style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
                   onPress={() => {
+                    speciesLanguageDirtyRef.current = true;
                     setLanguage(item.code);
                     setLanguageModalVisible(false);
                     setLanguageSearch('');

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
@@ -54,18 +54,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [player, setPlayer] = useState<Player | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
+  /** Avoid overwriting species language after the user picks a value — loadStoredPlayer can run twice (provider + Start). */
+  const lastLanguageSyncPlayerTokenRef = useRef<string | null>(null);
 
   const loadStoredPlayer = useCallback(async () => {
     const token = await AsyncStorage.getItem(PLAYER_TOKEN_KEY);
-    if (token) {
-      const p = await playerApi.getPlayer(token);
-      if (p) {
-        setPlayer(p);
-        if (!playerName) setPlayerName(p.name);
+    if (!token) {
+      lastLanguageSyncPlayerTokenRef.current = null;
+      return;
+    }
+    const p = await playerApi.getPlayer(token);
+    if (p) {
+      setPlayer(p);
+      if (!playerName) setPlayerName(p.name);
+      if (lastLanguageSyncPlayerTokenRef.current !== p.token) {
+        lastLanguageSyncPlayerTokenRef.current = p.token;
         setLanguage(p.language);
-      } else {
-        await AsyncStorage.removeItem(PLAYER_TOKEN_KEY);
       }
+    } else {
+      await AsyncStorage.removeItem(PLAYER_TOKEN_KEY);
+      lastLanguageSyncPlayerTokenRef.current = null;
     }
   }, [playerName]);
 

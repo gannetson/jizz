@@ -1,355 +1,414 @@
+"""
+Multiplayer quiz WebSocket consumer (Django Channels).
+
+URL: ws(s)://<host>/mpg/<game_token>
+Each connection is scoped to one game group `quiz_<game_token>`.
+
+Client -> server actions: join_game, start_game, next_question, submit_answer, rematch.
+Server -> client: update_players, new_question, game_started, game_updated, answer_checked, etc.
+"""
+from __future__ import annotations
+
 import json
+import logging
+from typing import Optional
 
 from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+logger = logging.getLogger(__name__)
+
+
+def _as_int(value, field_name: str):
+    """Coerce JSON number or numeric string for ORM / comparisons."""
+    if value is None:
+        raise ValueError(f"missing {field_name}")
+    if isinstance(value, bool):
+        raise ValueError(f"invalid {field_name}")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    try:
+        return int(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"invalid {field_name}") from e
+
+
 class QuizConsumer(AsyncWebsocketConsumer):
     """
-    WebSocket consumer for multiplayer game communication.
-    
-    Handles real-time communication for multiplayer games including:
-    - Player joining/leaving
-    - Game start/stop
-    - Question broadcasting
-    - Answer submission
-    - Score updates
-    - Rematch invitations
-    
-    WebSocket URL: /mpg/{game_token}/
-    
-    Actions:
-    - join_game: Player joins the game
-    - start_game: Host starts the game (generates first question)
-    - submit_answer: Player submits answer to current question
-    - next_question: Advance to next question (when all players answered)
-    - rematch: Host creates a rematch game
-    
-    Events:
-    - update_players: Player list updated
-    - new_question: New question available
-    - answer_checked: Answer processed
-    - game_started: Game has started
-    - game_updated: Game state changed
-    - rematch_invitation: Rematch game created
-    
-    See docs/GAME_LIFECYCLE.md for complete documentation.
+    One consumer instance per WebSocket connection.
+    All per-connection state must live on self (never rely on class attributes for instance data).
     """
-    game_token = ''
-    game_group_name = ''
-    game = None
-    player = None
-
-    async def get_player_data(self):
-        from .models import Game
-        from .serializers import PlayerScoreSerializer
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        player_scores = await sync_to_async(lambda: list(game.scores.order_by('-score').all()))()
-        serializer = PlayerScoreSerializer(player_scores, many=True)
-        players_data = await sync_to_async(lambda: serializer.data)()
-        return players_data
-
-    async def send_game_update(self):
-        """Fetch game and serialize in one sync block so DB connection is consistent."""
-        from .models import Game
-        from .serializers import GameSerializer
-
-        def get_game_data():
-            game = Game.objects.get(token=self.game_token)
-            return GameSerializer(game).data
-
-        game_data = await sync_to_async(get_game_data)()
-        await self.send(text_data=json.dumps({
-            'action': 'game_updated',
-            'game': game_data
-        }))
-
-    async def send_players_update(self, everyone):
-        player_data = await self.get_player_data()
-        if everyone:
-            await self.channel_layer.group_send(
-                self.game_group_name,
-                {
-                    'type': 'update_players',
-                    'players': player_data
-                }
-            )
-        else:
-            await self.send(text_data=json.dumps({
-                'action': 'update_players',
-                'players': player_data
-            }))
-
-    async def get_current_question(self):
-        from .models import Game
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        # Use game.question property which returns the current undone question
-        # This ensures players joining after game start get the active question
-        return await sync_to_async(lambda: game.question)()
-
-    async def get_current_answer(self):
-        question = await self.get_current_question()
-        if not question:
-            return None
-        return await sync_to_async(lambda: question.answers.filter(player_score__player=self.player).first)()
-
-    async def send_current_answer(self):
-        from .serializers import AnswerSerializer
-        answer = await self.get_current_answer()
-        if not answer:
-            return None
-        serializer = AnswerSerializer(answer, context={'game': answer.question.game})
-        data = await sync_to_async(lambda: serializer.data)()
-        if not data:
-            return None
-        await self.send(
-            text_data=json.dumps({
-                'action': 'answer_checked',
-                'answer': data
-            })
-        )
-
-    async def send_current_question(self, everyone):
-        """
-        Send the current question to player(s).
-        
-        Args:
-            everyone: If True, broadcast to all players in game group.
-                     If False, send only to this connection.
-        
-        The question data includes the game token so the frontend can
-        validate that the question belongs to the current game.
-        This prevents old questions from previous games from being displayed.
-        """
-        from .serializers import QuestionSerializer
-        from .models import Game
-        question = await self.get_current_question()
-        if not question:
-            return None
-        serializer = QuestionSerializer(question)
-        question_data = await sync_to_async(lambda: serializer.data)()
-        # Add game token to question data so frontend can verify it belongs to current game
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        question_data['game'] = {'token': game.token}
-        if everyone:
-            await self.channel_layer.group_send(
-                self.game_group_name,
-                {
-                    'type': 'new_question',
-                    'question': question_data
-                }
-            )
-        else:
-            await self.send(
-                text_data=json.dumps({
-                    'action': 'new_question',
-                    'question': question_data
-                })
-            )
-
-    async def next_question(self):
-        from .models import Game
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        await sync_to_async(game.add_question)()
-        await self.send_current_question(True)
 
     async def connect(self):
-        self.game_token = self.scope['url_route']['kwargs']['game_token']
-        self.game_group_name = f'quiz_{self.game_token}'
+        self.game_token = self.scope["url_route"]["kwargs"]["game_token"]
+        self.game_group_name = f"quiz_{self.game_token}"
+        # Player token from the last join_game on this connection (for send_current_answer)
+        self._player_token: Optional[str] = None
         await self.channel_layer.group_add(self.game_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
+        self._player_token = None
         await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
 
     async def receive(self, text_data):
-        from .serializers import AnswerSerializer
-        from .models import Game, Player, Question, Answer
         try:
             data = json.loads(text_data)
         except json.JSONDecodeError as e:
-            print(f"Error parsing JSON in receive: {e}, text_data: {text_data}")
+            logger.warning("WebSocket JSON parse error: %s data=%s", e, text_data[:200])
             return
 
-        action = data.get('action')
+        action = data.get("action")
         if not action:
             return
-        print(f"Received action: {action}")
 
-        # if data['action'] == 'create_game':
-        #     game = await sync_to_async(Game.objects.create)(token=self.game_token, multiplayer=True)
-        #     player = await sync_to_async(Player.objects.create)(game=game, name=data['player_name'])
-        #     await self.send(text_data=json.dumps(
-        #         {'message': 'Game created', 'game_code': game.token, 'player_token': str(player.token)}))
-
-        if action == 'end_game':
-            game = await sync_to_async(Game.objects.create)(token=self.game_token, multiplayer=True)
-            player = await sync_to_async(Player.objects.create)(game=game, name=data['player_name'])
-            await self.send(text_data=json.dumps(
-                {'message': 'Game created', 'game_code': game.token, 'player_token': str(player.token)}))
-
-        elif action == 'join_game':
-            from jizz.models import PlayerScore
-            game = await sync_to_async(Game.objects.get)(token=self.game_token)
-            player = await sync_to_async(Player.objects.get)(token=data['player_token'])
-            await sync_to_async(PlayerScore.objects.get_or_create)(
-                player=player,
-                game=game
-            )
-            await self.channel_layer.group_send(
-                self.game_group_name, {
-                    'type': 'player_joined',
-                    'player_name': player.name
-                }
-            )
-            await self.send_players_update(True)
-            await self.send_game_update()
-            await self.send_current_question(False)
-            await self.send_current_answer()
-
-        elif action == 'start_game':
-            game = await sync_to_async(Game.objects.get)(token=self.game_token)
-            if hasattr(Game, 'started'):
-                game.started = True
-                await sync_to_async(game.save)()
-            # Send to this connection first so we don't block on group_send while next_question runs
-            await self.send(text_data=json.dumps({'action': 'game_started'}))
-            await self.channel_layer.group_send(
-                self.game_group_name, {
-                    'type': 'game_started',
-                }
-            )
-            await self.next_question()
-
-        elif action == 'next_question':
-            await self.next_question()
-
-        elif action == 'submit_answer':
-            from jizz.models import PlayerScore
-            player = await sync_to_async(Player.objects.get)(token=data['player_token'])
-            game = await sync_to_async(Game.objects.get)(token=self.game_token)
-            player_score = await sync_to_async(PlayerScore.objects.get)(player=player, game=game)
-            question = await sync_to_async(Question.objects.get)(id=data['question_id'])
-            correct = data['answer_id'] == question.species_id
-            answer = await sync_to_async(Answer.objects.filter(player_score=player_score, question=question).first)()
-            if not answer:
-                answer = await sync_to_async(Answer.objects.create)(
-                    answer_id=data['answer_id'],
-                    player_score=player_score,
-                    question=question,
-                    correct=correct
+        try:
+            if action == "join_game":
+                await self._handle_join_game(data)
+            elif action == "start_game":
+                await self._handle_start_game(data)
+            elif action == "next_question":
+                await self._handle_next_question(data)
+            elif action == "submit_answer":
+                await self._handle_submit_answer(data)
+            elif action == "rematch":
+                await self._handle_rematch(data)
+            elif action == "end_game":
+                # Legacy / unused path kept for compatibility
+                await self._handle_end_game(data)
+        except Exception as e:
+            logger.exception("WebSocket action %s failed: %s", action, e)
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": str(e) or "Server error"}
                 )
+            )
 
-            serializer = AnswerSerializer(answer, context={'game': question.game})
-            answer_data = await sync_to_async(lambda: serializer.data)()
-            await self.send(text_data=json.dumps({
-                'action': 'answer_checked',
-                'answer': answer_data
-            }))
+    # --- Handlers ---
 
-            player_data = await self.get_player_data()
-            await self.channel_layer.group_send(
-                self.game_group_name,
+    async def _handle_end_game(self, data):
+        from .models import Game, Player
+
+        game = await sync_to_async(Game.objects.create)(
+            token=self.game_token, multiplayer=True
+        )
+        player = await sync_to_async(Player.objects.create)(
+            game=game, name=data["player_name"]
+        )
+        await self.send(
+            text_data=json.dumps(
                 {
-                    'type': 'update_players',
-                    'players': player_data
+                    "message": "Game created",
+                    "game_code": game.token,
+                    "player_token": str(player.token),
                 }
             )
+        )
 
-        elif action == 'rematch':
-            # Host requests a rematch - create new game with same specs and notify all players
-            try:
-                player_token = data.get('player_token')
-                if not player_token:
-                    await self.send(text_data=json.dumps({
-                        'action': 'error',
-                        'message': 'player_token is required for rematch',
-                    }))
-                    return
-                from jizz.rematch import create_rematch_game as do_create_rematch
-                new_game, player = await database_sync_to_async(do_create_rematch)(
-                    self.game_token, player_token
+    async def _handle_join_game(self, data):
+        from jizz.models import PlayerScore, Game, Player
+
+        player_token = (data.get("player_token") or "").strip()
+        if not player_token:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "player_token required"}
                 )
-                player_name = player.name
-                
-                print(f"Rematch: Created new game {new_game.token} for host {player_name}")
-                
-                # Send rematch invitation to all players in the game group
-                # This includes the host who will auto-join, and other players who will see the join button
-                invitation_data = {
-                    'type': 'rematch_invitation',
-                    'new_game_token': new_game.token,
-                    'host_name': player_name
-                }
-                print(f"Rematch: Sending group message to {self.game_group_name}: {invitation_data}")
-                await self.channel_layer.group_send(
-                    self.game_group_name,
-                    invitation_data
+            )
+            return
+
+        self._player_token = player_token
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        player = await sync_to_async(Player.objects.get)(token=player_token)
+        await sync_to_async(PlayerScore.objects.get_or_create)(player=player, game=game)
+
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {"type": "player_joined", "player_name": player.name},
+        )
+        await self._broadcast_players_update()
+        await self._send_game_update_to_self()
+        await self._send_current_question_to_self()
+        await self._send_current_answer_to_self()
+
+    async def _handle_start_game(self, data):
+        from .models import Game
+
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        if hasattr(game, "started"):
+            game.started = True
+            await sync_to_async(game.save)()
+
+        await self.send(text_data=json.dumps({"action": "game_started"}))
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {"type": "game_started"},
+        )
+        await self._run_next_question()
+
+    async def _handle_next_question(self, data):
+        await self._run_next_question()
+
+    async def _handle_submit_answer(self, data):
+        from jizz.models import PlayerScore, Player, Question, Answer, Game
+        from jizz.serializers import AnswerSerializer
+
+        try:
+            player_token = (data.get("player_token") or "").strip()
+            question_id = _as_int(data.get("question_id"), "question_id")
+            answer_id = _as_int(data.get("answer_id"), "answer_id")
+        except ValueError as e:
+            await self.send(
+                text_data=json.dumps({"action": "error", "message": str(e)})
+            )
+            return
+
+        if not player_token:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "player_token required"}
                 )
-                
-                # Also send directly to the requester to ensure they receive it
-                direct_message = {
-                    'action': 'rematch_invitation',
-                    'new_game_token': new_game.token,
-                    'host_name': player_name
-                }
-                print(f"Rematch: Sending direct message: {direct_message}")
-                await self.send(text_data=json.dumps(direct_message))
-                print(f"Rematch: Messages sent successfully")
-            except Exception as e:
-                import traceback
-                error_msg = f"Error in rematch action: {str(e)}\n{traceback.format_exc()}"
-                print(error_msg)
-                await self.send(text_data=json.dumps({
-                    'action': 'error',
-                    'message': f'Failed to create rematch: {str(e)}'
-                }))
+            )
+            return
+
+        player = await sync_to_async(Player.objects.get)(token=player_token)
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        player_score = await sync_to_async(PlayerScore.objects.get)(
+            player=player, game=game
+        )
+        question = await sync_to_async(Question.objects.get)(id=question_id)
+
+        if question.game_id != game.id:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "Question does not belong to this game"}
+                )
+            )
+            return
+
+        correct = answer_id == question.species_id
+
+        existing = await sync_to_async(
+            lambda: Answer.objects.filter(
+                player_score=player_score, question=question
+            ).first()
+        )()
+        if existing:
+            answer = existing
+        else:
+            answer = await sync_to_async(Answer.objects.create)(
+                answer_id=answer_id,
+                player_score=player_score,
+                question=question,
+                correct=correct,
+            )
+
+        serializer = AnswerSerializer(answer, context={"game": question.game})
+        answer_data = await sync_to_async(lambda: serializer.data)()
+        await self.send(
+            text_data=json.dumps({"action": "answer_checked", "answer": answer_data})
+        )
+
+        await self._broadcast_players_update()
+
+    async def _handle_rematch(self, data):
+        player_token = (data.get("player_token") or "").strip()
+        if not player_token:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "player_token is required for rematch"}
+                )
+            )
+            return
+        try:
+            from jizz.rematch import create_rematch_game as do_create_rematch
+
+            new_game, player = await database_sync_to_async(do_create_rematch)(
+                self.game_token, player_token
+            )
+            player_name = player.name
+            invitation_data = {
+                "type": "rematch_invitation",
+                "new_game_token": new_game.token,
+                "host_name": player_name,
+            }
+            await self.channel_layer.group_send(self.game_group_name, invitation_data)
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "action": "rematch_invitation",
+                        "new_game_token": new_game.token,
+                        "host_name": player_name,
+                    }
+                )
+            )
+        except Exception as e:
+            logger.exception("rematch failed")
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "action": "error",
+                        "message": f"Failed to create rematch: {str(e)}",
+                    }
+                )
+            )
+
+    # --- Game flow helpers ---
+
+    async def _run_next_question(self):
+        from .models import Game
+
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        await sync_to_async(game.add_question)()
+        await self._broadcast_current_question()
+
+    async def _broadcast_players_update(self):
+        player_data = await self._get_player_data()
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {"type": "update_players", "players": player_data},
+        )
+
+    async def _get_player_data(self):
+        from .models import Game
+        from .serializers import PlayerScoreSerializer
+
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        player_scores = await sync_to_async(
+            lambda: list(game.scores.order_by("-score").all())
+        )()
+        serializer = PlayerScoreSerializer(player_scores, many=True)
+        return await sync_to_async(lambda: serializer.data)()
+
+    async def _send_game_update_to_self(self):
+        from .models import Game
+        from .serializers import GameSerializer
+
+        def get_game_data():
+            g = Game.objects.get(token=self.game_token)
+            return GameSerializer(g).data
+
+        game_data = await sync_to_async(get_game_data)()
+        await self.send(
+            text_data=json.dumps({"action": "game_updated", "game": game_data})
+        )
+
+    async def _get_current_question(self):
+        from .models import Game
+
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        return await sync_to_async(lambda: game.question)()
+
+    async def _send_current_question_to_self(self):
+        q = await self._serialize_current_question_for_send()
+        if not q:
+            return
+        await self.send(
+            text_data=json.dumps({"action": "new_question", "question": q})
+        )
+
+    async def _broadcast_current_question(self):
+        q = await self._serialize_current_question_for_send()
+        if not q:
+            return
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {"type": "new_question", "question": q},
+        )
+
+    async def _serialize_current_question_for_send(self):
+        from .models import Game
+        from .serializers import QuestionSerializer
+
+        question = await self._get_current_question()
+        if not question:
+            return None
+        serializer = QuestionSerializer(question)
+        question_data = await sync_to_async(lambda: serializer.data)()
+        game = await sync_to_async(Game.objects.get)(token=self.game_token)
+        question_data["game"] = {"token": str(game.token)}
+        return question_data
+
+    async def _get_current_answer_for_connection(self):
+        if not self._player_token:
+            return None
+        question = await self._get_current_question()
+        if not question:
+            return None
+        from jizz.models import Player, Answer
+
+        player = await sync_to_async(Player.objects.get)(token=self._player_token)
+        return await sync_to_async(
+            lambda: Answer.objects.filter(
+                player_score__player=player, question=question
+            ).first()
+        )()
+
+    async def _send_current_answer_to_self(self):
+        from jizz.serializers import AnswerSerializer
+
+        answer = await self._get_current_answer_for_connection()
+        if not answer:
+            return
+        serializer = AnswerSerializer(
+            answer, context={"game": answer.question.game}
+        )
+        data = await sync_to_async(lambda: serializer.data)()
+        if not data:
+            return
+        await self.send(
+            text_data=json.dumps({"action": "answer_checked", "answer": data})
+        )
+
+    # --- Channel layer event handlers (type = snake_case method name) ---
 
     async def update_players(self, event):
-        message = {
-            'action': 'update_players',
-            'players': event['players'],
-        }
-        await self.send(text_data=json.dumps(message))
+        await self.send(
+            text_data=json.dumps(
+                {"action": "update_players", "players": event["players"]}
+            )
+        )
 
     async def player_joined(self, event):
-        await self.send(text_data=json.dumps(
-            {
-                'action': 'player_joined',
-                'player_name': event['player_name']
-            }
-        ))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "action": "player_joined",
+                    "player_name": event["player_name"],
+                }
+            )
+        )
 
     async def game_started(self, event):
-        await self.send(text_data=json.dumps({
-            'action': 'game_started',
-        }))
+        await self.send(text_data=json.dumps({"action": "game_started"}))
 
     async def new_question(self, event):
-        message = {
-            'action': 'new_question',
-            'question': event['question'],
-        }
-        await self.send(text_data=json.dumps(message))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "action": "new_question",
+                    "question": event["question"],
+                }
+            )
+        )
 
     async def player_answered(self, event):
-        await self.send(text_data=json.dumps({
-            'action': 'player_answered',
-            'player': event['player']
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {"action": "player_answered", "player": event["player"]}
+            )
+        )
 
     async def rematch_invitation(self, event):
-        print(f"rematch_invitation handler called with event: {event}")
-        try:
-            message = {
-                'action': 'rematch_invitation',
-                'new_game_token': event['new_game_token'],
-                'host_name': event['host_name']
-            }
-            print(f"Sending rematch_invitation message: {message}")
-            await self.send(text_data=json.dumps(message))
-            print(f"rematch_invitation message sent successfully")
-        except Exception as e:
-            import traceback
-            error_msg = f"Error in rematch_invitation handler: {str(e)}\n{traceback.format_exc()}"
-            print(error_msg)
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "action": "rematch_invitation",
+                    "new_game_token": event["new_game_token"],
+                    "host_name": event["host_name"],
+                }
+            )
+        )

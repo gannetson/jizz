@@ -87,7 +87,9 @@ export async function getCurrentQuestion(gameToken: string): Promise<Question | 
   });
   if (!response.ok) return null;
   const data = await response.json();
-  if (!data?.id || !data?.game?.token) return null;
+  if (!data?.id) return null;
+  // If API includes game.token, it must match (otherwise ignore). Missing token still allowed for fallback fetch.
+  if (data.game?.token != null && String(data.game.token) !== String(gameToken)) return null;
   return data as Question;
 }
 

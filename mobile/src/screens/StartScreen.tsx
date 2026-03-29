@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -73,6 +73,8 @@ export function StartScreen() {
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [languageSearch, setLanguageSearch] = useState('');
+  /** After user picks species language, do not let late profile/player fetches overwrite it. */
+  const speciesLanguageUserChosenRef = useRef(false);
 
   useEffect(() => {
     loadCountries().then((list) => {
@@ -122,7 +124,7 @@ export function StartScreen() {
           const c = countries.find((x) => x.code === profile.country_code);
           if (c) setCountry(c);
         }
-        if (profile.language?.trim()) {
+        if (profile.language?.trim() && !speciesLanguageUserChosenRef.current) {
           setLanguage(profile.language.trim());
         }
       })
@@ -237,7 +239,12 @@ export function StartScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
-                  onPress={() => { setLanguage(item.code); setLanguageModalVisible(false); setLanguageSearch(''); }}
+                  onPress={() => {
+                    speciesLanguageUserChosenRef.current = true;
+                    setLanguage(item.code);
+                    setLanguageModalVisible(false);
+                    setLanguageSearch('');
+                  }}
                 >
                   <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{getLanguageDisplayName(item, locale)}</Text>
                 </TouchableOpacity>

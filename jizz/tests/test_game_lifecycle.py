@@ -398,8 +398,8 @@ class GameLifecycleTestCase(TestCase):
         self.assertNotEqual(game.question.id, q1_g2.id)
         self.assertEqual(game2.question.id, q1_g2.id)
 
-    def test_add_question_marks_previous_undone_questions(self):
-        """Test that add_question marks all undone questions as done."""
+    def test_add_question_returns_current_when_previous_unanswered(self):
+        """Duplicate add_question must not skip rounds: return the same active question."""
         game = Game.objects.create(
             country=self.country,
             level='beginner',
@@ -408,17 +408,14 @@ class GameLifecycleTestCase(TestCase):
             host=self.player
         )
 
-        # Add first question
         q1 = game.add_question()
         self.assertFalse(q1.done)
 
-        # Add second question without marking first as done
-        # This should mark q1 as done
         q2 = game.add_question()
-        
         q1.refresh_from_db()
-        self.assertTrue(q1.done, "Previous question should be marked as done when adding new question")
-        self.assertFalse(q2.done)
+        self.assertFalse(q1.done)
+        self.assertEqual(q1.id, q2.id)
+        self.assertEqual(game.questions.count(), 1)
 
     def test_complete_game_lifecycle_with_new_game(self):
         """Test complete lifecycle: start game, answer questions, start new game, answer more questions."""

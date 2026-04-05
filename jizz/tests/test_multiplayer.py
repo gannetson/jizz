@@ -282,8 +282,8 @@ class MultiplayerGameTestCase(TestCase):
         )
         self.assertTrue(game.can_advance_to_next_question())
 
-    def test_start_game_duplicate_would_skip_rounds_if_unguarded(self):
-        """Once a question exists, a second add_question (duplicate start_game) creates another round."""
+    def test_duplicate_add_question_does_not_skip_round(self):
+        """Second add_question while the round is unanswered returns the same question."""
         game = Game.objects.create(
             country=self.country,
             level='beginner',
@@ -294,10 +294,10 @@ class MultiplayerGameTestCase(TestCase):
             include_rare=True,
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
-        game.add_question()
+        q1 = game.add_question()
+        q2 = game.add_question()
+        self.assertEqual(q1.id, q2.id)
         self.assertEqual(game.questions.count(), 1)
-        game.add_question()
-        self.assertEqual(game.questions.count(), 2)
 
     def test_player_scores_update_correctly_in_multiplayer(self):
         """Test that player scores update correctly when multiple players answer."""

@@ -279,23 +279,31 @@ class Game(models.Model):
     def add_question(self):
         """
         Generate a new question for this game.
-        
-        Process:
+
+        If there is already an active (undone) round that is not finished yet
+        (no host answer — see ``can_advance_to_next_question``), returns that
+        question and does not create another. This makes duplicate WebSocket/API
+        calls idempotent and prevents skipped rounds.
+
+        Process when advancing:
         1. Mark all previous undone questions as done
-        2. Check if game should end (sequence > length)
-        3. Select random species based on game filters
-        4. Select random media item for the species
-        5. Generate answer options based on game level
-        6. Create Question and QuestionOption instances
-        
+        2. Select random species based on game filters
+        3. Select random media item for the species
+        4. Generate answer options based on game level
+        5. Create Question and QuestionOption instances
+
         Returns:
             Question instance or None if game has ended
-            
+
         Note: Questions are generated lazily (on-demand) rather than
         all at once. This allows for dynamic game progression.
-        
+
         See docs/GAME_LIFECYCLE.md for detailed documentation.
         """
+        current = self.question
+        if current is not None and not self.can_advance_to_next_question():
+            return current
+
         self.questions.filter(done=False).update(done=True)
         statuses = ['native', 'endemic']
         if self.include_rare:

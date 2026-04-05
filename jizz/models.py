@@ -443,14 +443,37 @@ class Game(models.Model):
 
         elif self.level == 'beginner':
             # Distractors must be at least 20 away from answer by species id
-            far_species = all_species.exclude(id=species.id).filter(
-                models.Q(id__lte=species.id - 20) | models.Q(id__gte=species.id + 20)
+            far_species = (
+                all_species.exclude(id=species.id)
+                .filter(
+                    models.Q(id__lte=species.id - 20)
+                    | models.Q(id__gte=species.id + 20)
+                )
+                .distinct()
             )
-            options = list(far_species.order_by('?')[:3])
+            # Joins on all_species can multiply rows; [:3] after order_by('?') may repeat the same PK.
+            distractor_ids = set()
+            options = []
+            for s in far_species.order_by('?'):
+                if len(options) >= 3:
+                    break
+                if s.id in distractor_ids:
+                    continue
+                distractor_ids.add(s.id)
+                options.append(s)
             # If not enough far species, fill with any other species (excluding answer)
             if len(options) < 3:
-                remaining = all_species.exclude(id=species.id).exclude(id__in=[s.id for s in options])
-                for s in remaining.order_by('?')[: 3 - len(options)]:
+                remaining = (
+                    all_species.exclude(id=species.id)
+                    .exclude(id__in=distractor_ids)
+                    .distinct()
+                )
+                for s in remaining.order_by('?'):
+                    if len(options) >= 3:
+                        break
+                    if s.id in distractor_ids:
+                        continue
+                    distractor_ids.add(s.id)
                     options.append(s)
             question = self.questions.create(
                 species=species, number=number, sequence=sequence
@@ -482,6 +505,22 @@ class Game(models.Model):
             Question instance or None if no active question exists
         """
         return self.questions.filter(done=False).order_by('sequence').first()
+
+    def can_advance_to_next_question(self):
+        """
+        True when the current round may be closed and a new one created.
+
+        Requires an answer from the game host on the current question so duplicate
+        ``next_question`` / ``start_game`` WebSocket actions cannot skip rounds.
+        If ``host`` is unset, any answer on the current question suffices.
+        """
+        current = self.question
+        if current is None:
+            return False
+        host = self.host
+        if host is None:
+            return current.answers.exists()
+        return current.answers.filter(player_score__player_id=host.id).exists()
 
     @property
     def progress(self):

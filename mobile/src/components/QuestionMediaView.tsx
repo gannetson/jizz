@@ -83,50 +83,57 @@ export function QuestionMediaView({
     onMediaReady();
   }, [onMediaReady]);
 
+  function wikimediaMp4(url: string) {
+    // iOS doesn't support webm, ogv, ogg video; use Wikimedia transcoded mov
+    const match = url.match(/.*commons\/(.+\/.+\/.+\.(webm|ogv|ogg))$/i);
+    if (!match) return url;
+    const path = match[1];
+    const filename = path.split('/').pop();
+    return `https://upload.wikimedia.org/wikipedia/commons/transcoded/${path}/${filename}.144p.mjpeg.mov`;
+  }
+
+  const displayVideoUri =
+    mediaType === 'video' && videoUri
+      ? Platform.OS === 'ios'
+        ? wikimediaMp4(videoUri)
+        : videoUri
+      : null;
+
   React.useEffect(() => {
     mediaReadyOnce.current = false;
-  }, [imageUri, videoUri, soundUri, mediaType]);
+  }, [imageUri, videoUri, soundUri, mediaType, displayVideoUri]);
 
   const hasMedia =
     (mediaType === 'images' && (imageUri || imageError !== undefined)) ||
-    (mediaType === 'video' && videoUri) ||
+    (mediaType === 'video' && !!displayVideoUri) ||
     (mediaType === 'audio' && soundUri);
-
-    function wikimediaMp4(url: string, quality = "480p") {
-      // iOS doesn't support webm, ogv, ogg video; use Wikimedia transcoded mov
-      const match = url.match(/.*commons\/(.+\/.+\/.+\.(webm|ogv|ogg))$/i)
-      if (!match) return url
-
-      const path = match[1]
-      const filename = path.split("/").pop()
-      return`https://upload.wikimedia.org/wikipedia/commons/transcoded/${path}/${filename}.144p.mjpeg.mov`
-    }
-    
-    videoUri = Platform.OS === "ios" && videoUri? wikimediaMp4(videoUri) : videoUri
 
   // Configure audio session for video playback on iOS so video has sound and native controls work
   React.useEffect(() => {
-    if (mediaType !== 'video' || !videoUri) return;
+    if (mediaType !== 'video' || !displayVideoUri) return;
     setAudioModeAsync({
       playsInSilentMode: false,
       allowsRecording: false,
       shouldPlayInBackground: false,
       interruptionMode: 'duckOthers',
     }).catch(() => {});
-  }, [mediaType, videoUri]);
+  }, [mediaType, displayVideoUri]);
 
-  const videoPlayer = useVideoPlayer(mediaType === 'video' && videoUri ? videoUri : null, (player) => {
-    if (mediaType === 'video' && videoUri) player.play();
-  });
+  const videoPlayer = useVideoPlayer(
+    mediaType === 'video' && displayVideoUri ? displayVideoUri : null,
+    (player) => {
+      if (mediaType === 'video' && displayVideoUri) player.play();
+    }
+  );
 
   React.useEffect(() => {
-    if (mediaType === 'video' && videoUri && onMediaReady) {
+    if (mediaType === 'video' && displayVideoUri && onMediaReady) {
       const sub = videoPlayer.addListener('statusChange', ({ status }: { status: string }) => {
         if (status === 'readyToPlay') fireMediaReady();
       });
       return () => sub.remove();
     }
-  }, [mediaType, videoUri, videoPlayer, onMediaReady, fireMediaReady]);
+  }, [mediaType, displayVideoUri, videoPlayer, onMediaReady, fireMediaReady]);
 
   React.useEffect(() => {
     if (mediaType === 'audio' && soundUri) fireMediaReady();
@@ -187,9 +194,10 @@ export function QuestionMediaView({
         </>
       )}
 
-      {mediaType === 'video' && videoUri && (
+      {mediaType === 'video' && displayVideoUri && (
         <>
           <VideoView
+            key={displayVideoUri}
             player={videoPlayer}
             style={[styles.video, videoHeight != null && { height: videoHeight }]}
             nativeControls={true}

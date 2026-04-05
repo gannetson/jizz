@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
+import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getProfile } from '../api/profile';
@@ -74,7 +75,9 @@ export function StartScreen() {
     loading,
     createGame,
     loadStoredPlayer,
+    setGame,
   } = useGame();
+  const { joinGame } = useGameWebSocket();
 
   const [countries, setCountries] = useState<Country[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -193,6 +196,7 @@ export function StartScreen() {
       return;
     }
     try {
+      joinGame(null, null, setGame);
       const game = await createGame();
       if (game) {
         (navigation as any).navigate('Lobby', {

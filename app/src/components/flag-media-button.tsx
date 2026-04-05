@@ -11,6 +11,8 @@ type FlagMediaButtonProps = {
   fontSize?: string;
   color?: string;
   onClick?: (e: React.MouseEvent) => void;
+  /** After a successful flag (e.g. advance to next image/video in the question). */
+  onFlagSuccess?: () => void;
 };
 
 /**
@@ -22,7 +24,8 @@ export function FlagMediaButton({
   media, 
   fontSize = "sm", 
   color = "error.700",
-  onClick 
+  onClick,
+  onFlagSuccess,
 }: FlagMediaButtonProps) {
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
 
@@ -64,6 +67,7 @@ export function FlagMediaButton({
           link: media.link,
           contributor: media.contributor,
         }}
+        onSuccess={onFlagSuccess}
       />
     </>
   );

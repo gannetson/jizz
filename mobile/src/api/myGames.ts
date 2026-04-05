@@ -92,8 +92,18 @@ export type GameDetailWithAnswers = {
 
 export async function getMyGames(page: number = 1): Promise<PaginatedGamesResponse> {
   const headers = await getAuthHeaders();
-  const url = `${apiUrl('/api/my-games/')}?page=${page}`;
-  const response = await fetch(url, { method: 'GET', headers });
+  const u = new URL(apiUrl('/api/my-games/'));
+  u.searchParams.set('page', String(page));
+  u.searchParams.set('_', String(Date.now()));
+  const response = await fetch(u.toString(), {
+    method: 'GET',
+    headers: {
+      ...headers,
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+  });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) {
@@ -108,7 +118,17 @@ export async function getMyGames(page: number = 1): Promise<PaginatedGamesRespon
 /** Get game details with all questions and user's answers */
 export async function getGameDetail(token: string): Promise<GameDetailWithAnswers> {
   const headers = await getAuthHeaders();
-  const response = await fetch(apiUrl(`/api/my-games/${token}/`), { method: 'GET', headers });
+  const u = new URL(apiUrl(`/api/my-games/${encodeURIComponent(token)}/`));
+  u.searchParams.set('_', String(Date.now()));
+  const response = await fetch(u.toString(), {
+    method: 'GET',
+    headers: {
+      ...headers,
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+  });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) throw new Error('Unauthorized');

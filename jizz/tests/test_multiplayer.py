@@ -248,6 +248,57 @@ class MultiplayerGameTestCase(TestCase):
         self.assertIsNotNone(existing_answer)
         self.assertEqual(existing_answer.id, answer1.id)
 
+    def test_can_advance_to_next_question_requires_host_answer(self):
+        """MPG must not advance until the host has submitted an answer for the current round."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+        ps_host, _ = PlayerScore.objects.get_or_create(
+            player=self.player1, game=game
+        )
+        ps_guest, _ = PlayerScore.objects.get_or_create(
+            player=self.player2, game=game
+        )
+        question = game.add_question()
+        self.assertFalse(game.can_advance_to_next_question())
+
+        Answer.objects.create(
+            player_score=ps_guest,
+            question=question,
+            answer=question.species,
+        )
+        self.assertFalse(game.can_advance_to_next_question())
+
+        Answer.objects.create(
+            player_score=ps_host,
+            question=question,
+            answer=question.species,
+        )
+        self.assertTrue(game.can_advance_to_next_question())
+
+    def test_start_game_duplicate_would_skip_rounds_if_unguarded(self):
+        """Once a question exists, a second add_question (duplicate start_game) creates another round."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+            include_rare=True,
+        )
+        PlayerScore.objects.get_or_create(player=self.player1, game=game)
+        game.add_question()
+        self.assertEqual(game.questions.count(), 1)
+        game.add_question()
+        self.assertEqual(game.questions.count(), 2)
+
     def test_player_scores_update_correctly_in_multiplayer(self):
         """Test that player scores update correctly when multiple players answer."""
         # Create a multiplayer game

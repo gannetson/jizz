@@ -67,10 +67,14 @@ export async function createGame(
 }
 
 export async function loadGame(token: string): Promise<Game | null> {
-  const response = await fetch(apiUrl(`/api/games/${encodeURIComponent(token)}/`), {
-    method: 'GET',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-  });
+  const response = await fetch(
+    apiUrl(`/api/games/${encodeURIComponent(token)}/?t=${Date.now()}`),
+    {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    }
+  );
   if (!response.ok) return null;
   const data = await response.json();
   return data as Game;

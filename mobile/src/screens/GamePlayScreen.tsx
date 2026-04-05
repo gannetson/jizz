@@ -218,11 +218,29 @@ export function GamePlayScreen() {
   const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
   const done = gameLength <= (question?.sequence ?? 0);
 
+  /** Server `answer_checked` for this question id — not stale state or mid-submit. */
+  const resultsReadyForCurrentQuestion =
+    !!question &&
+    !!answer &&
+    submittingId === null &&
+    (() => {
+      const qid = (answer as { question_id?: number }).question_id;
+      if (qid != null && Number(qid) === question.id) return true;
+      if (answer.question?.id != null && answer.question.id === question.id) return true;
+      return (
+        answer.sequence != null &&
+        question.sequence != null &&
+        answer.sequence === question.sequence
+      );
+    })();
+
   const handleEndGame = () => {
+    if (!resultsReadyForCurrentQuestion) return;
     endGameSession();
   };
 
   const handleNext = () => {
+    if (!resultsReadyForCurrentQuestion) return;
     setShowFeedback(false);
     nextQuestion();
   };
@@ -375,11 +393,11 @@ export function GamePlayScreen() {
       />
 
       <View style={styles.nextSection}>
-        {done && answer ? (
+        {done && resultsReadyForCurrentQuestion ? (
           <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
             <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
           </TouchableOpacity>
-        ) : isHost && answer ? (
+        ) : isHost && resultsReadyForCurrentQuestion ? (
           <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
             <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
           </TouchableOpacity>

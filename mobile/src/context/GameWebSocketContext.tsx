@@ -107,6 +107,12 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
+      // Avoid duplicate start_game when the socket opens (queued flush would run twice).
+      if (payload.action === 'start_game') {
+        if (pendingActionsRef.current.some((p) => p.action === 'start_game')) {
+          return;
+        }
+      }
       pendingActionsRef.current.push(payload);
     },
     []
@@ -298,6 +304,10 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         currentSocketRef.current = null;
         socket.close();
         setSocket(undefined);
+      }
+      if (!canJoin) {
+        playerTokenRef.current = '';
+        gameTokenRef.current = '';
       }
       setQuestion(undefined);
       setAnswer(undefined);

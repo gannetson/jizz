@@ -119,7 +119,10 @@ class QuizConsumer(AsyncWebsocketConsumer):
             return GameSerializer(game).data
 
         try:
-            game_data = await sync_to_async(load_game_and_payload)()
+            # Use database_sync_to_async (not plain sync_to_async) so ORM runs in a DB-safe
+            # thread context; otherwise Django can raise SynchronousOnlyOperation and the
+            # client shows "You cannot call this from an async context".
+            game_data = await database_sync_to_async(load_game_and_payload)()
         except ObjectDoesNotExist:
             await self.send(
                 text_data=json.dumps(
@@ -167,10 +170,21 @@ class QuizConsumer(AsyncWebsocketConsumer):
     async def _handle_start_game(self, data):
         from .models import Game
 
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        if hasattr(game, "started"):
-            game.started = True
-            await sync_to_async(game.save)()
+        def prepare_start():
+            game = Game.objects.get(token=self.game_token)
+            # Idempotent: duplicate start_game (e.g. queued WebSocket actions) must not
+            # call add_question twice or rounds are skipped with no answers.
+            if game.questions.exists():
+                return False
+            return True
+
+        should_run = await database_sync_to_async(prepare_start)()
+        if not should_run:
+            logger.info(
+                "Ignoring duplicate start_game for game %s (questions already exist)",
+                self.game_token,
+            )
+            return
 
         await self.send(text_data=json.dumps({"action": "game_started"}))
         await self.channel_layer.group_send(
@@ -180,6 +194,18 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self._run_next_question()
 
     async def _handle_next_question(self, data):
+        from .models import Game
+
+        def can_advance():
+            game = Game.objects.get(token=self.game_token)
+            return game.can_advance_to_next_question()
+
+        if not await database_sync_to_async(can_advance)():
+            logger.info(
+                "Ignoring next_question for game %s (host has not answered current round)",
+                self.game_token,
+            )
+            return
         await self._run_next_question()
 
     async def _handle_submit_answer(self, data):

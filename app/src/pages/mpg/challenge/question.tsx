@@ -35,6 +35,7 @@ export const ChallengeQuestion = () => {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<Answer | null>(null)
   const [mediaReady, setMediaReady] = useState(false)
+  const [mediaIndex, setMediaIndex] = useState<number | null>(null)
   const mediaPostedForQuestionId = useRef<number | null>(null)
   const rotate = keyframes`
     from {
@@ -53,10 +54,29 @@ export const ChallengeQuestion = () => {
     }
   }, [question, level])
 
+  const currentMediaIndex =
+    question != null ? (mediaIndex ?? question.number ?? 0) : 0
+
+  useEffect(() => {
+    if (question) setMediaIndex(question.number ?? 0)
+  }, [question?.id])
+
   useEffect(() => {
     mediaPostedForQuestionId.current = null
     setMediaReady(false)
-  }, [question?.id])
+  }, [question?.id, currentMediaIndex])
+
+  const handleFlagSuccess = useCallback(() => {
+    if (!question) return
+    const g = countryChallenge?.levels?.[0]?.game
+    if (!g) return
+    let maxIndex = 0
+    if (g.media === 'images' && question.images?.length) maxIndex = question.images.length - 1
+    else if (g.media === 'video' && question.videos?.length) maxIndex = question.videos.length - 1
+    else if (g.media === 'audio' && question.sounds?.length) maxIndex = question.sounds.length - 1
+    const idx = mediaIndex ?? question.number ?? 0
+    setMediaIndex(idx >= maxIndex ? 0 : idx + 1)
+  }, [question, countryChallenge?.levels, mediaIndex])
 
   const notifyMediaReady = useCallback(() => {
     setMediaReady(true)
@@ -167,9 +187,10 @@ export const ChallengeQuestion = () => {
           {game.media === 'video' && (
             <>
               <ReactPlayer
+                key={`${question.id}-video-${currentMediaIndex}`}
                 width={'100%'}
                 height={'50%'}
-                url={question.videos[question.number].url}
+                url={question.videos[currentMediaIndex].url}
                 controls={true}
                 playing={true}
                 onReady={notifyMediaReady}
@@ -178,7 +199,8 @@ export const ChallengeQuestion = () => {
           )}
           {game.media === 'images' && (
             <Image
-              src={question.images[question.number].url.replace('/1800', '/900')}
+              key={`${question.id}-img-${currentMediaIndex}`}
+              src={question.images[currentMediaIndex].url.replace('/1800', '/900')}
               onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
@@ -190,9 +212,10 @@ export const ChallengeQuestion = () => {
           {game.media === 'audio' && (
             <Box py={8}>
               <ReactPlayer
+                key={`${question.id}-audio-${currentMediaIndex}`}
                 width={'100%'}
                 height={'50px'}
-                url={question.sounds[question.number].url}
+                url={question.sounds[currentMediaIndex].url}
                 controls={true}
                 playing={true}
                 onReady={notifyMediaReady}
@@ -201,14 +224,14 @@ export const ChallengeQuestion = () => {
 
           )}
           <Flex justifyContent={'end'}>
-            {game.media === 'video' && question.videos[question.number] && (
-              <FlagMediaButton media={question.videos[question.number]} />
+            {game.media === 'video' && question.videos[currentMediaIndex] && (
+              <FlagMediaButton media={question.videos[currentMediaIndex]} onFlagSuccess={handleFlagSuccess} />
             )}
-            {game.media === 'images' && question.images[question.number] && (
-              <FlagMediaButton media={question.images[question.number]} />
+            {game.media === 'images' && question.images[currentMediaIndex] && (
+              <FlagMediaButton media={question.images[currentMediaIndex]} onFlagSuccess={handleFlagSuccess} />
             )}
-            {game.media === 'audio' && question.sounds[question.number] && (
-              <FlagMediaButton media={question.sounds[question.number]} />
+            {game.media === 'audio' && question.sounds[currentMediaIndex] && (
+              <FlagMediaButton media={question.sounds[currentMediaIndex]} onFlagSuccess={handleFlagSuccess} />
             )}
           </Flex>
         </Box>

@@ -87,9 +87,12 @@ class GamesService {
         {
           params: {
             page: page,
+            _: Date.now(),
           },
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
           },
         }
       );
@@ -105,10 +108,13 @@ class GamesService {
   async getGameDetail(token: string): Promise<GameDetailWithAnswers> {
     try {
       const response = await axios.get<GameDetailWithAnswers>(
-        `${this.baseURL}/api/my-games/${token}/`,
+        `${this.baseURL}/api/my-games/${encodeURIComponent(token)}/`,
         {
+          params: { _: Date.now() },
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
           },
         }
       );

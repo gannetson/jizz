@@ -1367,6 +1367,13 @@ class RegisterView(APIView):
         )
 
 
+def _set_no_cache_headers(response):
+    """Per-user data must not be stored by browsers or intermediaries."""
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    return response
+
+
 class UserGamesView(ListAPIView):
     """
     Get paginated list of games played by the authenticated user
@@ -1379,6 +1386,10 @@ class UserGamesView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserGameSerializer
     pagination_class = PageNumberPagination
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return _set_no_cache_headers(response)
     
     def get_queryset(self):
         user_players = Player.objects.filter(user=self.request.user)
@@ -1412,6 +1423,10 @@ class UserGameDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = GameDetailWithAnswersSerializer
     lookup_field = "token"
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        return _set_no_cache_headers(response)
     
     def get_queryset(self):
         user_players = Player.objects.filter(user=self.request.user)

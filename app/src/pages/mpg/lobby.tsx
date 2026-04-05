@@ -14,11 +14,12 @@ import AppStoreBanner from '../../components/app-store-banner'
 
 const Lobby: React.FC = () => {
 
-  const gameToken = localStorage.getItem('game-token')
   const [copied2, setCopied2] = useState(false)
   const {players, startGame, question} = useContext(WebsocketContext)
   const {player, game} = useContext(AppContext)
   const navigate = useNavigate()
+  const gameTokenFromStorage = localStorage.getItem('game-token')
+  const gameToken = game?.token ?? gameTokenFromStorage
 
   const gameLink = `${window.location.origin}/join/${gameToken}`
 

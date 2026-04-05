@@ -258,6 +258,12 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     // Socket is not open – queue the action and (re)connect before sending.
     if (game?.token) {
       console.warn("Socket not open, queueing action and reconnecting:", (data as any).action)
+      if (
+        (data as any).action === 'start_game' &&
+        pendingActionsRef.current.some((p: any) => p.action === 'start_game')
+      ) {
+        return
+      }
       pendingActionsRef.current.push(data)
       if (!isConnectingRef.current) {
         isConnectingRef.current = true

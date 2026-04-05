@@ -97,6 +97,8 @@ export function ChallengePlayScreen() {
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
   const [expertQuery, setExpertQuery] = useState('');
   const [mediaReady, setMediaReady] = useState(false);
+  /** After flagging, advance to next media item (same as MPG GamePlayScreen). */
+  const [mediaIndex, setMediaIndex] = useState<number | null>(null);
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
@@ -143,8 +145,12 @@ export function ChallengePlayScreen() {
   }, [loadQuestion]);
 
   useEffect(() => {
-    setMediaReady(false);
+    if (question) setMediaIndex(question.number ?? 0);
   }, [question?.id]);
+
+  useEffect(() => {
+    setMediaReady(false);
+  }, [question?.id, mediaIndex]);
 
   useEffect(() => {
     if (!gameToken) return;
@@ -247,16 +253,29 @@ export function ChallengePlayScreen() {
   const options = question?.options ?? [];
   const hasOptions = options.length > 0;
 
-  const image = question?.images?.[question.number];
-  const video = question?.videos?.[question.number];
-  const soundForAudio = question?.sounds?.[question?.number ?? 0];
+  const currentMediaIdx = question != null ? (mediaIndex ?? question.number ?? 0) : 0;
+  const image = question?.images?.[currentMediaIdx];
+  const video = question?.videos?.[currentMediaIdx];
+  const soundForAudio = question?.sounds?.[currentMediaIdx];
   const soundUri = soundForAudio?.url ? (soundForAudio.url.startsWith('http') ? soundForAudio.url : apiUrl(soundForAudio.url)) : null;
   const imageUri = image?.url ? (image.url.startsWith('http') ? image.url : apiUrl(image.url)).replace('/1800', '/900') : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
 
+  const onFlagSuccess = useCallback(() => {
+    if (!question) return;
+    setFlagModalVisible(false);
+    setFlagMediaInfo(null);
+    let maxIndex = 0;
+    if (mediaType === 'images' && question.images?.length) maxIndex = question.images.length - 1;
+    else if (mediaType === 'video' && question.videos?.length) maxIndex = question.videos.length - 1;
+    else if (mediaType === 'audio' && question.sounds?.length) maxIndex = question.sounds.length - 1;
+    const idx = mediaIndex ?? question.number ?? 0;
+    setMediaIndex(idx >= maxIndex ? 0 : idx + 1);
+  }, [question, mediaType, mediaIndex]);
+
   const openFlagModal = useCallback(() => {
     if (!question) return;
-    const idx = question.number ?? 0;
+    const idx = mediaIndex ?? question.number ?? 0;
     let mediaData: FlagMediaInfo | null = null;
     if (mediaType === 'images' && question.images?.[idx]) {
       const item = question.images[idx] as { id?: number; url: string; link?: string; contributor?: string };
@@ -293,7 +312,7 @@ export function ChallengePlayScreen() {
       setFlagMediaInfo(mediaData);
       setFlagModalVisible(true);
     }
-  }, [question, mediaType]);
+  }, [question, mediaType, mediaIndex]);
 
   const checkLevelEndAndNavigate = useCallback(async () => {
     const token = await getStoredChallengePlayerToken();
@@ -464,7 +483,7 @@ export function ChallengePlayScreen() {
           videoUri={videoUri}
           videoMedia={video}
           soundUri={soundUri}
-          soundMedia={sound}
+          soundMedia={soundForAudio && typeof soundForAudio === 'object' ? soundForAudio : undefined}
           onPlaySound={playSound}
           soundPlaying={soundPlaying}
           pulsatingStyle={pulsatingStyle}
@@ -704,6 +723,7 @@ export function ChallengePlayScreen() {
         onClose={() => { setFlagModalVisible(false); setFlagMediaInfo(null); }}
         media={flagMediaInfo}
         playerToken={challengePlayerToken}
+        onSuccess={onFlagSuccess}
       />
     </ScrollView>
       )}

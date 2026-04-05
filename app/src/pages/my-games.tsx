@@ -12,7 +12,7 @@ import {
   AlertIndicator,
 } from "@chakra-ui/react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { gamesService, PaginatedGamesResponse } from "../api/services/games.service";
 import { authService } from "../api/services/auth.service";
 import { Page } from "../shared/components/layout";
@@ -21,6 +21,7 @@ import { GameRow } from "../components/game-row";
 
 export const MyGamesPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +61,8 @@ export const MyGamesPage = () => {
     };
 
     loadGames();
-  }, [currentPage, navigate]);
+    // location.key: refetch when navigating to this screen again (browser must not reuse stale list).
+  }, [currentPage, navigate, location.key]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

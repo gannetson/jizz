@@ -66,7 +66,7 @@ export function GamePlayScreen() {
   const gameTokenParam = (route.params as { gameToken?: string })?.gameToken;
   const playerTokenParam = (route.params as { playerToken?: string })?.playerToken;
   const { game, player, setGame, setPlayer, loadGame } = useGame();
-  const { question, answer, players, nextQuestion, submitAnswer, joinGame, startGame, connected } = useGameWebSocket();
+  const { question, answer, players, nextQuestion, submitAnswer, joinGame, startGame, connected, endGameSession } = useGameWebSocket();
   const dailyChallengeStartSent = useRef(false);
   const [dailyChallengeLoadTimeout, setDailyChallengeLoadTimeout] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -219,7 +219,7 @@ export function GamePlayScreen() {
   const done = gameLength <= (question?.sequence ?? 0);
 
   const handleEndGame = () => {
-    (navigation as any).navigate('GameResults', { dailyChallengeId });
+    endGameSession();
   };
 
   const handleNext = () => {

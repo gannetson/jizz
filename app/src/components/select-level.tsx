@@ -1,8 +1,21 @@
-import {Box, Flex, Heading, RadioGroup, Text} from "@chakra-ui/react";
-import {useContext} from "react";
+import {Box, Heading, RadioCard} from "@chakra-ui/react";
+import {useContext, type ComponentType, type ReactNode} from "react";
 import AppContext from "../core/app-context";
-import {FormattedMessage} from "react-intl"
+import {FormattedMessage} from "react-intl";
 
+/** Chakra RadioCard slot typings omit `children` / conflict with Ark props; runtime is fine. */
+const RcItem = RadioCard.Item as unknown as ComponentType<{
+  value: string;
+  w?: string;
+  children?: ReactNode;
+}>;
+const RcItemText = RadioCard.ItemText as unknown as ComponentType<{
+  children?: ReactNode;
+}>;
+const RcItemDescription = RadioCard.ItemDescription as unknown as ComponentType<{
+  fontSize?: string;
+  children?: ReactNode;
+}>;
 
 const SelectLevel = () => {
   const {level, setLevel} = useContext(AppContext);
@@ -11,62 +24,63 @@ const SelectLevel = () => {
     <Box>
       <Heading size={'md'} mb={4}>
         <FormattedMessage id={'level'} defaultMessage={'Level'} />
-
       </Heading>
-      <RadioGroup.Root colorPalette="primary" onValueChange={(e: { value?: string }) => e.value && setLevel(e.value)} value={level}>
-        <Flex direction={'column'} gap={4}>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value='beginner' colorPalette="primary">
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl cursor="pointer">
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>
-                <Text>
+      <RadioCard.Root
+        colorPalette="primary"
+        variant="surface"
+        size="md"
+        value={level}
+        onValueChange={(details: { value: string | null }) =>
+          details.value && setLevel(details.value)}
+        w="100%"
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
+          <RcItem value="beginner" w="100%">
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <RadioCard.ItemContent>
+                <RcItemText>
                   <FormattedMessage id={'beginner'} defaultMessage={'Beginner'} />
-                </Text>
-                <Text fontSize={'xs'}>
+                </RcItemText>
+                <RcItemDescription fontSize="xs">
                   <FormattedMessage id={'simple multiple choice'} defaultMessage={'Very easy multiple choice'} />
-                </Text>
-              </RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value='advanced' colorPalette="primary">
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>
-                <Text>
+                </RcItemDescription>
+              </RadioCard.ItemContent>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RcItem>
+          <RcItem value="advanced" w="100%">
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <RadioCard.ItemContent>
+                <RcItemText>
                   <FormattedMessage id={'advanced'} defaultMessage={'Advanced'} />
-                </Text>
-                <Text fontSize={'xs'}>
+                </RcItemText>
+                <RcItemDescription fontSize="xs">
                   <FormattedMessage id={'hard multiple choice'} defaultMessage={'Multiple choice with similar species'} />
-                </Text>
-              </RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value='expert' colorPalette="primary">
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl cursor="pointer">
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>
-                <Text>
+                </RcItemDescription>
+              </RadioCard.ItemContent>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RcItem>
+          <RcItem value="expert" w="100%">
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <RadioCard.ItemContent>
+                <RcItemText>
                   <FormattedMessage id={'expert'} defaultMessage={'Expert'} />
-                </Text>
-                <Text fontSize={'xs'}>
+                </RcItemText>
+                <RcItemDescription fontSize="xs">
                   <FormattedMessage id={'text input'} defaultMessage={'Text input (with auto complete)'} />
-                </Text>
-              </RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-        </Flex>
-      </RadioGroup.Root>
+                </RcItemDescription>
+              </RadioCard.ItemContent>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RcItem>
+        </Box>
+      </RadioCard.Root>
     </Box>
-  )
+  );
 };
 
 export default SelectLevel;

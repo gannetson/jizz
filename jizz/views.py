@@ -681,6 +681,8 @@ class PlayerScoreListView(ListAPIView):
     def get_queryset(self):
         return (
             PlayerScore.objects
+            .filter(Q(game__tax_order='') | Q(game__tax_order__isnull=True))
+            .filter(Q(game__tax_family='') | Q(game__tax_family__isnull=True))
             .select_related("player", "game", "game__country")
             .annotate(
                 score_rank=Window(

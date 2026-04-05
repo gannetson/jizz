@@ -72,11 +72,23 @@ const AppContextProvider: FC<Props> = ({children}) => {
 
   // Load profile when authenticated (for species language preference)
   useEffect(() => {
-    if (authService.getAccessToken()) {
-      profileService.getProfile()
+    let cancelled = false;
+    (async () => {
+      if (!authService.getAccessToken()) {
+        setProfile(null);
+        return;
+      }
+      const ok = await authService.ensureValidAccessToken();
+      if (cancelled) return;
+      if (!ok || !authService.getAccessToken()) {
+        setProfile(null);
+        return;
+      }
+      profileService
+        .getProfile()
         .then((p) => {
+          if (cancelled) return;
           setProfile(p);
-          // Sync language from profile if user never set it in this browser
           try {
             if (p.language && !localStorage.getItem('birdr-language')) {
               setLanguage(p.language);
@@ -86,10 +98,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
             /* ignore */
           }
         })
-        .catch(() => setProfile(null));
-    } else {
-      setProfile(null);
-    }
+        .catch(() => {
+          if (!cancelled) setProfile(null);
+        });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const setUserPreferredLanguage = useCallback((lang: string) => {

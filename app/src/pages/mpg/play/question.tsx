@@ -26,14 +26,13 @@ import {AnswerFeedback} from "../../../components/answer-feedback"
 import {WaitingComponent} from "./waiting"
 import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
-import {useNavigate} from "react-router-dom"
 import SpeciesCombobox from "../../../components/species-combobox"
 import { ComparisonButton } from "../../../components/comparison-button"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
 
 export const QuestionComponent = () => {
   const {species, player, game, speciesLanguage} = useContext(AppContext)
-  const {players, nextQuestion, question, submitAnswer, answer} = useContext(WebsocketContext)
+  const {players, nextQuestion, question, submitAnswer, answer, endGame: endGameSession} = useContext(WebsocketContext)
   const {onOpen, onClose, open: isOpen} = useDisclosure()
   const [flagMediaInfo, setFlagMediaInfo] = useState<{
     type: 'image' | 'video' | 'audio'
@@ -51,10 +50,9 @@ export const QuestionComponent = () => {
   const mediaPostedKey = useRef<string | null>(null)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
-  const navigate = useNavigate()
 
   const endGame = () => {
-    navigate('/game/ended')
+    endGameSession()
   }
   const isHost = player?.name === game?.host?.name
   const viewSpecies = (species: Species) => {

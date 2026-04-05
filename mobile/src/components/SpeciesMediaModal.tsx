@@ -64,7 +64,7 @@ function speciesTitle(s: SpeciesMediaData, lang?: string): string {
 
 function VideoItem({ uri, width }: { uri: string; width: number }) {
   const player = useVideoPlayer(uri, (p: { play: () => void }) => {
-    p.play();
+    // p.play();
   });
   return (
     <VideoView
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 42,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.primary[200],

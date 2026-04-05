@@ -236,6 +236,10 @@ class Game(models.Model):
     include_rare = models.BooleanField(default=True)
     include_escapes = models.BooleanField(default=False)
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
+    force_ended = models.BooleanField(
+        default=False,
+        help_text='True when a player ended the session early (WebSocket end_game) before all rounds.',
+    )
 
     tax_family = models.CharField(
         'Taxonomic family',
@@ -264,6 +268,8 @@ class Game(models.Model):
 
     @property
     def ended(self):
+        if self.force_ended:
+            return True
         return self.questions.filter(done=True).count() >= self.length
 
     @property

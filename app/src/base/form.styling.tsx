@@ -1,5 +1,25 @@
 import { defineRecipe, defineSlotRecipe, defaultConfig } from '@chakra-ui/react'
 
+/** Chakra combobox slot names (same set as `comboboxAnatomy.keys()` in @chakra-ui/react). Fallback when preset slots are unavailable to TS. */
+const COMBOBOX_SLOT_NAMES = [
+  'root',
+  'label',
+  'control',
+  'input',
+  'trigger',
+  'clearTrigger',
+  'indicatorGroup',
+  'positioner',
+  'content',
+  'list',
+  'item',
+  'itemText',
+  'itemIndicator',
+  'itemGroup',
+  'itemGroupLabel',
+  'empty',
+] as const
+
 // Export both radio and checkbox themes
 
 /**
@@ -297,6 +317,98 @@ export const checkboxTheme = defineSlotRecipe({
       ...(defaultCheckboxRecipe?.base?.label ?? {}),
       fontWeight: 'medium',
       color: 'primary.700',
+    },
+  },
+})
+
+/** Preset combobox recipe; `base` slots use pseudo-keys like `_highlighted` — use a loose record for merges. */
+const defaultComboboxRecipe = defaultConfig.theme?.slotRecipes?.combobox as
+  | {
+      className?: string
+      slots?: readonly string[]
+      base?: Record<string, Record<string, unknown>>
+    }
+  | undefined
+
+const comboboxSlots: readonly string[] =
+  defaultComboboxRecipe?.slots ?? COMBOBOX_SLOT_NAMES
+
+/**
+ * Combobox theme – align with `select` / `input` (primary border, white panel, item hover/checked).
+ * Use `<Combobox.Root variant="outline" size="md" colorPalette="primary" />` in screens; avoid per-instance panel styles.
+ */
+export const comboboxTheme = defineSlotRecipe({
+  className: defaultComboboxRecipe?.className ?? 'chakra-combobox',
+  slots: [...comboboxSlots],
+  base: {
+    ...(defaultComboboxRecipe?.base ?? {}),
+    root: {
+      ...(defaultComboboxRecipe?.base?.root ?? {}),
+      width: 'full',
+    },
+    control: {
+      ...(defaultComboboxRecipe?.base?.control ?? {}),
+      width: 'full',
+    },
+    input: {
+      ...(defaultComboboxRecipe?.base?.input ?? {}),
+      borderWidth: '2px',
+      borderColor: 'primary.300',
+      borderRadius: 'md',
+      fontWeight: 'bold',
+      color: 'primary.500',
+      bg: 'white',
+      _placeholderShown: {
+        color: 'primary.300',
+      },
+      _focusVisible: {
+        borderColor: 'primary.500',
+        boxShadow: '0 0 0 1px {colors.primary.500}',
+      },
+    },
+    indicatorGroup: {
+      ...(defaultComboboxRecipe?.base?.indicatorGroup ?? {}),
+      color: 'primary.500',
+    },
+    trigger: {
+      ...(defaultComboboxRecipe?.base?.trigger ?? {}),
+      color: 'primary.500',
+    },
+    clearTrigger: {
+      ...(defaultComboboxRecipe?.base?.clearTrigger ?? {}),
+      color: 'primary.400',
+    },
+    content: {
+      ...(defaultComboboxRecipe?.base?.content ?? {}),
+      borderWidth: '2px',
+      borderColor: 'primary.300',
+      boxShadow: 'xl',
+      bg: 'white',
+      borderRadius: 'md',
+      fontWeight: 'bold',
+      color: 'primary.500',
+    },
+    item: {
+      ...(defaultComboboxRecipe?.base?.item ?? {}),
+      transition: 'background-color 0.15s ease-in-out',
+      _highlighted: {
+        ...(defaultComboboxRecipe?.base?.item?._highlighted ?? {}),
+        bg: 'primary.50',
+      },
+      _disabled: {
+        ...(defaultComboboxRecipe?.base?.item?._disabled ?? {}),
+      },
+      '&[data-state="checked"]': {
+        bg: 'primary.100',
+      },
+    },
+    itemText: {
+      ...(defaultComboboxRecipe?.base?.itemText ?? {}),
+      color: 'primary.700',
+    },
+    empty: {
+      ...(defaultComboboxRecipe?.base?.empty ?? {}),
+      color: 'primary.400',
     },
   },
 })

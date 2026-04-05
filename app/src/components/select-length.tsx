@@ -1,8 +1,32 @@
-import {useContext} from "react";
+import {useContext, type ComponentType, type ReactNode} from "react";
 import AppContext from "../core/app-context";
-import {Box, Flex, Heading, RadioGroup, Text} from "@chakra-ui/react"
+import {Box, Flex, Heading, RadioCard, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import { getCountryDisplayName } from "../data/country-names-nl";
+
+/** Chakra RadioCard slot typings omit `children` / conflict with Ark props; runtime is fine. */
+const RcItem = RadioCard.Item as unknown as ComponentType<{
+  value: string;
+  w?: string;
+  children?: ReactNode;
+}>;
+const RcItemText = RadioCard.ItemText as unknown as ComponentType<{
+  children?: ReactNode;
+}>;
+
+function LengthRadioOption({ value }: { value: string }) {
+  return (
+    <RcItem value={value}>
+      <RadioCard.ItemHiddenInput />
+      <RadioCard.ItemControl>
+        <RadioCard.ItemContent>
+          <RcItemText>{value}</RcItemText>
+        </RadioCard.ItemContent>
+        <RadioCard.ItemIndicator />
+      </RadioCard.ItemControl>
+    </RcItem>
+  );
+}
 
 export const SelectLength = () => {
   const { length, setLength, country, language } = useContext(AppContext);
@@ -26,50 +50,20 @@ export const SelectLength = () => {
           />
         </Text>
       )}
-      <RadioGroup.Root
+      <RadioCard.Root
         colorPalette="primary"
+        variant="surface"
+        size="md"
         value={length || '10'}
-        onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
+        onValueChange={(details: { value: string | null }) =>
+          details.value && onChange(details.value)}
       >
-        <Flex direction={'row'} gap={4}>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'10'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>10</RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'20'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>20</RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'50'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>50</RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'100'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>100</RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
+        <Flex direction="row" gap={4} flexWrap="wrap">
+          {(['10', '20', '50', '100'] as const).map((v) => (
+            <LengthRadioOption key={v} value={v} />
+          ))}
         </Flex>
-      </RadioGroup.Root>
+      </RadioCard.Root>
     </Box>
   )
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -13,25 +13,53 @@ import type { MultiPlayer } from '../types/game';
 
 const LOBBY_POLL_INTERVAL_MS = 3000;
 
+type LobbyRouteParams = {
+  rematch_game_token?: string;
+  /** Only true when navigating from GameResults rematch; stale token without this must be ignored */
+  rematchJoin?: boolean;
+};
+
 export function LobbyScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
-  const rematchToken = (route.params as { rematch_game_token?: string })?.rematch_game_token;
+  const params = (route.params as LobbyRouteParams) ?? {};
+  const rematchToken = params.rematch_game_token;
+  const rematchJoin = params.rematchJoin === true;
   const { game, player, setGame, loadGame: loadGameFromApi } = useGame();
-  const { players, question, startGame, joinGame, connected } = useGameWebSocket();
+  const { players, question, startGame, joinGame, connected, clearQuestion } = useGameWebSocket();
 
   const [starting, setStarting] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const lobbyGameTokenRef = useRef<string | undefined>(undefined);
   const [topScores, setTopScores] = useState<Score[]>([]);
   const [refreshedGameScores, setRefreshedGameScores] = useState<MultiPlayer[]>([]);
 
-  // When arriving from "Join rematch", ensure we have the new game in context (param overrides stale context)
+  // Drop stale rematch params left merged on the route when opening Lobby from Start / deep link (not a rematch navigation)
   useEffect(() => {
-    if (!rematchToken || !player?.token) return;
-    if (game?.token === rematchToken) return;
-    loadGameFromApi(rematchToken).then((g) => g && setGame(g));
-  }, [rematchToken, player?.token, game?.token, loadGameFromApi, setGame]);
+    if (params.rematch_game_token && !rematchJoin) {
+      (navigation as any).setParams({ rematch_game_token: undefined, rematchJoin: undefined });
+    }
+  }, [params.rematch_game_token, rematchJoin, navigation]);
+
+  // When arriving from "Join rematch", load the new game; only when rematchJoin is set (avoids fighting createGame)
+  useEffect(() => {
+    if (!rematchToken || !player?.token || !rematchJoin) return;
+    if (game?.token === rematchToken) {
+      (navigation as any).setParams({ rematch_game_token: undefined, rematchJoin: undefined });
+      return;
+    }
+    let cancelled = false;
+    loadGameFromApi(rematchToken).then((g) => {
+      if (cancelled || !g) return;
+      setGame(g);
+      (navigation as any).setParams({ rematch_game_token: undefined, rematchJoin: undefined });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [rematchToken, rematchJoin, player?.token, game?.token, loadGameFromApi, setGame, navigation]);
 
   useEffect(() => {
     if (!game?.token || !player?.token) return;
@@ -39,23 +67,37 @@ export function LobbyScreen() {
     return () => {};
   }, [game?.token, player?.token]);
 
+  // Drop stale question / WS state from a previous game when the lobby game token changes
   useEffect(() => {
-    if (game?.token) {
-      loadGameFromApi(game.token).then((g) => {
-        if (g && g.scores?.length) {
-          setRefreshedGameScores(
-            g.scores.map((s, i) => ({
-              id: s.id ?? i,
-              name: s.name,
-              score: s.score,
-              is_host: s.is_host,
-            }))
-          );
-        }
-        if (g) setGame(g);
-      });
+    if (!game?.token) return;
+    if (lobbyGameTokenRef.current !== game.token) {
+      lobbyGameTokenRef.current = game.token;
+      clearQuestion();
     }
-  }, [game?.token]);
+  }, [game?.token, clearQuestion]);
+
+  useEffect(() => {
+    if (!game?.token) return;
+    const token = game.token;
+    let cancelled = false;
+    loadGameFromApi(token).then((g) => {
+      if (cancelled || !g || g.token !== token) return;
+      if (g.scores?.length) {
+        setRefreshedGameScores(
+          g.scores.map((s, i) => ({
+            id: s.id ?? i,
+            name: s.name,
+            score: s.score,
+            is_host: s.is_host,
+          }))
+        );
+      }
+      setGame(g);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.token, loadGameFromApi, setGame]);
 
   // Poll game so host sees new joiners even if WebSocket update_players was missed
   useEffect(() => {
@@ -80,12 +122,23 @@ export function LobbyScreen() {
   useEffect(() => {
     if (!question?.id || !game?.token) return;
     const qt = question.game?.token;
-    const sameGame =
-      qt == null || String(qt).trim() === '' || String(qt).trim() === String(game.token).trim();
-    if (sameGame) {
-      (navigation as any).navigate('GamePlay');
+    if (qt != null && String(qt).trim() !== '' && String(qt).trim() !== String(game.token).trim()) {
+      return;
     }
+    (navigation as any).navigate('GamePlay');
   }, [question, game?.token, navigation]);
+
+  const handleRefreshConnection = useCallback(async () => {
+    if (!game?.token || !player?.token) return;
+    setReconnecting(true);
+    try {
+      const g = await loadGameFromApi(game.token);
+      if (g) setGame(g);
+      joinGame(g ?? game, player, setGame, { force: true });
+    } finally {
+      setReconnecting(false);
+    }
+  }, [game, player, loadGameFromApi, setGame, joinGame]);
 
   useEffect(() => {
     if (!game) return;
@@ -160,7 +213,23 @@ export function LobbyScreen() {
             )}
           </TouchableOpacity>
         ) : (
-          <Text style={styles.muted}>{t('waiting_for_host')}</Text>
+          <View style={styles.clientWaitBlock}>
+            <Text style={styles.muted}>{t('waiting_for_host_to_start')}</Text>
+            <TouchableOpacity
+              style={[styles.refreshConnectionButton, reconnecting && styles.primaryButtonDisabled]}
+              onPress={handleRefreshConnection}
+              disabled={reconnecting}
+              accessibilityRole="button"
+              accessibilityLabel={t('refresh')}
+            >
+              {reconnecting ? (
+                <ActivityIndicator size="small" color={colors.primary[700]} />
+              ) : (
+                <Text style={styles.refreshConnectionButtonText}>{t('refresh')}</Text>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.refreshHint}>{t('lobby_refresh_hint')}</Text>
+          </View>
         )}
       </View>
 
@@ -282,6 +351,20 @@ const styles = StyleSheet.create({
   },
   primaryButtonDisabled: { opacity: 0.7 },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
+  clientWaitBlock: { gap: 12 },
+  refreshConnectionButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary[400],
+    backgroundColor: colors.primary[50],
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  refreshConnectionButtonText: { fontSize: 15, fontWeight: '600', color: colors.primary[800] },
+  refreshHint: { fontSize: 12, color: colors.primary[500], fontStyle: 'italic' },
   button: { marginTop: 16, paddingVertical: 12 },
   buttonText: { fontSize: 16, color: colors.primary[500] },
   errorText: { fontSize: 16, color: colors.error[500], textAlign: 'center', marginBottom: 12 },

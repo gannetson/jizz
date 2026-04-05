@@ -1,6 +1,6 @@
 import { createSystem, defaultConfig, defineGlobalStyles } from '@chakra-ui/react'
 import { buttonTheme } from './base/button.styling'
-import { linkTheme, inputTheme, selectTheme, textareaTheme, radioTheme, checkboxTheme } from './base/form.styling'
+import { linkTheme, inputTheme, selectTheme, textareaTheme, radioTheme, checkboxTheme, comboboxTheme } from './base/form.styling'
 import { dialogTheme } from './base/dialog.styling'
 import { sliderTheme } from './base/slider.styling'
 
@@ -171,6 +171,7 @@ export const system = createSystem({
     slotRecipes: {
       ...defaultConfig.theme?.slotRecipes,
       select: selectTheme,
+      combobox: comboboxTheme,
       radioGroup: radioTheme,
       checkbox: checkboxTheme,
       dialog: dialogTheme,

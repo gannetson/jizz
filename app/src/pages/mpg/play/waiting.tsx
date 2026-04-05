@@ -4,21 +4,19 @@ import React, {useCallback, useContext, useEffect} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
-import {useNavigate} from "react-router-dom"
 import {ViewSpecies} from "../../../components/view-species"
 import { AnswerFeedback } from "../../../components/answer-feedback"
 
 
 export const WaitingComponent = () => {
 
-  const {players, nextQuestion, question} = useContext(WebsocketContext)
+  const {players, nextQuestion, question, endGame: endGameSession} = useContext(WebsocketContext)
   const {player, game} = useContext(AppContext)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
-  const navigate = useNavigate()
 
   const endGame = () => {
-    navigate('/game/ended')
+    endGameSession()
   }
   const isHost = player?.name === game?.host?.name
 

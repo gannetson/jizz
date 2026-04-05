@@ -19,8 +19,15 @@ type GameWebSocketContextType = {
   startGame: () => void;
   nextQuestion: () => void;
   submitAnswer: (payload: { question: Question; answer: Species }) => void;
-  joinGame: (game: Game | null, player: Player | null, setGame: (g: Game | null) => void) => void;
+  joinGame: (
+    game: Game | null,
+    player: Player | null,
+    setGame: (g: Game | null) => void,
+    options?: { force?: boolean }
+  ) => void;
   clearQuestion: () => void;
+  /** Notify server that the MPG session is finished; all players receive `game_ended` with updated game. */
+  endGameSession: () => void;
   connected: boolean;
   sendRematch: () => void;
   rematchInvitation: { new_game_token: string; host_name: string } | null;
@@ -123,6 +130,10 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     sendAction({ action: 'next_question', player_token: playerTokenRef.current });
   }, [sendAction]);
 
+  const endGameSession = useCallback(() => {
+    sendAction({ action: 'end_game', player_token: playerTokenRef.current });
+  }, [sendAction]);
+
   const submitAnswer = useCallback(
     (payload: { question: Question; answer: Species }) => {
       sendAction({
@@ -147,8 +158,13 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     gameTokenRef.current = game.token;
     languageCodeRef.current = player.language || 'en';
 
+    // Authoritative token for this connection — validate WS payloads against this, not lagging context/ref
+    // (see web websocket-context-provider: guests could miss new_question otherwise).
+    const connectionGameToken = game.token;
+
     const url = getWebSocketUrl(`/mpg/${game.token}`);
     const ws = new WebSocket(url);
+    (ws as WebSocket & { gameToken: string }).gameToken = connectionGameToken;
     currentSocketRef.current = ws;
 
     ws.onopen = () => {
@@ -168,14 +184,16 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
 
     ws.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
+        const raw = typeof event.data === 'string' ? event.data : String(event.data);
+        const message = JSON.parse(raw);
+        const socketGameToken = (ws as WebSocket & { gameToken?: string }).gameToken ?? connectionGameToken;
         switch (message.action) {
           case 'update_players':
             setPlayers(Array.isArray(message.players) ? message.players : []);
             break;
           case 'new_question':
             setAnswer(undefined);
-            if (questionBelongsToSocketGame(message.question, gameTokenRef.current)) {
+            if (questionBelongsToSocketGame(message.question, socketGameToken)) {
               setQuestion(message.question as Question);
             }
             break;
@@ -183,24 +201,30 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             // Fallback: fetch current question if new_question was missed (e.g. socket reconnect race).
             // Retry with delays: server may still be running add_question after game_started is broadcast.
             {
-              const token = gameTokenRef.current;
               const apply = (q: Question | null) => {
-                if (token !== gameTokenRef.current) return;
-                if (q && questionBelongsToSocketGame(q, token)) {
+                if (currentSocketRef.current !== ws) return;
+                if (q && questionBelongsToSocketGame(q, connectionGameToken)) {
                   setQuestion(q);
                 }
               };
-              [0, 280, 900].forEach((delay) => {
+              [0, 100, 300, 600, 1200, 2500, 5000].forEach((delay) => {
                 setTimeout(() => {
-                  if (token !== gameTokenRef.current) return;
-                  getCurrentQuestion(token).then(apply).catch(() => {});
+                  if (currentSocketRef.current !== ws) return;
+                  getCurrentQuestion(connectionGameToken).then(apply).catch(() => {});
                 }, delay);
               });
             }
             break;
           case 'game_updated':
-            if (tokensEqual(message.game?.token, gameTokenRef.current) && setGameRef.current) {
+            if (tokensEqual(message.game?.token, connectionGameToken) && setGameRef.current) {
               setGameRef.current(message.game as Game);
+            }
+            break;
+          case 'game_ended':
+            if (tokensEqual(message.game?.token, connectionGameToken) && setGameRef.current) {
+              setGameRef.current(message.game as Game);
+              setQuestion(undefined);
+              setAnswer(undefined);
             }
             break;
           case 'answer_checked':
@@ -223,7 +247,11 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
           default:
             break;
         }
-      } catch (_) {}
+      } catch (e) {
+        if (__DEV__) {
+          console.warn('[GameWebSocket] onmessage parse/handle failed', e);
+        }
+      }
     };
 
     ws.onerror = () => {
@@ -241,9 +269,14 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   }, [flushPendingActions]);
 
   const joinGame = useCallback(
-    (game: Game | null, player: Player | null, setGame: (g: Game | null) => void) => {
+    (
+      game: Game | null,
+      player: Player | null,
+      setGame: (g: Game | null) => void,
+      options?: { force?: boolean }
+    ) => {
       const canJoin = !!(game && player && game.token && player.token);
-      if (canJoin) {
+      if (canJoin && !options?.force) {
         setGameRef.current = setGame;
         // Avoid closing a healthy socket (React Strict Mode double-mount, duplicate effects).
         // Closing here drops in-flight new_question when the host starts.
@@ -257,6 +290,8 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         ) {
           return;
         }
+      } else if (canJoin) {
+        setGameRef.current = setGame;
       }
       if (socket) {
         pendingActionsRef.current = [];
@@ -285,6 +320,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         submitAnswer,
         joinGame,
         clearQuestion,
+        endGameSession,
         connected,
         sendRematch,
         rematchInvitation,

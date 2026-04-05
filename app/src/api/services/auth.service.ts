@@ -24,10 +24,78 @@ export interface AuthError {
   details?: any;
 }
 
+/** Seconds before access token expiry to proactively refresh (clock skew + overlap). */
+const ACCESS_REFRESH_SKEW_SEC = 120;
+
+let ensureAccessPromise: Promise<boolean> | null = null;
+
 class AuthService {
   // getApiBaseUrl() returns correct origin for web and Capacitor (Android/iOS)
   private get baseURL(): string {
     return getApiBaseUrl();
+  }
+
+  /** Decode JWT payload for `exp` (SimpleJWT access tokens always include exp). */
+  private getJwtExp(accessToken: string): number | null {
+    try {
+      const payload = accessToken.split('.')[1];
+      if (!payload) return null;
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+      const json = atob(padded);
+      const data = JSON.parse(json) as { exp?: number };
+      return typeof data.exp === 'number' ? data.exp : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Ensure stored access token is valid: refresh using refresh token when expired or near expiry.
+   * Call before relying on the access token (e.g. after the app was idle for days).
+   * Single-flight: concurrent callers share one refresh.
+   */
+  async ensureValidAccessToken(): Promise<boolean> {
+    if (ensureAccessPromise) return ensureAccessPromise;
+    ensureAccessPromise = this.doEnsureValidAccessToken().finally(() => {
+      ensureAccessPromise = null;
+    });
+    return ensureAccessPromise;
+  }
+
+  private async doEnsureValidAccessToken(): Promise<boolean> {
+    const refresh = this.getRefreshToken();
+    const access = this.getAccessToken();
+    if (!access && !refresh) return false;
+    if (!refresh) {
+      return !!access;
+    }
+    if (!access) {
+      return this.persistRefresh(refresh);
+    }
+    const exp = this.getJwtExp(access);
+    const now = Math.floor(Date.now() / 1000);
+    if (exp != null && exp > now + ACCESS_REFRESH_SKEW_SEC) {
+      return true;
+    }
+    if (exp == null) {
+      return true;
+    }
+    return this.persistRefresh(refresh);
+  }
+
+  private async persistRefresh(refresh: string): Promise<boolean> {
+    try {
+      const tokens = await this.refreshToken(refresh);
+      this.storeTokens({
+        access: tokens.access,
+        refresh: tokens.refresh || refresh,
+      });
+      return true;
+    } catch {
+      this.clearTokens();
+      return false;
+    }
   }
 
   /**

@@ -4,6 +4,73 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
+/** Seconds before access token expiry to proactively refresh. */
+const ACCESS_REFRESH_SKEW_SEC = 120;
+
+let ensureAccessInFlight: Promise<string | null> | null = null;
+
+function decodeJwtExp(accessToken: string): number | null {
+  try {
+    const part = accessToken.split('.')[1];
+    if (!part) return null;
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = globalThis.atob(padded);
+    const data = JSON.parse(json) as { exp?: number };
+    return typeof data.exp === 'number' ? data.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+async function persistRefresh(refresh: string): Promise<string | null> {
+  const response = await fetch(apiUrl('/token/refresh/'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access) {
+    await clearTokens();
+    return null;
+  }
+  await storeTokens({
+    access: data.access,
+    refresh: data.refresh ?? refresh,
+  });
+  return data.access as string;
+}
+
+/**
+ * Return a valid access token, refreshing with the refresh token when expired or near expiry.
+ * Clears tokens and returns null if the session cannot be renewed.
+ */
+export async function ensureFreshAccessToken(): Promise<string | null> {
+  if (ensureAccessInFlight) return ensureAccessInFlight;
+
+  ensureAccessInFlight = (async (): Promise<string | null> => {
+    const refresh = await getRefreshToken();
+    const access = await getAccessToken();
+    if (!access && !refresh) return null;
+    if (!refresh) return access;
+    if (!access) return persistRefresh(refresh);
+
+    const exp = decodeJwtExp(access);
+    const now = Math.floor(Date.now() / 1000);
+    if (exp != null && exp > now + ACCESS_REFRESH_SKEW_SEC) {
+      return access;
+    }
+    if (exp == null) {
+      return access;
+    }
+    return persistRefresh(refresh);
+  })().finally(() => {
+    ensureAccessInFlight = null;
+  });
+
+  return ensureAccessInFlight;
+}
+
 export type TokenResponse = {
   access: string;
   refresh: string;
@@ -163,9 +230,9 @@ export async function getAccessToken(): Promise<string | null> {
   return getStored(ACCESS_TOKEN_KEY);
 }
 
-/** Returns headers with Bearer token for authenticated API calls. */
+/** Returns headers with Bearer token for authenticated API calls (refreshes access token when needed). */
 export async function getAuthHeaders(): Promise<HeadersInit> {
-  const token = await getAccessToken();
+  const token = await ensureFreshAccessToken();
   const headers: HeadersInit = { 'Content-Type': 'application/json', Accept: 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   return headers;

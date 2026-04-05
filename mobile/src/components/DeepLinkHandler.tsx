@@ -58,7 +58,10 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
         const game = await loadGame(token);
         if (game) {
           setGame(game);
-          navigation.navigate('Lobby');
+          (navigation as any).navigate('Lobby', {
+            rematch_game_token: undefined,
+            rematchJoin: undefined,
+          });
         }
       }
     };

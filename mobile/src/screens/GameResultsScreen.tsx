@@ -97,7 +97,7 @@ export function GameResultsScreen() {
       setIsRematchLoading(false);
       if (g) {
         await new Promise((r) => setTimeout(r, 200));
-        (navigation as any).replace('Lobby', { rematch_game_token: token });
+        (navigation as any).replace('Lobby', { rematch_game_token: token, rematchJoin: true });
       }
     };
     doJoin();
@@ -119,7 +119,7 @@ export function GameResultsScreen() {
     if (g) {
       // Wait for context to update so LobbyScreen mounts with the new game (not the old one)
       await new Promise((r) => setTimeout(r, 200));
-      (navigation as any).replace('Lobby', { rematch_game_token: newToken });
+      (navigation as any).replace('Lobby', { rematch_game_token: newToken, rematchJoin: true });
     }
   };
 

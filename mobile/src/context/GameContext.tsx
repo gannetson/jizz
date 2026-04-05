@@ -4,6 +4,7 @@ import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
 import type { Player } from '../api/player';
 import type { Game } from '../api/games';
+import type { TaxOrderRow, TaxFamilyRow } from '../api/taxonomy';
 import * as playerApi from '../api/player';
 import * as gamesApi from '../api/games';
 import * as authApi from '../api/auth';
@@ -28,6 +29,10 @@ type GameContextType = {
   setSoundsScope: (v: 'all' | 'passerines') => void;
   includeRare: boolean;
   setIncludeRare: (v: boolean) => void;
+  taxOrder: TaxOrderRow | undefined;
+  setTaxOrder: (v: TaxOrderRow | undefined) => void;
+  taxFamily: TaxFamilyRow | undefined;
+  setTaxFamily: (v: TaxFamilyRow | undefined) => void;
   player: Player | null;
   game: Game | null;
   loading: boolean;
@@ -51,6 +56,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [mediaType, setMediaType] = useState('images');
   const [soundsScope, setSoundsScope] = useState<'all' | 'passerines'>('all');
   const [includeRare, setIncludeRare] = useState(true);
+  const [taxOrder, setTaxOrder] = useState<TaxOrderRow | undefined>(undefined);
+  const [taxFamily, setTaxFamily] = useState<TaxFamilyRow | undefined>(undefined);
   const [player, setPlayer] = useState<Player | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,11 +88,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     loadStoredPlayer();
   }, []);
 
+  useEffect(() => {
+    setTaxOrder(undefined);
+    setTaxFamily(undefined);
+  }, [country?.code]);
+
   const createPlayer = useCallback(async () => {
     if (!playerName.trim() || !country) return null;
     setLoading(true);
     try {
-      const accessToken = await authApi.getAccessToken();
+      const accessToken = await authApi.ensureFreshAccessToken();
       const p = await playerApi.createPlayer(playerName.trim(), language, accessToken);
       if (p) {
         await AsyncStorage.setItem(PLAYER_TOKEN_KEY, p.token);
@@ -107,7 +119,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const trimmed = playerName.trim();
       if (!trimmed) return null;
       if (trimmed !== p.name || language !== p.language) {
-        const accessToken = await authApi.getAccessToken();
+        const accessToken = await authApi.ensureFreshAccessToken();
         const updated = await playerApi.updatePlayer(
           p.token,
           { name: trimmed, language },
@@ -131,7 +143,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         media: mediaType,
         include_rare: includeRare,
         include_escapes: false,
-        ...(mediaType === 'audio' && soundsScope === 'passerines' ? { tax_order: 'Passeriformes' } : {}),
+        tax_order:
+          mediaType === 'audio'
+            ? soundsScope === 'passerines'
+              ? 'Passeriformes'
+              : undefined
+            : taxOrder?.tax_order,
+        tax_family: taxFamily?.tax_family,
       });
       if (g) {
         await AsyncStorage.setItem(GAME_TOKEN_KEY, g.token);
@@ -142,7 +160,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
     return null;
-  }, [player, playerName, country, language, level, length, mediaType, soundsScope, includeRare, createPlayer]);
+  }, [player, playerName, country, language, level, length, mediaType, soundsScope, includeRare, taxOrder, taxFamily, createPlayer]);
 
   const clearGame = useCallback(async () => {
     await AsyncStorage.removeItem(GAME_TOKEN_KEY);
@@ -179,6 +197,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setSoundsScope,
         includeRare,
         setIncludeRare,
+        taxOrder,
+        setTaxOrder,
+        taxFamily,
+        setTaxFamily,
         player,
         game,
         loading,

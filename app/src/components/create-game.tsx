@@ -53,8 +53,6 @@ export const CreateGame = ({
   const navigate = useNavigate()
   const {countries} = UseCountries()
 
-  // Don't auto-load user profile preferences - let users set their own preferences for each game
-
   useEffect(() => {
     if (pickCountry && countries && countries.length > 0) {
       const country = countries.find((c) => c.code === pickCountry)
@@ -118,10 +116,19 @@ export const CreateGame = ({
         <SetName/>
         <SelectLanguage/>
         {!pickCountry &&  <SelectCountry/>}
+
+        <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
+          <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
+        </Button>
+
+        <Heading size={'lg'}><FormattedMessage id='more game settings' defaultMessage={'More game settings'}/></Heading>
+
         {includeRare === undefined && <SelectSpeciesStatus/>}
         {!pickLength && <SelectLength/>}
         {!pickLevel && <SelectLevel/>}
         {!pickMediaType && <SelectMediaType/>}
+        <SelectTaxOrder/>
+        <SelectTaxFamily/>
         <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>

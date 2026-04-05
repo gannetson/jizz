@@ -24,30 +24,32 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
   const setInterfaceLang = (lang: string) => setUserPreferredLanguage?.(lang) ?? undefined;
 
   const checkAuth = async () => {
-    // Check if user is authenticated
     const token = authService.getAccessToken();
-    setIsAuthenticated(!!token);
-    
-    // Try to get user info from token (if available)
-    if (token) {
+    if (!token) {
+      setIsAuthenticated(false);
+      setUserEmail(null);
+      setProfile(null);
+      return;
+    }
+    const ok = await authService.ensureValidAccessToken();
+    const access = authService.getAccessToken();
+    if (!ok || !access) {
+      setIsAuthenticated(false);
+      setUserEmail(null);
+      setProfile(null);
+      return;
+    }
+    setIsAuthenticated(true);
+    try {
+      const payload = JSON.parse(atob(access.split('.')[1]));
+      setUserEmail(payload.email || payload.username || null);
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserEmail(payload.email || payload.username || null);
-        
-        // Load profile if authenticated
-        try {
-          const profileData = await profileService.getProfile();
-          setProfile(profileData);
-        } catch (e) {
-          // Profile might not exist yet, that's okay
-          setProfile(null);
-        }
-      } catch (e) {
-        // Token might not be a JWT or might be invalid
-        setUserEmail(null);
+        const profileData = await profileService.getProfile();
+        setProfile(profileData);
+      } catch {
         setProfile(null);
       }
-    } else {
+    } catch {
       setUserEmail(null);
       setProfile(null);
     }

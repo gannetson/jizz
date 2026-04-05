@@ -194,6 +194,14 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
             })
           }
           break
+        case 'game_ended':
+          const endedGame = message.game as Game
+          if (endedGame?.token === socketGameToken) {
+            setGame(endedGame)
+            setQuestion(undefined)
+            setAnswer(undefined)
+          }
+          break
         case 'answer_checked':
           setAnswer(message.answer as Answer)
           break
@@ -267,6 +275,10 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
 
   const nextQuestion = () => {
     sendAction({action: 'next_question', player_token: player?.token})
+  }
+
+  const endGame = () => {
+    sendAction({action: 'end_game', player_token: player?.token})
   }
 
   const joinGame = (game?: Game, player?: Player) => {
@@ -410,6 +422,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       players,
       startGame,
       nextQuestion,
+      endGame,
       question,
       joinGame,
       submitAnswer,

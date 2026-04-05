@@ -1,5 +1,6 @@
 import axios from '../axios-config';
 import { getApiBaseUrl } from '../baseUrl';
+import { authService } from './auth.service';
 
 export interface UserProfile {
   username: string;
@@ -47,6 +48,10 @@ class ProfileService {
    */
   async getProfile(): Promise<UserProfile> {
     try {
+      const ok = await authService.ensureValidAccessToken();
+      if (!ok || !authService.getAccessToken()) {
+        throw new Error('Not authenticated');
+      }
       const response = await axios.get<UserProfile>(
         `${this.baseURL}/api/profile/`,
         {
@@ -66,6 +71,10 @@ class ProfileService {
    */
   async updateProfile(data: ProfileUpdateData): Promise<UserProfile> {
     try {
+      const ok = await authService.ensureValidAccessToken();
+      if (!ok || !authService.getAccessToken()) {
+        throw new Error('Not authenticated');
+      }
       const formData = new FormData();
       
       if (data.username) {

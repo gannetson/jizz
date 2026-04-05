@@ -4,8 +4,8 @@ Multiplayer quiz WebSocket consumer (Django Channels).
 URL: ws(s)://<host>/mpg/<game_token>
 Each connection is scoped to one game group `quiz_<game_token>`.
 
-Client -> server actions: join_game, start_game, next_question, submit_answer, rematch.
-Server -> client: update_players, new_question, game_started, game_updated, answer_checked, etc.
+Client -> server actions: join_game, start_game, next_question, submit_answer, rematch, end_game.
+Server -> client: update_players, new_question, game_started, game_updated, game_ended, answer_checked, etc.
 """
 from __future__ import annotations
 
@@ -77,7 +77,6 @@ class QuizConsumer(AsyncWebsocketConsumer):
             elif action == "rematch":
                 await self._handle_rematch(data)
             elif action == "end_game":
-                # Legacy / unused path kept for compatibility
                 await self._handle_end_game(data)
         except Exception as e:
             logger.exception("WebSocket action %s failed: %s", action, e)
@@ -90,22 +89,53 @@ class QuizConsumer(AsyncWebsocketConsumer):
     # --- Handlers ---
 
     async def _handle_end_game(self, data):
-        from .models import Game, Player
+        """Any player in the game may end the session: finished games broadcast as-is; otherwise force end."""
+        from django.core.exceptions import ObjectDoesNotExist
 
-        game = await sync_to_async(Game.objects.create)(
-            token=self.game_token, multiplayer=True
-        )
-        player = await sync_to_async(Player.objects.create)(
-            game=game, name=data["player_name"]
-        )
-        await self.send(
-            text_data=json.dumps(
-                {
-                    "message": "Game created",
-                    "game_code": game.token,
-                    "player_token": str(player.token),
-                }
+        from .models import Game, Player, PlayerScore
+        from .serializers import GameSerializer
+
+        player_token = (data.get("player_token") or "").strip()
+        if not player_token:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "player_token required"}
+                )
             )
+            return
+
+        def load_game_and_payload():
+            game = Game.objects.select_related("host", "country").get(
+                token=self.game_token
+            )
+            player = Player.objects.get(token=player_token)
+            PlayerScore.objects.get(player=player, game=game)
+            if not game.ended:
+                # Close any in-progress question so current-question APIs are consistent.
+                game.questions.filter(done=False).update(done=True)
+                if not game.ended:
+                    game.force_ended = True
+                    game.save(update_fields=["force_ended"])
+            return GameSerializer(game).data
+
+        try:
+            game_data = await sync_to_async(load_game_and_payload)()
+        except ObjectDoesNotExist:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "Game or player not found"}
+                )
+            )
+            return
+        except ValueError as e:
+            await self.send(
+                text_data=json.dumps({"action": "error", "message": str(e)})
+            )
+            return
+
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {"type": "mpg_game_ended", "game": game_data},
         )
 
     async def _handle_join_game(self, data):
@@ -410,5 +440,12 @@ class QuizConsumer(AsyncWebsocketConsumer):
                     "new_game_token": event["new_game_token"],
                     "host_name": event["host_name"],
                 }
+            )
+        )
+
+    async def mpg_game_ended(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {"action": "game_ended", "game": event["game"]}
             )
         )

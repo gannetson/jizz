@@ -9,6 +9,8 @@ type SharedState = {
   joinGame: (game?: Game, player?: Player) =>void
   submitAnswer: (answer: Answer)=>void
   nextQuestion: ()=>void
+  /** MPG: server broadcasts game_ended to all players when the session is finished. */
+  endGame: () => void
   answer?: Answer
   socket?: WebSocket
   clearQuestion: ()=>void
@@ -19,6 +21,7 @@ const WebsocketContext = createContext<SharedState>({
   joinGame: (game?: Game, player?: Player) => {},
   submitAnswer: () => {},
   nextQuestion: () => {},
+  endGame: () => {},
   clearQuestion: () => {},
 });
 

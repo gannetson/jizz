@@ -24,6 +24,12 @@ import type { Language } from '../api/languages';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { getLanguageDisplayName } from '../i18n/languageNames';
 import { colors } from '../theme';
+import {
+  loadTaxOrders,
+  loadTaxFamilies,
+  type TaxOrderRow,
+  type TaxFamilyRow,
+} from '../api/taxonomy';
 
 const LEVELS = [
   { value: 'beginner', labelKey: 'beginner', subKey: 'very_easy_multiple_choice' },
@@ -60,6 +66,10 @@ export function StartScreen() {
     setSoundsScope,
     includeRare,
     setIncludeRare,
+    taxOrder,
+    setTaxOrder,
+    taxFamily,
+    setTaxFamily,
     player,
     loading,
     createGame,
@@ -73,8 +83,32 @@ export function StartScreen() {
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [languageSearch, setLanguageSearch] = useState('');
+  const [taxOrders, setTaxOrders] = useState<TaxOrderRow[]>([]);
+  const [taxFamilies, setTaxFamilies] = useState<TaxFamilyRow[]>([]);
+  const [orderModalVisible, setOrderModalVisible] = useState(false);
+  const [familyModalVisible, setFamilyModalVisible] = useState(false);
+  const [orderSearch, setOrderSearch] = useState('');
+  const [familySearch, setFamilySearch] = useState('');
   /** After user picks species language, do not let late profile/player fetches overwrite it. */
   const speciesLanguageUserChosenRef = useRef(false);
+
+  useEffect(() => {
+    if (!country?.code) {
+      setTaxOrders([]);
+      setTaxFamilies([]);
+      return;
+    }
+    let cancelled = false;
+    loadTaxOrders(country.code).then((rows) => {
+      if (!cancelled) setTaxOrders(rows);
+    });
+    loadTaxFamilies(country.code).then((rows) => {
+      if (!cancelled) setTaxFamilies(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [country?.code]);
 
   useEffect(() => {
     loadCountries().then((list) => {
@@ -109,6 +143,21 @@ export function StartScreen() {
     const q = languageSearch.trim().toLowerCase();
     return sortedLanguages.filter((l) => getLanguageDisplayName(l, locale).toLowerCase().includes(q));
   }, [sortedLanguages, languageSearch, locale]);
+
+  const filteredTaxOrders = React.useMemo(() => {
+    if (!orderSearch.trim()) return taxOrders;
+    const q = orderSearch.trim().toLowerCase();
+    return taxOrders.filter((row) => row.tax_order.toLowerCase().includes(q));
+  }, [taxOrders, orderSearch]);
+
+  const filteredTaxFamilies = React.useMemo(() => {
+    if (!familySearch.trim()) return taxFamilies;
+    const q = familySearch.trim().toLowerCase();
+    return taxFamilies.filter(
+      (row) =>
+        row.tax_family.toLowerCase().includes(q)
+    );
+  }, [taxFamilies, familySearch]);
 
   // When logged in, prefill player name, country and species language from profile
   useEffect(() => {
@@ -146,7 +195,10 @@ export function StartScreen() {
     try {
       const game = await createGame();
       if (game) {
-        (navigation as any).navigate('Lobby');
+        (navigation as any).navigate('Lobby', {
+          rematch_game_token: undefined,
+          rematchJoin: undefined,
+        });
       } else {
         Alert.alert(t('error'), t('could_not_create_game'));
       }
@@ -257,6 +309,120 @@ export function StartScreen() {
         </Pressable>
       </Modal>
 
+      <Modal visible={orderModalVisible} transparent animationType="slide">
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => {
+            setOrderModalVisible(false);
+            setOrderSearch('');
+          }}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t('tax_order')}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search')}
+              placeholderTextColor={colors.primary[400]}
+              value={orderSearch}
+              onChangeText={setOrderSearch}
+            />
+            <FlatList
+              data={filteredTaxOrders}
+              keyExtractor={(item) => item.tax_order}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, taxOrder?.tax_order === item.tax_order && styles.modalItemSelected]}
+                  onPress={() => {
+                    setTaxOrder(item);
+                    setTaxFamily(undefined);
+                    setOrderModalVisible(false);
+                    setOrderSearch('');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      taxOrder?.tax_order === item.tax_order && styles.modalItemTextSelected,
+                    ]}
+                  >
+                    {item.tax_order} ({item.count})
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => {
+                setOrderModalVisible(false);
+                setOrderSearch('');
+              }}
+            >
+              <Text style={styles.modalCloseText}>{t('close')}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={familyModalVisible} transparent animationType="slide">
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => {
+            setFamilyModalVisible(false);
+            setFamilySearch('');
+          }}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t('tax_family')}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search')}
+              placeholderTextColor={colors.primary[400]}
+              value={familySearch}
+              onChangeText={setFamilySearch}
+            />
+            <FlatList
+              data={filteredTaxFamilies}
+              keyExtractor={(item) => item.tax_family}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    taxFamily?.tax_family === item.tax_family && styles.modalItemSelected,
+                  ]}
+                  onPress={() => {
+                    setTaxFamily(item);
+                    setTaxOrder(undefined);
+                    setFamilyModalVisible(false);
+                    setFamilySearch('');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      taxFamily?.tax_family === item.tax_family && styles.modalItemTextSelected,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {item.tax_family} - {item.tax_family_en} ({item.count})
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => {
+                setFamilyModalVisible(false);
+                setFamilySearch('');
+              }}
+            >
+              <Text style={styles.modalCloseText}>{t('close')}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <TouchableOpacity
         style={[styles.startButton, (!country || !playerName.trim()) && styles.startButtonDisabled]}
         onPress={handleStart}
@@ -348,6 +514,56 @@ export function StartScreen() {
         </>
       )}
 
+      <Text style={styles.label}>{t('tax_order')}</Text>
+      <TouchableOpacity
+        style={styles.selectButton}
+        onPress={() => {
+          setOrderSearch('');
+          setOrderModalVisible(true);
+        }}
+        accessibilityLabel={t('tax_order')}
+      >
+        <Text style={styles.selectButtonText} numberOfLines={2}>
+          {taxOrder ? `${taxOrder.tax_order} (${taxOrder.count})` : t('select_tax_order')}
+        </Text>
+      </TouchableOpacity>
+      {taxOrder != null && (
+        <TouchableOpacity
+          onPress={() => setTaxOrder(undefined)}
+          style={styles.clearTaxLink}
+          accessibilityLabel={t('clear_tax_filter')}
+        >
+          <Text style={styles.clearTaxLinkText}>{t('clear_tax_filter')}</Text>
+        </TouchableOpacity>
+      )}
+
+      <Text style={styles.label}>{t('tax_family')}</Text>
+      <TouchableOpacity
+        style={styles.selectButton}
+        onPress={() => {
+          setFamilySearch('');
+          setFamilyModalVisible(true);
+        }}
+        accessibilityLabel={t('tax_family')}
+      >
+        <Text style={styles.selectButtonText} numberOfLines={2}>
+          {taxFamily
+            ? `${taxFamily.tax_family} - ${taxFamily.tax_family_en} (${taxFamily.count})`
+            : t('select_tax_family')}
+        </Text>
+      </TouchableOpacity>
+      {taxFamily != null && (
+        <TouchableOpacity
+          onPress={() => setTaxFamily(undefined)}
+          style={styles.clearTaxLink}
+          accessibilityLabel={t('clear_tax_filter')}
+        >
+          <Text style={styles.clearTaxLinkText}>{t('clear_tax_filter')}</Text>
+        </TouchableOpacity>
+      )}
+
+      <Text style={styles.taxHint}>{t('tax_filter_hint')}</Text>
+
     </ScrollView>
   );
 }
@@ -429,4 +645,7 @@ const styles = StyleSheet.create({
   modalItemTextSelected: { fontWeight: '600', color: colors.primary[700] },
   modalClose: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
   modalCloseText: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
+  clearTaxLink: { alignSelf: 'flex-start', marginTop: 4, marginBottom: 4 },
+  clearTaxLinkText: { fontSize: 14, color: colors.primary[500], fontWeight: '600' },
+  taxHint: { fontSize: 12, color: colors.primary[600], fontStyle: 'italic', marginBottom: 8 },
 });

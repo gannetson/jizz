@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  */
 async function linkStoredPlayerToAccount(): Promise<void> {
   try {
-    const accessToken = await authApi.getAccessToken();
+    const accessToken = await authApi.ensureFreshAccessToken();
     const playerToken = (await AsyncStorage.getItem(playerApi.PLAYER_TOKEN_STORAGE_KEY))?.trim();
     if (accessToken && playerToken && playerToken.length >= 4) {
       await playerApi.linkPlayerToAccount(accessToken, playerToken);
@@ -60,8 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const token = await authApi.getAccessToken();
-      setIsAuthenticated(!!token);
+      const hadAnyToken = !!(await authApi.getAccessToken()) || !!(await authApi.getRefreshToken());
+      if (!hadAnyToken) {
+        setIsAuthenticated(false);
+        return;
+      }
+      const access = await authApi.ensureFreshAccessToken();
+      setIsAuthenticated(!!access);
     } catch {
       setIsAuthenticated(false);
     } finally {

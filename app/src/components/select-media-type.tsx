@@ -1,101 +1,101 @@
-import {useContext} from "react";
+import {useContext, type ComponentType, type ReactNode} from "react";
 import AppContext from "../core/app-context";
-import {Box, Flex, Heading, RadioGroup} from "@chakra-ui/react"
-import {FormattedMessage} from "react-intl"
+import {Box, Flex, Heading, RadioCard, Switch} from "@chakra-ui/react";
+import {FormattedMessage} from "react-intl";
 
+/** Chakra RadioCard slot typings omit `children` / conflict with Ark props; runtime is fine. */
+const RcItem = RadioCard.Item as unknown as ComponentType<{
+  value: string;
+  w?: string;
+  children?: ReactNode;
+}>;
+const RcItemText = RadioCard.ItemText as unknown as ComponentType<{
+  children?: ReactNode;
+}>;
+
+const SwLabel = Switch.Label as unknown as ComponentType<{
+  children?: ReactNode;
+}>;
 
 export const SelectMediaType = () => {
   const {mediaType, setMediaType, soundsScope, setSoundsScope} = useContext(AppContext);
 
   const onChange = (value: string) => {
-    setMediaType && setMediaType(value)
-    if (value !== 'audio') {
-      setSoundsScope && setSoundsScope('all')
+    setMediaType && setMediaType(value);
+    if (value !== "audio") {
+      setSoundsScope && setSoundsScope("all");
     }
-  }
+  };
 
   return (
     <Box>
-      <Heading size={'md'} mb={4}>
-        <FormattedMessage id={'media type'} defaultMessage={'Media type'}/>
+      <Heading size={"md"} mb={4}>
+        <FormattedMessage id={"media type"} defaultMessage={"Media type"} />
       </Heading>
-      <RadioGroup.Root
+      <RadioCard.Root
         colorPalette="primary"
+        variant="surface"
+        size="md"
         value={mediaType}
-        onValueChange={(e: { value?: string }) => e.value && onChange(e.value)}
+        onValueChange={(details: { value: string | null }) =>
+          details.value && onChange(details.value)}
+        w="100%"
       >
-        <Flex direction={'column'} gap={4}>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'images'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>
-                <FormattedMessage id={'pictures'} defaultMessage={'Pictures'}/>
-              </RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'audio'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>
-                <Flex gap={4}>
-                  <FormattedMessage id={'sounds'} defaultMessage={'Sounds'}/>
-                </Flex>
-              </RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-          {mediaType === 'audio' && (
-            <Box pl={8}>
-              <RadioGroup.Root
-                colorPalette="primary"
-                value={soundsScope}
-                onValueChange={(e: { value?: string }) => e.value && (e.value === 'all' || e.value === 'passerines') && setSoundsScope?.(e.value)}
-              >
-                <Flex direction={'column'} gap={2}>
-                  <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-                    <RadioGroup.Item value="all">
-                      <RadioGroup.ItemHiddenInput />
-                      <RadioGroup.ItemControl>
-                        <RadioGroup.ItemIndicator />
-                      </RadioGroup.ItemControl>
-                      <RadioGroup.ItemText>
-                        <FormattedMessage id={'sounds all birds'} defaultMessage={'All birds'}/>
-                      </RadioGroup.ItemText>
-                    </RadioGroup.Item>
-                  </Box>
-                  <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-                    <RadioGroup.Item value="passerines">
-                      <RadioGroup.ItemHiddenInput />
-                      <RadioGroup.ItemControl>
-                        <RadioGroup.ItemIndicator />
-                      </RadioGroup.ItemControl>
-                      <RadioGroup.ItemText>
-                        <FormattedMessage id={'sounds passerines'} defaultMessage={'Passerines'}/>
-                      </RadioGroup.ItemText>
-                    </RadioGroup.Item>
-                  </Box>
-                </Flex>
-              </RadioGroup.Root>
-            </Box>
-          )}
-          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-            <RadioGroup.Item value={'video'}>
-              <RadioGroup.ItemHiddenInput />
-              <RadioGroup.ItemControl>
-                <RadioGroup.ItemIndicator />
-              </RadioGroup.ItemControl>
-              <RadioGroup.ItemText>
-                <FormattedMessage id={'videos'} defaultMessage={'Videos'}/>
-              </RadioGroup.ItemText>
-            </RadioGroup.Item>
-          </Box>
-        </Flex>
-      </RadioGroup.Root>
+        <Box display="flex" flexDirection={['column', 'row']} gap={4}>
+          <RcItem value="images" w="100%">
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <RadioCard.ItemContent>
+                <RcItemText>
+                  <FormattedMessage id={"pictures"} defaultMessage={"Pictures"} />
+                </RcItemText>
+              </RadioCard.ItemContent>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RcItem>
+          <RcItem value="audio" w="100%">
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <RadioCard.ItemContent>
+                <RcItemText>
+                  <FormattedMessage id={"sounds"} defaultMessage={"Sounds"} />
+                  {mediaType === "audio" && (
+                    <Flex align="center" gap={3} pt={4}>
+                      <Switch.Root
+                        colorPalette="primary"
+                        checked={soundsScope === "passerines"}
+                        onCheckedChange={(details: { checked: boolean }) =>
+                          setSoundsScope?.(details.checked ? "passerines" : "all")}
+                      >
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                        <SwLabel>
+                          <FormattedMessage
+                            id="passerines only"
+                            defaultMessage="Passerines only"
+                          />
+                        </SwLabel>
+                      </Switch.Root>
+                    </Flex>
+                  )}
+                </RcItemText>
+              </RadioCard.ItemContent>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RcItem>
+          <RcItem value="video" w="100%">
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <RadioCard.ItemContent>
+                <RcItemText>
+                  <FormattedMessage id={"videos"} defaultMessage={"Videos"} />
+                </RcItemText>
+              </RadioCard.ItemContent>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RcItem>
+        </Box>
+      </RadioCard.Root>
     </Box>
-  )
+  );
 };

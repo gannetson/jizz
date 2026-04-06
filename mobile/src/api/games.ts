@@ -85,10 +85,14 @@ export async function loadGame(token: string): Promise<Game | null> {
  * Used when we receive game_started so we can show the first question even if new_question was missed.
  */
 export async function getCurrentQuestion(gameToken: string): Promise<Question | null> {
-  const response = await fetch(apiUrl(`/api/games/${encodeURIComponent(gameToken)}/question`), {
-    method: 'GET',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-  });
+  const response = await fetch(
+    apiUrl(`/api/games/${encodeURIComponent(gameToken)}/question?t=${Date.now()}`),
+    {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    }
+  );
   if (!response.ok) return null;
   const data = await response.json();
   if (!data?.id) return null;

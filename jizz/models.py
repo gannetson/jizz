@@ -3,7 +3,7 @@ import uuid
 from datetime import timedelta
 from random import randint, shuffle, random
 
-from django.db import models
+from django.db import models, transaction
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Sum, Q
 from django.db.models.signals import post_save
@@ -299,100 +299,113 @@ class Game(models.Model):
         all at once. This allows for dynamic game progression.
 
         See docs/GAME_LIFECYCLE.md for detailed documentation.
-        """
-        current = self.question
-        if current is not None and not self.can_advance_to_next_question():
-            return current
 
-        self.questions.filter(done=False).update(done=True)
+        Concurrent callers (e.g. many HTTP GETs on /api/games/<token>/question/ when
+        ``game_started`` is broadcast) must serialize on this game row or each request
+        can observe no active question and create duplicate rounds (sequence jumps).
+        """
+        with transaction.atomic():
+            # Lock only jizz_game — select_related + FOR UPDATE breaks PostgreSQL
+            # ("nullable side of an outer join") when FKs like country are nullable.
+            game = Game.objects.select_for_update(of=("self",)).get(pk=self.pk)
+            current = game.question
+            if current is not None and not game.can_advance_to_next_question():
+                return current
+
+            game.questions.filter(done=False).update(done=True)
+            return Game._add_question_body(game)
+
+    @staticmethod
+    def _add_question_body(game):
+        """Create the next question row; caller must hold ``game`` locked in ``add_question``."""
         statuses = ['native', 'endemic']
-        if self.include_rare:
+        if game.include_rare:
             statuses.extend(['rare', 'extirpated'])
-        if self.include_escapes:
+        if game.include_escapes:
             statuses.extend(['introduced', 'uncertain', 'unknown'])
 
-        if self.country.code == 'NL-NH' and random() < 0.3:
+        if game.country.code == 'NL-NH' and random() < 0.3:
             statuses = ['rare']
 
-        if self.tax_family:
+        if game.tax_family:
             all_species = Species.objects.filter(
                 media__isnull=False,
                 media__type='image',
                 countryspecies__status__in=statuses,
-                countryspecies__country=self.country,
-                tax_family=self.tax_family
+                countryspecies__country=game.country,
+                tax_family=game.tax_family
             ).distinct().order_by('id')
-        elif self.tax_order:
+        elif game.tax_order:
             all_species = Species.objects.filter(
                 media__isnull=False,
                 media__type='image',
                 countryspecies__status__in=statuses,
-                countryspecies__country=self.country,
-                tax_order=self.tax_order
+                countryspecies__country=game.country,
+                tax_order=game.tax_order
             ).distinct().order_by('id')
         else:
             all_species = Species.objects.filter(
                 media__isnull=False,
                 media__type='image',
                 countryspecies__status__in=statuses,
-                countryspecies__country=self.country
+                countryspecies__country=game.country
             ).distinct().order_by('id')
-        if self.media == 'video':
-            if self.tax_family:
+        if game.media == 'video':
+            if game.tax_family:
                 all_species = Species.objects.filter(
                     media__isnull=False,
                     media__type='video',
                     countryspecies__status__in=statuses,
-                    countryspecies__country=self.country,
-                    tax_family=self.tax_family
+                    countryspecies__country=game.country,
+                    tax_family=game.tax_family
                 ).distinct().order_by('id')
-            elif self.tax_order:
+            elif game.tax_order:
                 all_species = Species.objects.filter(
                     media__isnull=False,
                     media__type='video',
                     countryspecies__status__in=statuses,
-                    countryspecies__country=self.country,
-                    tax_order=self.tax_order
+                    countryspecies__country=game.country,
+                    tax_order=game.tax_order
                 ).distinct().order_by('id')
             else:
                 all_species = Species.objects.filter(
                     media__isnull=False,
                     media__type='video',
                     countryspecies__status__in=statuses,
-                    countryspecies__country=self.country
+                    countryspecies__country=game.country
                 ).distinct().order_by('id')
-        if self.media == 'audio':
-            if self.tax_family:
+        if game.media == 'audio':
+            if game.tax_family:
                 all_species = Species.objects.filter(
                     media__isnull=False,
                     media__type='audio',
                     countryspecies__status__in=statuses,
-                    countryspecies__country=self.country,
-                    tax_family=self.tax_family
+                    countryspecies__country=game.country,
+                    tax_family=game.tax_family
                 ).distinct().order_by('id')
-            elif self.tax_order:
+            elif game.tax_order:
                 all_species = Species.objects.filter(
                     media__isnull=False,
                     media__type='audio',
                     countryspecies__status__in=statuses,
-                    countryspecies__country=self.country,
-                    tax_order=self.tax_order
+                    countryspecies__country=game.country,
+                    tax_order=game.tax_order
                 ).distinct().order_by('id')
             else:
                 all_species = Species.objects.filter(
                     media__isnull=False,
                     media__type='audio',
                     countryspecies__status__in=statuses,
-                    countryspecies__country=self.country
+                    countryspecies__country=game.country
                 ).distinct().order_by('id')
 
-        left_species = all_species.exclude(id__in=self.questions.values_list('species_id', flat=True))
+        left_species = all_species.exclude(id__in=game.questions.values_list('species_id', flat=True))
         if left_species.exists():
             species = left_species.order_by('?').first()
         else:
             species = all_species.order_by('?').first()
 
-        sequence = self.questions.count() + 1
+        sequence = game.questions.count() + 1
         
         # Eligible media: approved only, or if none approved then not rejected (same as Species.images/videos/sounds)
         # Retry with another species if selected one has no eligible media
@@ -400,9 +413,9 @@ class Game(models.Model):
         retry_count = 0
         media_count = 0
         while retry_count < max_retries:
-            if self.media == 'video':
+            if game.media == 'video':
                 media_count = species.videos.count()
-            elif self.media == 'audio':
+            elif game.media == 'audio':
                 media_count = species.sounds.count()
             else:
                 media_count = species.images.count()
@@ -413,7 +426,7 @@ class Game(models.Model):
 
             # Try another species
             retry_count += 1
-            remaining = all_species.exclude(id=species.id).exclude(id__in=self.questions.values_list('species_id', flat=True))
+            remaining = all_species.exclude(id=species.id).exclude(id__in=game.questions.values_list('species_id', flat=True))
             if remaining.exists():
                 species = remaining.order_by('?').first()
             else:
@@ -423,14 +436,14 @@ class Game(models.Model):
                     species = remaining.order_by('?').first()
                 else:
                     # No more species available
-                    raise ValueError(f"No species with {self.media} media available for game {self.id}")
+                    raise ValueError(f"No species with {game.media} media available for game {game.id}")
 
         if media_count == 0:
-            raise ValueError(f"Species {species.id} ({species.name}) has no eligible {self.media} media (approved or not rejected) after {max_retries} retries")
+            raise ValueError(f"Species {species.id} ({species.name}) has no eligible {game.media} media (approved or not rejected) after {max_retries} retries")
 
         number = randint(1, media_count) - 1
 
-        if self.level == 'advanced':
+        if game.level == 'advanced':
             options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
             next = 5 - options1.count()
             options2 = all_species.filter(id__gt=species.id).order_by('id')[:next]
@@ -440,7 +453,7 @@ class Game(models.Model):
 
             options = list(options1) + list(options2) + [species]
             shuffle(options)
-            question = self.questions.create(species=species, number=number, sequence=sequence)
+            question = game.questions.create(species=species, number=number, sequence=sequence)
             for index, species in enumerate(options):
                 QuestionOption.objects.create(
                     question=question,
@@ -449,7 +462,7 @@ class Game(models.Model):
                 )
             return question
 
-        elif self.level == 'beginner':
+        elif game.level == 'beginner':
             # Distractors must be at least 20 away from answer by species id
             far_species = (
                 all_species.exclude(id=species.id)
@@ -483,7 +496,7 @@ class Game(models.Model):
                         continue
                     distractor_ids.add(s.id)
                     options.append(s)
-            question = self.questions.create(
+            question = game.questions.create(
                 species=species, number=number, sequence=sequence
             )
             options = options + [species]
@@ -496,7 +509,7 @@ class Game(models.Model):
                 )
             return question
         else:
-            question = self.questions.create(
+            question = game.questions.create(
                 species=species, number=number, sequence=sequence
             )
             return question

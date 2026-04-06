@@ -213,7 +213,9 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
                   setQuestion(q);
                 }
               };
-              [0, 100, 300, 600, 1200, 2500, 5000].forEach((delay) => {
+              // Few retries: GET /question/ calls add_question when empty — many parallel
+              // requests caused duplicate rounds (sequence jumps). Server serializes; keep traffic low.
+              [400, 1500, 3500].forEach((delay) => {
                 setTimeout(() => {
                   if (currentSocketRef.current !== ws) return;
                   getCurrentQuestion(connectionGameToken).then(apply).catch(() => {});

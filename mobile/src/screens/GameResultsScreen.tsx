@@ -1,18 +1,62 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
+import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
+import type { Game } from '../api/games';
+import type { MultiPlayer } from '../types/game';
+import type { Player } from '../api/player';
 
 const REMATCH_TIMEOUT_MS = 20000;
+
+function formatGameDate(dateString: string | undefined): string {
+  if (!dateString) return '—';
+  try {
+    const d = new Date(dateString);
+    return (
+      d.toLocaleDateString(undefined, { dateStyle: 'medium' }) +
+      ' ' +
+      d.toLocaleTimeString(undefined, { timeStyle: 'short' })
+    );
+  } catch {
+    return dateString;
+  }
+}
+
+function getLevelLabel(level: string): string {
+  const map: Record<string, string> = { beginner: 'Beginner', advanced: 'Advanced', expert: 'Expert' };
+  return map[level] || level;
+}
+
+function getMediaLabel(media: string): string {
+  const map: Record<string, string> = { images: 'Pictures', audio: 'Sounds', video: 'Videos' };
+  return map[media] || media;
+}
+
+function getMpgResultsStats(game: Game, player: Player | null, players: MultiPlayer[]) {
+  const me = players.find((p) => p.id === player?.id);
+  const userScore = me?.score;
+  const scoreRow = game.scores?.find((s) => s.name === player?.name);
+  const answers = scoreRow?.answers ?? [];
+  const correctCount = answers.filter((a) => a.correct === true).length;
+  const len = typeof game.length === 'string' ? parseInt(game.length, 10) : Number(game.length);
+  const totalQuestions = Number.isFinite(len) && len > 0 ? len : answers.length;
+  return {
+    userScore: userScore ?? scoreRow?.score,
+    correctCount,
+    totalQuestions,
+  };
+}
 
 export function GameResultsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const dailyChallengeId = (route.params as { dailyChallengeId?: number })?.dailyChallengeId;
+  const { isAuthenticated } = useAuth();
   const { game, player, clearGame, setGame, loadGame } = useGame();
   const {
     players,
@@ -109,6 +153,19 @@ export function GameResultsScreen() {
     };
   }, []);
 
+  const handleGameDetails = () => {
+    if (!game?.token) return;
+    if (isAuthenticated) {
+      (navigation as any).navigate('GameDetail', { token: game.token });
+      return;
+    }
+    if (!player?.token) return;
+    (navigation as any).navigate('GameDetail', {
+      token: game.token,
+      playerToken: player.token,
+    });
+  };
+
   const handleJoinRematch = async () => {
     if (!rematchInvitation || !player) return;
     joinGame(null, null, setGame);
@@ -124,6 +181,11 @@ export function GameResultsScreen() {
   };
 
   const sortedPlayers = [...(players || [])].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  const resultsStats = useMemo(() => {
+    if (!game) return null;
+    return getMpgResultsStats(game, player, players || []);
+  }, [game, player, players]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gameResults.screen" accessibilityLabel="Game results">
@@ -160,6 +222,50 @@ export function GameResultsScreen() {
       {(rematchError || rematchTimeoutMessage) ? (
           <Text style={styles.errorText} testID="gameResults.rematchError">{rematchError || rematchTimeoutMessage}</Text>
         ) : null}
+      {game?.token && (isAuthenticated || player?.token) && resultsStats ? (
+        <View style={styles.gameDetailsSection}>
+          <Text style={styles.sectionTitle}>{t('review_answers')}</Text>
+          <TouchableOpacity
+            style={styles.gameDetailsCard}
+            onPress={handleGameDetails}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityHint={t('tap_for_game_details')}
+            accessibilityLabel={t('game_details')}
+            testID="gameResults.gameDetails"
+          >
+            <View style={styles.gameDetailsRow}>
+              <View style={styles.gameDetailsMain}>
+                <Text style={styles.gameCountry}>{game.country?.name ?? '—'}</Text>
+                <Text style={styles.gameDate}>{formatGameDate(game.created)}</Text>
+              </View>
+              <View style={styles.gameDetailsRight}>
+                <View style={styles.gameDetailsScores}>
+                  {resultsStats.userScore != null && (
+                    <Text style={styles.gameScore}>{resultsStats.userScore} pts</Text>
+                  )}
+                  {resultsStats.totalQuestions > 0 && (
+                    <Text style={styles.gameMeta}>
+                      {resultsStats.correctCount} / {resultsStats.totalQuestions} correct
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.chevron} accessible={false}>
+                  ›
+                </Text>
+              </View>
+            </View>
+            <View style={styles.gameTags}>
+              <Text style={styles.tag}>Level: {getLevelLabel(game.level)}</Text>
+              <Text style={styles.tagDot}>•</Text>
+              <Text style={styles.tag}>Length: {game.length}</Text>
+              <Text style={styles.tagDot}>•</Text>
+              <Text style={styles.tag}>Media: {getMediaLabel(game.media)}</Text>
+            </View>
+            <Text style={styles.tapHint}>{t('tap_for_game_details')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <View style={styles.buttons}>
         {dailyChallengeId != null && (
           <TouchableOpacity style={styles.outlineButton} onPress={handleBackToDailyChallenge}>
@@ -173,22 +279,22 @@ export function GameResultsScreen() {
         )}
         {isHost && (
           <TouchableOpacity
-            style={[styles.outlineButton, isRematchLoading && styles.buttonDisabled]}
+            style={[styles.primaryButton, isRematchLoading && styles.buttonDisabled]}
             onPress={handleRematch}
             disabled={isRematchLoading}
           >
             {isRematchLoading ? (
               <>
                 <ActivityIndicator size="small" color={colors.primary[500]} style={styles.buttonSpinner} />
-                <Text style={styles.outlineButtonText}>{t('creating_game')}</Text>
+                <Text style={styles.primaryButtonText}>{t('creating_game')}</Text>
               </>
             ) : (
-              <Text style={styles.outlineButtonText}>{t('rematch')}</Text>
+              <Text style={styles.primaryButtonText}>{t('rematch')}</Text>
             )}
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.primaryButton} onPress={handlePlayAgain}>
-          <Text style={styles.primaryButtonText}>{t('play_again')}</Text>
+        <TouchableOpacity style={styles.outlineButton} onPress={handlePlayAgain}>
+          <Text style={styles.outlineButtonText}>{t('play_again')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -201,6 +307,33 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 20 },
   errorText: { fontSize: 14, color: colors.error[500], marginBottom: 12 },
   list: { marginBottom: 24 },
+  gameDetailsSection: { marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary[800],
+    marginBottom: 12,
+  },
+  gameDetailsCard: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: colors.primary[200],
+    borderRadius: 8,
+    padding: 16,
+  },
+  gameDetailsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  gameDetailsMain: { flex: 1, paddingRight: 8 },
+  gameCountry: { fontSize: 18, fontWeight: '700', color: colors.primary[800] },
+  gameDate: { fontSize: 13, color: colors.primary[600], marginTop: 4 },
+  gameDetailsRight: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  gameDetailsScores: { alignItems: 'flex-end' },
+  gameScore: { fontSize: 16, fontWeight: '600', color: colors.primary[600] },
+  gameMeta: { fontSize: 13, color: colors.primary[600], marginTop: 2 },
+  chevron: { fontSize: 28, color: colors.primary[400], lineHeight: 30, marginTop: 0 },
+  gameTags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 12, gap: 4 },
+  tag: { fontSize: 13, color: colors.primary[600] },
+  tagDot: { fontSize: 13, color: colors.primary[400] },
+  tapHint: { fontSize: 14, fontWeight: '500', color: colors.primary[500], marginTop: 12 },
   playerCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',

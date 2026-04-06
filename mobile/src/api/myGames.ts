@@ -115,18 +115,33 @@ export async function getMyGames(page: number = 1): Promise<PaginatedGamesRespon
   return data as PaginatedGamesResponse;
 }
 
-/** Get game details with all questions and user's answers */
-export async function getGameDetail(token: string): Promise<GameDetailWithAnswers> {
-  const headers = await getAuthHeaders();
-  const u = new URL(apiUrl(`/api/my-games/${encodeURIComponent(token)}/`));
+/**
+ * Get game details with all questions and user's answers.
+ * - Logged-in users: JWT via GET /api/my-games/<token>/ (omit playerToken).
+ * - Guests: GET /api/games/<token>/with-answers/?player_token= (pass playerToken).
+ */
+export async function getGameDetail(
+  token: string,
+  options?: { playerToken?: string }
+): Promise<GameDetailWithAnswers> {
+  const playerToken = options?.playerToken;
+  const u = playerToken
+    ? new URL(apiUrl(`/api/games/${encodeURIComponent(token)}/with-answers/`))
+    : new URL(apiUrl(`/api/my-games/${encodeURIComponent(token)}/`));
+  if (playerToken) {
+    u.searchParams.set('player_token', playerToken);
+  }
   u.searchParams.set('_', String(Date.now()));
+  const headers = playerToken
+    ? { Accept: 'application/json', 'Content-Type': 'application/json' }
+    : {
+        ...(await getAuthHeaders()),
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      };
   const response = await fetch(u.toString(), {
     method: 'GET',
-    headers: {
-      ...headers,
-      'Cache-Control': 'no-cache',
-      Pragma: 'no-cache',
-    },
+    headers,
     cache: 'no-store',
   });
   const data = await response.json().catch(() => ({}));

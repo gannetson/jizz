@@ -21,7 +21,7 @@ import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { colors } from '../theme';
 
-type GameDetailRouteParams = { token: string };
+type GameDetailRouteParams = { token: string; playerToken?: string };
 
 function formatDate(dateString: string): string {
   try {
@@ -55,10 +55,35 @@ function getAnswerName(answer: NonNullable<QuestionWithAnswer['user_answer']>, g
   return answer.name || answer.name_latin || '';
 }
 
+/** Display seconds for answer timing (matches web game-detail `formatTime`). */
+function formatAnswerSeconds(seconds: number): string {
+  if (seconds < 1) return `${Math.round(seconds * 1000)} ms`;
+  if (seconds < 60) return `${seconds.toFixed(1)} s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${Math.round(s)}s`;
+}
+
+/** Score + answered-in time for each question row. */
+function questionStatsLine(q: QuestionWithAnswer): string | null {
+  if (q.correct === null) return null;
+  const parts: string[] = [];
+  if (q.correct === true) {
+    if (q.points != null) parts.push(`Score: ${q.points} pts`);
+  } else {
+    parts.push('0 pts');
+  }
+  if (q.time_taken_seconds != null) {
+    parts.push(`Answered in ${formatAnswerSeconds(q.time_taken_seconds)}`);
+  }
+  return parts.length ? parts.join(' · ') : null;
+}
+
 export function GameDetailScreen() {
   const route = useRoute<RouteProp<{ GameDetail: GameDetailRouteParams }, 'GameDetail'>>();
   const navigation = useNavigation();
   const token = route.params?.token ?? '';
+  const playerToken = route.params?.playerToken;
   const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,14 +98,17 @@ export function GameDetailScreen() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getGameDetail(token);
+      const data = await getGameDetail(
+        token,
+        playerToken ? { playerToken } : undefined
+      );
       setGame(data);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load game');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, playerToken]);
 
   useEffect(() => {
     loadGame();
@@ -156,6 +184,7 @@ export function GameDetailScreen() {
         game.questions.map((q) => {
           const speciesName = getSpeciesName(q, game.language);
           const isExpanded = expandedId === q.id;
+          const statsLine = questionStatsLine(q);
           return (
             <Pressable
               key={q.id}
@@ -190,6 +219,12 @@ export function GameDetailScreen() {
                   </Text>
                 </View>
               )}
+
+              {statsLine ? (
+                <View style={styles.statsRow}>
+                  <Text style={styles.statsText}>{statsLine}</Text>
+                </View>
+              ) : null}
 
               {isExpanded && q.media_item && (
                 <View style={styles.mediaBox}>
@@ -343,6 +378,8 @@ const styles = StyleSheet.create({
   },
   yourAnswerLabel: { fontSize: 12, fontWeight: '600', color: colors.error[500], marginBottom: 4 },
   yourAnswerText: { fontSize: 15, color: colors.primary[800] },
+  statsRow: { marginTop: 10 },
+  statsText: { fontSize: 14, color: colors.primary[700], fontWeight: '500' },
   mediaBox: { marginTop: 12, padding: 12, backgroundColor: colors.primary[50], borderRadius: 8 },
   mediaImage: { width: '100%', height: 200, borderRadius: 8 },
   mediaVideo: { width: '100%', height: 200, borderRadius: 8 },

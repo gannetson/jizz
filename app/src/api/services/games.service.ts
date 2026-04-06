@@ -103,21 +103,29 @@ class GamesService {
   }
 
   /**
-   * Get game details with all questions and user's answers
+   * Get game details with all questions and user's answers.
+   * With playerToken: public GET /api/games/<token>/with-answers/?player_token= (guests).
+   * Without: GET /api/my-games/<token>/ (JWT).
    */
-  async getGameDetail(token: string): Promise<GameDetailWithAnswers> {
+  async getGameDetail(
+    token: string,
+    options?: { playerToken?: string }
+  ): Promise<GameDetailWithAnswers> {
     try {
-      const response = await axios.get<GameDetailWithAnswers>(
-        `${this.baseURL}/api/my-games/${encodeURIComponent(token)}/`,
-        {
-          params: { _: Date.now() },
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-            Pragma: 'no-cache',
-          },
-        }
-      );
+      const pt = options?.playerToken;
+      const url = pt
+        ? `${this.baseURL}/api/games/${encodeURIComponent(token)}/with-answers/`
+        : `${this.baseURL}/api/my-games/${encodeURIComponent(token)}/`;
+      const params: Record<string, string | number> = { _: Date.now() };
+      if (pt) params.player_token = pt;
+      const response = await axios.get<GameDetailWithAnswers>(url, {
+        params,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      });
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);

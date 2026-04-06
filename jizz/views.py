@@ -1439,6 +1439,10 @@ class UserGameDetailView(RetrieveAPIView):
                 queryset=Question.objects.order_by('sequence').select_related('species').prefetch_related(
                     'species__media',
                     Prefetch(
+                        'media_ready',
+                        queryset=QuestionMediaReady.objects.select_related('player'),
+                    ),
+                    Prefetch(
                         'answers',
                         queryset=Answer.objects.filter(
                             player_score__in=user_player_scores
@@ -1455,6 +1459,80 @@ class UserGameDetailView(RetrieveAPIView):
         """Add request to serializer context"""
         context = super().get_serializer_context()
         context['request'] = self.request
+        return context
+
+
+class GameDetailWithAnswersByPlayerTokenView(RetrieveAPIView):
+    """
+    Same JSON as GET /api/my-games/<token>/ for guests: ?player_token=<player token>.
+    Player must have a score row for this game (same secret as WebSocket join_game).
+    """
+
+    from .serializers import GameDetailWithAnswersSerializer
+
+    permission_classes = [AllowAny]
+    serializer_class = GameDetailWithAnswersSerializer
+    lookup_field = "token"
+
+    def retrieve(self, request, *args, **kwargs):
+        if not (request.query_params.get("player_token") or "").strip():
+            return Response(
+                {"detail": "player_token query parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        response = super().retrieve(request, *args, **kwargs)
+        return _set_no_cache_headers(response)
+
+    def get_queryset(self):
+        player_token = (self.request.query_params.get("player_token") or "").strip()
+        self._detail_player_for_context = None
+        if not player_token:
+            return Game.objects.none()
+        player = Player.objects.filter(token=player_token).first()
+        if not player:
+            return Game.objects.none()
+
+        self._detail_player_for_context = player
+        user_player_scores = PlayerScore.objects.filter(player=player)
+        return (
+            Game.objects.filter(
+                token=self.kwargs["token"],
+                questions__answers__player_score__in=user_player_scores,
+            )
+            .distinct()
+            .prefetch_related(
+                Prefetch(
+                    "questions",
+                    queryset=Question.objects.order_by("sequence")
+                    .select_related("species")
+                    .prefetch_related(
+                        "species__media",
+                        Prefetch(
+                            "media_ready",
+                            queryset=QuestionMediaReady.objects.select_related("player"),
+                        ),
+                        Prefetch(
+                            "answers",
+                            queryset=Answer.objects.filter(
+                                player_score__in=user_player_scores
+                            )
+                            .select_related(
+                                "answer",
+                                "player_score",
+                                "player_score__player",
+                            )
+                            .prefetch_related("answer__media"),
+                        ),
+                    ),
+                )
+            )
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        player = getattr(self, "_detail_player_for_context", None)
+        if player is not None:
+            context["detail_player"] = player
         return context
 
 

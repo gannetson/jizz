@@ -261,31 +261,39 @@ export const GameDetailPage = () => {
                         </Box>
                       )}
 
-                      {/* Stats */}
-                      <HStack gap={4} fontSize="sm" color="gray.600" flexWrap="wrap">
-                        {question.time_taken_seconds !== null && (
-                          <>
-                            <Text>
-                              <FormattedMessage id="time" defaultMessage="Time" />: {formatTime(question.time_taken_seconds)}
+                      {/* Score + answer time (same basis as live play scoring) */}
+                      {question.correct !== null && (
+                        <HStack gap={2} fontSize="sm" color="gray.600" flexWrap="wrap" alignItems="center">
+                          {question.correct === true && question.points !== null && (
+                            <Text fontWeight="medium" color="green.600">
+                              <FormattedMessage
+                                id="score_pts"
+                                defaultMessage="Score: {points} pts"
+                                values={{ points: question.points }}
+                              />
                             </Text>
-                            <Text>•</Text>
-                          </>
-                        )}
-                        {question.points !== null && question.correct === true && (
-                          <Text fontWeight="medium" color="green.600">
-                            <FormattedMessage 
-                              id="points_earned" 
-                              defaultMessage="{points} points" 
-                              values={{ points: question.points }}
-                            />
-                          </Text>
-                        )}
-                        {question.correct === false && (
-                          <Text color="red.600">
-                            <FormattedMessage id="no_points" defaultMessage="0 points" />
-                          </Text>
-                        )}
-                      </HStack>
+                          )}
+                          {question.correct === false && (
+                            <Text color="red.600">
+                              <FormattedMessage id="no_points" defaultMessage="0 pts" />
+                            </Text>
+                          )}
+                          {question.time_taken_seconds !== null && (
+                            <>
+                              {(question.correct === true && question.points !== null) || question.correct === false ? (
+                                <Text aria-hidden>·</Text>
+                              ) : null}
+                              <Text>
+                                <FormattedMessage
+                                  id="answered_in_seconds"
+                                  defaultMessage="Answered in {time}"
+                                  values={{ time: formatTime(question.time_taken_seconds) }}
+                                />
+                              </Text>
+                            </>
+                          )}
+                        </HStack>
+                      )}
                     </VStack>
                   </Box>
                 ))

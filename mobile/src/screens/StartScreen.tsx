@@ -75,6 +75,7 @@ export function StartScreen() {
     loading,
     createGame,
     loadStoredPlayer,
+    trySetInitialPlayerName,
     setGame,
   } = useGame();
   const { joinGame } = useGameWebSocket();
@@ -170,7 +171,7 @@ export function StartScreen() {
       .then((profile) => {
         if (cancelled) return;
         if (profile.username?.trim()) {
-          setPlayerName(profile.username.trim());
+          trySetInitialPlayerName(profile.username.trim());
         }
         if (profile.country_code) {
           const c = countries.find((x) => x.code === profile.country_code);
@@ -184,7 +185,7 @@ export function StartScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, countriesLoaded, countries.length]);
+  }, [isAuthenticated, countriesLoaded, countries.length, trySetInitialPlayerName]);
 
   const handleStart = async () => {
     if (!playerName.trim()) {

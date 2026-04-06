@@ -63,6 +63,7 @@
   "game lobby": "Game Lobby",
   "game progress": "Game - {current} of {total}",
   "game_details": "Game Details",
+  "tap_for_game_details": "Open for full game details and answers",
   "go_to_login": "Go to Login",
   "hard multiple choice": "Multiple choice with similar species",
   "have_account": "Already have an account?",

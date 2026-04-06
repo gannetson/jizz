@@ -40,9 +40,11 @@ type GameDetailModalProps = {
   isOpen: boolean;
   onClose: () => void;
   gameToken: string | null;
+  /** Guest MPG: fetch via /api/games/.../with-answers/?player_token= */
+  playerToken?: string;
 };
 
-export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalProps) => {
+export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: GameDetailModalProps) => {
   const { language } = useContext(AppContext);
   const locale = language === 'nl' ? 'nl' : 'en';
   const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
@@ -59,7 +61,10 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
       try {
         setLoading(true);
         setError(null);
-        const data = await gamesService.getGameDetail(gameToken);
+        const data = await gamesService.getGameDetail(
+          gameToken,
+          playerToken ? { playerToken } : undefined
+        );
         setGame(data);
       } catch (err: any) {
         setError(err.message || "Failed to load game");
@@ -69,7 +74,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
     };
 
     loadGame();
-  }, [gameToken, isOpen]);
+  }, [gameToken, isOpen, playerToken]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -400,31 +405,39 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken }: GameDetailModalP
                                 </Box>
                               )}
 
-                              {/* Stats */}
-                              <HStack gap={4} fontSize="sm" color="gray.600" flexWrap="wrap">
-                                {question.time_taken_seconds !== null && (
-                                  <>
-                                    <Text>
-                                      <FormattedMessage id="time" defaultMessage="Time" />: {formatTime(question.time_taken_seconds)}
+                              {question.correct !== null && (
+                                <HStack gap={2} fontSize="sm" color="gray.600" flexWrap="wrap" alignItems="center">
+                                  {question.correct === true && question.points !== null && (
+                                    <Text fontWeight="medium" color="green.600">
+                                      <FormattedMessage
+                                        id="score_pts"
+                                        defaultMessage="Score: {points} pts"
+                                        values={{ points: question.points }}
+                                      />
                                     </Text>
-                                    <Text>•</Text>
-                                  </>
-                                )}
-                                {question.points !== null && question.correct === true && (
-                                  <Text fontWeight="medium" color="green.600">
-                                    <FormattedMessage 
-                                      id="points_earned" 
-                                      defaultMessage="{points} points" 
-                                      values={{ points: question.points }}
-                                    />
-                                  </Text>
-                                )}
-                                {question.correct === false && (
-                                  <Text color="red.600">
-                                    <FormattedMessage id="no_points" defaultMessage="0 points" />
-                                  </Text>
-                                )}
-                              </HStack>
+                                  )}
+                                  {question.correct === false && (
+                                    <Text color="red.600">
+                                      <FormattedMessage id="no_points" defaultMessage="0 pts" />
+                                    </Text>
+                                  )}
+                                  {question.time_taken_seconds !== null && (
+                                    <>
+                                      {(question.correct === true && question.points !== null) ||
+                                      question.correct === false ? (
+                                        <Text aria-hidden>·</Text>
+                                      ) : null}
+                                      <Text>
+                                        <FormattedMessage
+                                          id="answered_in_seconds"
+                                          defaultMessage="Answered in {time}"
+                                          values={{ time: formatTime(question.time_taken_seconds) }}
+                                        />
+                                      </Text>
+                                    </>
+                                  )}
+                                </HStack>
+                              )}
                             </VStack>
                           </Box>
                         );

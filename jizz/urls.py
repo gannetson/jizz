@@ -9,7 +9,7 @@ from rest_framework_simplejwt import views as jwt_views
 from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
-    GameDetailView, QuestionDetailView, QuestionMediaReadyView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
+    GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
     PlayerScoreListView, \
     PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
@@ -120,6 +120,11 @@ urlpatterns = [
     re_path(r"^api/species/(?P<pk>\w+)/$", SpeciesDetailView.as_view(), name="species-detail"),
 
     re_path(r"^api/games/$", GameListView.as_view(), name="game-list"),
+    re_path(
+        r"^api/games/(?P<token>[\w-]+)/with-answers/$",
+        GameDetailWithAnswersByPlayerTokenView.as_view(),
+        name="game-detail-with-answers",
+    ),
     re_path(r"^api/games/(?P<token>[\w-]+)/$", GameDetailView.as_view(), name="game-detail"),
     re_path(r"^api/species/$", SpeciesListView.as_view(), name="species-list"),
 

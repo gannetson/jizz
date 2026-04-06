@@ -1,12 +1,35 @@
 import {Box, Button, Flex, Heading, ListRoot, ListItem} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import React, {useContext, useState, useEffect} from "react"
+import React, {useContext, useState, useEffect, useMemo} from "react"
 import WebsocketContext from "../../../core/websocket-context"
-import AppContext from "../../../core/app-context"
+import AppContext, {type Game, type MultiPlayer, type Player} from "../../../core/app-context"
 import {PlayerItem} from "./player-item"
 import {useNavigate, useLocation} from "react-router-dom"
 import {GameRow} from "../../../components/game-row"
 import { apiUrl } from '../../../api/baseUrl'
+import { authService } from "../../../api/services/auth.service"
+
+/** Merge MPG results data so GameRow can show points + correct/total like My games. */
+function enrichGameForResults(
+  game: Game,
+  currentPlayer: Player | undefined,
+  playersList: MultiPlayer[] | undefined
+): Game {
+  const me = playersList?.find((p) => p.id === currentPlayer?.id)
+  const userScore = me?.score
+  const scoreRow = game.scores?.find((s) => s.name === currentPlayer?.name)
+  const answers = scoreRow?.answers ?? []
+  const correct_count = answers.filter((a) => a.correct === true).length
+  const len = typeof game.length === "number" ? game.length : Number(game.length)
+  const total_questions =
+    Number.isFinite(len) && len > 0 ? len : answers.length
+  return {
+    ...game,
+    user_score: userScore ?? scoreRow?.score,
+    correct_count,
+    total_questions,
+  }
+}
 
 export const ResultsComponent = () => {
 
@@ -25,6 +48,14 @@ export const ResultsComponent = () => {
     players?.find(p => p.is_host && (p.name === player?.name || p.id === player?.id)) !== undefined ||
     player?.name === game?.host?.name ||
     player?.id === game?.host?.id
+
+  const gameDetailPlayerToken =
+    !authService.getAccessToken() && player?.token ? player.token : undefined
+
+  const displayGame = useMemo(
+    () => (game ? enrichGameForResults(game, player, players) : undefined),
+    [game, player, players]
+  )
 
   const createGame = () => {
     navigate('/start')
@@ -202,24 +233,27 @@ export const ResultsComponent = () => {
               <Button
                 onClick={handleRematch}
                 colorPalette="primary"
-                variant="outline"
                 loading={isRematchLoading}
                 loadingText={<FormattedMessage id={'creating game'} defaultMessage={'Creating game…'} />}
               >
                 <FormattedMessage id={'rematch'} defaultMessage={'Rematch'}/>
               </Button>
             )}
-            <Button onClick={createGame} colorPalette="primary">
+            <Button onClick={createGame} colorPalette="primary" variant={'outline'}>
               <FormattedMessage id={'play again'} defaultMessage={'Play another game'}/>
             </Button>
           </Flex>
           
-          {game && (
+          {displayGame && (
             <Box>
               <Heading size="md" mb={4}>
                 <FormattedMessage id="review_answers" defaultMessage="Review Your Answers" />
               </Heading>
-              <GameRow game={game} />
+              <GameRow
+                game={displayGame}
+                emphasizeClickable
+                playerToken={gameDetailPlayerToken}
+              />
             </Box>
           )}
         </Flex>

@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, FlagQuestion, \
+from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
     ChallengeLevel, Language, Page, SpeciesName, UserProfile, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
@@ -765,17 +765,36 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
     
     def _get_user_answer_obj(self, obj):
         """Helper method to get the user's answer object (uses prefetched data)"""
+        detail_player = self.context.get('detail_player')
+        if detail_player is not None:
+            if hasattr(obj, 'answers'):
+                for answer in obj.answers.all():
+                    if (
+                        answer.player_score
+                        and answer.player_score.player_id == detail_player.id
+                    ):
+                        return answer
+            return (
+                Answer.objects.filter(
+                    player_score__player=detail_player,
+                    player_score__game=obj.game,
+                    question=obj,
+                )
+                .select_related('answer')
+                .first()
+            )
+
         request = self.context.get('request')
         if not request or not request.user or not request.user.is_authenticated:
             return None
-        
+
         # Try to use prefetched answers first
         if hasattr(obj, 'answers'):
             # Answers are prefetched, find the one for this user
             for answer in obj.answers.all():
                 if answer.player_score and answer.player_score.player.user == request.user:
                     return answer
-        
+
         # Fallback: query if not prefetched
         game = obj.game
         user_players = Player.objects.filter(user=request.user)
@@ -783,16 +802,16 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
             player__in=user_players,
             game=game
         ).first()
-        
+
         if not player_score:
             return None
-        
+
         # Get the answer for this question
         answer = Answer.objects.filter(
             player_score=player_score,
             question=obj
         ).select_related('answer').first()
-        
+
         return answer
     
     def get_user_answer(self, obj):
@@ -815,12 +834,26 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
         return None
     
     def get_time_taken_seconds(self, obj):
-        """Calculate time taken to answer in seconds"""
+        """Seconds from question (or media-ready) to submit — same basis as score calculation."""
         answer = self._get_user_answer_obj(obj)
-        
+
         if answer:
-            time_taken = (answer.created - obj.created).total_seconds()
-            return round(time_taken, 2)
+            start = obj.created
+            player_id = answer.player_score.player_id
+            ready = None
+            for mr in obj.media_ready.all():
+                if mr.player_id == player_id:
+                    ready = mr
+                    break
+            if ready is None:
+                ready = QuestionMediaReady.objects.filter(
+                    question=obj,
+                    player_id=player_id,
+                ).first()
+            if ready and ready.ready_at:
+                start = max(start, ready.ready_at)
+            time_taken = (answer.created - start).total_seconds()
+            return round(max(0.0, time_taken), 2)
         return None
     
     def get_points(self, obj):
@@ -902,16 +935,21 @@ class GameDetailWithAnswersSerializer(serializers.ModelSerializer):
     
     def get_total_score(self, obj):
         """Get total score for the user"""
+        detail_player = self.context.get('detail_player')
+        if detail_player is not None:
+            ps = PlayerScore.objects.filter(player=detail_player, game=obj).first()
+            return ps.score if ps else 0
+
         request = self.context.get('request')
         if not request or not request.user or not request.user.is_authenticated:
             return 0
-        
+
         user_players = Player.objects.filter(user=request.user)
         player_score = PlayerScore.objects.filter(
             player__in=user_players,
             game=obj
         ).first()
-        
+
         if player_score:
             return player_score.score
         return 0

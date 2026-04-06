@@ -9,6 +9,8 @@ export type GameScore = {
   score?: number;
   ranking?: number;
   is_host?: boolean;
+  /** Present on `game_ended` payload (PlayerScoreSerializer). */
+  answers?: Array<{ correct?: boolean }>;
 };
 
 export type Game = {
@@ -18,6 +20,7 @@ export type Game = {
   media: string;
   country: Country;
   language: string;
+  created?: string;
   host?: { id: number; name: string; token?: string };
   ended?: boolean;
   current_highscore?: { name: string; score?: number };

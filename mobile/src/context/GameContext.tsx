@@ -42,6 +42,8 @@ type GameContextType = {
   setGame: (g: Game | null) => void;
   setPlayer: (p: Player | null) => void;
   loadStoredPlayer: () => Promise<void>;
+  /** Set player name from profile/storage only if we have not already filled it once (cleared field stays empty). */
+  trySetInitialPlayerName: (name: string) => void;
   clearGame: () => Promise<void>;
 };
 
@@ -63,26 +65,44 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   /** Avoid overwriting species language after the user picks a value — loadStoredPlayer can run twice (provider + Start). */
   const lastLanguageSyncPlayerTokenRef = useRef<string | null>(null);
+  /** Once we set name from storage or profile, never auto-fill again until player token is cleared (logout / invalid token). */
+  const initialPlayerNameFilledRef = useRef(false);
+
+  const trySetInitialPlayerName = useCallback((name: string) => {
+    const t = name?.trim();
+    if (!t) return;
+    setPlayerName((prev) => {
+      if (initialPlayerNameFilledRef.current) return prev;
+      if (prev.trim()) {
+        initialPlayerNameFilledRef.current = true;
+        return prev;
+      }
+      initialPlayerNameFilledRef.current = true;
+      return t;
+    });
+  }, []);
 
   const loadStoredPlayer = useCallback(async () => {
     const token = await AsyncStorage.getItem(PLAYER_TOKEN_KEY);
     if (!token) {
+      initialPlayerNameFilledRef.current = false;
       lastLanguageSyncPlayerTokenRef.current = null;
       return;
     }
     const p = await playerApi.getPlayer(token);
     if (p) {
       setPlayer(p);
-      if (!playerName) setPlayerName(p.name);
+      trySetInitialPlayerName(p.name);
       if (lastLanguageSyncPlayerTokenRef.current !== p.token) {
         lastLanguageSyncPlayerTokenRef.current = p.token;
         setLanguage(p.language);
       }
     } else {
       await AsyncStorage.removeItem(PLAYER_TOKEN_KEY);
+      initialPlayerNameFilledRef.current = false;
       lastLanguageSyncPlayerTokenRef.current = null;
     }
-  }, [playerName]);
+  }, [trySetInitialPlayerName]);
 
   useEffect(() => {
     loadStoredPlayer();
@@ -210,6 +230,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setGame,
         setPlayer,
         loadStoredPlayer,
+        trySetInitialPlayerName,
         clearGame,
       }}
     >

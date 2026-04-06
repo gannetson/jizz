@@ -16,7 +16,8 @@ on:
 
 jobs:
   ios-build:
-    runs-on: macos-14
+    # macos-14 defaults to Xcode 15.4; React Native 0.81+ requires Xcode >= 16.1.
+    runs-on: macos-15
     timeout-minutes: 45
     continue-on-error: true
 

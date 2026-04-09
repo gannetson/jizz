@@ -10,9 +10,10 @@ import {
   Dimensions,
   Animated,
   Image,
-  Platform,
   BackHandler,
+  Platform,
 } from 'react-native';
+import { exitApp } from '@logicwind/react-native-exit-app';
 import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../context/AuthContext';
@@ -53,9 +54,15 @@ export function UserMenuModal() {
 
   const handleExit = () => {
     closeUserMenu();
-    if (Platform.OS === 'android') {
-      BackHandler.exitApp();
-    }
+    requestAnimationFrame(() => {
+      try {
+        exitApp();
+      } catch {
+        if (Platform.OS === 'android') {
+          BackHandler.exitApp();
+        }
+      }
+    });
   };
 
   return (

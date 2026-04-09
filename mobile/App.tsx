@@ -34,8 +34,8 @@ export default function App() {
         <AutocompleteDropdownContextProvider>
         <AuthProvider>
           <ProfileProvider>
-            <TranslationProvider>
-              <GameProvider>
+            <GameProvider>
+              <TranslationProvider>
                 <GameWebSocketProvider>
                   <DeepLinkHandler>
                     <MenuProvider>
@@ -43,8 +43,8 @@ export default function App() {
                     </MenuProvider>
                   </DeepLinkHandler>
                 </GameWebSocketProvider>
-              </GameProvider>
-            </TranslationProvider>
+              </TranslationProvider>
+            </GameProvider>
           </ProfileProvider>
         </AuthProvider>
         </AutocompleteDropdownContextProvider>

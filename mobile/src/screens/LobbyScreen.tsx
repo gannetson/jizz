@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Linking } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useGame } from '../context/GameContext';
@@ -23,6 +23,7 @@ export function LobbyScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
+  const isFocused = useIsFocused();
   const params = (route.params as LobbyRouteParams) ?? {};
   const rematchToken = params.rematch_game_token;
   const rematchJoin = params.rematchJoin === true;
@@ -45,7 +46,7 @@ export function LobbyScreen() {
 
   // When arriving from "Join rematch", load the new game; only when rematchJoin is set (avoids fighting createGame)
   useEffect(() => {
-    if (!rematchToken || !player?.token || !rematchJoin) return;
+    if (!isFocused || !rematchToken || !player?.token || !rematchJoin) return;
     if (game?.token === rematchToken) {
       (navigation as any).setParams({ rematch_game_token: undefined, rematchJoin: undefined });
       return;
@@ -59,13 +60,13 @@ export function LobbyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [rematchToken, rematchJoin, player?.token, game?.token, loadGameFromApi, setGame, navigation]);
+  }, [isFocused, rematchToken, rematchJoin, player?.token, game?.token, loadGameFromApi, setGame, navigation]);
 
   useEffect(() => {
-    if (!game?.token || !player?.token) return;
+    if (!isFocused || !game?.token || !player?.token) return;
     joinGame(game, player, setGame);
     return () => {};
-  }, [game?.token, player?.token]);
+  }, [isFocused, game?.token, player?.token, joinGame, setGame]);
 
   // Drop stale question / WS state from a previous game when the lobby game token changes
   useEffect(() => {
@@ -77,7 +78,7 @@ export function LobbyScreen() {
   }, [game?.token, clearQuestion]);
 
   useEffect(() => {
-    if (!game?.token) return;
+    if (!isFocused || !game?.token) return;
     const token = game.token;
     let cancelled = false;
     loadGameFromApi(token).then((g) => {
@@ -97,11 +98,11 @@ export function LobbyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [game?.token, loadGameFromApi, setGame]);
+  }, [isFocused, game?.token, loadGameFromApi, setGame]);
 
   // Poll game so host sees new joiners even if WebSocket update_players was missed
   useEffect(() => {
-    if (!game?.token || !connected) return;
+    if (!isFocused || !game?.token || !connected) return;
     const interval = setInterval(() => {
       loadGameFromApi(game.token).then((g) => {
         if (g?.scores?.length) {
@@ -117,16 +118,16 @@ export function LobbyScreen() {
       });
     }, LOBBY_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [game?.token, connected, loadGameFromApi]);
+  }, [isFocused, game?.token, connected, loadGameFromApi]);
 
   useEffect(() => {
-    if (!question?.id || !game?.token) return;
+    if (!isFocused || !question?.id || !game?.token) return;
     const qt = question.game?.token;
     if (qt != null && String(qt).trim() !== '' && String(qt).trim() !== String(game.token).trim()) {
       return;
     }
     (navigation as any).navigate('GamePlay');
-  }, [question, game?.token, navigation]);
+  }, [isFocused, question, game?.token, navigation]);
 
   const handleRefreshConnection = useCallback(async () => {
     if (!game?.token || !player?.token) return;

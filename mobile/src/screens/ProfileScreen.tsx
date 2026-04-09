@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View,
   Text,
@@ -19,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
+import { setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference';
 import { getProfile, updateProfile, updateProfileAvatar, getAvatarUrl, deleteAccount, type UserProfile } from '../api/profile';
 import { loadCountries, type Country } from '../api/countries';
 import { loadLanguages, type Language } from '../api/languages';
@@ -28,6 +30,7 @@ import { colors } from '../theme';
 
 export function ProfileScreen() {
   const { t, locale, setLocale } = useTranslation();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { refreshProfile } = useProfile();
@@ -50,6 +53,7 @@ export function ProfileScreen() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   /** True after user changes species language in the modal; blocks loadProfile from overwriting before save. */
   const speciesLanguageDirtyRef = useRef(false);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -59,7 +63,9 @@ export function ProfileScreen() {
       const p = await getProfile();
       setProfile(p);
       setUsername(p.username);
-      setLanguage(p.language || 'en');
+      if (!speciesLanguageDirtyRef.current) {
+        setLanguage(p.language || 'en');
+      }
       setTimezone(p.timezone || 'Europe/Amsterdam');
       setCountryCode(p.country_code ?? null);
       if (p.avatar_url) setAvatarPreviewUri(null);
@@ -92,6 +98,12 @@ export function ProfileScreen() {
     loadLanguages().then(setLanguages);
     loadCountries().then((list) => setCountries(list.filter((c) => !c.code.includes('NL-NH'))));
   }, []);
+
+  useEffect(() => {
+    if (!saveToast) return;
+    const id = setTimeout(() => setSaveToast(null), 2200);
+    return () => clearTimeout(id);
+  }, [saveToast]);
 
   const showAvatarOptions = useCallback(() => {
     Alert.alert(
@@ -180,14 +192,19 @@ export function ProfileScreen() {
         timezone: timezone?.trim() || undefined,
         country_code: countryCode ?? undefined,
       });
-      speciesLanguageDirtyRef.current = false;
+      const speciesCode = (language || 'en').trim();
       const updated = await getProfile();
       setProfile(updated);
       setUsername(updated.username);
       setLanguage(updated.language || 'en');
       setTimezone(updated.timezone ?? 'Europe/Amsterdam');
       setCountryCode(updated.country_code ?? null);
+      speciesLanguageDirtyRef.current = false;
       refreshProfile();
+      setSaveToast(t('profile_saved'));
+      setTimeout(() => {
+        (navigation as any).navigate('Home');
+      }, 450);
     } catch (e: any) {
       setError(e?.message ?? t('failed_update_profile'));
     } finally {
@@ -243,6 +260,7 @@ export function ProfileScreen() {
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
   return (
+    <View style={styles.screenRoot}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {error && (
         <View style={styles.errorBox}>
@@ -300,35 +318,6 @@ export function ProfileScreen() {
       <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)}>
         <Text style={styles.selectButtonText}>{languageLabel}</Text>
       </TouchableOpacity>
-      <Text style={styles.label}>{t('app_language')}</Text>
-      <View style={styles.radioRow}>
-        <TouchableOpacity
-          style={[styles.radioChip, locale === 'en' && styles.radioChipSelected]}
-          onPress={() => setLocale('en')}
-        >
-          <Text
-            style={[
-              styles.radioChipText,
-              locale === 'en' && styles.radioChipTextSelected,
-            ]}
-          >
-            English
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.radioChip, locale === 'nl' && styles.radioChipSelected]}
-          onPress={() => setLocale('nl')}
-        >
-          <Text
-            style={[
-              styles.radioChipText,
-              locale === 'nl' && styles.radioChipTextSelected,
-            ]}
-          >
-            Nederlands
-          </Text>
-        </TouchableOpacity>
-      </View>
       <Text style={styles.label}>{t('country_optional')}</Text>
       <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)}>
         <Text style={styles.selectButtonText}>{countryLabel}</Text>
@@ -377,10 +366,13 @@ export function ProfileScreen() {
                 <TouchableOpacity
                   style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
                   onPress={() => {
-                    speciesLanguageDirtyRef.current = true;
-                    setLanguage(item.code);
-                    setLanguageModalVisible(false);
-                    setLanguageSearch('');
+                    void (async () => {
+                      speciesLanguageDirtyRef.current = true;
+                      await setSpeciesLanguageIndependent(true);
+                      setLanguage(item.code);
+                      setLanguageModalVisible(false);
+                      setLanguageSearch('');
+                    })();
                   }}
                 >
                   <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{getLanguageDisplayName(item, locale)}</Text>
@@ -428,11 +420,44 @@ export function ProfileScreen() {
         </Pressable>
       </Modal>
     </ScrollView>
+    {saveToast != null ? (
+      <View
+        style={[styles.saveToast, { bottom: Math.max(insets.bottom, 12) + 8 }]}
+        pointerEvents="none"
+        accessibilityLiveRegion="polite"
+        accessibilityRole="text"
+      >
+        <Text style={styles.saveToastText}>{saveToast}</Text>
+      </View>
+    ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenRoot: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
+  saveToast: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary[800],
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  saveToastText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary[50],
+    textAlign: 'center',
+  },
   content: { padding: 24, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   muted: { fontSize: 14, color: colors.primary[600], marginTop: 8 },

@@ -19,8 +19,6 @@ omit =
     *standardize_copyright*
     *generate_comparison*
     *ai_service*
-    */media/utils*
-    */jizz/utils*
 
 [report]
 exclude_lines =

@@ -9815,7 +9815,7 @@
   dependencies:
     "dom-confetti" "0.2.2"
 
-"react-dom@^16 || ^17 || ^18", "react-dom@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom@^18.0.0", "react-dom@^18.0.0 || ^19.0.0", "react-dom@>=16.6.0", "react-dom@>=16.8", "react-dom@>=16.8.0", "react-dom@>=18", "react-dom@>=18.0.0", "react-dom@18.3.1":
+"react-dom@*", "react-dom@^16 || ^17 || ^18", "react-dom@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom@^18.0.0", "react-dom@^18.0.0 || ^19.0.0", "react-dom@>=16.6.0", "react-dom@>=16.8", "react-dom@>=16.8.0", "react-dom@>=18", "react-dom@>=18.0.0", "react-dom@18.3.1":
   "integrity" "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="
   "resolved" "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz"
   "version" "18.3.1"
@@ -10004,6 +10004,11 @@
     "svg-country-flags" "^1.2.10"
     "svgo" "^3.0.2"
     "world-countries" "^5.0.0"
+
+"react-zoom-pan-pinch@^3.7.0":
+  "integrity" "sha512-UmReVZ0TxlKzxSbYiAj+LeGRW8s8LraAFTXRAxzMYnNRgGPsxCudwZKVkjvGmjtx7SW/hZamt69NUmGf4xrkXA=="
+  "resolved" "https://registry.npmjs.org/react-zoom-pan-pinch/-/react-zoom-pan-pinch-3.7.0.tgz"
+  "version" "3.7.0"
 
 "react@*", "react@^16 || ^17 || ^18", "react@^16.3.0 || ^17.0.1 || ^18.0.0", "react@^16.6.0 || 17 || 18", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^18.0.0", "react@^18.0.0 || ^19.0.0", "react@^18.3.1", "react@>= 16", "react@>=0.14", "react@>=16.6.0", "react@>=16.8", "react@>=16.8.0", "react@>=18", "react@>=18.0.0", "react@18.3.1":
   "integrity" "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ=="

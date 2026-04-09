@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,13 @@ import {
   FlatList,
   Pressable,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { getProfile } from '../api/profile';
+import { setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference';
 import { loadCountries } from '../api/countries';
 import { loadLanguages } from '../api/languages';
 import type { Country } from '../api/countries';
@@ -50,6 +51,7 @@ export function StartScreen() {
   const navigation = useNavigation();
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { profile, ready: profileReady } = useProfile();
   const {
     playerName,
     setPlayerName,
@@ -76,6 +78,7 @@ export function StartScreen() {
     createGame,
     loadStoredPlayer,
     trySetInitialPlayerName,
+    markSpeciesLanguageUserChosen,
     setGame,
   } = useGame();
   const { joinGame } = useGameWebSocket();
@@ -93,8 +96,6 @@ export function StartScreen() {
   const [familyModalVisible, setFamilyModalVisible] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [familySearch, setFamilySearch] = useState('');
-  /** After user picks species language, do not let late profile/player fetches overwrite it. */
-  const speciesLanguageUserChosenRef = useRef(false);
 
   useEffect(() => {
     if (!country?.code) {
@@ -163,29 +164,40 @@ export function StartScreen() {
     );
   }, [taxFamilies, familySearch]);
 
-  // When logged in, prefill player name, country and species language from profile
-  useEffect(() => {
-    if (!isAuthenticated || !countriesLoaded || countries.length === 0) return;
-    let cancelled = false;
-    getProfile()
-      .then((profile) => {
-        if (cancelled) return;
-        if (profile.username?.trim()) {
-          trySetInitialPlayerName(profile.username.trim());
-        }
-        if (profile.country_code) {
-          const c = countries.find((x) => x.code === profile.country_code);
-          if (c) setCountry(c);
-        }
-        if (profile.language?.trim() && !speciesLanguageUserChosenRef.current) {
-          setLanguage(profile.language.trim());
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, countriesLoaded, countries.length, trySetInitialPlayerName]);
+  useFocusEffect(
+    useCallback(() => {
+      joinGame(null, null, setGame);
+
+      if (!isAuthenticated || !profileReady || !profile || !countriesLoaded || countries.length === 0) {
+        return;
+      }
+
+      if (profile.country_code) {
+        const c = countries.find((x) => x.code === profile.country_code);
+        if (c) setCountry(c);
+      }
+
+      if (profile.username?.trim()) {
+        trySetInitialPlayerName(profile.username.trim());
+      }
+
+      const plang = profile.language?.trim();
+      if (plang) {
+        setLanguage(plang);
+      }
+    }, [
+      joinGame,
+      setGame,
+      isAuthenticated,
+      profile,
+      profileReady,
+      countriesLoaded,
+      countries.length,
+      trySetInitialPlayerName,
+      setLanguage,
+      setCountry,
+    ])
+  );
 
   const handleStart = async () => {
     if (!playerName.trim()) {
@@ -233,7 +245,7 @@ export function StartScreen() {
       <Text style={styles.label}>{t('player_name')}</Text>
       <TextInput
         style={styles.input}
-        value={playerName || player?.name || ''}
+        value={playerName}
         onChangeText={setPlayerName}
         placeholder={t('your_name')}
         placeholderTextColor={colors.primary[500]}
@@ -297,10 +309,13 @@ export function StartScreen() {
                 <TouchableOpacity
                   style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
                   onPress={() => {
-                    speciesLanguageUserChosenRef.current = true;
-                    setLanguage(item.code);
-                    setLanguageModalVisible(false);
-                    setLanguageSearch('');
+                    void (async () => {
+                      await setSpeciesLanguageIndependent(true);
+                      markSpeciesLanguageUserChosen();
+                      setLanguage(item.code);
+                      setLanguageModalVisible(false);
+                      setLanguageSearch('');
+                    })();
                   }}
                 >
                   <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{getLanguageDisplayName(item, locale)}</Text>

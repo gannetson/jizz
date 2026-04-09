@@ -6,7 +6,10 @@ type ProfileContextType = {
   profile: UserProfile | null;
   avatarUrl: string | null;
   initials: string;
+  /** True while the initial fetch (or an explicit refresh) is in flight. */
   loading: boolean;
+  /** Logged-in user: false until the first GET /api/profile/ after auth finishes (success or error). Guests: always true. */
+  ready: boolean;
   refreshProfile: () => Promise<void>;
 };
 
@@ -30,6 +33,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  /** Guests: true. After login: false until the auth-triggered GET /api/profile/ settles (so UI can avoid duplicate fetches). */
+  const [ready, setReady] = useState(() => !isAuthenticated);
 
   const refreshProfile = useCallback(async () => {
     setLoading(true);
@@ -44,18 +49,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      refreshProfile();
-    } else {
+    if (!isAuthenticated) {
       setProfile(null);
+      setReady(true);
+      return;
     }
+    setReady(false);
+    let cancelled = false;
+    void refreshProfile().finally(() => {
+      if (!cancelled) setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, refreshProfile]);
 
   const avatarUrl = getAvatarUrl(profile);
   const initials = deriveInitials(profile);
 
   return (
-    <ProfileContext.Provider value={{ profile, avatarUrl, initials, loading, refreshProfile }}>
+    <ProfileContext.Provider value={{ profile, avatarUrl, initials, loading, ready, refreshProfile }}>
       {children}
     </ProfileContext.Provider>
   );

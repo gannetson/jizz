@@ -1,4 +1,4 @@
-import {Box, Button, Flex, Heading, Icon, Image, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, CardRoot} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Icon, PopoverRoot, PopoverArrow, PopoverCloseTrigger, PopoverBody, PopoverContent, PopoverTrigger, SimpleGrid, CardRoot} from "@chakra-ui/react"
 import {useContext, useEffect, useState, useCallback, useRef} from "react"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
@@ -17,6 +17,7 @@ import { AnswerFeedback } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
 import SpeciesCombobox from "../../../components/species-combobox"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
+import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
 
@@ -198,16 +199,16 @@ export const ChallengeQuestion = () => {
             </>
           )}
           {game.media === 'images' && (
-            <Image
+            <ZoomablePlayImage
               key={`${question.id}-img-${currentMediaIndex}`}
-              src={question.images[currentMediaIndex].url.replace('/1800', '/900')}
+              previewSrc={question.images[currentMediaIndex].url.replace('/1800', '/900')}
+              fullSrc={question.images[currentMediaIndex].url}
               onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
                 notifyMediaReady()
               }}
             />
-
           )}
           {game.media === 'audio' && (
             <Box py={8}>

@@ -380,6 +380,9 @@ export function GamePlayScreen() {
         loadingLabel={t('loading')}
         imageFailedLabel={currentMedia ? t('image_failed_to_load') : ''}
         playSoundLabel={`🔊 ${t('play_sound')}`}
+        expandImageLabel={t('expand_image_fullscreen_label')}
+        expandImageHint={t('expand_image_fullscreen_hint')}
+        closeFullScreenLabel={t('close')}
         containerStyle={StyleSheet.flatten(isWide ? [styles.mediaWrap, { minHeight: Math.round(screenHeight * 0.5) }] : styles.mediaWrap)}
         imageHeight={mediaHeight}
         videoHeight={videoHeight}

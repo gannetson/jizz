@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Image,
   ViewStyle,
@@ -12,6 +13,7 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { setAudioModeAsync } from 'expo-audio';
 import { MediaCredits } from './MediaCredits';
+import { FullScreenImageViewerModal } from './FullScreenImageViewerModal';
 import { colors } from '../theme';
 
 export type MediaWithCredits = {
@@ -50,6 +52,12 @@ export type QuestionMediaViewProps = {
   videoHeight?: number;
   /** Called when primary media is ready to interact with (image decoded, video playable, or audio UI shown). Use to avoid starting the answer timer before load. */
   onMediaReady?: () => void;
+  /** Accessibility label for the tappable question image */
+  expandImageLabel?: string;
+  /** Accessibility hint (e.g. pinch to zoom) */
+  expandImageHint?: string;
+  /** Label for the full-screen viewer close control */
+  closeFullScreenLabel?: string;
 };
 
 export function QuestionMediaView({
@@ -75,7 +83,11 @@ export function QuestionMediaView({
   imageHeight,
   videoHeight,
   onMediaReady,
+  expandImageLabel = 'View image full screen',
+  expandImageHint = 'Opens full screen. Pinch to zoom.',
+  closeFullScreenLabel = 'Close',
 }: QuestionMediaViewProps) {
+  const [fullScreenImage, setFullScreenImage] = React.useState(false);
   const mediaReadyOnce = React.useRef(false);
   const fireMediaReady = React.useCallback(() => {
     if (!onMediaReady || mediaReadyOnce.current) return;
@@ -162,25 +174,42 @@ export function QuestionMediaView({
       {mediaType === 'images' && (
         <>
           {imageUri && !imageError ? (
-            <Image
-              style={[styles.image, imageHeight != null && { height: imageHeight }]}
-              resizeMode="contain"
-              source={{
-                uri: imageUri,
-                headers: {
-                  'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
-                },
-              }}
-              onLoad={() => fireMediaReady()}
-              onError={(e) => {
-                const message =
-                  (e as any)?.error?.message ||
-                  (e as any)?.nativeEvent?.error ||
-                  'Unknown image error';
-                onImageError?.(message);
-                fireMediaReady();
-              }}
-            />
+            <>
+              <Pressable
+                onPress={() => setFullScreenImage(true)}
+                accessibilityRole="button"
+                accessibilityLabel={expandImageLabel}
+                accessibilityHint={expandImageHint}
+              >
+                <Image
+                  style={[styles.image, imageHeight != null && { height: imageHeight }]}
+                  resizeMode="contain"
+                  source={{
+                    uri: imageUri,
+                    headers: {
+                      'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
+                    },
+                  }}
+                  onLoad={() => fireMediaReady()}
+                  onError={(e) => {
+                    const message =
+                      (e as any)?.error?.message ||
+                      (e as any)?.nativeEvent?.error ||
+                      'Unknown image error';
+                    onImageError?.(message);
+                    fireMediaReady();
+                  }}
+                />
+              </Pressable>
+              <FullScreenImageViewerModal
+                visible={fullScreenImage}
+                imageUri={
+                  imageUri.includes('/900') ? imageUri.replace('/900', '/1800') : imageUri
+                }
+                onClose={() => setFullScreenImage(false)}
+                closeLabel={closeFullScreenLabel}
+              />
+            </>
           ) : imageError !== undefined || (imageUri && imageError) ? (
             <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
               <Text style={styles.placeholderText}>🖼</Text>

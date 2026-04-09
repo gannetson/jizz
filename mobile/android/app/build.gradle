@@ -100,8 +100,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 56
-        versionName "Pintail"
+        versionCode 57
+        versionName "Smew"
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {
@@ -191,5 +191,20 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+// RN New Architecture: externalNativeBuildClean* re-runs CMake, which includes autolinking paths
+// under node_modules/.../android/build/generated/source/codegen/jni/ that do not exist until
+// codegen has run (they are removed by clean). That makes `./gradlew clean` fail with
+// "add_subdirectory ... which is not an existing directory". Skip those clean tasks and drop .cxx instead.
+afterEvaluate {
+    tasks.matching { it.name.startsWith("externalNativeBuildClean") }.configureEach {
+        enabled = false
+    }
+    tasks.named("clean").configure {
+        doLast {
+            delete file("${project.projectDir}/.cxx")
+        }
     }
 }

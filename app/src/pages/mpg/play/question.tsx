@@ -3,7 +3,6 @@ import {
   Button,
   Flex,
   Heading,
-  Image,
   Link,
   ListRoot,
   ListItem,
@@ -28,6 +27,7 @@ import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
 import SpeciesCombobox from "../../../components/species-combobox"
 import { ComparisonButton } from "../../../components/comparison-button"
+import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
 
 export const QuestionComponent = () => {
@@ -279,8 +279,9 @@ export const QuestionComponent = () => {
         )}
         {game.media === 'images' && question.images[currentMediaIndex] && (
           <>
-            <Image
-              src={question.images[currentMediaIndex].url.replace('/1800', '/900')}
+            <ZoomablePlayImage
+              previewSrc={question.images[currentMediaIndex].url.replace('/1800', '/900')}
+              fullSrc={question.images[currentMediaIndex].url}
               onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';

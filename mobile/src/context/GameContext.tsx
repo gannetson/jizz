@@ -44,6 +44,9 @@ type GameContextType = {
   loadStoredPlayer: () => Promise<void>;
   /** Set player name from profile/storage only if we have not already filled it once (cleared field stays empty). */
   trySetInitialPlayerName: (name: string) => void;
+  /** Call when user picks species language so a late loadStoredPlayer response does not overwrite it. */
+  markSpeciesLanguageUserChosen: () => void;
+  isSpeciesLanguageUserChosen: () => boolean;
   clearGame: () => Promise<void>;
 };
 
@@ -65,8 +68,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   /** Avoid overwriting species language after the user picks a value — loadStoredPlayer can run twice (provider + Start). */
   const lastLanguageSyncPlayerTokenRef = useRef<string | null>(null);
+  /** True after user selects species language on Start / profile; cleared when player token is cleared. */
+  const speciesLanguageUserChosenRef = useRef(false);
   /** Once we set name from storage or profile, never auto-fill again until player token is cleared (logout / invalid token). */
   const initialPlayerNameFilledRef = useRef(false);
+
+  const markSpeciesLanguageUserChosen = useCallback(() => {
+    speciesLanguageUserChosenRef.current = true;
+  }, []);
+
+  const isSpeciesLanguageUserChosen = useCallback(() => speciesLanguageUserChosenRef.current, []);
 
   const trySetInitialPlayerName = useCallback((name: string) => {
     const t = name?.trim();
@@ -87,6 +98,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!token) {
       initialPlayerNameFilledRef.current = false;
       lastLanguageSyncPlayerTokenRef.current = null;
+      speciesLanguageUserChosenRef.current = false;
       return;
     }
     const p = await playerApi.getPlayer(token);
@@ -95,12 +107,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       trySetInitialPlayerName(p.name);
       if (lastLanguageSyncPlayerTokenRef.current !== p.token) {
         lastLanguageSyncPlayerTokenRef.current = p.token;
-        setLanguage(p.language);
+        if (!speciesLanguageUserChosenRef.current) {
+          setLanguage(p.language);
+        }
       }
     } else {
       await AsyncStorage.removeItem(PLAYER_TOKEN_KEY);
       initialPlayerNameFilledRef.current = false;
       lastLanguageSyncPlayerTokenRef.current = null;
+      speciesLanguageUserChosenRef.current = false;
     }
   }, [trySetInitialPlayerName]);
 
@@ -231,6 +246,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setPlayer,
         loadStoredPlayer,
         trySetInitialPlayerName,
+        markSpeciesLanguageUserChosen,
+        isSpeciesLanguageUserChosen,
         clearGame,
       }}
     >

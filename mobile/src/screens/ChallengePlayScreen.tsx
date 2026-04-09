@@ -490,6 +490,9 @@ export function ChallengePlayScreen() {
           onFlagPress={openFlagModal}
           flagLabel={t('this_seems_wrong')}
           playSoundLabel={`🔊 ${t('play_sound')}`}
+          expandImageLabel={t('expand_image_fullscreen_label')}
+          expandImageHint={t('expand_image_fullscreen_hint')}
+          closeFullScreenLabel={t('close')}
           containerStyle={styles.challengeMediaWrap}
           onMediaReady={() => {
             setMediaReady(true);

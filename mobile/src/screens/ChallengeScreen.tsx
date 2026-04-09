@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,8 +24,9 @@ import {
   type CountryChallenge,
 } from '../api/challenge';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { getProfile } from '../api/profile';
+import { getSpeciesLanguageIndependent, setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { getLanguageDisplayName } from '../i18n/languageNames';
 import { colors } from '../theme';
@@ -34,6 +35,7 @@ export function ChallengeScreen() {
   const navigation = useNavigation();
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { profile, ready: profileReady } = useProfile();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<CountryChallenge | null>(null);
@@ -50,6 +52,7 @@ export function ChallengeScreen() {
   const [languageSearch, setLanguageSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [nextLevelLoading, setNextLevelLoading] = useState(false);
+  const profileSpeciesLanguageSeededRef = useRef(false);
 
   const sortedCountries = React.useMemo(
     () => [...countries].sort((a, b) => getCountryDisplayName(a, locale).localeCompare(getCountryDisplayName(b, locale), undefined, { sensitivity: 'base' })),
@@ -133,21 +136,42 @@ export function ChallengeScreen() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || countries.length === 0) return;
+    if (!isAuthenticated) {
+      profileSpeciesLanguageSeededRef.current = false;
+      return;
+    }
+    if (countries.length === 0 || !profileReady || !profile) return;
+
+    if (profile.username?.trim()) setName(profile.username.trim());
+    if (profile.country_code) {
+      const c = countries.find((x) => x.code === profile.country_code);
+      if (c) setCountry(c);
+    }
+
+    if (profileSpeciesLanguageSeededRef.current) return;
+
     let cancelled = false;
-    getProfile()
-      .then((profile) => {
-        if (cancelled) return;
-        if (profile.username?.trim()) setName(profile.username.trim());
-        if (profile.country_code) {
-          const c = countries.find((x) => x.code === profile.country_code);
-          if (c) setCountry(c);
-        }
-        if (profile.language) setLanguage(profile.language);
-      })
-      .catch(() => {});
+    const plang = profile.language;
+    void (async () => {
+      const indep = await getSpeciesLanguageIndependent();
+      if (cancelled) return;
+      if (indep && plang) setLanguage(plang);
+      if (!cancelled) profileSpeciesLanguageSeededRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, countries.length, profile, profileReady]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const indep = await getSpeciesLanguageIndependent();
+      if (cancelled || indep) return;
+      if (locale === 'en' || locale === 'nl') setLanguage(locale);
+    })();
     return () => { cancelled = true; };
-  }, [isAuthenticated, countries.length]);
+  }, [locale]);
 
   // When we have a loaded challenge (e.g. returning to screen), default name to current challenge player
   useEffect(() => {
@@ -381,9 +405,12 @@ export function ChallengeScreen() {
                 <TouchableOpacity
                   style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
                   onPress={() => {
-                    setLanguage(item.code);
-                    setLanguageModalVisible(false);
-                    setLanguageSearch('');
+                    void (async () => {
+                      await setSpeciesLanguageIndependent(true);
+                      setLanguage(item.code);
+                      setLanguageModalVisible(false);
+                      setLanguageSearch('');
+                    })();
                   }}
                   testID={`countryChallenge.modal.language.${item.code}`}
                   accessibilityLabel={getLanguageDisplayName(item, locale)}

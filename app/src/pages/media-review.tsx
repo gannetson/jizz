@@ -577,7 +577,7 @@ export const MediaReviewPage = () => {
           <FormattedMessage id={'media review'} defaultMessage={'Media Review'} />
         </Heading>
       </Page.Header>
-      <Page.Body>
+      <Page.Body maxW="full">
           <Box backgroundColor={'blue.100'} borderColor={'blue.700'} color={'blue.700'} border={'2px solid'} padding={4}>
             <Flex
               as="button"
@@ -812,7 +812,7 @@ export const MediaReviewPage = () => {
                   >
                     <Box
                       width="100%"
-                      height="150px"
+                      height="300px"
                       overflow="hidden"
                       bg="gray.100"
                       position="relative"
@@ -822,7 +822,7 @@ export const MediaReviewPage = () => {
                         alt={item.species_name}
                         width="100%"
                         height="100%"
-                        objectFit="cover"
+                        objectFit="contain"
                         cursor={isReviewed ? 'not-allowed' : 'pointer'}
                         onClick={() => !isReviewed && handleImageClick(item)}
                         onError={(e) => {

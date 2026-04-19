@@ -9,6 +9,8 @@ from bs4 import BeautifulSoup
 import time
 import logging
 
+from media.utils import normalize_contributor as _normalize_contributor
+
 logger = logging.getLogger(__name__)
 
 
@@ -113,6 +115,10 @@ class BaseMediaScraper(ABC):
         if len(parts) >= 2:
             return f"{parts[0]} {parts[1]}"
         return name.strip()
+
+    def normalize_contributor(self, value) -> str:
+        """Plain text, no HTML, max length per Media.contributor."""
+        return _normalize_contributor(value)
     
     def _calculate_quality_score(self, item: Dict, default_score: float = 0.5) -> float:
         """

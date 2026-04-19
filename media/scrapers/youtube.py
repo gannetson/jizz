@@ -112,7 +112,7 @@ class YouTubeScraper(BaseMediaScraper):
                             results.append({
                                 'url': embed_url,  # Embed URL for playback
                                 'link': page_url,
-                                'contributor': channel_title,
+                                'contributor': self.normalize_contributor(channel_title),
                                 'copyright_text': copyright_text,
                                 'title': title,
                                 'source': 'youtube',

@@ -214,7 +214,7 @@ class GBIFScraper(BaseMediaScraper):
             return {
                 'url': url,
                 'link': page_url,
-                'contributor': creator,
+                'contributor': self.normalize_contributor(creator),
                 'copyright_text': copyright_text,
                 'title': title,
                 'source': 'gbif',

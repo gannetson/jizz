@@ -201,7 +201,7 @@ class iNaturalistScraper(BaseMediaScraper):
         return {
             'url': url,
             'link': page_url,
-            'contributor': contributor,
+            'contributor': self.normalize_contributor(contributor),
             'copyright_text': copyright_text,
             'title': taxon.get('name', ''),
             'source': 'inaturalist',
@@ -233,7 +233,7 @@ class iNaturalistScraper(BaseMediaScraper):
         return {
             'url': url,
             'link': page_url,
-            'contributor': contributor,
+            'contributor': self.normalize_contributor(contributor),
             'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',
@@ -260,7 +260,7 @@ class iNaturalistScraper(BaseMediaScraper):
         return {
             'url': url,
             'link': page_url,
-            'contributor': contributor,
+            'contributor': self.normalize_contributor(contributor),
             'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',
@@ -286,7 +286,7 @@ class iNaturalistScraper(BaseMediaScraper):
         return {
             'url': url,
             'link': page_url,
-            'contributor': contributor,
+            'contributor': self.normalize_contributor(contributor),
             'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',

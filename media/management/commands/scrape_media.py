@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from jizz.models import Species
 from media.models import Media
-from media.utils import parse_copyright
+from media.utils import normalize_contributor, parse_copyright, safe_truncate
 from media.scrapers.xeno_canto import XenoCantoScraper
 from media.scrapers.inaturalist import iNaturalistScraper
 from media.scrapers.wikimedia import WikimediaScraper
@@ -17,30 +17,6 @@ from media.scrapers.youtube import YouTubeScraper
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def safe_truncate(value, max_length=200):
-    """
-    Safely truncate a value to max_length, handling None and non-string types.
-    Handles multi-byte characters by encoding to bytes and truncating if needed.
-    """
-    if value is None:
-        return ''
-    value_str = str(value)
-    
-    # If string is already short enough, return as-is
-    if len(value_str) <= max_length:
-        return value_str
-    
-    # Truncate by characters first
-    truncated = value_str[:max_length]
-    
-    # Check byte length (PostgreSQL counts bytes, not characters)
-    # If bytes exceed max_length, truncate further
-    while len(truncated.encode('utf-8')) > max_length and len(truncated) > 0:
-        truncated = truncated[:-1]
-    
-    return truncated
 
 
 class Command(BaseCommand):
@@ -211,7 +187,7 @@ class Command(BaseCommand):
                 species=species,
                 type='audio',
                 source='xeno_canto',
-                contributor=safe_truncate(item.get('contributor'), 500),
+                contributor=normalize_contributor(item.get('contributor')),
                 copyright_text=copyright_text,
                 copyright_standardized=copyright_standardized,
                 non_commercial_only=non_commercial_only,
@@ -254,7 +230,7 @@ class Command(BaseCommand):
                 species=species,
                 type='image',
                 source=source,
-                contributor=safe_truncate(item.get('contributor'), 500),
+                contributor=normalize_contributor(item.get('contributor')),
                 copyright_text=copyright_text,
                 copyright_standardized=copyright_standardized,
                 non_commercial_only=non_commercial_only,
@@ -292,7 +268,7 @@ class Command(BaseCommand):
                 species=species,
                 type='video',
                 source=source,
-                contributor=safe_truncate(item.get('contributor'), 500),
+                contributor=normalize_contributor(item.get('contributor')),
                 copyright_text=copyright_text,
                 copyright_standardized=copyright_standardized,
                 non_commercial_only=non_commercial_only,

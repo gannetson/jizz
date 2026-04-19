@@ -180,7 +180,7 @@ class ObservationScraper(BaseMediaScraper):
             return {
                 'url': img_url,
                 'link': page_url,
-                'contributor': contributor,
+                'contributor': self.normalize_contributor(contributor),
                 'copyright_text': copyright_text,
                 'title': '',
                 'source': 'observation',
@@ -230,7 +230,7 @@ class ObservationScraper(BaseMediaScraper):
             return {
                 'url': img_url,
                 'link': page_url,
-                'contributor': contributor,
+                'contributor': self.normalize_contributor(contributor),
                 'copyright_text': copyright_text,
                 'title': '',
                 'source': 'observation',

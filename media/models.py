@@ -27,8 +27,8 @@ class Media(models.Model):
         on_delete=models.CASCADE
     )
     source = models.CharField(max_length=200, choices=IMAGE_SOURCES, blank=True, default='')
-    contributor = models.CharField(max_length=2000, blank=True, default='')
-    copyright_text = models.CharField(max_length=2000, blank=True, default='', help_text='Copyright text as received from scraper')
+    contributor = models.CharField(max_length=500, blank=True, default='')
+    copyright_text = models.CharField(max_length=500, blank=True, default='', help_text='Copyright text as received from scraper')
     copyright_standardized = models.CharField(max_length=100, blank=True, default='', help_text='Standardized copyright notation (e.g., CC BY, CC BY-NC, etc.)')
     non_commercial_only = models.BooleanField(default=False, help_text='If checked, media is for non-commercial use only. If unchecked, media is free to use with attribution.')
     url = models.URLField(blank=True, null=True, max_length=2000)

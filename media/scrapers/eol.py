@@ -97,7 +97,7 @@ class EOLScraper(BaseMediaScraper):
                             results.append({
                                 'url': media_url,
                                 'link': page_url,
-                                'contributor': contributor,
+                                'contributor': self.normalize_contributor(contributor),
                                 'copyright_text': copyright_text,
                                 'title': title,
                                 'source': 'eol',
@@ -133,7 +133,7 @@ class EOLScraper(BaseMediaScraper):
                             results.append({
                                 'url': media_url,
                                 'link': page_url,
-                                'contributor': contributor,
+                                'contributor': self.normalize_contributor(contributor),
                                 'copyright_text': copyright_text,
                                 'title': title,
                                 'source': 'eol',

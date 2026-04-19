@@ -130,7 +130,7 @@ class WikimediaScraper(BaseMediaScraper):
                         results.append({
                             'url': url,
                             'link': page_url,
-                            'contributor': contributor,
+                            'contributor': self.normalize_contributor(contributor),
                             'copyright_text': copyright_text,
                             'title': description,
                             'source': 'wikimedia',

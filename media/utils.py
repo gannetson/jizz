@@ -1,9 +1,14 @@
 """
 Utility functions for media processing.
 """
+import html as html_module
 import re
 from typing import List, Dict, Optional
+
 from django.db import transaction
+from django.utils.html import strip_tags
+
+CONTRIBUTOR_MAX_LENGTH = 500
 
 
 def parse_copyright(copyright_text):
@@ -162,6 +167,21 @@ def safe_truncate(value, max_length=200):
         truncated = truncated[:-1]
     
     return truncated
+
+
+def normalize_contributor(value, max_length=CONTRIBUTOR_MAX_LENGTH):
+    """
+    Strip HTML, normalize whitespace, and truncate for Media.contributor.
+    """
+    if value is None:
+        return ''
+    s = str(value).strip()
+    if not s:
+        return ''
+    s = html_module.unescape(s)
+    s = strip_tags(s)
+    s = ' '.join(s.split()).strip()
+    return safe_truncate(s, max_length)
 
 
 def get_species_media(

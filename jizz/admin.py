@@ -21,8 +21,9 @@ from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
+from media.management.commands import standardize_copyright
 from media.models import Media
-from media.utils import get_species_media
+from media.utils import get_species_media, parse_copyright
 
 
 class UserProfileInline(admin.StackedInline):
@@ -267,7 +268,24 @@ class SpeciesAdmin(admin.ModelAdmin):
     def get_media(self, request, pk=None):
         species = Species.objects.get(pk=pk)
         species.media.all().delete()
-        get_species_media(species)
+        results = get_species_media(species)
+        for media in results:
+            for result in results[media]:
+                cc_text = result['copyright_text'] or ''
+                cc = parse_copyright(cc_text)
+                Media.objects.get_or_create(
+                    species=species,
+                    url=result['url'],
+                    type=result['type'],
+                    defaults={
+                        'link': result['link'],
+                        'contributor': result['contributor'],
+                        'source': result['source'],
+                        'copyright_text': cc_text,
+                        'copyright_standardized': cc[0],
+                        'non_commercial_only': cc[1]
+                    }
+                )
         image_count = species.media.filter(type='image').count()
         video_count = species.media.filter(type='video').count()
         audio_count = species.media.filter(type='audio').count()

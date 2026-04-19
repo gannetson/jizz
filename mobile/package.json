@@ -9,7 +9,7 @@
     "start": "expo start",
     "android": "./run-android-with-node22.sh",
     "android:expo": "expo run:android",
-    "ios": "expo run:ios",
+    "ios": "node scripts/sync-release-info-plist.cjs && expo run:ios",
     "web": "expo start --web",
     "prebuild": "expo prebuild",
     "postinstall": "node -e \"var v=parseInt(process.version.slice(1).split('.')[0],10); if(v>=18) require('child_process').execSync('npx patch-package', {stdio:'inherit'});\"",
@@ -26,7 +26,9 @@
     "build:android:aab:rebuild": "bash scripts/android-aab-rebuild.sh",
     "print-sha1": "bash scripts/gradle-with-node22.sh signingReport",
     "make-icon": "node scripts/make-icon-transparent.cjs",
-    "test": "jest"
+    "test": "jest",
+    "sync-release": "node scripts/sync-release-info-plist.cjs",
+    "eas-build-pre-install": "node scripts/sync-release-info-plist.cjs"
   },
   "dependencies": {
     "@logicwind/react-native-exit-app": "^0.2.0",

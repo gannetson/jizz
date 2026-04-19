@@ -4,20 +4,60 @@ apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
+// Android Studio / raw ./gradlew often pick up an old system `node` on PATH. Expo needs Node 18+ (see package.json engines).
+// Prefer: ./scripts/gradle-with-node22.sh or npm run android. Or set NODE_BINARY below or in android/gradle.properties.
+def resolveNodeExecutable() {
+    def fromEnv = System.getenv("NODE_BINARY")
+    if (fromEnv != null && !fromEnv.trim().isEmpty()) return fromEnv.trim()
+    def fromProp = findProperty("NODE_BINARY")
+    if (fromProp != null && !fromProp.toString().trim().isEmpty()) return fromProp.toString().trim()
+    return "node"
+}
+project.ext.nodeExecutable = resolveNodeExecutable()
+
+def runNodeCommand(List<String> args) {
+    def cmd = [project.ext.nodeExecutable] + args
+    def proc = cmd.execute(null, rootDir)
+    proc.waitFor()
+    def out = proc.text.trim()
+    if (proc.exitValue() != 0) {
+        def err = proc.err.text.trim()
+        throw new GradleException(
+            "Node command failed (exit ${proc.exitValue()}): ${cmd.join(' ')}\n${err}\n" +
+            "Fix: use Node 22+ on PATH when building, set NODE_BINARY in android/gradle.properties, or run ./scripts/gradle-with-node22.sh"
+        )
+    }
+    return out
+}
+
+def entryPath = runNodeCommand(["-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"])
+if (!entryPath) {
+    throw new GradleException(
+        "Expo resolveAppEntry returned empty — Gradle is likely using an old Node (Expo needs Node 18+).\n" +
+        "Set NODE_BINARY in android/gradle.properties to your Node 22 binary, or build with: ./scripts/gradle-with-node22.sh"
+    )
+}
+def reactNativePkg = runNodeCommand(["--print", "require.resolve('react-native/package.json')"])
+def reactNativeDirFile = new File(reactNativePkg).getParentFile().getAbsoluteFile()
+def codegenPkg = runNodeCommand(["--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"])
+def codegenDirFile = new File(codegenPkg).getParentFile().getAbsoluteFile()
+def expoCliPkg = runNodeCommand(["--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"])
+def expoCliFile = new File(expoCliPkg)
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
-    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
-    reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
-    hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
-    codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+    entryFile = file(entryPath)
+    reactNativeDir = reactNativeDirFile
+    hermesCommand = reactNativeDirFile.getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
+    codegenDir = codegenDirFile
 
     enableBundleCompression = (findProperty('android.enableBundleCompression') ?: false).toBoolean()
     // Use Expo CLI to bundle the app, this ensures the Metro config
     // works correctly with Expo projects.
-    cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
+    cliFile = expoCliFile
     bundleCommand = "export:embed"
 
     /* Folders */
@@ -35,8 +75,7 @@ react {
     // debuggableVariants = ["liteDebug", "prodDebug"]
 
     /* Bundling */
-    //   A list containing the node command and its flags. Default is just 'node'.
-    // nodeExecutableAndArgs = ["node"]
+    nodeExecutableAndArgs = [project.ext.nodeExecutable]
 
     //
     //   The path to the CLI configuration file. Default is empty.
@@ -89,6 +128,12 @@ if (keystorePropertiesFile.exists()) {
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Release versions: edit only mobile/app.json (expo.version, expo.buildNumber, expo.releaseCodename).
+def appJsonFile = file("${rootDir}/../../app.json")
+def appJsonExpo = new groovy.json.JsonSlurper().parse(appJsonFile).expo
+def releaseVersionCode = appJsonExpo.buildNumber.toString().toInteger()
+def releaseCodename = appJsonExpo.releaseCodename.toString()
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -100,8 +145,8 @@ android {
         applicationId 'pro.birdr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 57
-        versionName "Smew"
+        versionCode releaseVersionCode
+        versionName releaseCodename
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {

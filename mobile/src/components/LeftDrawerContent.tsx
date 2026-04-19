@@ -2,10 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
-import Constants from 'expo-constants';
 import { colors } from '../theme';
-
-const APP_VERSION = Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—';
+import { getAppVersionDisplay } from '../utils/appVersion';
 
 const MENU_ITEMS: { route: string; label: string }[] = [
   { route: 'Home', label: 'Home' },
@@ -20,9 +18,18 @@ const MENU_ITEMS: { route: string; label: string }[] = [
 
 export function LeftDrawerContent(props: DrawerContentComponentProps) {
   const { state, navigation } = props;
+  const { version: appVersion, build: buildNumber, codename } = getAppVersionDisplay();
+  const versionLine = (() => {
+    const base = buildNumber ? `${appVersion} (${buildNumber})` : appVersion;
+    return codename ? `${base} · ${codename}` : base;
+  })();
 
   return (
     <View style={styles.container}>
+      <View style={styles.menuHeader}>
+        <Text style={styles.menuHeaderTitle}>Birdr</Text>
+        <Text style={styles.menuHeaderVersion}>Version {versionLine}</Text>
+      </View>
       <View style={styles.footerSpacer}>
         {MENU_ITEMS.map((item) => {
           const isFocused = state.routes[state.index]?.name === item.route;
@@ -54,7 +61,6 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
         })}
       </View>
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Version {APP_VERSION}</Text>
         <Text style={styles.footerText}>Data: eBird</Text>
         <Text style={styles.footerText}>Media: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto</Text>
         <Text style={styles.footerText}>Developed by GoedLoek</Text>
@@ -69,6 +75,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 56,
     paddingHorizontal: 16,
+  },
+  menuHeader: {
+    marginBottom: 12,
+    paddingBottom: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.primary[200],
+  },
+  menuHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primary[800],
+    marginBottom: 6,
+  },
+  menuHeaderVersion: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[600],
   },
   item: {
     paddingVertical: 14,

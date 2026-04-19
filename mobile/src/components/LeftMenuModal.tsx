@@ -13,11 +13,9 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Constants from 'expo-constants';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
-
-const APP_VERSION = Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—';
+import { getAppVersionDisplay } from '../utils/appVersion';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
@@ -60,6 +58,11 @@ export function LeftMenuModal() {
   };
 
   const currentRoute = currentRouteName;
+  const { version: appVersion, build: buildNumber, codename } = getAppVersionDisplay();
+  const versionLine = (() => {
+    const base = `${t('version')} ${appVersion}`;
+    return codename ? `${base} · ${codename}` : base;
+  })();
 
   return (
     <Modal
@@ -84,6 +87,9 @@ export function LeftMenuModal() {
               style={styles.scroll}
               contentContainerStyle={[styles.content, { paddingTop: Math.max(24, insets.top) }]}
             >
+              <View style={styles.menuHeader}>
+                <Text style={styles.menuHeaderTitle}>Birdr</Text>
+              </View>
               {MENU_ITEMS.map((item) => {
                 const isFocused = currentRoute === item.route;
                 const label = t(item.labelKey);
@@ -100,7 +106,9 @@ export function LeftMenuModal() {
                 );
               })}
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Version {APP_VERSION}</Text>
+                <Text style={styles.footerText} accessibilityLabel={versionLine}>
+                  {versionLine}
+                </Text>
                 <Text style={styles.footerText}>{t('data_ebird')}</Text>
                 <Text style={styles.footerText}>{t('media_credits')}</Text>
                 <Text style={styles.footerText}>{t('developed_by')}</Text>
@@ -140,6 +148,23 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     paddingBottom: 32,
+  },
+  menuHeader: {
+    marginBottom: 8,
+    paddingBottom: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.primary[200],
+  },
+  menuHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primary[800],
+    marginBottom: 6,
+  },
+  menuHeaderVersion: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[600],
   },
   item: {
     paddingVertical: 14,

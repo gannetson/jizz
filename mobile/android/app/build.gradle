@@ -129,7 +129,7 @@ if (keystorePropertiesFile.exists()) {
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 // Release versions: edit only mobile/app.json (expo.version, expo.buildNumber, expo.releaseCodename).
-def appJsonFile = file("${rootDir}/../../app.json")
+def appJsonFile = file("${rootDir}/../app.json")
 def appJsonExpo = new groovy.json.JsonSlurper().parse(appJsonFile).expo
 def releaseVersionCode = appJsonExpo.buildNumber.toString().toInteger()
 def releaseCodename = appJsonExpo.releaseCodename.toString()

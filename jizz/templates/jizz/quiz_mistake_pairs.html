@@ -1,0 +1,55 @@
+{% extends "jizz/quiz_mistake_stats_base.html" %}
+
+{% block title %}Confused pairs — quiz mistakes{% endblock %}
+
+{% block nav_extra %}
+        <span> · </span>
+        <a href="?format=csv{% if selected_country %}&amp;country={{ selected_country }}{% endif %}">Download CSV</a>
+{% endblock %}
+
+{% block content %}
+    <h1>Confused pairs</h1>
+    <p class="muted">Incorrect answers between two species (undirected). Columns show whether the lower-ID or higher-ID species was the question target. Same country and CountrySpecies filters as the species page.</p>
+
+    <form method="get" action="{% url 'quiz-mistake-pairs' %}" style="margin-bottom: 1rem;">
+        <label for="country">Country:</label>
+        <select name="country" id="country" onchange="this.form.submit()">
+            <option value="">All countries</option>
+            {% for c in countries %}
+            <option value="{{ c.code }}" {% if c.code == selected_country %}selected{% endif %}>{{ c.name }} ({{ c.code }})</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit">Apply</button></noscript>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Species A (lower id)</th>
+                <th>Species B (higher id)</th>
+                <th class="num">Total wrong</th>
+                <th class="num">A was target → picked B</th>
+                <th class="num">B was target → picked A</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pair_rows %}
+            <tr>
+                <td>
+                    <a href="/admin/jizz/species/{{ row.low_id }}/change/">{{ row.low_name }}</a>
+                    <span class="muted">{{ row.low_name_latin }}</span>
+                </td>
+                <td>
+                    <a href="/admin/jizz/species/{{ row.high_id }}/change/">{{ row.high_name }}</a>
+                    <span class="muted">{{ row.high_name_latin }}</span>
+                </td>
+                <td class="num">{{ row.total_wrong }}</td>
+                <td class="num">{{ row.when_low_was_target }}</td>
+                <td class="num">{{ row.when_high_was_target }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No incorrect answers.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

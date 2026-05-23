@@ -46,6 +46,17 @@ class Media(models.Model):
     def __str__(self):
         return f"{self.species.name} - {self.type} ({self.id})"
 
+    @property
+    def effective_review_status(self):
+        """Latest review as 'approved' or 'rejected' (not_sure counts as rejected). None if no reviews."""
+        reviews = list(self.reviews.all())
+        if not reviews:
+            return None
+        latest = max(reviews, key=lambda r: r.id)
+        if latest.review_type == MediaReview.APPROVED:
+            return 'approved'
+        return 'rejected'
+
 
 class MediaReview(models.Model):
     """Model for reviewing media items (positive, negative, or neutral)."""
@@ -109,6 +120,10 @@ class MediaReview(models.Model):
         self.media.save()
         return super().save(*args, **kwargs)
 
+    @property
+    def is_effectively_rejected(self):
+        return self.review_type in (self.REJECTED, self.NOT_SURE)
+
     def __str__(self):
         reviewer = self.user or self.player
         return f"{self.get_review_type_display()} for {self.media} by {reviewer}"
@@ -137,3 +152,36 @@ class FlagMedia(models.Model):
 
     def __str__(self):
         return f"Flag for {self.media} by {self.player}"
+
+
+class MediaPrediction(models.Model):
+    """Machine first-assertion (approved vs rejected) for image media; precomputed offline."""
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+    PRED_CHOICES = [
+        (APPROVED, 'Approved'),
+        (REJECTED, 'Rejected'),
+    ]
+
+    media = models.OneToOneField(
+        Media,
+        on_delete=models.CASCADE,
+        related_name='first_assertion_prediction',
+    )
+    predicted_review_type = models.CharField(max_length=20, choices=PRED_CHOICES)
+    confidence = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Model confidence (e.g. max class probability).',
+    )
+    model_version = models.CharField(max_length=64, db_index=True)
+    features_version = models.CharField(max_length=64, blank=True, default='')
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Media prediction'
+        verbose_name_plural = 'Media predictions'
+
+    def __str__(self):
+        return f"{self.predicted_review_type} ({self.model_version}) for {self.media_id}"

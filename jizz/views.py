@@ -76,6 +76,8 @@ from jizz.serializers import (
     FeedbackSerializer,
     MediaSerializer,
     ReviewMediaSerializer,
+    FirstAssertionReviewSerializer,
+    MediaReviewBriefSerializer,
     FlagMediaSerializer,
     FlagQuestionSerializer,
     GameSerializer,
@@ -402,6 +404,20 @@ class ReviewMediaView(ListCreateAPIView):
     queryset = MediaReview.objects.all()
 
 
+class FirstAssertionReviewView(CreateAPIView):
+    """First assertion for image media only: approved or rejected. Same auth as ReviewMediaView."""
+
+    permission_classes = [AllowAny]
+    serializer_class = FirstAssertionReviewSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save()
+        out = MediaReviewBriefSerializer(review, context={'request': request})
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+
 class FlagMediaView(ListCreateAPIView):
     """View for flagging media items."""
     serializer_class = FlagMediaSerializer
@@ -555,6 +571,7 @@ class MediaReviewSpeciesListView(APIView):
             Media.objects
             .filter(species_id__in=species_ids, type=media_type, hide=False)
             .prefetch_related('reviews')
+            .select_related('first_assertion_prediction')
             .order_by('species_id', '-created')
         )
         media_by_species = {}

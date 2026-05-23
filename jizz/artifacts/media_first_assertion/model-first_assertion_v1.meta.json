@@ -1,0 +1,24 @@
+{
+  "model_version": "first_assertion_v1",
+  "features_version": "handcrafted_v1",
+  "metrics": {
+    "accuracy": 0.639225181598063,
+    "precision_macro": 0.514905869324474,
+    "recall_macro": 0.5955771961858389,
+    "f1_macro": 0.4383260313983205,
+    "confusion_matrix": [
+      [
+        17,
+        14
+      ],
+      [
+        284,
+        511
+      ]
+    ],
+    "test_size": 826,
+    "train_size": 3302
+  },
+  "n_train_samples": 4128,
+  "sklearn": "1.3.2"
+}

@@ -27,6 +27,15 @@ export interface MediaItem {
   review_status?: MediaItemReviewStatus | null;
   /** Present when loaded via media-review-species: single review type for this item */
   review_type?: 'approved' | 'rejected' | 'not_sure' | null;
+  /** Offline ML first assertion (from MediaPrediction); null if absent */
+  machine_prediction?: {
+    predicted_review_type: 'approved' | 'rejected';
+    confidence: number | null;
+    model_version: string;
+    features_version?: string | null;
+  } | null;
+  /** Compares latest human effective label to machine prediction */
+  machine_human_agreement?: 'agree' | 'disagree' | null;
 }
 
 export interface PaginatedMediaResponse {
@@ -82,6 +91,8 @@ export interface MediaService {
   getMediaReviewSpecies(type?: string, page?: number, countryCode?: string, language?: string, speciesId?: number, level?: ReviewLevel): Promise<PaginatedSpeciesWithMediaResponse>;
   /** Pass playerToken when using a game player; omit when authenticated as a user (JWT). */
   reviewMedia(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected' | 'not_sure', description?: string): Promise<unknown>;
+  /** Image-only first assertion (approved/rejected). Same auth as reviewMedia. */
+  reviewMediaFirstAssertion(mediaId: number, playerToken: string | undefined, reviewType: 'approved' | 'rejected', description?: string): Promise<unknown>;
   getSpeciesReviewStats(countryCode?: string, mediaType?: string, language?: string): Promise<SpeciesReviewStatsResponse>;
 }
 
@@ -121,6 +132,23 @@ export class MediaServiceImpl implements MediaService {
       body.player_token = playerToken;
     }
     return this.client.post('/api/review-media/', body);
+  }
+
+  async reviewMediaFirstAssertion(
+    mediaId: number,
+    playerToken: string | undefined,
+    reviewType: 'approved' | 'rejected',
+    description?: string
+  ): Promise<unknown> {
+    const body: Record<string, unknown> = {
+      media_id: mediaId,
+      review_type: reviewType,
+      description: description || '',
+    };
+    if (playerToken != null) {
+      body.player_token = playerToken;
+    }
+    return this.client.post('/api/review-media/first-assertion/', body);
   }
 
   async getSpeciesReviewStats(countryCode?: string, mediaType: string = 'image', language?: string): Promise<SpeciesReviewStatsResponse> {

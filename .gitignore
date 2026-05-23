@@ -23,3 +23,6 @@ node_modules
 /mobile/jizz-birding-app-f499dfeece8c.json
 /mobile/android/keys app/
 /jizz/ebird_st_csv/
+
+# Local ML artifacts (joblib + meta JSON)
+/artifacts/

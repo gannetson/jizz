@@ -836,6 +836,9 @@ class CountrySpecies(models.Model):
     def __repr__(self):
         return self.species.name_latin
 
+    def __str__(self):
+        return self.species.name
+
     class Meta:
         verbose_name = 'Country Species'
         verbose_name_plural = 'Country Species'
@@ -843,7 +846,14 @@ class CountrySpecies(models.Model):
 
 
 class CountrySpeciesFrequency(models.Model):
-    """Per-month frequency from eBird (e.g. regional_stats CSV by season)."""
+    """Per-month frequency from eBird (API, Status & Trends CSV, or future bulk CSV)."""
+
+    CONFIDENCE_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+
     country_species = models.ForeignKey(
         CountrySpecies,
         on_delete=models.CASCADE,
@@ -852,19 +862,70 @@ class CountrySpeciesFrequency(models.Model):
     month = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(12)],
     )
-    frequency_pct = models.FloatField(null=True, blank=True)
+    reference_year = models.PositiveSmallIntegerField(
+        default=2020,
+        help_text='Calendar year this month slice refers to (imports default to command --year).',
+    )
+    frequency_pct = models.FloatField(
+        null=True,
+        blank=True,
+        help_text=(
+            'When from checklist-based eBird metrics: % of complete checklists in scope that '
+            'report the species (0–100). Other sources: document in notes.'
+        ),
+    )
     frequency = models.CharField(
         max_length=20,
         null=True,
         blank=True,
         choices=CountrySpecies.FREQUENCY_CHOICES,
     )
+    checklist_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Complete checklists in scope (denominator), when the source provides it.',
+    )
+    observation_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Raw observation or row count if available; never used alone for tiering.',
+    )
+    occupied_subregions = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Count of subregions / cells / locids where reported (meaning depends on source).',
+    )
+    occurrence_event_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Deduplicated occurrence estimate when the source provides it.',
+    )
+    source = models.CharField(
+        max_length=64,
+        default='ebird',
+        blank=True,
+        help_text='e.g. ebird_api_freqlist, ebird_st_pct_percentile',
+    )
+    source_updated_at = models.DateTimeField(null=True, blank=True)
+    confidence = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        choices=CONFIDENCE_CHOICES,
+    )
+    is_vagrant_like = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
 
     class Meta:
         verbose_name = 'Country Species Frequency'
         verbose_name_plural = 'Country Species Frequencies'
-        unique_together = ('country_species', 'month')
-        ordering = ['country_species', 'month']
+        constraints = [
+            models.UniqueConstraint(
+                fields=('country_species', 'month', 'reference_year'),
+                name='jizz_countryspeciesfrequency_unique_cs_month_year',
+            ),
+        ]
+        ordering = ['country_species', 'reference_year', 'month']
 
 
 class Feedback(models.Model):
@@ -1009,6 +1070,62 @@ class CountryGame(models.Model):
 
     class Meta:
         ordering = ['-id']
+
+
+# --- Birdr Journey ---
+
+
+class BirdrJourney(models.Model):
+    """Solo level progression (sequences 0–7) per country for a user or guest player."""
+    user = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='birdr_journeys',
+    )
+    player = models.ForeignKey(
+        Player,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='birdr_journeys',
+    )
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.CASCADE,
+        related_name='birdr_journeys',
+    )
+    current_sequence = models.PositiveSmallIntegerField(default=0)
+    streak_days = models.PositiveIntegerField(default=0)
+    last_played_date = models.DateField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(user__isnull=False, player__isnull=True)
+                    | models.Q(user__isnull=True, player__isnull=False)
+                ),
+                name='birdr_journey_user_xor_player',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'country'],
+                condition=models.Q(user__isnull=False),
+                name='birdr_journey_unique_user_country',
+            ),
+            models.UniqueConstraint(
+                fields=['player', 'country'],
+                condition=models.Q(player__isnull=False),
+                name='birdr_journey_unique_player_country',
+            ),
+        ]
+
+    def __str__(self):
+        owner = self.user_id or f'player:{self.player_id}'
+        return f'Journey {owner} @ {self.country_id} seq={self.current_sequence}'
 
 
 # --- Daily Challenge & Friends ---

@@ -1,0 +1,69 @@
+{% extends "jizz/quiz_mistake_stats_base.html" %}
+
+{% block title %}Species — quiz mistakes{% endblock %}
+
+{% block nav_extra %}
+        <span> · </span>
+        <a href="?{% if species_sort == 'error_rate' %}species_sort=times_shown{% else %}species_sort=error_rate{% endif %}{% if selected_country %}&amp;country={{ selected_country }}{% endif %}">Toggle sort</a>
+        <span> · </span>
+        <a href="?format=csv&amp;species_sort={{ species_sort }}{% if selected_country %}&amp;country={{ selected_country }}{% endif %}">Download CSV</a>
+{% endblock %}
+
+{% block content %}
+    <h1>Species mistake statistics</h1>
+    <p class="muted">Staff-only report: aggregates over answers; optionally scoped to one country (game country). With a country selected, species marked <strong>introduced</strong>, <strong>uncertain</strong>, or <strong>unknown</strong> for that country are excluded (via CountrySpecies).</p>
+
+    <form method="get" action="{% url 'quiz-mistake-species' %}" style="margin-bottom: 1rem;">
+        <label for="country">Country:</label>
+        <select name="country" id="country" onchange="this.form.submit()">
+            <option value="">All countries</option>
+            {% for c in countries %}
+            <option value="{{ c.code }}" {% if c.code == selected_country %}selected{% endif %}>{{ c.name }} ({{ c.code }})</option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="species_sort" value="{{ species_sort }}">
+        <noscript><button type="submit">Apply</button></noscript>
+    </form>
+
+    <p class="muted">
+        Only species with this species on the option list for at least <strong>10</strong> answered questions (<strong>times shown</strong>).
+        <strong>Unanswered</strong> = player saw this species as an option but chose a different species.
+        <strong>Error rate</strong> = wrongly answered / (wrongly + correctly answered) when this species was chosen—among picks only, not “unanswered”.
+    </p>
+    <p class="muted">
+        Sort by:
+        <a href="?species_sort=error_rate{% if selected_country %}&amp;country={{ selected_country }}{% endif %}" {% if species_sort == 'error_rate' %}class="sort-active"{% endif %}>error rate</a>
+        &middot;
+        <a href="?species_sort=times_shown{% if selected_country %}&amp;country={{ selected_country }}{% endif %}" {% if species_sort == 'times_shown' %}class="sort-active"{% endif %}>times shown</a>
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Species</th>
+                <th class="num">Times shown</th>
+                <th class="num">Correctly answered</th>
+                <th class="num">Wrongly answered</th>
+                <th class="num">Unanswered</th>
+                <th class="num">Error rate %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in species_rows %}
+            <tr>
+                <td>
+                    <a href="/admin/jizz/species/{{ row.species_id }}/change/">{{ row.name }}</a>
+                    <span class="muted">{{ row.name_latin }}</span>
+                </td>
+                <td class="num">{{ row.times_shown }}</td>
+                <td class="num">{{ row.correctly_answered }}</td>
+                <td class="num">{{ row.wrongly_answered }}</td>
+                <td class="num">{{ row.unanswered }}</td>
+                <td class="num">{% if row.error_rate is not None %}{{ row.error_rate|floatformat:2 }}%{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No data.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

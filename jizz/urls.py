@@ -15,8 +15,14 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     ReactionView, \
     AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
-    MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
+    MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FirstAssertionReviewView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
+from jizz.quiz_mistake_views import (
+    quiz_mistake_pairs_view,
+    quiz_mistake_species_view,
+    quiz_mistake_stats_legacy_redirect,
+)
+from jizz.birdr_journey_views import BirdrJourneyView
 from jizz.daily_challenge_views import (
     FriendsListView,
     FriendRequestsListView,
@@ -89,6 +95,9 @@ urlpatterns = [
     path('join/<str:token>/', join_game_redirect, name='join-game'),
 
     path('admin/', admin.site.urls),
+    path('staff/quiz-mistakes/', quiz_mistake_stats_legacy_redirect, name='quiz-mistake-stats'),
+    path('staff/quiz-mistakes/species/', quiz_mistake_species_view, name='quiz-mistake-species'),
+    path('staff/quiz-mistakes/pairs/', quiz_mistake_pairs_view, name='quiz-mistake-pairs'),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
     re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),
 
@@ -138,6 +147,7 @@ urlpatterns = [
 
     re_path(r"^api/media/$", MediaListView.as_view(), name="media-list"),
     re_path(r"^api/media-review-species/$", MediaReviewSpeciesListView.as_view(), name="media-review-species"),
+    path('api/review-media/first-assertion/', FirstAssertionReviewView.as_view(), name='review-media-first-assertion'),
     re_path(r"^api/review-media/$", ReviewMediaView.as_view(), name="review-media-create"),
     re_path(r"^api/flag-media/$", FlagMediaView.as_view(), name="flag-media-create"),
     re_path(r"^api/species-review-stats/$", SpeciesReviewStatsView.as_view(), name="species-review-stats"),
@@ -157,6 +167,8 @@ urlpatterns = [
         AddChallengeLevelView.as_view(),
         name='add_challenge_level'
     ),
+
+    path('api/birdr-journey/', BirdrJourneyView.as_view(), name='birdr-journey'),
 
     # Friends
     path('api/friends/', FriendsListView.as_view(), name='friends-list'),

@@ -283,6 +283,8 @@ def download_regional_stats(
     use_cache: bool,
     session: requests.Session,
     paths: Optional[List[Any]] = None,
+    *,
+    retry: bool = True,
 ) -> Optional[pd.DataFrame]:
     species_code = normalize_st_species_code(species_code)
     os.makedirs(data_dir, exist_ok=True)
@@ -298,19 +300,24 @@ def download_regional_stats(
         print(f"  [skip] {species_code}: missing cache and no access key", file=sys.stderr)
         return None
 
+    list_attempts = 2 if retry else 1
     if not paths:
-        paths = list_st_objects(session, species_code, version_year, access_key)
+        paths = list_st_objects(
+            session, species_code, version_year, access_key, max_attempts=list_attempts
+        )
     if not paths:
         return None
 
     obj_key = _select_regional_obj_key(paths, species_code, version_year)
-    if not obj_key:
+    if not obj_key and retry:
         print(
             f"  [retry] {species_code}: no regional asset in listing, retrying list-obj …",
             file=sys.stderr,
         )
         time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
-        paths = list_st_objects(session, species_code, version_year, access_key)
+        paths = list_st_objects(
+            session, species_code, version_year, access_key, max_attempts=list_attempts
+        )
         if not paths:
             print(
                 f"  [skip] {species_code}: no regional_stats.csv or web_download regional ZIP in listing",
@@ -327,7 +334,8 @@ def download_regional_stats(
 
     text: Optional[str] = None
     fetch_err: Optional[BaseException] = None
-    for fetch_attempt in range(2):
+    fetch_attempts = 2 if retry else 1
+    for fetch_attempt in range(fetch_attempts):
         if fetch_attempt > 0:
             time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
             print(f"  [retry] {species_code}: fetch regional ZIP/CSV …", file=sys.stderr)

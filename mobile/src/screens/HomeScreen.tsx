@@ -37,6 +37,7 @@ type RootStackParamList = {
   Start: undefined;
   Scores: undefined;
   Challenge: undefined;
+  BirdrJourneyIntro: undefined;
   Updates: undefined;
   Help: undefined;
   Login: undefined;
@@ -82,6 +83,14 @@ export function HomeScreen() {
         accessibilityLabel={t('start_new_game')}
       >
         <Text style={styles.primaryButtonText}>{t('start_new_game')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => navigation.navigate('BirdrJourneyIntro')}
+        testID="home.birdrJourney"
+        accessibilityLabel={t('birdr_journey')}
+      >
+        <Text style={styles.primaryButtonText}>{t('birdr_journey')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.primaryButton}

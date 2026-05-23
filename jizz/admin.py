@@ -2,16 +2,18 @@ from collections import defaultdict
 
 from django.contrib import admin, messages
 from django.contrib.admin import register
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum
+from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
 from django.urls import path, re_path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from jizz.models import (Answer, ChallengeLevel, Country, CountryChallenge,
+from jizz.models import (Answer, BirdrJourney, ChallengeLevel, Country, CountryChallenge,
                          CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesImage, SpeciesSound, SpeciesVideo,
@@ -22,7 +24,8 @@ from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
 from media.management.commands import standardize_copyright
-from media.models import Media
+from media.first_assertion.run_inference import infer_media_queryset
+from media.models import Media, MediaPrediction
 from media.utils import get_species_media, parse_copyright
 
 
@@ -176,13 +179,17 @@ class MediaInline(admin.TabularInline):
     model = Media
     extra = 0
     ordering = ['type', '-created']
-    readonly_fields = ['media_preview', 'media_link', 'type', 'source']
-    fields = ['media_preview', 'type', 'source', 'media_link']
-    
+    readonly_fields = ['media_preview', 'media_link', 'type', 'source', 'machine_assertion_brief']
+    fields = ['media_preview', 'type', 'source', 'machine_assertion_brief', 'media_link']
+
     def get_queryset(self, request):
         """Order by type, then by created date (newest first within each type). Exclude hidden media."""
         qs = super().get_queryset(request)
-        return qs.filter(hide=False).order_by('type', '-created')
+        return (
+            qs.filter(hide=False)
+            .order_by('type', '-created')
+            .select_related('first_assertion_prediction')
+        )
     
     def media_preview(self, obj):
         """Display media based on type: large preview for images, inline player for video/audio."""
@@ -225,7 +232,24 @@ class MediaInline(admin.TabularInline):
         return format_html('<a href="{}">View Details</a>', url)
     
     media_link.short_description = 'Details'
-    
+
+    def machine_assertion_brief(self, obj):
+        if not obj or not obj.pk or obj.type != 'image':
+            return '—'
+        try:
+            p = obj.first_assertion_prediction
+        except ObjectDoesNotExist:
+            return format_html('<span style="color:#888;">—</span>')
+        conf = f'{p.confidence:.2f}' if p.confidence is not None else '—'
+        return format_html(
+            '<strong>{}</strong> {}<br/><span style="font-size:11px;color:#555;">{}</span>',
+            p.get_predicted_review_type_display(),
+            conf,
+            p.model_version,
+        )
+
+    machine_assertion_brief.short_description = 'Machine'
+
     def has_add_permission(self, request, obj):
         return True
 
@@ -234,7 +258,7 @@ class MediaInline(admin.TabularInline):
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [MediaInline]
     search_fields = ['name', 'name_nl', 'name_latin']
-    readonly_fields = ['sync_media', 'pic_count']
+    readonly_fields = ['sync_media', 'pic_count', 'infer_machine_predictions']
     list_display = ['name', 'name_nl', 'pic_count']
     list_filter = ['tax_order']
     actions = ['scrape_traits', 'generate_comparison']
@@ -246,7 +270,39 @@ class SpeciesAdmin(admin.ModelAdmin):
         if not obj or not obj.pk:
             return '-'
         sync_url = reverse('admin:get-media', args=(obj.pk,))
-        return format_html('<a href="{}">Get media</a>', sync_url)
+        video_url = reverse('admin:get-video', args=(obj.pk,))
+        audio_url = reverse('admin:get-audio', args=(obj.pk,))
+        image_url = reverse('admin:get-pics', args=(obj.pk,))
+
+        return format_html(
+            '<a href="{}">Get all media</a><br/>'
+            '<a href="{}">Get pics</a><br/>'
+            '<a href="{}">Get video</a><br/>'
+            '<a href="{}">Get audio</a><br/>',
+            sync_url, image_url, video_url, audio_url)
+
+    def infer_machine_predictions(self, obj):
+        if not obj or not obj.pk:
+            return '-'
+        base = reverse('admin:infer-machine-assertions', args=(obj.pk,))
+        missing = f'{base}?only_missing=1'
+        all_imgs = f'{base}?only_missing=0'
+        default_ver = getattr(settings, 'MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION', '') or 'first_assertion_v1'
+        hint = format_html(
+            '<p style="margin:0.35em 0 0 0;font-size:12px;color:#555;">Uses model version '
+            '<code>{}</code> from settings (<code>MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION</code>); '
+            'override with <code>?model_version=...</code> or <code>?artifact_path=...</code>.</p>',
+            default_ver,
+        )
+        return format_html(
+            '<a class="button" style="margin-right:8px;" href="{}">Infer machine assertions (missing only)</a>'
+            '<a class="button" href="{}">Re-infer all images for this species</a>{}',
+            missing,
+            all_imgs,
+            hint,
+        )
+
+    infer_machine_predictions.short_description = 'Machine inference'
 
     def get_urls(self):
         urls = super().get_urls()
@@ -258,6 +314,26 @@ class SpeciesAdmin(admin.ModelAdmin):
                 name="get-media"
             ),
             re_path(
+                r"^species/(?P<pk>.+)/get-pics/$",
+                self.admin_site.admin_view(self.get_pics),
+                name="get-pics"
+            ),
+            re_path(
+                r"^species/(?P<pk>.+)/get-audio/$",
+                self.admin_site.admin_view(self.get_audio),
+                name="get-audio"
+            ),
+            re_path(
+                r"^species/(?P<pk>.+)/get-video/$",
+                self.admin_site.admin_view(self.get_video),
+                name="get-video"
+            ),
+            re_path(
+                r"^species/(?P<pk>.+)/infer-machine-assertions/$",
+                self.admin_site.admin_view(self.infer_machine_assertions),
+                name="infer-machine-assertions",
+            ),
+            re_path(
                 r"^species/compare/$",
                 self.admin_site.admin_view(self.compare_species),
                 name="compare-species"
@@ -265,31 +341,121 @@ class SpeciesAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
-    def get_media(self, request, pk=None):
+    def get_pics(self, request, pk=None):
+        return self.get_media(request, pk, 'image')
+
+    def get_audio(self, request, pk=None):
+        return self.get_media(request, pk, 'audio')
+
+    def get_video(self, request, pk=None):
+        return self.get_media(request, pk, 'video')
+
+    def infer_machine_assertions(self, request, pk=None):
+        """Run first-assertion inference for this species' image media (GET, staff-only)."""
         species = Species.objects.get(pk=pk)
-        species.media.all().delete()
-        results = get_species_media(species)
+        only_missing = request.GET.get('only_missing', '1') not in ('0', 'false', 'False')
+        model_version = request.GET.get('model_version') or getattr(
+            settings, 'MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION', None
+        )
+        artifact_path = request.GET.get('artifact_path')
+
+        if not artifact_path and not model_version:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                'Set MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION or pass ?model_version= or ?artifact_path=.',
+            )
+            return HttpResponseRedirect(reverse('admin:jizz_species_change', args=(species.pk,)))
+
+        base = (
+            Media.objects.filter(species_id=species.pk, type='image')
+            .exclude(url__isnull=True)
+            .exclude(url='')
+        )
+        if only_missing:
+            predicted_ids = MediaPrediction.objects.values_list('media_id', flat=True)
+            qs = base.exclude(pk__in=predicted_ids)
+        else:
+            qs = base
+
+        try:
+            n_ok, n_skip, ver = infer_media_queryset(
+                qs,
+                artifact_path=artifact_path or None,
+                model_version=model_version,
+            )
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                f'Machine inference ({ver}): {n_ok} image(s) updated, {n_skip} skipped for species {species.pk}.',
+            )
+        except FileNotFoundError as exc:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                f'Model artifact not found ({exc}). Train with train_media_first_assertion_model or set '
+                'MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION / pass ?artifact_path=.',
+            )
+        except ValueError as exc:
+            messages.add_message(request, messages.ERROR, str(exc))
+        except Exception as exc:
+            messages.add_message(request, messages.ERROR, f'Inference failed: {exc}')
+
+        species_url = reverse('admin:jizz_species_change', args=(species.pk,))
+        return HttpResponseRedirect(species_url)
+
+    def get_media(self, request, pk=None, media_type=None):
+        species = Species.objects.get(pk=pk)
+        if media_type:
+            results = get_species_media(species, [media_type])
+        else:
+            results = get_species_media(species)
         for media in results:
             for result in results[media]:
                 cc_text = result['copyright_text'] or ''
                 cc = parse_copyright(cc_text)
-                Media.objects.get_or_create(
+                # get_or_create can raise MultipleObjectsReturned if we already have duplicates.
+                # In admin scrape flows, it's better to be resilient and reuse an existing row.
+                qs = Media.objects.filter(
                     species=species,
                     url=result['url'],
                     type=result['type'],
-                    defaults={
-                        'link': result['link'],
-                        'contributor': result['contributor'],
-                        'source': result['source'],
-                        'copyright_text': cc_text,
-                        'copyright_standardized': cc[0],
-                        'non_commercial_only': cc[1]
-                    }
-                )
+                ).order_by('id')
+                obj = qs.first()
+                if obj is None:
+                    Media.objects.create(
+                        species=species,
+                        url=result['url'],
+                        type=result['type'],
+                        link=result['link'],
+                        contributor=result['contributor'],
+                        source=result['source'],
+                        copyright_text=cc_text,
+                        copyright_standardized=cc[0],
+                        non_commercial_only=cc[1],
+                    )
+                else:
+                    # Keep the first row; update metadata in case scrapers changed.
+                    Media.objects.filter(pk=obj.pk).update(
+                        link=result['link'],
+                        contributor=result['contributor'],
+                        source=result['source'],
+                        copyright_text=cc_text,
+                        copyright_standardized=cc[0],
+                        non_commercial_only=cc[1],
+                    )
         image_count = species.media.filter(type='image').count()
         video_count = species.media.filter(type='video').count()
         audio_count = species.media.filter(type='audio').count()
-        messages.add_message(request, messages.INFO, f'Found {image_count} images, {video_count} videos, and {audio_count} sound files.')
+        if media_type == 'image':
+            messages.add_message(request, messages.INFO, f'Found {image_count} images.')
+        elif media_type == 'video':
+            messages.add_message(request, messages.INFO, f'Found {video_count} videos.')
+        elif media_type == 'audio':
+            messages.add_message(request, messages.INFO, f'Found {audio_count} sound files.')
+        else:
+            messages.add_message(request, messages.INFO, f'Found {image_count} images, {video_count} videos, and {audio_count} sound files.')
+
         species_url = reverse('admin:jizz_species_change', args=(species.pk,))
         response = HttpResponseRedirect(species_url)
         return response
@@ -671,7 +837,20 @@ class PlayerScoreAdmin(admin.ModelAdmin):
 class CountrySpeciesFrequencyInline(admin.TabularInline):
     model = CountrySpeciesFrequency
     extra = 0
-    fields = ['month', 'frequency_pct', 'frequency']
+    fields = [
+        'reference_year',
+        'month',
+        'frequency_pct',
+        'frequency',
+        'checklist_count',
+        'observation_count',
+        'occupied_subregions',
+        'confidence',
+        'is_vagrant_like',
+        'source',
+        'source_updated_at',
+    ]
+    readonly_fields = ['source_updated_at']
 
 
 @register(CountrySpecies)
@@ -686,9 +865,20 @@ class CountrySpeciesAdmin(admin.ModelAdmin):
 
 @register(CountrySpeciesFrequency)
 class CountrySpeciesFrequencyAdmin(admin.ModelAdmin):
-    list_display = ['country_species', 'month', 'frequency_pct', 'frequency']
-    list_filter = ['month', 'frequency']
+    list_display = [
+        'country_species',
+        'reference_year',
+        'month',
+        'frequency_pct',
+        'frequency',
+        'confidence',
+        'is_vagrant_like',
+        'source',
+        'source_updated_at',
+    ]
+    list_filter = ['month', 'frequency', 'reference_year', 'confidence', 'source', 'is_vagrant_like']
     raw_id_fields = ['country_species']
+    search_fields = ['country_species__species__name', 'country_species__species__code', 'notes']
 
 
 @register(Feedback)
@@ -735,6 +925,15 @@ class ChallengeLevelAdmin(admin.ModelAdmin):
     list_filter = ['level', 'media', 'include_rare', 'include_escapes']
     search_fields = ['title', 'description']
     ordering = ['sequence']
+
+
+@admin.register(BirdrJourney)
+class BirdrJourneyAdmin(admin.ModelAdmin):
+    list_display = ['user', 'player', 'country', 'current_sequence', 'streak_days', 'last_played_date', 'updated']
+    list_filter = ['country', 'current_sequence']
+    search_fields = ['user__username', 'player__name']
+    readonly_fields = ['created', 'updated']
+    raw_id_fields = ['user', 'player', 'country']
 
 
 @register(UserProfile)

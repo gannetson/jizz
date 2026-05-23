@@ -1,11 +1,12 @@
 from urllib.parse import urlparse
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, Page, SpeciesName, UserProfile, \
+    ChallengeLevel, Language, Page, SpeciesName, UserProfile, BirdrJourney, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
 
@@ -129,14 +130,44 @@ class SpeciesReviewStatsSerializer(serializers.Serializer):
 class MediaForReviewSerializer(MediaSerializer):
     """Media serializer with review_type for embedding in species (approved/rejected/not_sure or null)."""
     review_type = serializers.SerializerMethodField()
+    machine_prediction = serializers.SerializerMethodField()
+    machine_human_agreement = serializers.SerializerMethodField()
 
     def get_review_type(self, obj):
         reviews = list(obj.reviews.all())
         review = max(reviews, key=lambda r: r.id) if reviews else None
         return review.review_type if review else None
 
+    def get_machine_prediction(self, obj):
+        try:
+            p = obj.first_assertion_prediction
+        except ObjectDoesNotExist:
+            return None
+        return {
+            'predicted_review_type': p.predicted_review_type,
+            'confidence': p.confidence,
+            'model_version': p.model_version,
+            'features_version': p.features_version or None,
+        }
+
+    def get_machine_human_agreement(self, obj):
+        eff = obj.effective_review_status
+        try:
+            p = obj.first_assertion_prediction
+        except ObjectDoesNotExist:
+            return None
+        if eff is None:
+            return None
+        if p.predicted_review_type == eff:
+            return 'agree'
+        return 'disagree'
+
     class Meta(MediaSerializer.Meta):
-        fields = MediaSerializer.Meta.fields + ('review_type',)
+        fields = MediaSerializer.Meta.fields + (
+            'review_type',
+            'machine_prediction',
+            'machine_human_agreement',
+        )
 
 
 class SpeciesWithMediaReviewSerializer(serializers.Serializer):
@@ -311,6 +342,40 @@ class FlagQuestionSerializer(serializers.ModelSerializer):
             )
 
 
+def upsert_media_review(media, review_type, description, user, player):
+    """Create or update the single MediaReview for this media and reviewer (exactly one of user or player)."""
+    if player:
+        review, created = MediaReview.objects.get_or_create(
+            media=media,
+            player=player,
+            defaults={'review_type': review_type, 'description': description},
+        )
+    else:
+        review, created = MediaReview.objects.get_or_create(
+            media=media,
+            user=user,
+            defaults={'review_type': review_type, 'description': description},
+        )
+    if not created:
+        review.review_type = review_type
+        review.description = description
+        review.save()
+    return review
+
+
+def _validate_reviewer_player_token(data, request):
+    if request and request.user and request.user.is_authenticated:
+        if data.get('player_token'):
+            raise serializers.ValidationError(
+                {'player_token': 'Do not send player_token when authenticated as a user.'}
+            )
+        return
+    if not data.get('player_token'):
+        raise serializers.ValidationError(
+            {'player_token': 'Either authenticate as a user or provide player_token.'}
+        )
+
+
 class ReviewMediaSerializer(serializers.ModelSerializer):
     """Serializer for reviewing media items (positive or negative). Accepts player_token or uses request.user if authenticated."""
     player_token = serializers.CharField(write_only=True, required=False)
@@ -323,16 +388,7 @@ class ReviewMediaSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if request and request.user and request.user.is_authenticated:
-            if data.get('player_token'):
-                raise serializers.ValidationError(
-                    {'player_token': 'Do not send player_token when authenticated as a user.'}
-                )
-            return data
-        if not data.get('player_token'):
-            raise serializers.ValidationError(
-                {'player_token': 'Either authenticate as a user or provide player_token.'}
-            )
+        _validate_reviewer_player_token(data, request)
         return data
 
     def create(self, validated_data):
@@ -348,23 +404,60 @@ class ReviewMediaSerializer(serializers.ModelSerializer):
         else:
             player = Player.objects.get(token=validated_data.pop('player_token'))
 
-        if player:
-            review, created = MediaReview.objects.get_or_create(
-                media=media,
-                player=player,
-                defaults={'review_type': review_type, 'description': description},
+        return upsert_media_review(media, review_type, description, user, player)
+
+
+FIRST_ASSERTION_REVIEW_CHOICES = (
+    (MediaReview.APPROVED, 'Approved'),
+    (MediaReview.REJECTED, 'Rejected'),
+)
+
+
+class FirstAssertionReviewSerializer(serializers.Serializer):
+    """Image-only first assertion: approved or rejected only (no not_sure)."""
+    player_token = serializers.CharField(required=False, allow_blank=True)
+    media_id = serializers.IntegerField()
+    review_type = serializers.ChoiceField(choices=FIRST_ASSERTION_REVIEW_CHOICES)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate(self, data):
+        request = self.context.get('request')
+        _validate_reviewer_player_token(data, request)
+        return data
+
+    def validate_media_id(self, value):
+        try:
+            media = Media.objects.get(pk=value)
+        except Media.DoesNotExist as exc:
+            raise serializers.ValidationError('Invalid media id.') from exc
+        if media.type != 'image':
+            raise serializers.ValidationError(
+                'First assertion reviews are only allowed for image media.'
             )
+        return value
+
+    def create(self, validated_data):
+        media = Media.objects.get(pk=validated_data.pop('media_id'))
+        review_type = validated_data.pop('review_type')
+        description = validated_data.pop('description', '') or ''
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            validated_data.pop('player_token', None)
+            user = request.user
+            player = None
         else:
-            review, created = MediaReview.objects.get_or_create(
-                media=media,
-                user=user,
-                defaults={'review_type': review_type, 'description': description},
-            )
-        if not created:
-            review.review_type = review_type
-            review.description = description
-            review.save()
-        return review
+            player = Player.objects.get(token=validated_data.pop('player_token'))
+            user = None
+        return upsert_media_review(media, review_type, description, user, player)
+
+
+class MediaReviewBriefSerializer(serializers.ModelSerializer):
+    """201 response body for review create endpoints."""
+
+    class Meta:
+        model = MediaReview
+        fields = ('id', 'review_type', 'description', 'created', 'media')
+        read_only_fields = fields
 
 
 class FlagMediaSerializer(serializers.ModelSerializer):
@@ -1046,6 +1139,63 @@ class CountryChallengeSerializer(serializers.ModelSerializer):
     class Meta:
         model = CountryChallenge
         fields = ['id', 'country', 'player', 'created', 'levels', 'country_code']
+
+
+# --- Birdr Journey ---
+
+
+class BirdrJourneySerializer(serializers.ModelSerializer):
+    country = CountrySerializer(read_only=True)
+    current_level = serializers.SerializerMethodField()
+    next_level = serializers.SerializerMethodField()
+    roadmap = serializers.SerializerMethodField()
+    can_play_today = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BirdrJourney
+        fields = [
+            'id',
+            'country',
+            'current_sequence',
+            'streak_days',
+            'last_played_date',
+            'can_play_today',
+            'current_level',
+            'next_level',
+            'roadmap',
+            'created',
+            'updated',
+        ]
+
+    def get_can_play_today(self, obj):
+        return False
+
+    def _level_payload(self, sequence):
+        if sequence is None:
+            return None
+        from jizz.birdr_journey_views import MAX_JOURNEY_SEQUENCE, get_challenge_level_for_sequence
+
+        if sequence > MAX_JOURNEY_SEQUENCE:
+            return None
+        level = get_challenge_level_for_sequence(sequence)
+        if not level:
+            return {'sequence': sequence, 'title': '', 'description': ''}
+        return ChallengeLevelSerializer(level).data
+
+    def get_current_level(self, obj):
+        return self._level_payload(obj.current_sequence)
+
+    def get_next_level(self, obj):
+        from jizz.birdr_journey_views import MAX_JOURNEY_SEQUENCE
+
+        if obj.current_sequence >= MAX_JOURNEY_SEQUENCE:
+            return None
+        return self._level_payload(obj.current_sequence + 1)
+
+    def get_roadmap(self, obj):
+        from jizz.birdr_journey_views import build_roadmap
+
+        return build_roadmap(obj.current_sequence)
 
 
 # --- Friends & Daily Challenge ---

@@ -31,11 +31,16 @@ class iNaturalistScraper(BaseMediaScraper):
         Args:
             scientific_name: Scientific name (Latin) of the species.
             common_name: Unused, kept for interface compatibility.
-            media_type: Only 'photos' is supported for iNaturalist.
+            media_type: 'photos' or 'images' (still images), or 'videos' (native
+                iNat videos when the API includes them on observations). Many
+                observations have no `videos` payload even when they carry video
+                in the app; in those cases this returns fewer or no items.
         """
         normalized_name = self.normalize_scientific_name(scientific_name)
-        if media_type != 'photos':
-            logger.warning("iNaturalistScraper currently only supports photos.")
+        if media_type in ('images', 'image'):
+            media_type = 'photos'
+        if media_type not in ('photos', 'videos'):
+            logger.warning("iNaturalistScraper media_type must be 'photos', 'images', or 'videos'.")
             return []
         
         taxon = self._find_taxon_record(normalized_name)
@@ -43,34 +48,37 @@ class iNaturalistScraper(BaseMediaScraper):
             logger.warning(f"iNaturalist: no taxon found for {scientific_name}")
             return []
         
-        taxon_photos = taxon.get('taxon_photos', [])
         results: List[Dict] = []
-        seen_photo_ids: Set[int] = set()
+        seen_media_ids: Set[int] = set()
         
         def add_result(item: Optional[Dict]):
             if not item:
                 return
-            photo_id = item.get('photo_id')
+            mid = item.get('photo_id') or item.get('video_id')
             score = item.get('quality_score', 0)
-            if photo_id:
+            if mid is not None:
                 for idx, existing in enumerate(results):
-                    if existing.get('photo_id') == photo_id:
+                    ex_id = existing.get('photo_id') or existing.get('video_id')
+                    if ex_id == mid:
                         existing_score = existing.get('quality_score', 0)
                         if existing_score >= score:
                             return
                         results[idx] = item
-                        seen_photo_ids.add(photo_id)
+                        seen_media_ids.add(mid)
                         return
-                seen_photo_ids.add(photo_id)
+                seen_media_ids.add(mid)
             results.append(item)
         
-        for taxon_photo in taxon_photos:
-            photo = taxon_photo.get('photo', {})
-            add_result(self._process_taxon_photo(photo, taxon))
+        if media_type == 'photos':
+            taxon_photos = taxon.get('taxon_photos', [])
+            for taxon_photo in taxon_photos:
+                photo = taxon_photo.get('photo', {})
+                add_result(self._process_taxon_photo(photo, taxon))
         
         taxon_id = taxon.get('id')
         if taxon_id:
-            obs_results = self._fetch_observation_photos_v2(taxon_id, seen_photo_ids)
+            kind = 'photos' if media_type == 'photos' else 'videos'
+            obs_results = self._fetch_observation_media_v2(taxon_id, seen_media_ids, kind=kind)
             for item in obs_results:
                 add_result(item)
         
@@ -95,13 +103,15 @@ class iNaturalistScraper(BaseMediaScraper):
         if num_identifications > 0:
             score += min(0.2, num_identifications * 0.02)
         
-        # Prefer original/high resolution images
+        # Prefer original/high resolution images; v2 video objects often only have `url`
         if media_item.get('original_url'):
-            score += 0.2  # Original URL is best
+            score += 0.2
         elif media_item.get('large_url'):
-            score += 0.1  # Large URL is good
+            score += 0.1
         elif media_item.get('medium_url'):
-            score += 0.05  # Medium URL is acceptable
+            score += 0.05
+        elif media_item.get('url'):
+            score += 0.12
         
         # Prefer observations with coordinates (more reliable)
         if observation.get('latitude') and observation.get('longitude'):
@@ -154,7 +164,7 @@ class iNaturalistScraper(BaseMediaScraper):
             'per_page': 30,
         }
         url = f"{self.API_BASE}/search"
-        logger.info(f"iNaturalist: searchint: {url} / {params}")
+        logger.info(f"iNaturalist: searching: {url} / {params}")
         data = self._fetch_json(f"{self.API_BASE}/search", params)
         if not data or 'results' not in data:
             return None
@@ -264,7 +274,8 @@ class iNaturalistScraper(BaseMediaScraper):
             'copyright_text': copyright_text,
             'title': observation.get('description', ''),
             'source': 'inaturalist',
-            'quality_score': quality_score
+            'quality_score': quality_score,
+            'video_id': video.get('id'),
         }
     
     def _process_sound(self, sound: Dict, observation: Dict) -> Dict:
@@ -293,68 +304,106 @@ class iNaturalistScraper(BaseMediaScraper):
             'quality_score': quality_score
         }
     
-    def _fetch_observation_photos_v2(
+    def _fetch_observation_media_v2(
         self,
         taxon_id: int,
-        seen_photo_ids: Set[int],
+        seen_media_ids: Set[int],
+        *,
+        kind: str,
         per_page: int = 24,
         max_pages: int = 3,
         locale: str = "en-GB",
     ) -> List[Dict]:
-        """Fetch observation photos via the iNaturalist v2 API using the specified filters."""
+        """Fetch observation photos or videos via the iNaturalist v2 API."""
         api_url = "https://api.inaturalist.org/v2/observations"
-        fields = (
-            "(id:!t,quality_grade:!t,identifications_count:!t,location:!t,faves_count:!t,"
-            "place_guess:!t,description:!t,user:(id:!t,login:!t,name:!t),"
-            "photos:(id:!t,url:!t,license_code:!t,attribution:!t,original_url:!t,"
-            "large_url:!t,medium_url:!t,small_url:!t))"
-        )
-        params = {
-            "verifiable": "true",
-            "order_by": "votes",
-            "order": "desc",
-            "page": 1,
-            "spam": "false",
-            "taxon_id": taxon_id,
-            "captive": "false",
-            "quality_grade": "research",
-            "photo_license": "cc-by",
-            "reviewed": "true",
-            "photos": "true",
-            "locale": locale,
-            "per_page": per_page,
-            "fields": fields,
-        }
-        
+        if kind == "photos":
+            fields = (
+                "(id:!t,quality_grade:!t,identifications_count:!t,location:!t,faves_count:!t,"
+                "place_guess:!t,description:!t,user:(id:!t,login:!t,name:!t),"
+                "photos:(id:!t,url:!t,license_code:!t,attribution:!t,original_url:!t,"
+                "large_url:!t,medium_url:!t,small_url:!t))"
+            )
+            params = {
+                "verifiable": "true",
+                "order_by": "votes",
+                "order": "desc",
+                "page": 1,
+                "spam": "false",
+                "taxon_id": taxon_id,
+                "captive": "false",
+                "quality_grade": "research",
+                "photo_license": "cc-by",
+                "reviewed": "true",
+                "photos": "true",
+                "locale": locale,
+                "per_page": per_page,
+                "fields": fields,
+            }
+        elif kind == "videos":
+            fields = (
+                "(id:!t,quality_grade:!t,identifications_count:!t,location:!t,faves_count:!t,"
+                "place_guess:!t,description:!t,user:(id:!t,login:!t,name:!t),"
+                "videos:(id:!t,url:!t,license_code:!t,attribution:!t))"
+            )
+            params = {
+                "verifiable": "true",
+                "order_by": "votes",
+                "order": "desc",
+                "page": 1,
+                "spam": "false",
+                "taxon_id": taxon_id,
+                "captive": "false",
+                "quality_grade": "research",
+                "license": "cc-by",
+                "reviewed": "true",
+                "locale": locale,
+                "per_page": per_page,
+                "fields": fields,
+            }
+        else:
+            logger.error(f"iNaturalist: unknown media kind {kind!r}")
+            return []
+
         collected: List[Dict] = []
-        logger.warning(f"iNaturalist: fetching observation photos for taxon ID {taxon_id}")
+        log_label = "photos" if kind == "photos" else "videos"
+        logger.info(f"iNaturalist: fetching observation {log_label} for taxon ID {taxon_id}")
         while params["page"] <= max_pages:
-            logger.warning(f"iNaturalist: fetching observation photos for taxon ID {taxon_id} page {params['page']}")
+            logger.debug(
+                f"iNaturalist: fetching observation {log_label} for taxon ID {taxon_id} page {params['page']}"
+            )
             data = self._fetch_json(api_url, params)
             if not data or "results" not in data:
                 break
             results = data.get("results") or []
             if not results:
                 break
-            logger.warning(f"iNaturalist: fetched {len(results)} observations for taxon ID {taxon_id} page {params['page']}")
             for obs in results:
                 obs_struct = self._normalize_v2_observation(obs)
-                photos = obs.get("photos") or []
-                for photo in photos:
-                    pid = photo.get("id")
-                    if not pid or pid in seen_photo_ids:
-                        continue
-                    item = self._build_photo_from_observation(photo, obs_struct)
-                    if item:
-                        seen_photo_ids.add(pid)
-                        collected.append(item)
-            
+                if kind == "photos":
+                    for photo in obs.get("photos") or []:
+                        pid = photo.get("id")
+                        if not pid or pid in seen_media_ids:
+                            continue
+                        item = self._build_photo_from_observation(photo, obs_struct)
+                        if item:
+                            seen_media_ids.add(pid)
+                            collected.append(item)
+                else:
+                    for video in obs.get("videos") or []:
+                        vid = video.get("id")
+                        if not vid or vid in seen_media_ids:
+                            continue
+                        item = self._build_video_from_observation(video, obs_struct)
+                        if item:
+                            seen_media_ids.add(vid)
+                            collected.append(item)
+
             total_results = data.get("total_results", 0)
             if params["page"] * per_page >= total_results:
                 break
             params["page"] += 1
-        
-        logger.warning(f"iNaturalist: fetched {len(collected)} photos for taxon ID {taxon_id}")
+
+        logger.info(f"iNaturalist: fetched {len(collected)} {log_label} for taxon ID {taxon_id}")
         return collected
     
     def _normalize_v2_observation(self, observation: Dict) -> Dict:
@@ -396,6 +445,15 @@ class iNaturalistScraper(BaseMediaScraper):
         if medium_url:
             photo_payload["medium_url"] = medium_url
         return self._process_photo(photo_payload, observation)
+    
+    def _build_video_from_observation(self, video: Dict, observation: Dict) -> Optional[Dict]:
+        """Create a media item from an observation video (v2 `videos` array)."""
+        url = (video.get("url") or "").strip()
+        if not url:
+            return None
+        payload = dict(video)
+        payload["url"] = url
+        return self._process_video(payload, observation)
     
     def _upgrade_photo_url(self, url: Optional[str], size: str = "large") -> Optional[str]:
         """Convert a square photo URL to another size if possible."""

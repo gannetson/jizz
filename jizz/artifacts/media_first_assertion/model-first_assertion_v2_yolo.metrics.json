@@ -1,0 +1,18 @@
+{
+  "accuracy": 0.8186215235792019,
+  "precision_macro": 0.5749765781053897,
+  "recall_macro": 0.8437753282541741,
+  "f1_macro": 0.5806288032454361,
+  "confusion_matrix": [
+    [
+      27,
+      4
+    ],
+    [
+      146,
+      650
+    ]
+  ],
+  "test_size": 827,
+  "train_size": 3305
+}

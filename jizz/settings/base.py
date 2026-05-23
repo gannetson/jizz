@@ -16,6 +16,34 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Offline ML artifacts (train_media_first_assertion_model / joblib); not served as user uploads.
+MEDIA_FIRST_ASSERTION_ARTIFACTS_DIR = Path(
+    os.environ.get('MEDIA_FIRST_ASSERTION_ARTIFACTS_DIR', BASE_DIR / 'artifacts' / 'media_first_assertion')
+)
+# Default joblib name `model-{version}.joblib` for admin one-click inference (override via env).
+MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION = os.environ.get(
+    'MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION', 'first_assertion_v1'
+)
+# Browser-like User-Agent for train/infer image downloads (Wikimedia etc. return 403 without it).
+MEDIA_HTTP_FETCH_USER_AGENT = os.environ.get('MEDIA_HTTP_FETCH_USER_AGENT', '')
+# Polite pacing for Wikimedia (429 if hammering full-resolution upload URLs).
+MEDIA_HTTP_FETCH_DELAY_SECONDS = float(os.environ.get('MEDIA_HTTP_FETCH_DELAY_SECONDS', '0.35'))
+# Use Commons thumbnail URLs for ML fetches (smaller, less rate-limited than original files).
+# Desired width; actual fetch uses Wikimedia $wgThumbnailSteps (e.g. 500, 960), not arbitrary px.
+MEDIA_WIKIMEDIA_THUMB_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_THUMB_WIDTH_PX', '500'))
+
+# Optional YOLO bird detector (offline only; used by handcrafted_v2_yolo extractor).
+# Provide an ONNX file path (e.g. yolov5n.onnx exported with 640x640 input).
+MEDIA_YOLO_ONNX_PATH = os.environ.get('MEDIA_YOLO_ONNX_PATH', '')
+# YOLO objectness*class score threshold for candidate boxes.
+MEDIA_YOLO_CONF_THRESHOLD = float(os.environ.get('MEDIA_YOLO_CONF_THRESHOLD', '0.25'))
+# NMS IoU threshold for bird boxes.
+MEDIA_YOLO_NMS_IOU_THRESHOLD = float(os.environ.get('MEDIA_YOLO_NMS_IOU_THRESHOLD', '0.45'))
+# COCO class id for "bird" in most common YOLO COCO exports.
+MEDIA_YOLO_BIRD_CLASS_ID = int(os.environ.get('MEDIA_YOLO_BIRD_CLASS_ID', '14'))
+# If OpenCV DNN cannot import the ONNX (e.g. unsupported ops like Floor), try onnxruntime when installed.
+MEDIA_YOLO_PREFER_ONNXRUNTIME = os.environ.get('MEDIA_YOLO_PREFER_ONNXRUNTIME', '').lower() in ('1', 'true', 'yes')
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -266,7 +294,7 @@ SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
 # SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 # eBird API (for taxonomy, species lists, etc.)
-EBIRD_API_TOKEN = os.environ.get('EBIRD_API_TOKEN', '')
+EBIRD_API_TOKEN = os.environ.get('EBIRD_API_TOKEN', '') or os.environ.get('EBIRD_API_KEY', '')
 
 # eBird Status and Trends (for regional abundance CSV downloads); get key at https://ebird.org/st/request
 EBIRD_ST_ACCESS_KEY = os.environ.get('EBIRD_ST_ACCESS_KEY', '')
@@ -308,3 +336,6 @@ LOGGING = {
 
 DKIM_KEY = "dkim-key"
 DEFAULT_FROM_EMAIL = "Birdr <info@birdr.pro>"
+
+
+MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION = "first_assertion_v1"

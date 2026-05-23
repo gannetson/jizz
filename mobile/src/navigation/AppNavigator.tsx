@@ -26,6 +26,9 @@ import { GameDetailScreen } from '../screens/GameDetailScreen';
 import { DailyChallengeListScreen } from '../screens/DailyChallengeListScreen';
 import { DailyChallengeDetailScreen } from '../screens/DailyChallengeDetailScreen';
 import { DailyChallengeCreateScreen } from '../screens/DailyChallengeCreateScreen';
+import { BirdrJourneyIntroScreen } from '../screens/BirdrJourneyIntroScreen';
+import { BirdrJourneyCountryScreen } from '../screens/BirdrJourneyCountryScreen';
+import { BirdrJourneyProgressScreen } from '../screens/BirdrJourneyProgressScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +37,9 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'Start', titleKey: 'new_game', component: StartScreen },
   { name: 'Scores', titleKey: 'high_scores', component: ScoresScreen },
   { name: 'Challenge', titleKey: 'country_challenge', component: ChallengeScreen },
+  { name: 'BirdrJourneyIntro', titleKey: 'birdr_journey', component: BirdrJourneyIntroScreen },
+  { name: 'BirdrJourneyCountry', titleKey: 'birdr_journey_select_country', component: BirdrJourneyCountryScreen },
+  { name: 'BirdrJourneyProgress', titleKey: 'birdr_journey', component: BirdrJourneyProgressScreen },
   { name: 'ChallengeLevelIntro', titleKey: 'level', component: ChallengeLevelIntroScreen },
   { name: 'DailyChallenge', titleKey: 'daily_challenge', component: DailyChallengeListScreen },
   { name: 'DailyChallengeDetail', titleKey: 'daily_challenge', component: DailyChallengeDetailScreen },

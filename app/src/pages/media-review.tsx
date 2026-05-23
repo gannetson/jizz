@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import {
+  Badge,
   Box,
   Flex,
   Heading,
@@ -10,6 +11,7 @@ import {
   SimpleGrid,
   Icon,
   Select,
+  Spinner,
   Portal,
   createListCollection,
   ListRoot,
@@ -45,6 +47,32 @@ const {
 
 const mediaService = new MediaServiceImpl(apiClient);
 
+/** not_sure counts as rejected for display and overlays. */
+function effectiveReviewType(
+  raw: 'approved' | 'rejected' | 'not_sure' | null | undefined
+): 'approved' | 'rejected' | undefined {
+  if (raw == null) return undefined;
+  if (raw === 'approved') return 'approved';
+  return 'rejected';
+}
+
+function deltaSpeciesReviewCounts(
+  prevType: 'approved' | 'rejected' | 'not_sure' | null,
+  nextType: 'approved' | 'rejected' | 'not_sure',
+  cur: { approved: number; rejected: number; not_sure: number; unreviewed: number },
+  firstReview: boolean
+) {
+  let { approved, rejected, not_sure, unreviewed } = cur;
+  if (firstReview) unreviewed = Math.max(0, unreviewed - 1);
+  if (prevType === 'approved') approved -= 1;
+  else if (prevType === 'rejected') rejected -= 1;
+  else if (prevType === 'not_sure') not_sure -= 1;
+  if (nextType === 'approved') approved += 1;
+  else if (nextType === 'rejected') rejected += 1;
+  else if (nextType === 'not_sure') not_sure += 1;
+  return { approved, rejected, not_sure, unreviewed };
+}
+
 const glowKeyframes = keyframes`
   0%, 100% { box-shadow: 0 0 20px 4px rgba(234, 179, 8, 0.6), 0 0 40px 8px rgba(34, 197, 94, 0.3); }
   50% { box-shadow: 0 0 32px 8px rgba(234, 179, 8, 0.8), 0 0 60px 12px rgba(34, 197, 94, 0.5); }
@@ -59,6 +87,12 @@ export const MediaReviewPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [modalReviewSubmitting, setModalReviewSubmitting] = useState(false);
+  const [machineOverrideNotice, setMachineOverrideNotice] = useState(false);
+  const modalQueue = useMemo(() => speciesWithMedia.flatMap((g) => g.media), [speciesWithMedia]);
+  const handleReviewRef = useRef<(mediaId: number, reviewType: 'approved' | 'rejected' | 'not_sure') => Promise<void>>(
+    async () => {}
+  );
   const [reviewedItems, setReviewedItems] = useState<Map<number, 'approved' | 'rejected' | 'not_sure'>>(new Map());
   const [selectedCountry, setSelectedCountry] = useState<string>(countryCode ?? '');
   const [speciesStats, setSpeciesStats] = useState<SpeciesReviewStatsResponse | null>(null);
@@ -277,9 +311,14 @@ export const MediaReviewPage = () => {
   }, [loadMore, loadingMore, hasNextPage]);
 
   const handleImageClick = (item: MediaItem) => {
+    setMachineOverrideNotice(false);
     setSelectedMedia(item);
     setIsDialogOpen(true);
   };
+
+  useEffect(() => {
+    setMachineOverrideNotice(false);
+  }, [selectedMedia?.id]);
 
   const handleReview = async (mediaId: number, reviewType: 'approved' | 'rejected' | 'not_sure') => {
     const canReview = !!player || !!authService.getAccessToken();
@@ -300,35 +339,78 @@ export const MediaReviewPage = () => {
     const speciesId = item.species_id;
     const speciesName = item.species_name;
 
+    const previous = (reviewedItems.get(mediaId) ?? item.review_type ?? null) as
+      | 'approved'
+      | 'rejected'
+      | 'not_sure'
+      | null;
+    const isFirstReview = previous == null;
+    const prevType = previous;
+    const useFirstAssertion =
+      item.type === 'image' && reviewType !== 'not_sure' && (reviewType === 'approved' || reviewType === 'rejected');
+
+    const reviewingFromModal = isDialogOpen && selectedMedia?.id === mediaId;
+    if (reviewingFromModal) setModalReviewSubmitting(true);
+
     // Mark as reviewed immediately for visual feedback
-    setReviewedItems(prev => new Map(prev).set(mediaId, reviewType));
+    setReviewedItems((prev) => new Map(prev).set(mediaId, reviewType));
 
     // Optimistic update of in-memory species counts and media review_type
     setSpeciesWithMedia((prev) =>
-      prev.map((s) =>
-        s.id !== speciesId
-          ? s
-          : {
-              ...s,
-              unreviewed: Math.max(0, s.unreviewed - 1),
-              approved: s.approved + (reviewType === 'approved' ? 1 : 0),
-              rejected: s.rejected + (reviewType === 'rejected' ? 1 : 0),
-              not_sure: s.not_sure + (reviewType === 'not_sure' ? 1 : 0),
-              media: s.media.map((m) =>
-                m.id === mediaId ? { ...m, review_type: reviewType } : m
-              ),
+      prev.map((s) => {
+        if (s.id !== speciesId) return s;
+        const counts = deltaSpeciesReviewCounts(prevType, reviewType, s, isFirstReview);
+        return {
+          ...s,
+          unreviewed: counts.unreviewed,
+          approved: counts.approved,
+          rejected: counts.rejected,
+          not_sure: counts.not_sure,
+          media: s.media.map((m) => {
+            if (m.id !== mediaId) return m;
+            let machine_human_agreement: 'agree' | 'disagree' | null | undefined;
+            if (m.type === 'image' && (reviewType === 'approved' || reviewType === 'rejected')) {
+              const mp = m.machine_prediction;
+              if (mp) {
+                machine_human_agreement =
+                  mp.predicted_review_type === reviewType ? 'agree' : 'disagree';
+              }
             }
-      )
+            return {
+              ...m,
+              review_type: reviewType,
+              ...(machine_human_agreement !== undefined
+                ? { machine_human_agreement }
+                : {}),
+            };
+          }),
+        };
+      })
     );
 
     try {
-      // When authenticated (JWT), do not send player_token; backend uses request.user
       const playerToken = authService.getAccessToken() ? undefined : player?.token;
-      await mediaService.reviewMedia(mediaId, playerToken, reviewType);
+      if (useFirstAssertion) {
+        await mediaService.reviewMediaFirstAssertion(mediaId, playerToken, reviewType);
+      } else {
+        await mediaService.reviewMedia(mediaId, playerToken, reviewType);
+      }
+
       const speciesStatForToast = speciesStats?.species?.find((s) => s.id === speciesId);
       const approvedAfter = speciesStatForToast
-        ? speciesStatForToast.approved + (reviewType === 'approved' ? 1 : 0)
+        ? deltaSpeciesReviewCounts(
+            prevType,
+            reviewType,
+            {
+              approved: speciesStatForToast.approved,
+              rejected: speciesStatForToast.rejected,
+              not_sure: speciesStatForToast.not_sure,
+              unreviewed: speciesStatForToast.unreviewed,
+            },
+            isFirstReview
+          ).approved
         : 0;
+
       const messages = {
         approved:
           reviewLevel === 'fast'
@@ -346,16 +428,30 @@ export const MediaReviewPage = () => {
         duration: 2000,
       });
 
-      // Update species stats optimistically so counts (approved, rejected, not_sure) stay in sync for 10-approved and UI
+      if (item.type === 'image' && (reviewType === 'approved' || reviewType === 'rejected')) {
+        const mp = item.machine_prediction;
+        if (mp && mp.predicted_review_type !== reviewType) {
+          setMachineOverrideNotice(true);
+        } else {
+          setMachineOverrideNotice(false);
+        }
+      }
+
       if (speciesStats && speciesId != null) {
         setSpeciesStats((prev) => {
           if (!prev) return prev;
           const species = prev.species.find((s) => s.id === speciesId);
           if (!species) return prev;
-          const unreviewed = Math.max(0, species.unreviewed - 1);
-          const approved = species.approved + (reviewType === 'approved' ? 1 : 0);
-          const rejected = species.rejected + (reviewType === 'rejected' ? 1 : 0);
-          const not_sure = species.not_sure + (reviewType === 'not_sure' ? 1 : 0);
+          const counts = deltaSpeciesReviewCounts(prevType, reviewType, species, isFirstReview);
+          const { unreviewed, approved, rejected, not_sure } = counts;
+          if (!isFirstReview) {
+            return {
+              ...prev,
+              species: prev.species.map((s) =>
+                s.id === speciesId ? { ...s, unreviewed, approved, rejected, not_sure } : s
+              ),
+            };
+          }
           const isNowFullyReviewed = unreviewed === 0;
           const hadTenApprovedBefore = species.approved >= 10;
           const isNowReviewed = !isNowFullyReviewed && approved >= 10;
@@ -374,22 +470,19 @@ export const MediaReviewPage = () => {
           return {
             ...prev,
             species: prev.species.map((s) =>
-              s.id === speciesId
-                ? { ...s, unreviewed, approved, rejected, not_sure }
-                : s
+              s.id === speciesId ? { ...s, unreviewed, approved, rejected, not_sure } : s
             ),
             summary,
           };
         });
       }
 
-      // Celebrate when all media for this species are now reviewed (species fully reviewed)
       const speciesStat = speciesStats?.species?.find((s) => s.id === speciesId);
-      const unreviewedAfter = speciesStat ? Math.max(0, speciesStat.unreviewed - 1) : null;
+      const unreviewedAfter = speciesStat
+        ? deltaSpeciesReviewCounts(prevType, reviewType, speciesStat, isFirstReview).unreviewed
+        : null;
       const isSpeciesFullyReviewed =
-        speciesId != null &&
-        speciesName &&
-        unreviewedAfter === 0;
+        isFirstReview && speciesId != null && speciesName && unreviewedAfter === 0;
 
       if (isSpeciesFullyReviewed) {
         setShowConfetti(true);
@@ -398,8 +491,8 @@ export const MediaReviewPage = () => {
         setTimeout(() => setCelebrationSpeciesName(null), 12000);
       }
 
-      // Fast mode: when 10th media approved for this species, celebrate and hide that species from the list
       if (
+        isFirstReview &&
         reviewLevel === 'fast' &&
         reviewType === 'approved' &&
         speciesId != null &&
@@ -412,16 +505,27 @@ export const MediaReviewPage = () => {
         setTimeout(() => setTenApprovedSpeciesName(null), 12000);
         shouldScrollToNextRef.current = true;
         setSpeciesWithMedia((prev) => prev.filter((s) => s.id !== speciesId));
-      }
-
-      // Close dialog if this item was selected
-      if (selectedMedia?.id === mediaId) {
-        setIsDialogOpen(false);
+        if (selectedMedia?.id === mediaId) {
+          setIsDialogOpen(false);
+          setSelectedMedia(null);
+        }
+      } else if (selectedMedia?.id === mediaId) {
+        if (useFirstAssertion) {
+          const idx = modalQueue.findIndex((m) => m.id === mediaId);
+          const next = idx >= 0 ? modalQueue[idx + 1] : undefined;
+          if (next) setSelectedMedia(next);
+          else {
+            setIsDialogOpen(false);
+            setSelectedMedia(null);
+          }
+        } else {
+          setIsDialogOpen(false);
+          setSelectedMedia(null);
+        }
       }
     } catch (error) {
       console.error('Error reviewing media:', error);
-      // Remove from reviewed set on error
-      setReviewedItems(prev => {
+      setReviewedItems((prev) => {
         const newMap = new Map(prev);
         newMap.delete(mediaId);
         return newMap;
@@ -431,22 +535,62 @@ export const MediaReviewPage = () => {
         colorPalette: 'error',
         duration: 4000,
       });
+    } finally {
+      if (reviewingFromModal) setModalReviewSubmitting(false);
     }
   };
 
+  handleReviewRef.current = handleReview;
+
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (modalReviewSubmitting) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsDialogOpen(false);
+        setSelectedMedia(null);
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const q = modalQueue;
+        const cur = selectedMedia;
+        if (!cur) return;
+        const idx = q.findIndex((m) => m.id === cur.id);
+        if (idx < 0) return;
+        const delta = e.key === 'ArrowRight' ? 1 : -1;
+        const next = q[idx + delta];
+        if (next) setSelectedMedia(next);
+        return;
+      }
+
+      if (selectedMedia?.type !== 'image') return;
+
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        void handleReviewRef.current(selectedMedia.id, 'approved');
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        void handleReviewRef.current(selectedMedia.id, 'rejected');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isDialogOpen, modalReviewSubmitting, modalQueue, selectedMedia]);
+
   const handleOkay = async () => {
-    if (!selectedMedia) return;
+    if (!selectedMedia || modalReviewSubmitting) return;
     await handleReview(selectedMedia.id, 'approved');
   };
 
   const handleBad = async () => {
-    if (!selectedMedia) return;
+    if (!selectedMedia || modalReviewSubmitting) return;
     await handleReview(selectedMedia.id, 'rejected');
-  };
-
-  const handleNotSure = async () => {
-    if (!selectedMedia) return;
-    await handleReview(selectedMedia.id, 'not_sure');
   };
 
   return (
@@ -629,21 +773,36 @@ export const MediaReviewPage = () => {
                   <ListItem flexDirection={'row'} gap={2} display={'flex'} alignItems={'center'}>
                     <FaArrowAltCircleRight />
                     <Box>
-                    <FormattedMessage
-                      id={'media review instructions 4'}
-                      defaultMessage={"Click {ok} if the picture is ok, {question} if you don't know or {bad} if it should be removed."}
-                      values={{
-                        ok: (
-                          <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
-                        ),
-                        question: (
-                          <Icon as={FaQuestion} boxSize={5} color="orange.600" display="inline" verticalAlign="middle" mx={0.5} />
-                        ),
-                        bad: (
-                          <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
-                        ),
-                      }}
-                    />
+                      {selectedMediaType === 'image' ? (
+                        <FormattedMessage
+                          id={'media review instructions 4 image'}
+                          defaultMessage={'Click {ok} to approve the image or {bad} to reject it (first assertion). Open a picture to use the large preview and keyboard shortcuts A / R.'}
+                          values={{
+                            ok: (
+                              <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
+                            ),
+                            bad: (
+                              <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
+                            ),
+                          }}
+                        />
+                      ) : (
+                        <FormattedMessage
+                          id={'media review instructions 4'}
+                          defaultMessage={"Click {ok} if the picture is ok, {question} if you don't know or {bad} if it should be removed."}
+                          values={{
+                            ok: (
+                              <Icon as={BsCheckCircle} boxSize={5} color="green.600" display="inline" verticalAlign="middle" mx={0.5} />
+                            ),
+                            question: (
+                              <Icon as={FaQuestion} boxSize={5} color="orange.600" display="inline" verticalAlign="middle" mx={0.5} />
+                            ),
+                            bad: (
+                              <Icon as={BsXCircle} boxSize={5} color="red.600" display="inline" verticalAlign="middle" mx={0.5} />
+                            ),
+                          }}
+                        />
+                      )}
                     </Box>
                   </ListItem>
                 </ListRoot>
@@ -779,17 +938,16 @@ export const MediaReviewPage = () => {
                   </Text>
                   <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={4}>
                     {group.media.map((item) => {
-                const reviewType = reviewedItems.get(item.id) ?? item.review_type ?? undefined;
-                const isReviewed = reviewType !== undefined;
+                const reviewTypeRaw = reviewedItems.get(item.id) ?? item.review_type ?? undefined;
+                const isReviewed = reviewTypeRaw !== undefined;
+                const effectiveRt = effectiveReviewType(reviewTypeRaw);
 
-                // Determine overlay color based on review type
-                const overlayColor = reviewType === 'approved'
-                  ? 'rgba(34, 197, 94, 0.3)' // green
-                  : reviewType === 'rejected'
-                  ? 'rgba(239, 68, 68, 0.3)' // red
-                  : reviewType === 'not_sure'
-                  ? 'rgba(251, 146, 60, 0.3)' // orange
-                  : 'transparent';
+                const overlayColor =
+                  effectiveRt === 'approved'
+                    ? 'rgba(34, 197, 94, 0.3)'
+                    : effectiveRt === 'rejected'
+                    ? 'rgba(239, 68, 68, 0.3)'
+                    : 'transparent';
 
                 return (
                   <Box
@@ -802,13 +960,17 @@ export const MediaReviewPage = () => {
                     opacity={isReviewed ? 0.5 : 1}
                     filter={isReviewed ? 'blur(2px)' : 'none'}
                     transition="opacity 0.3s, filter 0.3s, border-color 0.2s, transform 0.2s"
-                    _hover={!isReviewed ? {
-                      borderColor: 'primary.500',
-                      transform: 'scale(1.02)',
-                      '& [data-buttons-overlay]': {
-                        opacity: 1,
-                      },
-                    } : {}}
+                    _hover={
+                      item.type === 'image' || !isReviewed
+                        ? {
+                            borderColor: 'primary.500',
+                            transform: 'scale(1.02)',
+                            '& [data-buttons-overlay]': {
+                              opacity: 1,
+                            },
+                          }
+                        : {}
+                    }
                   >
                     <Box
                       width="100%"
@@ -823,8 +985,11 @@ export const MediaReviewPage = () => {
                         width="100%"
                         height="100%"
                         objectFit="contain"
-                        cursor={isReviewed ? 'not-allowed' : 'pointer'}
-                        onClick={() => !isReviewed && handleImageClick(item)}
+                        cursor={item.type === 'image' || !isReviewed ? 'pointer' : 'not-allowed'}
+                        onClick={() => {
+                          if (item.type === 'image') handleImageClick(item);
+                          else if (!isReviewed) handleImageClick(item);
+                        }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="150" height="150"%3E%3Crect fill="%23ddd" width="150" height="150"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImage%3C/text%3E%3C/svg%3E';
                         }}
@@ -873,19 +1038,21 @@ export const MediaReviewPage = () => {
                           >
                             <Icon as={BsCheckCircle} boxSize={5} />
                           </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            colorPalette="warning"
-                            onClick={() => handleReview(item.id, 'not_sure')}
-                            minW="40px"
-                            h="40px"
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                          >
-                            <Icon as={FaQuestion} boxSize={5} />
-                          </Button>
+                          {item.type !== 'image' && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              colorPalette="warning"
+                              onClick={() => handleReview(item.id, 'not_sure')}
+                              minW="40px"
+                              h="40px"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                            >
+                              <Icon as={FaQuestion} boxSize={5} />
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             size="sm"
@@ -926,19 +1093,21 @@ export const MediaReviewPage = () => {
                         >
                           <Icon as={BsCheckCircle} boxSize={5} />
                         </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          colorPalette="warning"
-                          onClick={() => handleReview(item.id, 'not_sure')}
-                          minW="40px"
-                          h="40px"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                        >
-                          <Icon as={FaQuestion} boxSize={5} />
-                        </Button>
+                        {item.type !== 'image' && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            colorPalette="warning"
+                            onClick={() => handleReview(item.id, 'not_sure')}
+                            minW="40px"
+                            h="40px"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                          >
+                            <Icon as={FaQuestion} boxSize={5} />
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           size="sm"
@@ -974,29 +1143,56 @@ export const MediaReviewPage = () => {
           </Box>
         )}
 
-        {/* Dialog for larger image view */}
-        <DialogRoot open={isDialogOpen} onOpenChange={(e: { open: boolean }) => {
-          if (!e.open) {
-            setIsDialogOpen(false);
-          }
-        }}>
+        {/* Dialog: first assertion preview (images); video/audio keep three-way review */}
+        <DialogRoot
+          open={isDialogOpen}
+          onOpenChange={(e: { open: boolean }) => {
+            if (!e.open) {
+              setIsDialogOpen(false);
+              setSelectedMedia(null);
+            }
+          }}
+        >
           <DialogBackdrop />
           <DialogPositioner>
-            <DialogContent maxW="90vw" maxH="90vh">
+            <DialogContent maxW="92vw" maxH="92vh" overflow="auto">
               <DialogCloseTrigger />
               <DialogHeader>
-                <FormattedMessage id={'media details'} defaultMessage={'Media Details'} />
+                <FormattedMessage id={'first assertion review'} defaultMessage={'First assertion review'} />
               </DialogHeader>
               <DialogBody>
-                {selectedMedia && (
+                {selectedMedia && (() => {
+                  const modalRaw =
+                    reviewedItems.get(selectedMedia.id) ?? selectedMedia.review_type ?? undefined;
+                  const modalEffective = effectiveReviewType(modalRaw);
+                  const statusBadge =
+                    modalEffective === 'approved' ? (
+                      <Badge colorPalette="green" size="lg">
+                        <FormattedMessage id={'review badge approved'} defaultMessage={'Approved'} />
+                      </Badge>
+                    ) : modalEffective === 'rejected' ? (
+                      <Badge colorPalette="red" size="lg">
+                        <FormattedMessage id={'review badge rejected'} defaultMessage={'Rejected'} />
+                      </Badge>
+                    ) : (
+                      <Badge colorPalette="gray" size="lg">
+                        <FormattedMessage id={'review badge unreviewed'} defaultMessage={'Unreviewed'} />
+                      </Badge>
+                    );
+                  return (
                   <Flex direction="column" gap={4} align="center">
-                    <Box maxW="800px" maxH="600px" overflow="hidden" borderRadius="8px">
+                    <Flex align="center" gap={3} flexWrap="wrap" justify="center">
+                      {statusBadge}
+                      {modalReviewSubmitting && <Spinner size="sm" />}
+                    </Flex>
+                    <Box maxW="900px" w="100%" maxH="65vh" overflow="hidden" borderRadius="8px" bg="gray.50">
                       <Image
                         src={selectedMedia.url}
                         alt={selectedMedia.species_name}
                         style={{
                           width: '100%',
                           height: '100%',
+                          maxHeight: '65vh',
                           objectFit: 'contain',
                         }}
                         onError={(e) => {
@@ -1004,8 +1200,21 @@ export const MediaReviewPage = () => {
                         }}
                       />
                     </Box>
-                    <Box textAlign="center">
-                      <Text fontWeight="bold">{selectedMedia.species_name}</Text>
+                    <Box textAlign="center" w="100%" maxW="720px">
+                      <Text fontSize="sm" color="gray.600">
+                        ID: {selectedMedia.id}
+                      </Text>
+                      {selectedMedia.url && (
+                        <Text fontSize="sm" color="gray.600" wordBreak="break-all">
+                          URL: {selectedMedia.url}
+                        </Text>
+                      )}
+                      {selectedMedia.link && (
+                        <Text fontSize="sm" color="gray.600" wordBreak="break-all">
+                          <FormattedMessage id={'link label'} defaultMessage={'Link'} />: {selectedMedia.link}
+                        </Text>
+                      )}
+                      <Text fontWeight="bold" mt={2}>{selectedMedia.species_name}</Text>
                       {selectedMedia.contributor && (
                         <Text fontSize="sm" color="gray.600">
                           <FormattedMessage id={'contributor'} defaultMessage={'Contributor'} />: {selectedMedia.contributor}
@@ -1017,19 +1226,123 @@ export const MediaReviewPage = () => {
                         </Text>
                       )}
                     </Box>
-                    <Flex gap={4} mt={4}>
-                      <Button type="button" onClick={handleOkay} colorPalette="success">
-                        <FormattedMessage id={'okay'} defaultMessage={'Okay!'} />
+                    {selectedMedia.type === 'image' && (
+                      <Box
+                        w="100%"
+                        maxW="720px"
+                        p={4}
+                        bg="purple.50"
+                        borderRadius="md"
+                        borderWidth="1px"
+                        borderColor="purple.200"
+                      >
+                        <Text fontWeight="bold" color="purple.900" mb={2}>
+                          <FormattedMessage
+                            id="machine first assertion heading"
+                            defaultMessage="Machine first assertion"
+                          />
+                        </Text>
+                        {selectedMedia.machine_prediction ? (
+                          <>
+                            <Text fontSize="md" color="purple.950">
+                              <FormattedMessage id="machine says" defaultMessage="Predicted" />:{' '}
+                              {selectedMedia.machine_prediction.predicted_review_type === 'approved' ? (
+                                <FormattedMessage id="machine approved" defaultMessage="Approved" />
+                              ) : (
+                                <FormattedMessage id="machine rejected" defaultMessage="Rejected" />
+                              )}
+                            </Text>
+                            {selectedMedia.machine_prediction.confidence != null && (
+                              <Text fontSize="sm" color="purple.800" mt={1}>
+                                <FormattedMessage id="machine confidence" defaultMessage="Confidence" />:{' '}
+                                {selectedMedia.machine_prediction.confidence.toFixed(2)}
+                              </Text>
+                            )}
+                            <Text fontSize="sm" color="purple.800" mt={1}>
+                              <FormattedMessage id="machine model" defaultMessage="Model" />:{' '}
+                              {selectedMedia.machine_prediction.model_version}
+                              {selectedMedia.machine_prediction.features_version
+                                ? ` (${selectedMedia.machine_prediction.features_version})`
+                                : ''}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text fontSize="sm" color="gray.600">
+                            <FormattedMessage
+                              id="no machine prediction"
+                              defaultMessage="No machine prediction yet (run infer_media_first_assertions)."
+                            />
+                          </Text>
+                        )}
+                        <Flex gap={2} flexWrap="wrap" mt={2} align="center">
+                          {selectedMedia.machine_human_agreement === 'disagree' && (
+                            <Badge colorPalette="orange" size="sm">
+                              <FormattedMessage
+                                id="machine disagrees with human"
+                                defaultMessage="Differs from latest human review"
+                              />
+                            </Badge>
+                          )}
+                          {machineOverrideNotice && (
+                            <Badge colorPalette="orange" size="sm">
+                              <FormattedMessage
+                                id="you overrode machine"
+                                defaultMessage="Your choice differed from the machine"
+                              />
+                            </Badge>
+                          )}
+                        </Flex>
+                      </Box>
+                    )}
+                    {selectedMedia.type === 'image' && (
+                      <Text fontSize="xs" color="gray.500" textAlign="center" w="100%" maxW="720px">
+                        <FormattedMessage
+                          id={'first assertion shortcuts'}
+                          defaultMessage={'Keyboard: A approve · R reject · Esc close · Arrow keys previous/next'}
+                        />
+                      </Text>
+                    )}
+                    <Flex gap={3} mt={2} flexWrap="wrap" justify="center">
+                      <Button
+                        type="button"
+                        onClick={handleOkay}
+                        colorPalette="success"
+                        disabled={modalReviewSubmitting}
+                      >
+                        <FormattedMessage id={'approve'} defaultMessage={'Approve'} />
                       </Button>
-                      <Button type="button" onClick={handleNotSure} colorPalette="warning">
-                        <FormattedMessage id={'not sure'} defaultMessage={'Not Sure'} />
+                      <Button
+                        type="button"
+                        onClick={handleBad}
+                        colorPalette="error"
+                        disabled={modalReviewSubmitting}
+                      >
+                        <FormattedMessage id={'reject'} defaultMessage={'Reject'} />
                       </Button>
-                      <Button type="button" onClick={handleBad} colorPalette="error">
-                        <FormattedMessage id={'bad'} defaultMessage={'Bad!'} />
+                      {selectedMedia.type !== 'image' && (
+                        <Button
+                          type="button"
+                          onClick={() => void handleReview(selectedMedia.id, 'not_sure')}
+                          colorPalette="warning"
+                          disabled={modalReviewSubmitting}
+                        >
+                          <FormattedMessage id={'not sure'} defaultMessage={'Not Sure'} />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsDialogOpen(false);
+                          setSelectedMedia(null);
+                        }}
+                      >
+                        <FormattedMessage id={'close'} defaultMessage={'Close'} />
                       </Button>
                     </Flex>
                   </Flex>
-                )}
+                  );
+                })()}
               </DialogBody>
             </DialogContent>
           </DialogPositioner>

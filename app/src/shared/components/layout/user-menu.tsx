@@ -162,6 +162,9 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
       <Link href="/my-games" textDecoration="none">
         <FormattedMessage id="my_games" defaultMessage="My Games" />
       </Link>
+      <Link href="/checklist" textDecoration="none">
+        <FormattedMessage id="checklist_title" defaultMessage="My Checklist" />
+      </Link>
       <Link href="/settings" textDecoration="none">
         <FormattedMessage id="settings" defaultMessage="Profile" />
       </Link>

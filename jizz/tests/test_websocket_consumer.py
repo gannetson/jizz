@@ -79,8 +79,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
         player1 = self.player1
 
@@ -131,7 +130,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
 
         async def async_test():
@@ -151,7 +149,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
 
         async def async_test():
@@ -173,7 +170,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
 
         async def async_test():
@@ -196,7 +192,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         host = self.player1
@@ -243,7 +238,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         PlayerScore.objects.get_or_create(player=self.player2, game=game)
@@ -286,7 +280,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
 
         async def async_test():
@@ -311,8 +304,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         PlayerScore.objects.get_or_create(player=self.player2, game=game)
@@ -380,8 +372,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         PlayerScore.objects.get_or_create(player=self.player2, game=game)
@@ -462,8 +453,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
         player_score, _ = PlayerScore.objects.get_or_create(player=self.player1, game=game)
         question = game.add_question()
@@ -536,8 +526,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         player1 = self.player1
@@ -603,7 +592,6 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
 
         async def async_test():

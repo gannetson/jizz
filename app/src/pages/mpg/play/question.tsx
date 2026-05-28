@@ -29,12 +29,19 @@ import SpeciesCombobox from "../../../components/species-combobox"
 import { ComparisonButton } from "../../../components/comparison-button"
 import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
+import { postQuestionNextMedia } from "../../../api/question-next-media"
+import {
+  currentPlayMediaItem,
+  mediaArrayLengthForQuestion,
+  mediaSlotIndexFromQuestion,
+} from "../../../core/question-media-index"
 
 export const QuestionComponent = () => {
   const {species, player, game, speciesLanguage} = useContext(AppContext)
-  const {players, nextQuestion, question, submitAnswer, answer, endGame: endGameSession} = useContext(WebsocketContext)
+  const {players, nextQuestion, question, submitAnswer, answer, endGame: endGameSession, patchQuestionMedia} = useContext(WebsocketContext)
   const {onOpen, onClose, open: isOpen} = useDisclosure()
   const [flagMediaInfo, setFlagMediaInfo] = useState<{
+    id?: number
     type: 'image' | 'video' | 'audio'
     url: string
     link?: string | null
@@ -44,9 +51,9 @@ export const QuestionComponent = () => {
   const [showSpecies, setShowSpecies] = useState<Species | undefined>(undefined)
   const {open: isSpeciesOpen, onOpen: onSpeciesOpen, onClose: onSpeciesClose} = useDisclosure()
   const [showFeedback, setShowFeedback] = useState(false)
-  // Local state for media index (after flagging). null = use question.sequence so we don't flash first image on reload.
   const [mediaIndex, setMediaIndex] = useState<number | null>(null)
   const [mediaReady, setMediaReady] = useState(false)
+  const [advancingQuestion, setAdvancingQuestion] = useState(false)
   const mediaPostedKey = useRef<string | null>(null)
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
@@ -60,14 +67,22 @@ export const QuestionComponent = () => {
     onSpeciesOpen()
   }
 
-  // Initialize or reset mediaIndex when question changes
   useEffect(() => {
-    if (question) {
-      setMediaIndex(question.sequence ?? 0)
-    }
-  }, [question?.id]) // Reset when question ID changes
+    setMediaIndex(null)
+  }, [question?.id])
 
-  const currentMediaIndex = mediaIndex ?? question?.sequence ?? 0
+  useEffect(() => {
+    setAdvancingQuestion(false)
+  }, [question?.id])
+
+  const gameMedia = game?.media ?? 'images'
+  const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0
+  const currentMediaIndex =
+    mediaIndex ??
+    (question ? mediaSlotIndexFromQuestion(question, mediaLength) : 0)
+  const currentImage = currentPlayMediaItem(question?.images, question)
+  const currentVideo = currentPlayMediaItem(question?.videos, question)
+  const currentSound = currentPlayMediaItem(question?.sounds, question)
 
   useEffect(() => {
     mediaPostedKey.current = null
@@ -120,7 +135,7 @@ export const QuestionComponent = () => {
 
   const flagMedia = () => {
     if (!question || !game) return
-    const currentIndex = mediaIndex ?? question.sequence ?? 0
+    const currentIndex = currentMediaIndex
     let mediaData: {
       id?: number
       type: 'image' | 'video' | 'audio'
@@ -130,8 +145,8 @@ export const QuestionComponent = () => {
       index: number
     } | null = null
 
-    if (game.media === 'images' && question.images?.length) {
-      const item = question.images[currentIndex]
+    if (game.media === 'images' && currentImage) {
+      const item = currentImage
       if (item) {
         mediaData = {
           id: item.id,
@@ -142,8 +157,8 @@ export const QuestionComponent = () => {
           index: currentIndex,
         }
       }
-    } else if (game.media === 'video' && question.videos?.length) {
-      const item = question.videos[currentIndex]
+    } else if (game.media === 'video' && currentVideo) {
+      const item = currentVideo
       if (item) {
         mediaData = {
           id: item.id,
@@ -154,8 +169,8 @@ export const QuestionComponent = () => {
           index: currentIndex,
         }
       }
-    } else if (game.media === 'audio' && question.sounds?.length) {
-      const item = question.sounds[currentIndex]
+    } else if (game.media === 'audio' && currentSound) {
+      const item = currentSound
       if (item) {
         mediaData = {
           id: item.id,
@@ -182,7 +197,9 @@ export const QuestionComponent = () => {
   }
 
   const getNextQuestion = () => {
+    if (advancingQuestion) return
     setShowFeedback(false)
+    setAdvancingQuestion(true)
     nextQuestion()
   }
 
@@ -202,11 +219,18 @@ export const QuestionComponent = () => {
       ) : (
         isHost ? (
           answer ? (
-          <Button onClick={getNextQuestion} width='full' colorPalette={'primary'} autoFocus>
+          <Button
+            onClick={getNextQuestion}
+            width='full'
+            colorPalette={'primary'}
+            autoFocus
+            disabled={advancingQuestion}
+            loading={advancingQuestion}
+          >
             <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
           </Button>
           ) : (
-            <Button disabled={true} width='full' colorPalette={'primary'}>
+            <Button disabled width='full' colorPalette={'primary'}>
               <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
             </Button>
           )
@@ -233,21 +257,21 @@ export const QuestionComponent = () => {
         }}
         media={flagMediaInfo}
         useMediaReview
-        onSuccess={() => {
-          // After successful flagging, change to next media item in the sequence
-          if (question && game) {
-            let maxIndex = 0
-            if (game.media === 'images' && question.images?.length) {
-              maxIndex = question.images.length - 1
-            } else if (game.media === 'video' && question.videos?.length) {
-              maxIndex = question.videos.length - 1
-            } else if (game.media === 'audio' && question.sounds?.length) {
-              maxIndex = question.sounds.length - 1
-            }
-            
-            // Increment media index, wrap around if at the end
-            const nextIndex = currentMediaIndex >= maxIndex ? 0 : currentMediaIndex + 1
-            setMediaIndex(nextIndex)
+        onSuccess={async () => {
+          if (!question?.id || !player?.token) return
+          const excludedId = flagMediaInfo?.id
+          try {
+            const patch = await postQuestionNextMedia(
+              question.id,
+              player.token,
+              excludedId
+            )
+            patchQuestionMedia(patch)
+            setMediaIndex(null)
+            mediaPostedKey.current = null
+            setMediaReady(false)
+          } catch {
+            // No alternate media or request failed — keep current question state
           }
         }}
       />
@@ -256,32 +280,33 @@ export const QuestionComponent = () => {
         {showFeedback && (
           <AnswerFeedback
             correct={Boolean(answer?.correct)}
+            speciesFrequency={answer?.species_frequency}
             onAnimationComplete={handleAnimationComplete}
           />
         )}
       </>
       <Box position={'relative'}>
-        {game.media === 'video' && question.videos[currentMediaIndex] && (
+        {game.media === 'video' && currentVideo && (
           <>
             <ReactPlayer
               width={'100%'}
               height={'50%'}
-              url={question.videos[currentMediaIndex].url}
+              url={currentVideo.url}
               controls={true}
               playing={true}
               onReady={notifyMediaReady}
             />
             <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
-              <MediaCredits media={question.videos[currentMediaIndex]} />
+              <MediaCredits media={currentVideo} />
               {flag}
             </Flex>
           </>
         )}
-        {game.media === 'images' && question.images[currentMediaIndex] && (
+        {game.media === 'images' && currentImage && (
           <>
             <ZoomablePlayImage
-              previewSrc={question.images[currentMediaIndex].url.replace('/1800', '/900')}
-              fullSrc={question.images[currentMediaIndex].url}
+              previewSrc={currentImage.url.replace('/1800', '/900')}
+              fullSrc={currentImage.url}
               onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
@@ -290,7 +315,7 @@ export const QuestionComponent = () => {
             />
             <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
               <MediaCredits 
-                media={question.images[currentMediaIndex]} 
+                media={currentImage} 
                 onClick={skipQuestion}
               />
               {flag}
@@ -298,19 +323,19 @@ export const QuestionComponent = () => {
           </>
 
         )}
-        {game.media === 'audio' && question.sounds[currentMediaIndex] && (
+        {game.media === 'audio' && currentSound && (
           <Box py={8}>
             <>
               <ReactPlayer
                 width={'100%'}
                 height={'50px'}
-                url={question.sounds[currentMediaIndex].url}
+                url={currentSound.url}
                 controls={true}
                 playing={true}
                 onReady={notifyMediaReady}
               />
               <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
-                <MediaCredits media={question.sounds[currentMediaIndex]} />
+                <MediaCredits media={currentSound} />
                 {flag}
               </Flex>
             </>

@@ -86,20 +86,21 @@ export function HomeScreen() {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => navigation.navigate('BirdrJourneyIntro')}
-        testID="home.birdrJourney"
-        accessibilityLabel={t('birdr_journey')}
-      >
-        <Text style={styles.primaryButtonText}>{t('birdr_journey')}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.primaryButton}
         onPress={() => navigation.navigate('Challenge')}
         testID="home.countryChallenge"
         accessibilityLabel={t('country_challenge')}
       >
         <Text style={styles.primaryButtonText}>{t('country_challenge')}</Text>
       </TouchableOpacity>
+      {isAuthenticated && (
+        <TouchableOpacity
+          style={styles.ghostButton}
+          onPress={() => navigation.navigate('Checklist' as never)}
+          testID="home.checklist"
+        >
+          <Text style={styles.ghostButtonText}>{t('checklist_title')}</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity
         style={styles.ghostButton}
         onPress={() => navigation.navigate('Scores')}

@@ -374,7 +374,7 @@ class DailyChallengeStartView(APIView):
             media=challenge.media,
             multiplayer=True,
             host=creator_player,
-            include_rare=True,
+            rarity=Game.RARIT_REGULAR,
             include_escapes=False,
         )
         for p in accepted:

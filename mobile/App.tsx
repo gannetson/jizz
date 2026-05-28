@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './src/navigation/navigationRef';
+import { setupNotificationResponseHandler } from './src/lib/notifications';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
@@ -17,6 +19,10 @@ import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from './src/api/config';
 
 export default function App() {
   useEffect(() => {
+    return setupNotificationResponseHandler();
+  }, []);
+
+  useEffect(() => {
     const webClientId = GOOGLE_WEB_CLIENT_ID?.trim() || undefined;
     GoogleSignin.configure({
       webClientId: webClientId ?? undefined,
@@ -30,7 +36,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <AutocompleteDropdownContextProvider>
         <AuthProvider>
           <ProfileProvider>

@@ -76,7 +76,7 @@ class AdminChangelistTestCase(TestCase):
         player = Player.objects.create(name='P', language='en')
         Game.objects.create(
             country=country, level='beginner', length=5, media='images',
-            host=player, include_rare=True,
+            host=player,
         )
         response = self.client.get(reverse('admin:jizz_game_changelist'))
         self.assertEqual(response.status_code, 200)
@@ -91,7 +91,7 @@ class AdminChangelistTestCase(TestCase):
         player = Player.objects.create(name='P', language='en')
         game = Game.objects.create(
             country=country, level='beginner', length=5, media='images',
-            host=player, include_rare=True,
+            host=player,
         )
         PlayerScore.objects.create(player=player, game=game, score=10)
         response = self.client.get(reverse('admin:jizz_playerscore_changelist'))
@@ -154,7 +154,7 @@ class AdminChangeFormTestCase(TestCase):
         player = Player.objects.create(name='P', language='en')
         game = Game.objects.create(
             country=country, level='beginner', length=5, media='images',
-            host=player, include_rare=True,
+            host=player,
         )
         response = self.client.get(
             reverse('admin:jizz_game_change', args=(game.pk,))

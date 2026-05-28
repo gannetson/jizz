@@ -5,6 +5,7 @@ import { useIntl } from "react-intl";
 import { useContext } from "react";
 import AppContext from "../core/app-context";
 import { getCountryDisplayName } from "../data/country-names-nl";
+import { checklistSelectStyles } from "./checklist/checklist-select-styles";
 
 type Country = { code: string; name: string };
 
@@ -22,6 +23,8 @@ interface CountryComboboxProps {
   /** Optional: include an "empty" option (e.g. "All countries") with code "" */
   allowEmpty?: boolean;
   emptyLabel?: string;
+  /** Taller control + primary.500 selected option (checklist sidebar). */
+  size?: 'default' | 'large';
 }
 
 const defaultStyles: StylesConfig<OptionType, false> = {
@@ -43,6 +46,7 @@ export const CountryCombobox = ({
   placeholder,
   allowEmpty = false,
   emptyLabel,
+  size = 'default',
 }: CountryComboboxProps) => {
   const intl = useIntl();
   const { language } = useContext(AppContext);
@@ -94,7 +98,7 @@ export const CountryCombobox = ({
         noOptionsMessage={() =>
           intl.formatMessage({ id: "no options found", defaultMessage: "No options found" })
         }
-        styles={defaultStyles}
+        styles={size === 'large' ? checklistSelectStyles<OptionType>() : defaultStyles}
       />
     </Box>
   );

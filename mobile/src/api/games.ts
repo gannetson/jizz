@@ -13,6 +13,8 @@ export type GameScore = {
   answers?: Array<{ correct?: boolean }>;
 };
 
+export type Rarity = 'familiar' | 'regular' | 'exceptional';
+
 export type Game = {
   token: string;
   level: string;
@@ -20,6 +22,7 @@ export type Game = {
   media: string;
   country: Country;
   language: string;
+  rarity?: Rarity;
   created?: string;
   host?: { id: number; name: string; token?: string };
   ended?: boolean;
@@ -34,7 +37,7 @@ type CreateGameBody = {
   level: string;
   length: string;
   media: string;
-  include_rare?: boolean;
+  rarity?: Rarity;
   include_escapes?: boolean;
   tax_order?: string;
   tax_family?: string;

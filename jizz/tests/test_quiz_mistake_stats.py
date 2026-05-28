@@ -30,7 +30,6 @@ class QuizMistakeStatsTests(TestCase):
             length=5,
             media="images",
             multiplayer=False,
-            include_rare=True,
         )
         self.player = Player.objects.create(name="P", language="en")
         self.score = PlayerScore.objects.create(player=self.player, game=self.game)
@@ -193,7 +192,6 @@ class QuizMistakeStatsTests(TestCase):
             length=5,
             media="images",
             multiplayer=False,
-            include_rare=True,
         )
         ps = PlayerScore.objects.create(player=self.player, game=game2)
         q = Question.objects.create(game=game2, species=sp_intro, number=1, sequence=1)

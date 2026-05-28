@@ -56,8 +56,7 @@ class GameLifecycleTestCase(TestCase):
             level='beginner',
             length=5,
             media='images',
-            host=self.player,
-            include_rare=True
+            host=self.player
         )
 
         # Get first question
@@ -107,8 +106,7 @@ class GameLifecycleTestCase(TestCase):
             level='beginner',
             length=5,
             media='images',
-            host=self.player,
-            include_rare=True
+            host=self.player
         )
 
         # Add and answer first question in game1
@@ -136,8 +134,7 @@ class GameLifecycleTestCase(TestCase):
             level='beginner',
             length=5,
             media='images',
-            host=self.player,
-            include_rare=True
+            host=self.player
         )
 
         # Verify games are different
@@ -198,7 +195,7 @@ class GameLifecycleTestCase(TestCase):
                 'level': 'beginner',
                 'length': 5,
                 'media': 'images',
-                'include_rare': True,
+                'rarity': 'regular',
                 'include_escapes': False
             },
             HTTP_AUTHORIZATION=f'Token {self.player.token}'
@@ -244,7 +241,7 @@ class GameLifecycleTestCase(TestCase):
                 'level': 'beginner',
                 'length': 5,
                 'media': 'images',
-                'include_rare': True,
+                'rarity': 'regular',
                 'include_escapes': False
             },
             HTTP_AUTHORIZATION=f'Token {self.player.token}'

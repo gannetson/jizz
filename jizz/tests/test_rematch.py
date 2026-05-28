@@ -21,7 +21,6 @@ class RematchTestCase(TestCase):
             media="images",
             host=self.host,
             multiplayer=True,
-            include_rare=True,
             include_escapes=False,
         )
 
@@ -36,7 +35,7 @@ class RematchTestCase(TestCase):
         self.assertEqual(new_game.media, self.game.media)
         self.assertEqual(new_game.host_id, self.host.id)
         self.assertEqual(new_game.multiplayer, self.game.multiplayer)
-        self.assertEqual(new_game.include_rare, self.game.include_rare)
+        self.assertEqual(new_game.rarity, self.game.rarity)
 
     def test_rematch_as_non_host_raises(self):
         with self.assertRaises(ValueError) as ctx:

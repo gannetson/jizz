@@ -20,6 +20,9 @@ export const BirdrMenu = () => {
             <Link href={'/challenge'} textDecoration="none">
               <FormattedMessage id={'challenge'} defaultMessage={'Country challenge'} />
             </Link>
+            <Link href={'/checklist'} textDecoration="none">
+              <FormattedMessage id="checklist_title" defaultMessage="My Checklist" />
+            </Link>
             <Link href={'/daily-challenge'} textDecoration="none">
               <FormattedMessage id={'daily_challenge'} defaultMessage={'Daily challenge'} />
             </Link>

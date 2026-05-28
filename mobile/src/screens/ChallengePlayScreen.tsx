@@ -79,7 +79,10 @@ export function ChallengePlayScreen() {
   const [question, setQuestion] = useState<ChallengeQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{ correct: boolean } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    correct: boolean;
+    species_frequency?: string | null;
+  } | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [answerResult, setAnswerResult] = useState<{
     correct: boolean;
@@ -353,7 +356,11 @@ export function ChallengePlayScreen() {
       const correct = response?.correct ?? false;
       const userAnswer = (response?.answer ?? option) as QuestionOption | Species;
       const correctSpecies = (response?.species ?? userAnswer) as QuestionOption | Species;
-      setFeedback({ correct });
+      setFeedback({
+        correct,
+        species_frequency:
+          typeof response?.species_frequency === 'string' ? response.species_frequency : null,
+      });
       setShowFeedback(true);
       setAnswerResult({ correct, userAnswer, correctSpecies });
       const challenge = await loadCountryChallenge(playerToken, { cacheBust: true });
@@ -364,7 +371,7 @@ export function ChallengePlayScreen() {
         setLevelEnded(true);
       }
     } catch (e) {
-      setFeedback({ correct: false });
+      setFeedback({ correct: false, species_frequency: null });
       setShowFeedback(true);
       setAnswerResult({
         correct: false,
@@ -473,6 +480,7 @@ export function ChallengePlayScreen() {
         {showFeedback && feedback !== null && (
           <AnswerFeedback
             correct={feedback.correct}
+            speciesFrequency={feedback.species_frequency}
             onAnimationComplete={() => setShowFeedback(false)}
           />
         )}

@@ -185,7 +185,6 @@ class ApiGamesTestCase(TestCase):
             length=5,
             media='images',
             host=self.player,
-            include_rare=True,
         )
 
     def test_games_list_returns_200(self):
@@ -198,7 +197,7 @@ class ApiGamesTestCase(TestCase):
         _player_auth(self.client, self.player)
         response = self.client.post(
             '/api/games/',
-            {'country': 'NL', 'level': 'beginner', 'length': 5, 'media': 'images', 'include_rare': True},
+            {'country': 'NL', 'level': 'beginner', 'length': 5, 'media': 'images', 'rarity': 'regular'},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -236,7 +235,6 @@ class ApiQuestionAnswerTestCase(TestCase):
             length=5,
             media='images',
             host=self.player,
-            include_rare=True,
         )
         self.question = self.game.add_question()
         self.player_score, _ = PlayerScore.objects.get_or_create(player=self.player, game=self.game)
@@ -288,7 +286,7 @@ class ApiQuestionDetailTestCase(TestCase):
         self.player = Player.objects.create(name='P', language='en')
         self.game = Game.objects.create(
             country=self.country, level='beginner', length=5, media='images',
-            host=self.player, include_rare=True,
+            host=self.player,
         )
         self.question = self.game.add_question()
 
@@ -318,7 +316,7 @@ class QuestionMediaReadyApiTestCase(TestCase):
         self.player = Player.objects.create(name='P', language='en')
         self.game = Game.objects.create(
             country=self.country, level='beginner', length=5, media='images',
-            host=self.player, include_rare=True,
+            host=self.player,
         )
         self.question = self.game.add_question()
         PlayerScore.objects.get_or_create(player=self.player, game=self.game)
@@ -351,6 +349,52 @@ class QuestionMediaReadyApiTestCase(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class QuestionNextMediaApiTestCase(TestCase):
+    """POST /api/questions/<id>/next-media/ — rotate after flag."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        self.species = Species.objects.create(name='S', name_latin='S', code='S02')
+        CountrySpecies.objects.create(country=self.country, species=self.species, status='native')
+        self.media1 = Media.objects.create(
+            species=self.species, type='image', url='https://x.com/1.jpg', source='test'
+        )
+        self.media2 = Media.objects.create(
+            species=self.species, type='image', url='https://x.com/2.jpg', source='test'
+        )
+        self.player = Player.objects.create(name='P', language='en')
+        self.game = Game.objects.create(
+            country=self.country, level='beginner', length=5, media='images',
+            host=self.player,
+        )
+        self.question = self.game.add_question()
+        PlayerScore.objects.get_or_create(player=self.player, game=self.game)
+
+    def test_next_media_returns_alternate_image(self):
+        self.question.number = 0
+        self.question.save(update_fields=['number'])
+        response = self.client.post(
+            f'/api/questions/{self.question.id}/next-media/',
+            {'player_token': self.player.token, 'excluded_media_id': self.media1.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['images']), 1)
+        self.assertNotEqual(response.data['images'][0]['id'], self.media1.id)
+        self.question.refresh_from_db()
+        self.assertEqual(self.question.number, 1)
+
+    def test_next_media_409_when_only_one_eligible(self):
+        Media.objects.filter(pk=self.media2.pk).delete()
+        response = self.client.post(
+            f'/api/questions/{self.question.id}/next-media/',
+            {'player_token': self.player.token, 'excluded_media_id': self.media1.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
 
 class ApiFlagTestCase(TestCase):
@@ -516,7 +560,6 @@ class ApiScoresFiltersTestCase(TestCase):
             length=10,
             media='images',
             host=self.player,
-            include_rare=True,
         )
         self.player_score = PlayerScore.objects.create(
             player=self.player,
@@ -598,7 +641,7 @@ class ApiCountryChallengesTestCase(TestCase):
             sequence=0,
             defaults={
                 'level': 'beginner', 'length': 5, 'media': 'images',
-                'jokers': 2, 'include_rare': True, 'title': 'Level 0', 'description': 'First',
+                'jokers': 2, 'rarity': 'regular', 'title': 'Level 0', 'description': 'First',
             },
         )
 
@@ -643,14 +686,14 @@ class ApiChallengeNextLevelTestCase(TestCase):
             sequence=0,
             defaults={
                 'level': 'beginner', 'length': 5, 'media': 'images',
-                'jokers': 2, 'include_rare': True, 'title': 'Level 0', 'description': 'First',
+                'jokers': 2, 'rarity': 'regular', 'title': 'Level 0', 'description': 'First',
             },
         )[0]
         self.challenge = CountryChallenge.objects.create(country=self.country, player=self.player)
         self.level = self.level0
         self.game = Game.objects.create(
             country=self.country, level='beginner', length=5, media='images',
-            host=self.player, include_rare=True,
+            host=self.player,
         )
         CountryGame.objects.create(
             country_challenge=self.challenge,
@@ -669,7 +712,7 @@ class ApiChallengeNextLevelTestCase(TestCase):
     def test_add_challenge_level_returns_201(self):
         level1 = ChallengeLevel.objects.create(
             sequence=1, level='advanced', length=10, media='images',
-            jokers=2, include_rare=True, title='Level 1', description='Second',
+            jokers=2, title='Level 1', description='Second',
         )
         _player_auth(self.client, self.player)
         response = self.client.post(
@@ -684,7 +727,7 @@ class ApiChallengeNextLevelTestCase(TestCase):
         other_player = Player.objects.create(name='Other', language='en')
         ChallengeLevel.objects.create(
             sequence=1, level='advanced', length=10, media='images',
-            jokers=2, include_rare=True, title='Level 1', description='Second',
+            jokers=2, title='Level 1', description='Second',
         )
         _player_auth(self.client, other_player)
         response = self.client.post(

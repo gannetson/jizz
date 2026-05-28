@@ -318,8 +318,11 @@ class QuizConsumer(AsyncWebsocketConsumer):
         from .models import Game
 
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        await sync_to_async(game.add_question)()
-        await self._broadcast_current_question()
+        question = await sync_to_async(game.add_question)()
+        if question:
+            await self._broadcast_question_payload(question.id)
+        else:
+            await self._broadcast_current_question()
 
     async def _broadcast_players_update(self):
         player_data = await self._get_player_data()
@@ -375,18 +378,31 @@ class QuizConsumer(AsyncWebsocketConsumer):
             {"type": "new_question", "question": q},
         )
 
-    async def _serialize_current_question_for_send(self):
-        from .models import Game
-        from .serializers import QuestionSerializer
+    async def _broadcast_question_payload(self, question_id: int):
+        q = await self._serialize_question_for_send(question_id)
+        if not q:
+            return
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {"type": "new_question", "question": q},
+        )
 
+    async def _serialize_current_question_for_send(self):
         question = await self._get_current_question()
         if not question:
             return None
-        serializer = QuestionSerializer(question)
-        question_data = await sync_to_async(lambda: serializer.data)()
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        question_data["game"] = {"token": str(game.token)}
-        return question_data
+        return await self._serialize_question_for_send(question.id)
+
+    async def _serialize_question_for_send(self, question_id: int):
+        from .question_play import load_question_for_play, serialize_question_for_play
+
+        def _build_payload():
+            q = load_question_for_play(question_id)
+            data = serialize_question_for_play(q)
+            data["game"] = {"token": str(q.game.token)}
+            return data
+
+        return await sync_to_async(_build_payload)()
 
     async def _get_current_answer_for_connection(self):
         if not self._player_token:

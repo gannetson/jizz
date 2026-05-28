@@ -23,7 +23,6 @@ class PlayerScoreListViewTestCase(TestCase):
             length=10,
             media='images',
             host=self.player1,
-            include_rare=True,
         )
         self.ps1, _ = PlayerScore.objects.get_or_create(player=self.player1, game=self.game1)
         self.ps1.score = 500
@@ -42,7 +41,6 @@ class PlayerScoreListViewTestCase(TestCase):
             length=10,
             media='images',
             host=self.player2,
-            include_rare=True,
         )
         self.ps4, _ = PlayerScore.objects.get_or_create(player=self.player1, game=self.game2)
         self.ps4.score = 200
@@ -100,6 +98,25 @@ class PlayerScoreListViewTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         for item in response.data['results']:
             self.assertEqual(item['country']['code'], 'NL')
+
+    def test_scores_filter_by_rarity(self):
+        game_familiar = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=10,
+            media='images',
+            host=self.player1,
+            rarity='familiar',
+        )
+        PlayerScore.objects.create(player=self.player1, game=game_familiar, score=999)
+        response = self.client.get(
+            '/api/scores/?game__level=advanced&game__length=10&game__media=images'
+            '&game__country=NL&game__rarity=familiar'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for item in response.data['results']:
+            self.assertEqual(item['rarity'], 'familiar')
+        self.assertTrue(any(r['score'] == 999 for r in response.data['results']))
 
     def test_scores_page_size_100(self):
         response = self.client.get('/api/scores/')

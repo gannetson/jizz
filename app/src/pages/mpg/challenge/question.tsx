@@ -17,6 +17,12 @@ import { AnswerFeedback } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
 import SpeciesCombobox from "../../../components/species-combobox"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
+import { postQuestionNextMedia } from "../../../api/question-next-media"
+import {
+  currentPlayMediaItem,
+  mediaArrayLengthForQuestion,
+  mediaSlotIndexFromQuestion,
+} from "../../../core/question-media-index"
 import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect'
@@ -55,11 +61,19 @@ export const ChallengeQuestion = () => {
     }
   }, [question, level])
 
+  const game = countryChallenge?.levels[0].game
+  const gameMedia = game?.media ?? 'images'
+  const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0
   const currentMediaIndex =
-    question != null ? (mediaIndex ?? question.number ?? 0) : 0
+    question != null
+      ? (mediaIndex ?? mediaSlotIndexFromQuestion(question, mediaLength))
+      : 0
+  const currentImage = currentPlayMediaItem(question?.images, question)
+  const currentVideo = currentPlayMediaItem(question?.videos, question)
+  const currentSound = currentPlayMediaItem(question?.sounds, question)
 
   useEffect(() => {
-    if (question) setMediaIndex(question.number ?? 0)
+    setMediaIndex(null)
   }, [question?.id])
 
   useEffect(() => {
@@ -67,17 +81,22 @@ export const ChallengeQuestion = () => {
     setMediaReady(false)
   }, [question?.id, currentMediaIndex])
 
-  const handleFlagSuccess = useCallback(() => {
-    if (!question) return
-    const g = countryChallenge?.levels?.[0]?.game
-    if (!g) return
-    let maxIndex = 0
-    if (g.media === 'images' && question.images?.length) maxIndex = question.images.length - 1
-    else if (g.media === 'video' && question.videos?.length) maxIndex = question.videos.length - 1
-    else if (g.media === 'audio' && question.sounds?.length) maxIndex = question.sounds.length - 1
-    const idx = mediaIndex ?? question.number ?? 0
-    setMediaIndex(idx >= maxIndex ? 0 : idx + 1)
-  }, [question, countryChallenge?.levels, mediaIndex])
+  const handleFlagSuccess = useCallback(async () => {
+    if (!question?.id || !player?.token) return
+    const excludedId =
+      game?.media === 'images'
+        ? currentImage?.id
+        : game?.media === 'video'
+          ? currentVideo?.id
+          : currentSound?.id
+    try {
+      await postQuestionNextMedia(question.id, player.token, excludedId)
+      setMediaIndex(null)
+      await getNewChallengeQuestion()
+    } catch {
+      // no alternate media
+    }
+  }, [question, player?.token, game, currentImage, currentSound, currentVideo, getNewChallengeQuestion])
 
   const notifyMediaReady = useCallback(() => {
     setMediaReady(true)
@@ -86,8 +105,6 @@ export const ChallengeQuestion = () => {
     mediaPostedForQuestionId.current = question.id
     postQuestionMediaReady(question.id, player.token).catch(() => {})
   }, [question?.id, player?.token])
-
-  const game = countryChallenge?.levels[0].game
 
   if (!question || !game || !level) {
     return <Loading/>
@@ -141,9 +158,10 @@ export const ChallengeQuestion = () => {
       <Page>
         <>
           {showFeedback && (
-            <AnswerFeedback 
-              correct={isCorrect} 
-              onAnimationComplete={handleAnimationComplete} 
+            <AnswerFeedback
+              correct={isCorrect}
+              speciesFrequency={response?.species_frequency}
+              onAnimationComplete={handleAnimationComplete}
             />
           )}
         </>
@@ -185,24 +203,24 @@ export const ChallengeQuestion = () => {
           </Box>
 
         <Box position={'relative'}>
-          {game.media === 'video' && (
+          {game.media === 'video' && currentVideo && (
             <>
               <ReactPlayer
                 key={`${question.id}-video-${currentMediaIndex}`}
                 width={'100%'}
                 height={'50%'}
-                url={question.videos[currentMediaIndex].url}
+                url={currentVideo.url}
                 controls={true}
                 playing={true}
                 onReady={notifyMediaReady}
               />
             </>
           )}
-          {game.media === 'images' && (
+          {game.media === 'images' && currentImage && (
             <ZoomablePlayImage
               key={`${question.id}-img-${currentMediaIndex}`}
-              previewSrc={question.images[currentMediaIndex].url.replace('/1800', '/900')}
-              fullSrc={question.images[currentMediaIndex].url}
+              previewSrc={currentImage.url.replace('/1800', '/900')}
+              fullSrc={currentImage.url}
               onLoad={notifyMediaReady}
               onError={(e) => {
                 e.currentTarget.src = '/images/birdr-logo.png';
@@ -210,13 +228,13 @@ export const ChallengeQuestion = () => {
               }}
             />
           )}
-          {game.media === 'audio' && (
+          {game.media === 'audio' && currentSound && (
             <Box py={8}>
               <ReactPlayer
                 key={`${question.id}-audio-${currentMediaIndex}`}
                 width={'100%'}
                 height={'50px'}
-                url={question.sounds[currentMediaIndex].url}
+                url={currentSound.url}
                 controls={true}
                 playing={true}
                 onReady={notifyMediaReady}
@@ -225,14 +243,14 @@ export const ChallengeQuestion = () => {
 
           )}
           <Flex justifyContent={'end'}>
-            {game.media === 'video' && question.videos[currentMediaIndex] && (
-              <FlagMediaButton media={question.videos[currentMediaIndex]} onFlagSuccess={handleFlagSuccess} />
+            {game.media === 'video' && currentVideo && (
+              <FlagMediaButton media={currentVideo} onFlagSuccess={handleFlagSuccess} />
             )}
-            {game.media === 'images' && question.images[currentMediaIndex] && (
-              <FlagMediaButton media={question.images[currentMediaIndex]} onFlagSuccess={handleFlagSuccess} />
+            {game.media === 'images' && currentImage && (
+              <FlagMediaButton media={currentImage} onFlagSuccess={handleFlagSuccess} />
             )}
-            {game.media === 'audio' && question.sounds[currentMediaIndex] && (
-              <FlagMediaButton media={question.sounds[currentMediaIndex]} onFlagSuccess={handleFlagSuccess} />
+            {game.media === 'audio' && currentSound && (
+              <FlagMediaButton media={currentSound} onFlagSuccess={handleFlagSuccess} />
             )}
           </Flex>
         </Box>

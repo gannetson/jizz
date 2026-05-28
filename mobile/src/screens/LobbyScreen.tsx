@@ -148,6 +148,7 @@ export function LobbyScreen() {
       length: game.length ? String(game.length) : undefined,
       media: game.media || undefined,
       country: game.country?.code || undefined,
+      rarity: game.rarity || undefined,
     }).then((scores) => setTopScores(scores.slice(0, 3)));
   }, [game?.token]);
 

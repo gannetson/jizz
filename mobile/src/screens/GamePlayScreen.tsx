@@ -357,6 +357,9 @@ export function GamePlayScreen() {
       {showFeedback && answer !== undefined && (
         <AnswerFeedback
           correct={Boolean(answer?.correct)}
+          speciesFrequency={
+            typeof answer?.species_frequency === 'string' ? answer.species_frequency : null
+          }
           onAnimationComplete={() => setShowFeedback(false)}
         />
       )}

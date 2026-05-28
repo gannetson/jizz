@@ -1,17 +1,17 @@
 import {useContext, useEffect, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Box, Button, Flex, Heading, Image, Link} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, Link} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
 import SelectLevel from "./select-level"
-import {Loading} from "./loading"
 import {SelectLength} from "./select-length"
 import WebsocketContext from "../core/websocket-context"
 import {useNavigate} from "react-router-dom"
 import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
+import {SelectRarity, type Rarity} from "./select-rarity"
 import {UseCountries} from "../user/use-countries"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
@@ -21,7 +21,7 @@ type GameProps = {
   country?: string;
   length?: string;
   level?: string;
-  includeRare?: boolean
+  rarity?: Rarity
   mediaType?: string;
 }
 
@@ -29,7 +29,7 @@ export const CreateGame = ({
                              country: pickCountry,
                              length: pickLength,
                              level: pickLevel,
-                             includeRare,
+                             rarity: pickRarity,
                              mediaType: pickMediaType
                            }: GameProps) => {
 
@@ -41,7 +41,7 @@ export const CreateGame = ({
     setLevel,
     setLength,
     createGame,
-    setIncludeRare,
+    setRarity,
     setMediaType,
     playerName,
     setPlayerName,
@@ -67,33 +67,38 @@ export const CreateGame = ({
     if (pickMediaType) {
       setMediaType(pickMediaType)
     }
-    if (includeRare !== undefined) {
-      setIncludeRare(includeRare)
+    if (pickRarity !== undefined) {
+      setRarity(pickRarity)
     }
 
   }, [
-    countries.length, pickCountry, // Only depend on countries.length, not countries array itself
-    pickLevel, pickLength, pickMediaType, includeRare,
-    setLevel, setMediaType, setIncludeRare, setLength, setCountry
+    countries.length, pickCountry,
+    pickLevel, pickLength, pickMediaType, pickRarity,
+    setLevel, setMediaType, setRarity, setLength, setCountry
   ]);
 
 
   const create = async () => {
+    if (loading) return
     setLoading(true)
-    let myPlayer: Player | undefined = player
-    if (!myPlayer) {
-      myPlayer = await createPlayer()
+    try {
+      let myPlayer: Player | undefined = player
+      if (!myPlayer) {
+        myPlayer = await createPlayer()
+      }
+      const myGame = await createGame(myPlayer)
+      if (!myGame) return
+      await joinGame(myGame, myPlayer)
+      navigate('/game/lobby')
+    } finally {
+      setLoading(false)
     }
-    const myGame = await createGame(myPlayer)
-    await joinGame(myGame, myPlayer)
-    navigate('/game/lobby')
-    setLoading(false)
   }
 
+  const canStart = Boolean(country && playerName?.trim())
+  const startDisabled = loading || !canStart
+
   return (
-    loading ? (
-      <Loading/>
-    ) : (
       <Flex direction={'column'} gap={10}>
         <Heading size={'lg'}><FormattedMessage id='start game' defaultMessage={'Start a new game'}/></Heading>
         {country?.code === 'NL-NH' && (
@@ -117,23 +122,34 @@ export const CreateGame = ({
         <SelectLanguage/>
         {!pickCountry &&  <SelectCountry/>}
 
-        <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
+        <Button
+          disabled={startDisabled}
+          loading={loading}
+          size='lg'
+          onClick={create}
+          colorPalette="primary"
+        >
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
 
         <Heading size={'lg'}><FormattedMessage id='more game settings' defaultMessage={'More game settings'}/></Heading>
 
-        {includeRare === undefined && <SelectSpeciesStatus/>}
+        {pickRarity === undefined && <SelectRarity/>}
+        {pickRarity === undefined && <SelectSpeciesStatus/>}
         {!pickLength && <SelectLength/>}
         {!pickLevel && <SelectLevel/>}
         {!pickMediaType && <SelectMediaType/>}
         <SelectTaxOrder/>
         <SelectTaxFamily/>
-        <Button disabled={!country || !playerName} size='lg' onClick={create} colorPalette="primary">
+        <Button
+          disabled={startDisabled}
+          loading={loading}
+          size='lg'
+          onClick={create}
+          colorPalette="primary"
+        >
           <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
         </Button>
       </Flex>
-
-    )
   )
 }

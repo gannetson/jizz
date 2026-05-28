@@ -1,4 +1,9 @@
-export const API_BASE_URL = 'https://birdr.pro';
+import Constants from 'expo-constants';
+
+const extra = Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined;
+
+/** Override with EXPO_PUBLIC_API_URL in mobile/.env for local Django (e.g. http://10.0.2.2:8000). */
+export const API_BASE_URL = (extra?.apiBaseUrl || 'https://birdr.pro').replace(/\/$/, '');
 
 /**
  * Web OAuth 2.0 client ID from Google Console (type "Web application").
@@ -15,13 +20,12 @@ export const GOOGLE_IOS_CLIENT_ID = '56451813101-kkjv7e0agsujmmtuuq5gs6mdkumdmp7
 
 export function apiUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
-  return API_BASE_URL + p;
+  return `${API_BASE_URL}${p}`;
 }
 
 /** WebSocket URL for game (wss on production). */
 export function getWebSocketUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
-  const base = API_BASE_URL;
-  const wsBase = base.replace(/^https/, 'wss').replace(/^http/, 'ws');
-  return wsBase + p;
+  const wsBase = API_BASE_URL.replace(/^https/, 'wss').replace(/^http/, 'ws');
+  return `${wsBase}${p}`;
 }

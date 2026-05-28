@@ -44,22 +44,21 @@ def send_welcome_email(user, site_url=None):
 
 def send_push_to_user(user, title, body, data=None):
     """Send push notification to all devices of the user. Uses Expo Push API if SEND_PUSH_NOTIFICATIONS True."""
-    from jizz.models import DeviceToken
+    from jizz.mobile_push.expo import send_expo_push
+    from jizz.models import DeviceToken, PushDevice
+
     data = data or {}
-    tokens = list(DeviceToken.objects.filter(user=user).values_list('token', 'platform'))
+    tokens: set[str] = set()
+    tokens.update(
+        PushDevice.objects.filter(user=user, enabled=True).values_list(
+            'expo_push_token', flat=True
+        )
+    )
+    tokens.update(DeviceToken.objects.filter(user=user).values_list('token', flat=True))
     if not tokens:
         return
-    expo_push_url = getattr(settings, 'EXPO_PUSH_URL', 'https://exp.host/--/api/v2/push/send')
-    for token, _platform in tokens:
-        try:
-            payload = {'to': token, 'title': title, 'body': body, 'data': data, 'sound': 'default'}
-            if getattr(settings, 'SEND_PUSH_NOTIFICATIONS', False):
-                import requests
-                resp = requests.post(expo_push_url, json=payload, timeout=10)
-                if resp.status_code != 200:
-                    logger.warning('Expo push failed: %s %s', resp.status_code, resp.text)
-        except Exception as e:
-            logger.warning('Push send failed: %s', e)
+    for token in tokens:
+        send_expo_push(token, title, body, data=data)
 
 
 def send_daily_challenge_reminder_email(user, challenge, round_obj, hours_left):

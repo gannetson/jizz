@@ -1,9 +1,21 @@
 /**
  * Question media selection (MPG + single-player).
  *
- * Backend `Question.number` is the 0-based index into `species.images` / `.videos` / `.sounds`
- * for this question. `Question.sequence` is which turn in the game — never use it for media.
+ * Backend `Question.number` is the 0-based index into the species' eligible media list.
+ * Live play payloads usually send a single item in `images`/`videos`/`sounds` at array index 0;
+ * use `mediaSlotIndexFromQuestion` so both full and lean payloads work.
+ *
+ * `Question.sequence` is which turn in the game — never use it for media.
  */
+
+export function currentPlayMediaItem<T>(
+  items: T[] | undefined,
+  question: { number?: number | string | null } | undefined
+): T | undefined {
+  if (!items?.length || !question) return undefined;
+  const idx = mediaSlotIndexFromQuestion(question, items.length);
+  return items[idx];
+}
 
 export function mediaArrayLengthForQuestion(
   question: { images?: unknown[]; videos?: unknown[]; sounds?: unknown[] },

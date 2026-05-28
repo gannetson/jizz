@@ -339,3 +339,11 @@ DEFAULT_FROM_EMAIL = "Birdr <info@birdr.pro>"
 
 
 MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION = "first_assertion_v1"
+
+# Per-species field-guide illustration (OpenAI Images API, cached on disk)
+SPECIES_ILLUSTRATION_ENABLED = True
+SPECIES_ILLUSTRATION_MODEL = os.environ.get('SPECIES_ILLUSTRATION_MODEL', 'gpt-image-1-mini')
+SPECIES_ILLUSTRATION_SIZE = os.environ.get('SPECIES_ILLUSTRATION_SIZE', '1024x1024')
+# DALL-E: standard | hd. GPT image models: low | medium | high | auto
+SPECIES_ILLUSTRATION_QUALITY = os.environ.get('SPECIES_ILLUSTRATION_QUALITY', 'low')
+SPECIES_ILLUSTRATION_OUTPUT_FORMAT = os.environ.get('SPECIES_ILLUSTRATION_OUTPUT_FORMAT', 'png')

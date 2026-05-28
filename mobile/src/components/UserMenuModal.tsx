@@ -26,6 +26,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 
 const USER_MENU_ITEMS: { route: string; labelKey: string }[] = [
+  { route: 'Checklist', labelKey: 'checklist_title' },
   { route: 'MyGames', labelKey: 'my_games' },
   { route: 'Settings', labelKey: 'profile' },
 ];

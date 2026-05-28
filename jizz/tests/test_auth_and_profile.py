@@ -301,7 +301,6 @@ class UserGamesViewTestCase(TestCase):
             length=10,
             media='images',
             host=self.player,
-            include_rare=True,
         )
         player_score, _ = PlayerScore.objects.get_or_create(player=self.player, game=game)
         question = game.add_question()
@@ -329,7 +328,6 @@ class UserGamesViewTestCase(TestCase):
             length=10,
             media='images',
             host=self.player,
-            include_rare=True,
         )
         player_score, _ = PlayerScore.objects.get_or_create(player=self.player, game=game)
         question = game.add_question()
@@ -351,7 +349,6 @@ class UserGamesViewTestCase(TestCase):
             length=10,
             media='images',
             host=self.player,
-            include_rare=True,
         )
         self.client.credentials()
         response = self.client.get(f'/api/my-games/{game.token}/')
@@ -370,7 +367,6 @@ class UserGamesViewTestCase(TestCase):
             length=10,
             media='images',
             host=other_player,
-            include_rare=True,
         )
         player_score, _ = PlayerScore.objects.get_or_create(player=other_player, game=game)
         question = game.add_question()

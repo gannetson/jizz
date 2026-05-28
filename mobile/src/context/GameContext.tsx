@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
 import type { Player } from '../api/player';
-import type { Game } from '../api/games';
+import type { Game, Rarity } from '../api/games';
 import type { TaxOrderRow, TaxFamilyRow } from '../api/taxonomy';
 import * as playerApi from '../api/player';
 import * as gamesApi from '../api/games';
@@ -27,8 +27,8 @@ type GameContextType = {
   setMediaType: (v: string) => void;
   soundsScope: 'all' | 'passerines';
   setSoundsScope: (v: 'all' | 'passerines') => void;
-  includeRare: boolean;
-  setIncludeRare: (v: boolean) => void;
+  rarity: Rarity;
+  setRarity: (v: Rarity) => void;
   taxOrder: TaxOrderRow | undefined;
   setTaxOrder: (v: TaxOrderRow | undefined) => void;
   taxFamily: TaxFamilyRow | undefined;
@@ -60,7 +60,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [length, setLength] = useState('10');
   const [mediaType, setMediaType] = useState('images');
   const [soundsScope, setSoundsScope] = useState<'all' | 'passerines'>('all');
-  const [includeRare, setIncludeRare] = useState(true);
+  const [rarity, setRarity] = useState<Rarity>('regular');
   const [taxOrder, setTaxOrder] = useState<TaxOrderRow | undefined>(undefined);
   const [taxFamily, setTaxFamily] = useState<TaxFamilyRow | undefined>(undefined);
   const [player, setPlayer] = useState<Player | null>(null);
@@ -176,7 +176,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         level,
         length,
         media: mediaType,
-        include_rare: includeRare,
+        rarity,
         include_escapes: false,
         tax_order:
           mediaType === 'audio'
@@ -195,7 +195,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
     return null;
-  }, [player, playerName, country, language, level, length, mediaType, soundsScope, includeRare, taxOrder, taxFamily, createPlayer]);
+  }, [player, playerName, country, language, level, length, mediaType, soundsScope, rarity, taxOrder, taxFamily, createPlayer]);
 
   const clearGame = useCallback(async () => {
     await AsyncStorage.removeItem(GAME_TOKEN_KEY);
@@ -230,8 +230,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setMediaType,
         soundsScope,
         setSoundsScope,
-        includeRare,
-        setIncludeRare,
+        rarity,
+        setRarity,
         taxOrder,
         setTaxOrder,
         taxFamily,

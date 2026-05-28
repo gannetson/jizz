@@ -67,8 +67,8 @@ export function StartScreen() {
     setMediaType,
     soundsScope,
     setSoundsScope,
-    includeRare,
-    setIncludeRare,
+    rarity,
+    setRarity,
     taxOrder,
     setTaxOrder,
     taxFamily,
@@ -457,20 +457,19 @@ export function StartScreen() {
         )}
       </TouchableOpacity>
 
-      <Text style={styles.label}>{t('include_rare_species')}</Text>
+      <Text style={styles.label}>{t('rarity_label')}</Text>
       <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.chip, includeRare && styles.chipSelected]}
-          onPress={() => setIncludeRare(true)}
-        >
-          <Text style={[styles.chipText, includeRare && styles.chipTextSelected]}>{t('yes')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.chip, !includeRare && styles.chipSelected]}
-          onPress={() => setIncludeRare(false)}
-        >
-          <Text style={[styles.chipText, !includeRare && styles.chipTextSelected]}>{t('no')}</Text>
-        </TouchableOpacity>
+        {(['familiar', 'regular', 'exceptional'] as const).map((tier) => (
+          <TouchableOpacity
+            key={tier}
+            style={[styles.chip, rarity === tier && styles.chipSelected]}
+            onPress={() => setRarity(tier)}
+          >
+            <Text style={[styles.chipText, rarity === tier && styles.chipTextSelected]}>
+              {t(`rarity_${tier}`)}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <Text style={styles.label}>{t('questions')}</Text>

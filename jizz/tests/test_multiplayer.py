@@ -65,8 +65,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Player 1 joins (host)
@@ -111,8 +110,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Create player scores for all players
@@ -147,8 +145,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Player 1 joins and starts the game
@@ -181,8 +178,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Create player scores
@@ -257,7 +253,6 @@ class MultiplayerGameTestCase(TestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
         ps_host, _ = PlayerScore.objects.get_or_create(
             player=self.player1, game=game
@@ -291,7 +286,6 @@ class MultiplayerGameTestCase(TestCase):
             media='images',
             host=self.player1,
             multiplayer=True,
-            include_rare=True,
         )
         PlayerScore.objects.get_or_create(player=self.player1, game=game)
         q1 = game.add_question()
@@ -308,8 +302,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Create player scores
@@ -391,8 +384,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Create player scores
@@ -437,8 +429,7 @@ class MultiplayerGameTestCase(TestCase):
             length=3,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Create player scores
@@ -507,8 +498,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Player 1 and 2 join and play
@@ -575,7 +565,7 @@ class MultiplayerGameTestCase(TestCase):
                 'length': 3,
                 'media': 'images',
                 'multiplayer': True,
-                'include_rare': True,
+                'rarity': 'regular',
                 'include_escapes': False
             },
             HTTP_AUTHORIZATION=f'Token {self.player1.token}'
@@ -670,8 +660,7 @@ class MultiplayerGameTestCase(TestCase):
             length=5,
             media='images',
             host=self.player1,
-            multiplayer=True,
-            include_rare=True
+            multiplayer=True
         )
 
         # Create player scores

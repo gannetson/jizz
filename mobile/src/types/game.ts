@@ -37,6 +37,7 @@ export type Answer = {
   sequence?: number;
   answer?: Species;
   species?: Species;
+  species_frequency?: string | null;
   player?: { id: number; name: string; token: string };
   correct?: boolean;
   score?: number;

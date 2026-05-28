@@ -31,7 +31,7 @@ export type Game = {
   tax_order?: string
   tax_family?: string
   current_highscore?: Player
-  include_rare: boolean
+  rarity: 'familiar' | 'regular' | 'exceptional'
   include_escapes: boolean
   scores: Player[]
   user_score?: number
@@ -76,6 +76,8 @@ export type Species = {
   images: SpeciesImage[]
   sounds: SpeciesSound[]
   videos: SpeciesVideo[]
+  illustration_url?: string | null
+  illustration_status?: string
   correct?: boolean
 }
 
@@ -121,6 +123,7 @@ export type Answer = {
   sequence?: number
   answer?: Species
   species?: Species
+  species_frequency?: string | null
   player?: Player
   error?: number
   number?: number
@@ -138,6 +141,7 @@ export type Score = {
   country: Country
   media: string
   length: number
+  rarity?: string
 }
 
 
@@ -201,8 +205,8 @@ type SharedState = {
   setPlayerName?: Dispatch<SetStateAction<string | undefined>>
   player?: Player
   createPlayer: () => Promise<Player | undefined>
-  includeRare: boolean
-  setIncludeRare: Dispatch<SetStateAction<boolean>>
+  rarity: 'familiar' | 'regular' | 'exceptional'
+  setRarity: Dispatch<SetStateAction<'familiar' | 'regular' | 'exceptional'>>
   includeEscapes: boolean
   setIncludeEscapes: Dispatch<SetStateAction<boolean>>
   game?: Game
@@ -258,8 +262,8 @@ const AppContext = createContext<SharedState>({
   loadPlayer: async () => undefined,
   includeEscapes: false,
   setIncludeEscapes: () => {},
-  includeRare: true,
-  setIncludeRare: () => {},
+  rarity: 'regular',
+  setRarity: () => {},
   level: 'advanced',
   setLevel: () => {},
   taxOrder: undefined,

@@ -56,6 +56,13 @@ const MEDIA_VALUES = [
   { value: 'video', labelKey: 'videos' },
 ];
 
+const RARITY_VALUES = [
+  { value: '', labelKey: 'any_rarity' },
+  { value: 'familiar', labelKey: 'rarity_familiar' },
+  { value: 'regular', labelKey: 'rarity_regular' },
+  { value: 'exceptional', labelKey: 'rarity_exceptional' },
+];
+
 type FilterSelectProps<T> = {
   label: string;
   value: T;
@@ -122,7 +129,10 @@ function ScoreCard({ score, mediaLabels, locale }: { score: Score; mediaLabels: 
             <Text style={styles.cardMetaDot}> · </Text>
             <Text style={styles.cardMetaText}>{mediaIcon} {mediaLabel}</Text>
             <Text style={styles.cardMetaDot}> · </Text>
-            <Text style={styles.cardMetaText}>{score.level} · {score.length} q</Text>
+            <Text style={styles.cardMetaText}>
+              {score.level} · {score.length} q
+              {score.rarity ? ` · ${score.rarity.slice(0, 3)}` : ''}
+            </Text>
           </View>
         </View>
         <Text style={styles.cardScore}>{score.score}</Text>
@@ -141,6 +151,7 @@ export function ScoresScreen() {
   const [level, setLevel] = useState('');
   const [length, setLength] = useState('');
   const [media, setMedia] = useState('');
+  const [rarity, setRarity] = useState('');
 
   useEffect(() => {
     loadCountries().then((list) => setCountries(list));
@@ -153,6 +164,7 @@ export function ScoresScreen() {
       level: level || undefined,
       length: length || undefined,
       media: media || undefined,
+      rarity: rarity || undefined,
       cacheBust: opts?.cacheBust,
     })
       .then(setScores)
@@ -160,11 +172,11 @@ export function ScoresScreen() {
         setLoading(false);
         setRefreshing(false);
       });
-  }, [country?.code, level, length, media]);
+  }, [country?.code, level, length, media, rarity]);
 
   useEffect(() => {
     fetchScores();
-  }, [country, level, length, media]);
+  }, [country, level, length, media, rarity]);
 
   const isFirstFocus = useRef(true);
   // Refetch when screen gains focus again (e.g. after playing a game) so new scores show
@@ -189,6 +201,7 @@ export function ScoresScreen() {
     label: 'labelKey' in o ? t((o as { labelKey: string }).labelKey) : (o as { valueLabel: string }).valueLabel,
   }));
   const mediaOptions = MEDIA_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
+  const rarityOptions = RARITY_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
   const countryOptions = [
     { value: '', label: t('all_countries') },
     ...countries.map((c) => ({ value: c.code, label: getCountryDisplayName(c, locale) })),
@@ -198,6 +211,7 @@ export function ScoresScreen() {
   const levelDisplayLabel = levelOptions.find((o) => o.value === level)?.label ?? t('any_level');
   const lengthDisplayLabel = lengthOptions.find((o) => o.value === length)?.label ?? t('any_length');
   const mediaDisplayLabel = mediaOptions.find((o) => o.value === media)?.label ?? t('any_media');
+  const rarityDisplayLabel = rarityOptions.find((o) => o.value === rarity)?.label ?? t('any_rarity');
 
   const mediaLabels: Record<string, string> = { images: t('images'), audio: t('sounds'), video: t('videos') };
 
@@ -256,6 +270,16 @@ export function ScoresScreen() {
           displayLabel={lengthDisplayLabel}
           onSelect={setLength}
           options={lengthOptions}
+          closeLabel={t('close')}
+        />
+      </View>
+      <View style={styles.filterRow}>
+        <FilterSelect
+          label={t('rarity_label')}
+          value={rarity}
+          displayLabel={rarityDisplayLabel}
+          onSelect={setRarity}
+          options={rarityOptions}
           closeLabel={t('close')}
         />
       </View>

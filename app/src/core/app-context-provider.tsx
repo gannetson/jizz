@@ -35,7 +35,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [soundsScope, setSoundsScope] = useState<'all' | 'passerines'>('all')
   const [species, setSpecies] = useState<Species[]>([])
   const [game, setGame] = useState<Game | undefined>(undefined)
-  const [includeRare, setIncludeRare] = useState<boolean>(true)
+  const [rarity, setRarity] = useState<'familiar' | 'regular' | 'exceptional'>('regular')
   const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
   const [countryChallenge, setCountryChallenge] = useState<CountryChallenge | undefined>(undefined)
   const [challengeQuestion, setChallengeQuestion] = useState<Question | undefined>(undefined)
@@ -257,7 +257,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
           media: mediaType,
           tax_order: mediaType === 'audio' ? (soundsScope === 'passerines' ? 'Passeriformes' : undefined) : taxOrder?.tax_order,
           tax_family: taxFamily?.tax_family,
-          include_rare: includeRare,
+          rarity,
           include_escapes: includeEscapes
         })
       })
@@ -303,7 +303,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
           media: oldGame.media,
           tax_order: oldGame.tax_order,
           tax_family: oldGame.tax_family,
-          include_rare: oldGame.include_rare,
+          rarity: oldGame.rarity,
           include_escapes: oldGame.include_escapes
         })
       })
@@ -513,8 +513,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
     <AppContext.Provider value={{
       includeEscapes,
       setIncludeEscapes,
-      includeRare,
-      setIncludeRare,
+      rarity,
+      setRarity,
       level,
       setLevel,
       taxOrder,

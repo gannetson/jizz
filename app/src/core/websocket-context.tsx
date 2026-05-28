@@ -14,6 +14,8 @@ type SharedState = {
   answer?: Answer
   socket?: WebSocket
   clearQuestion: ()=>void
+  /** Merge media fields after flagging (next-media API). */
+  patchQuestionMedia: (patch: Pick<Question, 'number' | 'images' | 'videos' | 'sounds'>) => void
 };
 
 const WebsocketContext = createContext<SharedState>({
@@ -23,6 +25,7 @@ const WebsocketContext = createContext<SharedState>({
   nextQuestion: () => {},
   endGame: () => {},
   clearQuestion: () => {},
+  patchQuestionMedia: () => {},
 });
 
 export default WebsocketContext;

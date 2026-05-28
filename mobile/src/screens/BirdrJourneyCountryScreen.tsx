@@ -24,6 +24,7 @@ import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
+import { runBirdrJourneyPushOnboarding } from '../lib/notifications';
 
 type RouteParams = {
   BirdrJourneyCountry: { resumeCountryCode?: string } | undefined;
@@ -104,6 +105,7 @@ export function BirdrJourneyCountryScreen() {
     if (!ok) return;
     setSubmitting(true);
     try {
+      await runBirdrJourneyPushOnboarding();
       await startBirdrJourney(country.code);
       (navigation as any).navigate('BirdrJourneyProgress', { countryCode: country.code });
     } catch (e: unknown) {

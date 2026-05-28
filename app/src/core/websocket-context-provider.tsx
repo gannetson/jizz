@@ -1,4 +1,4 @@
-import React, {FC, ReactNode, useContext, useEffect, useRef, useState} from 'react';
+import React, {FC, ReactNode, useCallback, useContext, useEffect, useRef, useState} from 'react';
 import AppContext, {Answer, Game, MultiPlayer, Player, Question, Species} from "./app-context";
 import WebsocketContext from "./websocket-context"
 import { toaster } from "@/components/ui/toaster"
@@ -423,6 +423,13 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     }
   }, [game?.token, player?.token]);
 
+  const patchQuestionMedia = useCallback(
+    (patch: Pick<Question, 'number' | 'images' | 'videos' | 'sounds'>) => {
+      setQuestion((q) => (q ? { ...q, ...patch } : q))
+    },
+    []
+  )
+
   return (
     <WebsocketContext.Provider value={{
       players,
@@ -434,7 +441,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       submitAnswer,
       answer,
       socket,
-      clearQuestion
+      clearQuestion,
+      patchQuestionMedia,
     }}>
       {children}
     </WebsocketContext.Provider>

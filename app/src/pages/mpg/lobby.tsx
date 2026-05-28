@@ -15,6 +15,7 @@ import AppStoreBanner from '../../components/app-store-banner'
 const Lobby: React.FC = () => {
 
   const [copied2, setCopied2] = useState(false)
+  const [startingGame, setStartingGame] = useState(false)
   const {players, startGame, question} = useContext(WebsocketContext)
   const {player, game} = useContext(AppContext)
   const navigate = useNavigate()
@@ -58,7 +59,19 @@ const Lobby: React.FC = () => {
     }
   }, [question, game, gameToken, navigate]);
 
+  useEffect(() => {
+    if (question) {
+      setStartingGame(false)
+    }
+  }, [question?.id])
+
   const isHost = player?.name === game?.host?.name
+
+  const handleStartGame = () => {
+    if (startingGame) return
+    setStartingGame(true)
+    startGame()
+  }
 
   return (
     <Page>
@@ -114,8 +127,13 @@ const Lobby: React.FC = () => {
         </ListRoot>
         {
           isHost ? (
-            <Button onClick={startGame} colorPalette="primary">
-              Start game
+            <Button
+              onClick={handleStartGame}
+              colorPalette="primary"
+              disabled={startingGame}
+              loading={startingGame}
+            >
+              <FormattedMessage id={'start game'} defaultMessage={'Start game'}/>
             </Button>
 
           ) : (

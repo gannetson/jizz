@@ -66,7 +66,7 @@ export interface GameDetailWithAnswers {
   ended: boolean;
   tax_order?: string;
   tax_family?: string;
-  include_rare: boolean;
+  rarity: 'familiar' | 'regular' | 'exceptional';
   include_escapes: boolean;
   questions: QuestionWithAnswer[];
   total_score: number;

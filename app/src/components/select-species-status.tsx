@@ -5,7 +5,7 @@ import {FormattedMessage} from "react-intl"
 
 
 export const SelectSpeciesStatus = () => {
-  const {setIncludeEscapes, setIncludeRare, includeEscapes, includeRare} = useContext(AppContext);
+  const {setIncludeEscapes, includeEscapes} = useContext(AppContext);
 
 
   return (
@@ -14,21 +14,6 @@ export const SelectSpeciesStatus = () => {
         <FormattedMessage defaultMessage={'Species status'} id={'Species status'}/>
       </Heading>
       <Flex direction={'column'} gap={4}>
-        <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
-          <Checkbox.Root
-            colorPalette="primary"
-            checked={includeRare}
-            onCheckedChange={(e: { checked: boolean }) => setIncludeRare(e.checked === true)}
-          >
-            <Checkbox.HiddenInput />
-            <Checkbox.Control cursor="pointer">
-              <Checkbox.Indicator />
-            </Checkbox.Control>
-            <Checkbox.Label>
-              <FormattedMessage defaultMessage={'Include rare species'} id={'include rare species'}/>
-            </Checkbox.Label>
-          </Checkbox.Root>
-        </Box>
         <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
           <Checkbox.Root
             colorPalette="primary"

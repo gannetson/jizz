@@ -29,6 +29,7 @@ import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
 import { MyGamesPage } from "./pages/my-games"
+import ChecklistPage from "./pages/checklist"
 import { GameDetailPage } from "./pages/game-detail"
 import { MediaReviewPage } from "./pages/media-review"
 import { HelpOverviewPage, HelpPageDetail } from "./pages/help"
@@ -66,6 +67,7 @@ export const MainContent = () => {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<ProfilePage />} />
             <Route path="/my-games" element={<MyGamesPage />} />
+            <Route path="/checklist" element={<ChecklistPage />} />
             <Route path="/my-games/:token" element={<GameDetailPage />} />
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>

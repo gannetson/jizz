@@ -8,8 +8,8 @@ from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
 from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 
-from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, GameListView, \
-    GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
+from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesCoverView, GameListView, \
+    GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, QuestionNextMediaView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
     PlayerScoreListView, \
     PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
     ReactionView, \
@@ -23,6 +23,7 @@ from jizz.quiz_mistake_views import (
     quiz_mistake_stats_legacy_redirect,
 )
 from jizz.birdr_journey_views import BirdrJourneyView
+from jizz.checklist_views import ChecklistView
 from jizz.daily_challenge_views import (
     FriendsListView,
     FriendRequestsListView,
@@ -41,6 +42,7 @@ from jizz.daily_challenge_views import (
     DeviceTokenCreateView,
     DeviceTokenDeleteView,
 )
+from jizz.mobile_push.views import PushRegisterView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -110,6 +112,7 @@ urlpatterns = [
 
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/profile/', ProfileView.as_view(), name='profile'),
+    path('api/checklist/', ChecklistView.as_view(), name='checklist'),
     path('api/my-games/', UserGamesView.as_view(), name='user-games'),
     re_path(r'^api/my-games/(?P<token>[\w-]+)/$', UserGameDetailView.as_view(), name='user-game-detail'),
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
@@ -126,6 +129,7 @@ urlpatterns = [
     re_path(r"^api/player/(?P<token>[\w-]+)/stats/$", PlayerStatsView.as_view(), name="player-stats"),
 
     re_path(r"^api/species/$", SpeciesListView.as_view(), name="species-list"),
+    re_path(r"^api/species/(?P<pk>\w+)/cover/$", SpeciesCoverView.as_view(), name="species-cover"),
     re_path(r"^api/species/(?P<pk>\w+)/$", SpeciesDetailView.as_view(), name="species-detail"),
 
     re_path(r"^api/games/$", GameListView.as_view(), name="game-list"),
@@ -154,6 +158,7 @@ urlpatterns = [
     path('api/pages/', PageListView.as_view(), name='page-list'),
     path('api/pages/<slug:slug>/', PageDetailView.as_view(), name='page-detail'),
 
+    re_path(r"^api/questions/(?P<pk>\d+)/next-media/$", QuestionNextMediaView.as_view(), name="question-next-media"),
     re_path(r"^api/questions/(?P<pk>\d+)/media-ready/$", QuestionMediaReadyView.as_view(), name="question-media-ready"),
     re_path(r"^api/questions/(?P<pk>\w+)/$", QuestionDetailView.as_view(), name="question-detail"),
     re_path(r"^api/scores/$", PlayerScoreListView.as_view(), name="scores"),
@@ -191,6 +196,7 @@ urlpatterns = [
     # Device tokens (push)
     path('api/device-tokens/', DeviceTokenCreateView.as_view(), name='device-token-create'),
     path('api/device-tokens/<int:pk>/', DeviceTokenDeleteView.as_view(), name='device-token-delete'),
+    path('api/mobile/push/register/', PushRegisterView.as_view(), name='mobile-push-register'),
 
     # Compare app URLs
     path('api/compare/', include('compare.urls')),

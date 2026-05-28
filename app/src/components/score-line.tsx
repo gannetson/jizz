@@ -18,6 +18,7 @@ export const ScoreLine = ({score} : {score: Score}) => {
       <TableCell>{mediaIcon[score.media]}</TableCell>
       <TableCell>{score.level.substring(0,2)}</TableCell>
       <TableCell>{score.length}</TableCell>
+      <TableCell>{score.rarity ? score.rarity.substring(0, 3) : ''}</TableCell>
       <TableCell>{score.score}</TableCell>
     </TableRow>
   )

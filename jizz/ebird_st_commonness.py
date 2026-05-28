@@ -13,35 +13,47 @@ import os
 import re
 import sqlite3
 import sys
-import time
 import zipfile
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import pandas as pd
 import requests
 
+from jizz.country_region_codes import (
+    expand_region_codes,
+    resolve_app_country_for_st_region,
+)
+
 ST_DOWNLOAD_BASE = "https://st-download.ebird.org/v1"
+SCIENCE_ST_DOWNLOADS_BASE = "https://science.ebird.org"
 
-# Brief pause before retrying S&T API calls (transient errors / incomplete listings).
-_ST_DOWNLOAD_RETRY_DELAY_SEC = 0.75
+# Fallback when the science downloads page does not expose model years.
+_ST_CATALOG_YEARS = (2024, 2023, 2022, 2021)
 
-# Scoring uses range_total_percent, total_pop_percent, range_days_occupation — not range_occupied_percent.
-_ST_RANGE_DAYS_YEAR = 365.0
+_ST_HTTP_HEADERS = {
+    "User-Agent": (
+        "jizz-ebird-st-commonness/1.0 (+https://github.com/; "
+        "eBird Status & Trends regional_stats importer)"
+    ),
+}
 
-# Map weighted linear combo (see ``parse_species_commonness``) to [0, 1] for ``classify()``; tune as needed.
-_SCORE_LINEAR_SHIFT = 0.0
-_SCORE_LINEAR_SCALE = 0.55
+_RE_SCIENCE_STATUS_MODEL_YEAR = re.compile(r"statusModelYear:(\d{4})")
+_RE_SCIENCE_TREND_END_YEAR = re.compile(r"trendEndYear:(\d{4})")
 
-# Frequency tier order: most common → rarest (for ``classify()`` rarity_cap).
+# Peak-abundance tier order: most common → rarest (for caps / one-step upgrades).
 _FREQUENCY_ORDER = (
     "abundant",
-    "very_common",
     "common",
+    "fairly_common",
     "uncommon",
-    "scarce",
     "rare",
-    "extremely_rare",
+    "very_rare",
 )
+
+_COMMONNESS_BASIS = "peak_abundance_with_occupancy_days_modifiers"
+
+# log10(1 + 10) — denominator for normalized abundance score in [0, 1].
+_SCORE_LOG_DENOM = math.log10(11.0)
 
 
 def _repo_root() -> str:
@@ -63,6 +75,42 @@ def species_codes_for_country(country_code: str) -> List[str]:
     return sorted({normalize_st_species_code(c) for c in qs if c})
 
 
+def species_codes_for_selected_countries(country_codes: List[str]) -> List[str]:
+    """Distinct eBird species codes on any CountrySpecies row for the given countries."""
+    from jizz.models import Species
+
+    codes = sorted({c.strip().upper() for c in country_codes if c and str(c).strip()})
+    if not codes:
+        return []
+    qs = Species.objects.filter(countryspecies__country_id__in=codes).values_list(
+        "code", flat=True
+    )
+    return sorted({normalize_st_species_code(c) for c in qs if c})
+
+
+def species_countries_map(country_codes: List[str]) -> dict:
+    """
+    Map each eBird species code to sorted country codes where it appears in CountrySpecies.
+
+    Used to download each regional_stats CSV once and parse every target country from it.
+    """
+    from collections import defaultdict
+
+    from jizz.models import CountrySpecies
+
+    codes = sorted({c.strip().upper() for c in country_codes if c and str(c).strip()})
+    if not codes:
+        return {}
+    out: dict = defaultdict(list)
+    qs = CountrySpecies.objects.filter(country_id__in=codes).values_list(
+        "species__code", "country_id"
+    )
+    for sp_code, cc in qs:
+        if sp_code:
+            out[normalize_st_species_code(sp_code)].append(str(cc).strip().upper())
+    return {sp: sorted(set(ccs)) for sp, ccs in out.items()}
+
+
 def st_list_objects_url(species_code: str, version_year: int) -> str:
     return f"{ST_DOWNLOAD_BASE}/list-obj/{version_year}/{normalize_st_species_code(species_code)}"
 
@@ -82,57 +130,156 @@ def _coerce_list_obj_payload(data: object) -> Optional[List[Any]]:
     return None
 
 
+def _normalize_list_obj_paths(paths: object) -> List[str]:
+    """Coerce list-obj entries to fetchable object key strings."""
+    if not isinstance(paths, list):
+        return []
+    out: List[str] = []
+    for item in paths:
+        if isinstance(item, str):
+            p = item.strip()
+            if p:
+                out.append(p.replace("\\", "/"))
+            continue
+        if isinstance(item, dict):
+            for key in ("objKey", "path", "key", "name", "Key"):
+                raw = item.get(key)
+                if isinstance(raw, str) and raw.strip():
+                    out.append(raw.strip().replace("\\", "/"))
+                    break
+    return out
+
+
+def science_downloads_page_url(species_code: str) -> str:
+    """Public downloads page (same links the eBird Science UI builds)."""
+    sp = normalize_st_species_code(species_code)
+    return f"{SCIENCE_ST_DOWNLOADS_BASE}/en/status-and-trends/species/{sp}/downloads"
+
+
+def parse_science_download_years(page_html: str) -> List[int]:
+    """
+    Read ``statusModelYear`` / ``trendEndYear`` from the SSR ``__NUXT__`` payload on the
+    science downloads page (see StVizDownloadLink in the Science web app).
+    """
+    years: List[int] = []
+    # trendEndYear usually matches the on-disk S&T vintage; statusModelYear can be newer.
+    for pattern in (_RE_SCIENCE_TREND_END_YEAR, _RE_SCIENCE_STATUS_MODEL_YEAR):
+        for match in pattern.finditer(page_html):
+            year = int(match.group(1))
+            if year not in years:
+                years.append(year)
+    return years
+
+
+def fetch_science_download_years(
+    session: requests.Session,
+    species_code: str,
+    *,
+    cache: Optional[dict] = None,
+) -> List[int]:
+    """Fetch the science downloads page and return catalog years for this species."""
+    sp = normalize_st_species_code(species_code)
+    if cache is not None and sp in cache:
+        return list(cache[sp])
+    years: List[int] = []
+    url = science_downloads_page_url(sp)
+    try:
+        r = session.get(url, headers=_ST_HTTP_HEADERS, timeout=60)
+        r.raise_for_status()
+        years = parse_science_download_years(r.text)
+    except requests.RequestException as exc:
+        print(
+            f"  [note] {sp}: could not read science downloads page ({exc})",
+            file=sys.stderr,
+        )
+    if cache is not None:
+        cache[sp] = list(years)
+    return years
+
+
+def _years_to_try(version_year: int, science_years: Optional[List[int]] = None) -> List[int]:
+    """Science page years first, then CLI year, then static fallbacks."""
+    years: List[int] = []
+    if science_years:
+        for y in science_years:
+            yi = int(y)
+            if yi not in years:
+                years.append(yi)
+    primary = int(version_year)
+    if primary not in years:
+        years.append(primary)
+    for y in sorted(_ST_CATALOG_YEARS):
+        if y not in years:
+            years.append(y)
+    return years
+
+
+def _constructed_regional_obj_keys(species_code: str, version_year: int) -> List[str]:
+    """
+    Same object keys as the eBird Science downloads page (web_download ZIP, then flat CSV).
+    """
+    sp = normalize_st_species_code(species_code)
+    y = str(int(version_year))
+    return [
+        f"{y}/{sp}/web_download/{sp}_regional_{y}.zip",
+        f"{y}/{sp}/regional_stats.csv",
+    ]
+
+
+def _regional_obj_key_candidates(
+    species_code: str,
+    version_year: int,
+    paths: Optional[List[Any]],
+) -> List[str]:
+    """Ordered unique object keys to try for regional_stats (listing + constructed)."""
+    seen: set = set()
+    candidates: List[str] = []
+
+    def add(key: Optional[str]) -> None:
+        if key and key not in seen:
+            seen.add(key)
+            candidates.append(key)
+
+    norm_paths = _normalize_list_obj_paths(paths) if paths else []
+    add(_select_regional_obj_key(norm_paths, species_code, version_year))
+    for key in _constructed_regional_obj_keys(species_code, version_year):
+        add(key)
+    return candidates
+
+
 def list_st_objects(
     session: requests.Session,
     species_code: str,
     version_year: int,
     access_key: str,
-    *,
-    max_attempts: int = 2,
 ) -> Optional[List[Any]]:
-    """
-    GET /list-obj/{year}/{species}. Retries on HTTP/JSON errors, empty listing, or
-    unexpected JSON (``max_attempts`` tries, default 2).
-    """
+    """GET /list-obj/{year}/{species} (single attempt)."""
     sp = normalize_st_species_code(species_code)
     url = st_list_objects_url(sp, version_year)
-    n = max(1, max_attempts)
-    last_exc: Optional[BaseException] = None
-    last_data: object = None
-    for attempt in range(n):
-        if attempt > 0:
-            time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
-            print(f"  [retry] {sp}: list-obj (attempt {attempt + 1}/{n}) …", file=sys.stderr)
-        try:
-            r = session.get(url, params={"key": access_key}, timeout=60)
-            r.raise_for_status()
-            data = r.json()
-            last_data = data
-            payload = _coerce_list_obj_payload(data)
-            if payload is not None and isinstance(payload, list):
-                if len(payload) == 0 and attempt < n - 1:
-                    continue
-                return payload
-            if attempt < n - 1:
-                continue
-        except (requests.RequestException, ValueError, TypeError) as e:
-            last_exc = e
-            if attempt == n - 1:
-                print(f"  [skip] {sp}: list-obj failed: {e}", file=sys.stderr)
-            elif attempt < n - 1:
-                continue
-    if last_exc is None and last_data is not None:
-        snippet = str(last_data)[:240]
-        print(f"  [skip] {sp}: list-obj did not return a path list: {snippet}", file=sys.stderr)
+    try:
+        r = session.get(url, params={"key": access_key}, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, dict) and data.get("status") in (404, 500):
+            return []
+        payload = _coerce_list_obj_payload(data)
+        if isinstance(payload, list):
+            return _normalize_list_obj_paths(payload)
+        print(
+            f"  [skip] {sp}: list-obj did not return a path list: {str(data)[:240]}",
+            file=sys.stderr,
+        )
+    except (requests.RequestException, ValueError, TypeError) as e:
+        print(f"  [skip] {sp}: list-obj failed: {e}", file=sys.stderr)
     return None
 
 
 def _select_regional_obj_key(
     paths: object, species_code: str, version_year: int
 ) -> Optional[str]:
-    if not isinstance(paths, list):
+    str_paths = _normalize_list_obj_paths(paths)
+    if not str_paths:
         return None
-    str_paths = [p for p in paths if isinstance(p, str)]
     for p in str_paths:
         if p.endswith("regional_stats.csv"):
             return p
@@ -171,9 +318,9 @@ def _select_regional_obj_key(
 def _select_species_stats_obj_key(
     paths: object, species_code: str, version_year: int
 ) -> Optional[str]:
-    if not isinstance(paths, list):
+    str_paths = _normalize_list_obj_paths(paths)
+    if not str_paths:
         return None
-    str_paths = [p for p in paths if isinstance(p, str)]
     for p in str_paths:
         if p.endswith("species_stats.csv"):
             return p
@@ -260,19 +407,60 @@ def ebird_st_access_key_from_local_py() -> str:
     return m.group(1).strip() if m else ""
 
 
-def expand_region_codes(country_code: str) -> List[str]:
-    """
-    eBird ST ``regional_stats`` uses ISO-3166 alpha-3 for ``region_code`` on country rows.
+def app_country_for_st_region(region_code: str) -> Optional[str]:
+    """Map an eBird ST country ``region_code`` to app ``Country.pk`` (e.g. USA → US)."""
+    return resolve_app_country_for_st_region(region_code)
 
-    For app country **NL** (European Netherlands), use **NLD** only. Do not merge Caribbean
-    Netherlands (``BON``, ``SXM``, etc.); those are separate regions in ST.
-    The legacy second code ``NL`` is not used here: it does not appear as ``region_code``
-    in ST exports and could be ambiguous.
+
+def countries_in_regional_stats(
+    df: pd.DataFrame,
+    selected_countries: Optional[List[str]] = None,
+) -> List[str]:
     """
-    cc = country_code.strip().upper()
-    if cc == "NL":
-        return ["NLD"]
-    return [cc]
+    App country codes that have country-level rows in a regional_stats frame.
+
+    When ``selected_countries`` is set, only returns codes in that list (the run scope).
+    """
+    if df is None or df.empty or "region_code" not in df.columns:
+        return []
+
+    sub = df.copy()
+    if "region_type" in sub.columns:
+        sub = sub[
+            sub["region_type"].astype(str).str.strip().str.lower().eq("country")
+        ]
+    if sub.empty:
+        return []
+
+    selected: Optional[set] = None
+    if selected_countries is not None:
+        selected = {c.strip().upper() for c in selected_countries if c}
+
+    out: List[str] = []
+    seen: set = set()
+    for raw_rc in sub["region_code"].astype(str).str.strip().str.upper().unique():
+        app_cc = app_country_for_st_region(raw_rc)
+        if not app_cc or app_cc in seen:
+            continue
+        if selected is not None and app_cc not in selected:
+            continue
+        seen.add(app_cc)
+        out.append(app_cc)
+    return sorted(out)
+
+
+def _fetch_regional_csv_text(
+    session: requests.Session,
+    obj_key: str,
+    access_key: str,
+) -> str:
+    r = session.get(
+        st_fetch_url(),
+        params={"objKey": obj_key, "key": access_key},
+        timeout=120,
+    )
+    r.raise_for_status()
+    return _csv_text_from_fetch_response(r, kind="regional")
 
 
 def download_regional_stats(
@@ -284,7 +472,7 @@ def download_regional_stats(
     session: requests.Session,
     paths: Optional[List[Any]] = None,
     *,
-    retry: bool = True,
+    science_year_cache: Optional[dict] = None,
 ) -> Optional[pd.DataFrame]:
     species_code = normalize_st_species_code(species_code)
     os.makedirs(data_dir, exist_ok=True)
@@ -300,61 +488,57 @@ def download_regional_stats(
         print(f"  [skip] {species_code}: missing cache and no access key", file=sys.stderr)
         return None
 
-    list_attempts = 2 if retry else 1
-    if not paths:
-        paths = list_st_objects(
-            session, species_code, version_year, access_key, max_attempts=list_attempts
-        )
-    if not paths:
-        return None
+    text: Optional[str] = None
+    used_year: Optional[int] = None
 
-    obj_key = _select_regional_obj_key(paths, species_code, version_year)
-    if not obj_key and retry:
-        print(
-            f"  [retry] {species_code}: no regional asset in listing, retrying list-obj …",
-            file=sys.stderr,
+    if paths is not None:
+        years = [version_year]
+    else:
+        science_years = fetch_science_download_years(
+            session, species_code, cache=science_year_cache
         )
-        time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
-        paths = list_st_objects(
-            session, species_code, version_year, access_key, max_attempts=list_attempts
-        )
-        if not paths:
+        if science_years:
             print(
-                f"  [skip] {species_code}: no regional_stats.csv or web_download regional ZIP in listing",
+                f"  [science] {species_code}: catalog year(s) "
+                f"{', '.join(str(y) for y in science_years)}",
                 file=sys.stderr,
             )
-            return None
-        obj_key = _select_regional_obj_key(paths, species_code, version_year)
-    if not obj_key:
+        years = _years_to_try(version_year, science_years)
+    for year in years:
+        year_paths = paths
+        if year_paths is None:
+            year_paths = list_st_objects(session, species_code, year, access_key)
+        candidates = _regional_obj_key_candidates(species_code, year, year_paths)
+        if paths is not None and not candidates:
+            break
+
+        for obj_key in candidates:
+            try:
+                text = _fetch_regional_csv_text(session, obj_key, access_key)
+                used_year = year
+                break
+            except (requests.RequestException, ValueError):
+                text = None
+            if text is not None:
+                break
+        if text is not None:
+            break
+        paths = None
+
+    if text is None:
         print(
-            f"  [skip] {species_code}: no regional_stats.csv or web_download regional ZIP in listing",
+            f"  [skip] {species_code}: could not fetch regional_stats "
+            f"(tried years {', '.join(str(y) for y in years)})",
             file=sys.stderr,
         )
         return None
 
-    text: Optional[str] = None
-    fetch_err: Optional[BaseException] = None
-    fetch_attempts = 2 if retry else 1
-    for fetch_attempt in range(fetch_attempts):
-        if fetch_attempt > 0:
-            time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
-            print(f"  [retry] {species_code}: fetch regional ZIP/CSV …", file=sys.stderr)
-        try:
-            r = session.get(
-                st_fetch_url(),
-                params={"objKey": obj_key, "key": access_key},
-                timeout=120,
-            )
-            r.raise_for_status()
-            text = _csv_text_from_fetch_response(r, kind="regional")
-            break
-        except (requests.RequestException, ValueError) as e:
-            fetch_err = e
-            if fetch_attempt == 1:
-                print(f"  [skip] {species_code}: fetch failed: {e}", file=sys.stderr)
-                return None
-    if text is None:
-        return None
+    if used_year is not None and used_year != version_year:
+        print(
+            f"  [note] {species_code}: using S&T year {used_year} "
+            f"(requested {version_year})",
+            file=sys.stderr,
+        )
 
     with open(cache_path, "w", encoding="utf-8") as f:
         f.write(text)
@@ -392,37 +576,18 @@ def ensure_species_stats_csv(
 
     obj_key = _select_species_stats_obj_key(paths, species_code, version_year)
     if not obj_key:
-        print(
-            f"  [retry] {species_code}: no species_stats asset in listing, retrying list-obj …",
-            file=sys.stderr,
-        )
-        time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
-        paths = list_st_objects(session, species_code, version_year, access_key)
-        if not paths:
-            return False
-        obj_key = _select_species_stats_obj_key(paths, species_code, version_year)
-    if not obj_key:
         return False
 
-    text: Optional[str] = None
-    for fetch_attempt in range(2):
-        if fetch_attempt > 0:
-            time.sleep(_ST_DOWNLOAD_RETRY_DELAY_SEC)
-            print(f"  [retry] {species_code}: fetch species_stats …", file=sys.stderr)
-        try:
-            r = session.get(
-                st_fetch_url(),
-                params={"objKey": obj_key, "key": access_key},
-                timeout=120,
-            )
-            r.raise_for_status()
-            text = _csv_text_from_fetch_response(r, kind="species")
-            break
-        except (requests.RequestException, ValueError) as e:
-            if fetch_attempt == 1:
-                print(f"  [skip] {species_code}: species_stats fetch failed: {e}", file=sys.stderr)
-                return False
-    if text is None:
+    try:
+        r = session.get(
+            st_fetch_url(),
+            params={"objKey": obj_key, "key": access_key},
+            timeout=120,
+        )
+        r.raise_for_status()
+        text = _csv_text_from_fetch_response(r, kind="species")
+    except (requests.RequestException, ValueError) as e:
+        print(f"  [skip] {species_code}: species_stats fetch failed: {e}", file=sys.stderr)
         return False
 
     with open(cache_path, "w", encoding="utf-8") as f:
@@ -450,32 +615,112 @@ def _column_max(sub: pd.DataFrame, col: str) -> Optional[float]:
     return float(s.max())
 
 
-def _linear_combo_to_unit(score_linear: float) -> float:
-    """Map weighted linear combo to [0, 1] for tiering."""
-    v = (score_linear + _SCORE_LINEAR_SHIFT) / _SCORE_LINEAR_SCALE
-    return max(0.0, min(1.0, v))
-
-
-def _rarity_cap_from_maxes(
-    range_total_percent_max: Optional[float],
-    total_pop_percent_max: Optional[float],
-    range_days_occupation_max: Optional[float],
-) -> Optional[str]:
-    """Hard gates before scoring; ``range_occupied_percent`` is not used here."""
-    if (
-        range_total_percent_max is None
-        or total_pop_percent_max is None
-        or range_days_occupation_max is None
-    ):
-        return None
-    rt = float(range_total_percent_max)
-    tp = float(total_pop_percent_max)
-    dmax = float(range_days_occupation_max)
-    if dmax <= 7 and rt < 0.00005 and tp < 0.00005:
-        return "extremely_rare"
-    if dmax <= 30 and rt < 0.0001 and tp < 0.0001:
-        return "rare"
+def _range_occupied_column(sub: pd.DataFrame) -> Optional[str]:
+    for name in ("range_occupied_percent", "range_percent_occupied"):
+        if name in sub.columns:
+            return name
     return None
+
+
+def _normalize_range_occupied_fraction(raw: Optional[float]) -> Optional[float]:
+    """Return ``range_occupied_percent`` as a 0–1 fraction."""
+    if raw is None:
+        return None
+    v = float(raw)
+    if v > 1.5:
+        return min(v, 100.0) / 100.0
+    return v
+
+
+def _abundance_score_unit(abundance_mean_max: float) -> float:
+    """Normalized abundance score in [0, 1] for ``frequency_pct``."""
+    a = max(float(abundance_mean_max), 0.0)
+    return min(1.0, math.log10(1.0 + a) / _SCORE_LOG_DENOM)
+
+
+def _tier_index(tier: str) -> int:
+    return _FREQUENCY_ORDER.index(tier)
+
+
+def _cap_tier(tier: str, ceiling: str) -> str:
+    """Cap ``tier`` so it is not more common than ``ceiling``."""
+    ti = _tier_index(tier)
+    ci = _tier_index(ceiling)
+    if ti < ci:
+        return ceiling
+    return tier
+
+
+def _upgrade_tier_one_step(tier: str) -> str:
+    i = _tier_index(tier)
+    if i > 0:
+        return _FREQUENCY_ORDER[i - 1]
+    return tier
+
+
+def _base_tier_from_abundance(abundance_mean_max: float) -> str:
+    a = float(abundance_mean_max)
+    if a > 5.0:
+        return "abundant"
+    if a > 1.0:
+        return "common"
+    if a > 0.2:
+        return "fairly_common"
+    if a > 0.05:
+        return "uncommon"
+    if a > 0.01:
+        return "rare"
+    return "very_rare"
+
+
+def classify_from_abundance(
+    abundance_mean_max: float,
+    range_occupied_percent: Optional[float] = None,
+    range_days_occupation: Optional[float] = None,
+) -> Tuple[str, Optional[str]]:
+    """
+    Classify local commonness from peak ``abundance_mean`` with occupancy/day modifiers.
+
+    Returns ``(frequency_tier, rarity_cap)`` where ``rarity_cap`` is set when a modifier
+    forced a ceiling (for debug output).
+    """
+    tier = _base_tier_from_abundance(abundance_mean_max)
+    rarity_cap: Optional[str] = None
+    rop = _normalize_range_occupied_fraction(range_occupied_percent)
+    rdo = float(range_days_occupation) if range_days_occupation is not None else None
+    extremely_high = float(abundance_mean_max) > 5.0
+
+    if rdo is not None:
+        if rdo < 14:
+            capped = _cap_tier(tier, "very_rare")
+            if capped != tier:
+                rarity_cap = "very_rare"
+            tier = capped
+        elif rdo < 30 and not extremely_high:
+            capped = _cap_tier(tier, "rare")
+            if capped != tier:
+                rarity_cap = rarity_cap or "rare"
+            tier = capped
+
+    if rop is not None:
+        if rop < 0.01:
+            capped = _cap_tier(tier, "very_rare")
+            if capped != tier:
+                rarity_cap = rarity_cap or "very_rare"
+            tier = capped
+        elif rop < 0.05:
+            capped = _cap_tier(tier, "rare")
+            if capped != tier:
+                rarity_cap = rarity_cap or "rare"
+            tier = capped
+
+    if rop is not None and rdo is not None and rop > 0.5 and rdo >= 180:
+        upgraded = _upgrade_tier_one_step(tier)
+        if not extremely_high and _tier_index(upgraded) < _tier_index("common"):
+            upgraded = "common"
+        tier = upgraded
+
+    return tier, rarity_cap
 
 
 def parse_species_commonness(
@@ -497,84 +742,72 @@ def parse_species_commonness(
     if "abundance_mean" not in sub.columns:
         return None
 
-    am = pd.to_numeric(sub["abundance_mean"], errors="coerce")
-    if am.isna().all():
+    sub["_am"] = pd.to_numeric(sub["abundance_mean"], errors="coerce")
+    sub = sub[sub["_am"].notna()]
+    if sub.empty:
         return None
-    abundance_mean_avg = float(am.mean())
-    abundance_mean_max = float(am.max())
 
+    peak_idx = sub["_am"].idxmax()
+    peak_row = sub.loc[peak_idx]
+    abundance_mean_max = float(peak_row["_am"])
+    abundance_mean_avg = float(sub["_am"].mean())
+
+    peak_season: Optional[str] = None
+    if "season" in sub.columns:
+        raw_season = peak_row.get("season")
+        if pd.notna(raw_season):
+            peak_season = str(raw_season).strip() or None
+
+    rop_col = _range_occupied_column(sub)
+    range_occupied_percent: Optional[float] = None
+    if rop_col is not None:
+        peak_rop = pd.to_numeric(peak_row.get(rop_col), errors="coerce")
+        max_rop = _column_max(sub, rop_col)
+        if pd.notna(peak_rop):
+            range_occupied_percent = float(peak_rop)
+        else:
+            range_occupied_percent = max_rop
+
+    range_days_occupation = _column_max(sub, "range_days_occupation")
     range_total_percent_max = _column_max(sub, "range_total_percent")
     total_pop_percent_max = _column_max(sub, "total_pop_percent")
-    range_days_occupation_max = _column_max(sub, "range_days_occupation")
 
-    range_occupied_percent_max: Optional[float] = None
-    for name in ("range_occupied_percent", "range_percent_occupied"):
-        range_occupied_percent_max = _column_max(sub, name)
-        if range_occupied_percent_max is not None:
-            break
-
-    if range_total_percent_max is None or total_pop_percent_max is None:
-        return None
-    if range_days_occupation_max is None:
-        return None
-
-    rarity_cap = _rarity_cap_from_maxes(
-        range_total_percent_max,
-        total_pop_percent_max,
-        range_days_occupation_max,
-    )
-
-    abundance_component = math.log1p(max(abundance_mean_avg, 0.0))
-    range_component = max(
-        math.log10(max(range_total_percent_max, 1e-12)) + 8.0,
-        0.0,
-    ) / 8.0
-    pop_component = max(
-        math.log10(max(total_pop_percent_max, 1e-12)) + 8.0,
-        0.0,
-    ) / 8.0
-    days_component = (
-        min(max(float(range_days_occupation_max), 0.0), _ST_RANGE_DAYS_YEAR)
-        / _ST_RANGE_DAYS_YEAR
-    )
-
-    score_linear = (
-        0.50 * abundance_component
-        + 0.20 * range_component
-        + 0.20 * days_component
-        + 0.10 * pop_component
-    )
-
-    score = _linear_combo_to_unit(score_linear)
+    score = _abundance_score_unit(abundance_mean_max)
+    freq_pct = score * 100.0
+    abundance = math.log1p(max(abundance_mean_max, 0.0))
 
     occ_debug_pct = (
-        occupancy_raw_to_pct(float(range_occupied_percent_max))
-        if range_occupied_percent_max is not None
+        occupancy_raw_to_pct(float(range_occupied_percent))
+        if range_occupied_percent is not None
         else None
     )
-    freq_pct = score * 100.0
+
+    _, rarity_cap = classify_from_abundance(
+        abundance_mean_max,
+        range_occupied_percent,
+        range_days_occupation,
+    )
 
     return {
-        "abundance": abundance_component,
+        "abundance": abundance,
         "abundance_mean_avg": abundance_mean_avg,
         "abundance_mean_max": abundance_mean_max,
+        "peak_season": peak_season,
+        "range_occupied_percent": range_occupied_percent,
         "range_total_percent": range_total_percent_max,
         "total_pop_percent": total_pop_percent_max,
-        "range_days_occupation": range_days_occupation_max,
+        "range_days_occupation": range_days_occupation,
         "occupancy": occ_debug_pct,
         "score": score,
         "rarity_cap": rarity_cap,
         "frequency_pct": freq_pct,
-        "debug_score_linear": score_linear,
-        "debug_range_component": range_component,
-        "debug_pop_component": pop_component,
-        "debug_days_component": days_component,
-        "debug_range_occupied_max": range_occupied_percent_max,
+        "commonness_basis": _COMMONNESS_BASIS,
+        "debug_range_occupied_max": range_occupied_percent,
     }
 
 
-def _classify_from_score(score: float) -> str:
-    """Tier from normalized score only (before ``rarity_cap``)."""
+def _classify_from_score_legacy(score: float) -> str:
+    """Legacy score tiers (pre peak-abundance scoring)."""
     if score >= 0.72:
         return "abundant"
     if score >= 0.55:
@@ -592,18 +825,26 @@ def _classify_from_score(score: float) -> str:
 
 def classify(score: float, rarity_cap: Optional[str] = None) -> str:
     """
-    eBird S&T commonness tier on normalized ``score`` in [0, 1] (see ``_linear_combo_to_unit``).
+    Map a normalized score in [0, 1] to a frequency tier (legacy score-based path).
 
-    Same values as ``CountrySpecies.frequency`` / ``CountrySpeciesFrequency.frequency``.
-    If ``rarity_cap`` is set from ``parse_species_commonness`` hard gates, it overrides
-    or caps the score-based label.
+    Prefer ``classify_from_abundance`` for new peak-abundance scoring. If ``rarity_cap`` is
+    set (from occupancy/day modifiers), it caps the label to that tier or rarer.
     """
-    label = _classify_from_score(score)
-    if rarity_cap == "extremely_rare":
-        return "extremely_rare"
+    legacy_order = (
+        "abundant",
+        "very_common",
+        "common",
+        "uncommon",
+        "scarce",
+        "rare",
+        "extremely_rare",
+    )
+    label = _classify_from_score_legacy(score)
+    if rarity_cap in ("very_rare", "extremely_rare"):
+        return "very_rare"
     if rarity_cap == "rare":
-        rare_idx = _FREQUENCY_ORDER.index("rare")
-        label_idx = _FREQUENCY_ORDER.index(label)
+        rare_idx = legacy_order.index("rare")
+        label_idx = legacy_order.index(label) if label in legacy_order else len(legacy_order) - 1
         if label_idx < rare_idx:
             return "rare"
         return label

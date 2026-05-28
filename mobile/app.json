@@ -15,6 +15,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#2D5A3D"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "pro.birdr.app",
@@ -53,7 +57,8 @@
         }
       ],
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
@@ -75,7 +80,15 @@
       ],
       "expo-video",
       "expo-audio",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2D5A3D",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "extra": {
       "eas": {

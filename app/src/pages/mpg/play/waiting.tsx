@@ -1,6 +1,6 @@
 import {Box, Button, Flex, Kbd, ListRoot, ListItem, Show, SimpleGrid, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import React, {useCallback, useContext, useEffect} from "react"
+import React, {useContext, useEffect, useState} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
@@ -19,6 +19,17 @@ export const WaitingComponent = () => {
     endGameSession()
   }
   const isHost = player?.name === game?.host?.name
+  const [advancingQuestion, setAdvancingQuestion] = useState(false)
+
+  useEffect(() => {
+    setAdvancingQuestion(false)
+  }, [question?.id])
+
+  const handleNextQuestion = () => {
+    if (advancingQuestion) return
+    setAdvancingQuestion(true)
+    nextQuestion()
+  }
 
   return (
     <>
@@ -38,7 +49,13 @@ export const WaitingComponent = () => {
               </Button>
             ) : (
               isHost ? (
-                <Button onClick={nextQuestion} width='full' colorPalette="primary">
+                <Button
+                  onClick={handleNextQuestion}
+                  width='full'
+                  colorPalette="primary"
+                  disabled={advancingQuestion}
+                  loading={advancingQuestion}
+                >
                   <FormattedMessage id={'next question'} defaultMessage={'Next question'} />
                 </Button>
               ) : (

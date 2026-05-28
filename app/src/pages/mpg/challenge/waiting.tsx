@@ -1,6 +1,6 @@
 import {Box, Button, Flex, Kbd, ListRoot, ListItem, Show, Text} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
-import React, {useCallback, useContext, useEffect} from "react"
+import React, {useContext, useEffect, useState} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import {PlayerItem} from "./player-item"
 import AppContext from "../../../core/app-context"
@@ -16,6 +16,17 @@ export const WaitingComponent = () => {
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
   const navigate = useNavigate()
+  const [advancingQuestion, setAdvancingQuestion] = useState(false)
+
+  useEffect(() => {
+    setAdvancingQuestion(false)
+  }, [question?.id])
+
+  const handleNextQuestion = () => {
+    if (advancingQuestion) return
+    setAdvancingQuestion(true)
+    nextQuestion()
+  }
 
   const endGame = () => {
     navigate('/game/ended')
@@ -53,7 +64,12 @@ export const WaitingComponent = () => {
                 <FormattedMessage id={'end game'} defaultMessage={'End game'}/>
               </Button>
             ) : (
-              <Button onClick={nextQuestion} colorPalette={'primary'}>
+              <Button
+                onClick={handleNextQuestion}
+                colorPalette={'primary'}
+                disabled={advancingQuestion}
+                loading={advancingQuestion}
+              >
                 <FormattedMessage id={'next question'} defaultMessage={'Next question'}/>
               </Button>
             )}

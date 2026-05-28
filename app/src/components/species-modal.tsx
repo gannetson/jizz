@@ -7,16 +7,21 @@ import {
   VStack,
   AspectRatio,
   Text,
-  HStack
+  HStack,
+  Spinner,
+  Icon,
+  IconButton,
 } from "@chakra-ui/react";
-import {BsImages, BsBoxArrowRight} from "react-icons/all";
+import {BsBoxArrowRight, BsX} from "react-icons/bs";
 import AppContext, {Species} from "../core/app-context";
-import React, {useContext, useState} from "react"
+import React, {useContext, useEffect, useState} from "react"
 import {FormattedMessage} from "react-intl"
 import ReactPlayer from "react-player"
 import { MediaCredits } from "./media-credits"
 import { FlagMediaButton } from "./flag-media-button"
 import { createPortal } from "react-dom"
+import { fetchSpeciesDetail } from "../api/fetch-species-detail"
+import { fetchSpeciesCover } from "../api/fetch-species-cover"
 
 // Add global styles for nested modal z-index
 // This ensures the species modal appears above parent modals (like game detail modal)
@@ -50,10 +55,61 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
 
   const {speciesLanguage} = useContext(AppContext)
   const [activeTab, setActiveTab] = useState<'images' | 'videos' | 'sounds'>('images')
+  const [detail, setDetail] = useState<Species | null>(null)
+  const [coverUrl, setCoverUrl] = useState<string | null | undefined>(undefined)
+  const [coverStatus, setCoverStatus] = useState<string | undefined>(undefined)
+  const [coverLoading, setCoverLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen || !species?.id) {
+      setDetail(null)
+      setCoverUrl(undefined)
+      setCoverStatus(undefined)
+      return
+    }
+    setCoverUrl(species.illustration_url ?? null)
+    setCoverStatus(species.illustration_status)
+
+    let cancelled = false
+    fetchSpeciesDetail(species.id, speciesLanguage)
+      .then((data) => {
+        if (!cancelled) setDetail(data)
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(species)
+      })
+
+    setCoverLoading(true)
+    fetchSpeciesCover(species.id)
+      .then((data) => {
+        if (!cancelled) {
+          setCoverUrl(data.illustration_url)
+          setCoverStatus(data.illustration_status)
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setCoverLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, species?.id, speciesLanguage, species])
 
   if (!species) return null
 
-  const displayName = species.name_translated || (speciesLanguage === 'nl' ? species.name_nl : speciesLanguage === 'la' ? species.name_latin : species.name)
+  const display = detail ?? species
+  const images = display.images ?? []
+  const videos = display.videos ?? []
+  const sounds = display.sounds ?? []
+
+  const displayName = display.name_translated || (speciesLanguage === 'nl' ? display.name_nl : speciesLanguage === 'la' ? display.name_latin : display.name)
+
+  const illustrationUrl = coverUrl !== undefined ? coverUrl : display.illustration_url
+  const illustrationStatus = coverStatus ?? display.illustration_status
+  const illustrationPending = coverLoading || illustrationStatus === 'pending'
+  const showIllustration = Boolean(illustrationUrl) || illustrationPending
 
   const DialogPositionerComponent = Dialog.Positioner as React.FC<any>;
   const DialogContentComponent = Dialog.Content as React.FC<any>;
@@ -61,25 +117,62 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
   const DialogHeaderComponent = Dialog.Header as React.FC<any>;
   const DialogBodyComponent = Dialog.Body as React.FC<any>;
   const DialogFooterComponent = Dialog.Footer as React.FC<any>;
-  const DialogCloseTriggerComponent = Dialog.CloseTrigger as React.FC<any>;
-
   // Use portal to render outside parent modal's DOM tree to avoid z-index issues
   const modalContent = (
     <Box className="species-modal-wrapper">
       <Dialog.Root open={isOpen} onOpenChange={(e: { open: boolean }) => !e.open && onClose()} size="xl">
         <DialogBackdropComponent/>
         <DialogPositionerComponent>
-          <DialogContentComponent>
-            <DialogHeaderComponent>{displayName}</DialogHeaderComponent>
-            <DialogCloseTriggerComponent/>
+          <DialogContentComponent position="relative">
+            <DialogHeaderComponent pr={10}>{displayName}</DialogHeaderComponent>
+            <IconButton
+              aria-label="Close"
+              variant="ghost"
+              size="sm"
+              colorPalette="gray"
+              position="absolute"
+              top={2}
+              right={2}
+              zIndex={1}
+              onClick={onClose}
+            >
+              <Icon as={BsX} boxSize={5} />
+            </IconButton>
             <DialogBodyComponent>
-                <Link href={'https://ebird.org/species/' + species.code} target="_blank" rel="noopener noreferrer">
+                <Link href={'https://ebird.org/species/' + display.code} target="_blank" rel="noopener noreferrer">
                   <Flex gap={2} mb={4} alignItems={'center'}>
                     <FormattedMessage defaultMessage={'View on eBird'} id={'view on eBird'}/>
                     <BsBoxArrowRight/>
                   </Flex>
                 </Link>
-                
+
+                {showIllustration && (
+                  <Box
+                    bg="white"
+                    borderRadius="md"
+                    py={3}
+                    px={4}
+                    mb={4}
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                    minH="140px"
+                  >
+                    {illustrationUrl ? (
+                      <Image
+                        src={illustrationUrl}
+                        alt={displayName}
+                        maxH="160px"
+                        maxW="100%"
+                        objectFit="contain"
+                      />
+                    ) : (
+                      <Spinner size="md" color="gray.400" />
+                    )}
+                  </Box>
+                )}
+
+                <>
                 {/* Tab Buttons */}
                 <HStack gap={2} mb={4} borderBottomWidth="1px" pb={2}>
                   <Button
@@ -88,7 +181,7 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                     onClick={() => setActiveTab('images')}
                     size="sm"
                   >
-                    <FormattedMessage defaultMessage={'Images'} id={'images'}/> ({species.images.length})
+                    <FormattedMessage defaultMessage={'Images'} id={'images'}/> ({images.length})
                   </Button>
                   <Button
                     variant={activeTab === 'videos' ? 'solid' : 'ghost'}
@@ -96,7 +189,7 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                     onClick={() => setActiveTab('videos')}
                     size="sm"
                   >
-                    <FormattedMessage defaultMessage={'Videos'} id={'videos'}/> ({species.videos.length})
+                    <FormattedMessage defaultMessage={'Videos'} id={'videos'}/> ({videos.length})
                   </Button>
                   <Button
                     variant={activeTab === 'sounds' ? 'solid' : 'ghost'}
@@ -104,15 +197,15 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                     onClick={() => setActiveTab('sounds')}
                     size="sm"
                   >
-                    <FormattedMessage defaultMessage={'Sounds'} id={'sounds'}/> ({species.sounds.length})
+                    <FormattedMessage defaultMessage={'Sounds'} id={'sounds'}/> ({sounds.length})
                   </Button>
                 </HStack>
                 
                 {/* Tab Content */}
                 {activeTab === 'images' && (
-                  species.images.length > 0 ? (
+                  images.length > 0 ? (
                     <VStack gap={4} align="stretch">
-                      {species.images.map((img, key) => (
+                      {images.map((img, key) => (
                         <Box key={key}>
                           <Box 
                             width="100%" 
@@ -146,9 +239,9 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                 )}
                 
                 {activeTab === 'videos' && (
-                  species.videos.length > 0 ? (
+                  videos.length > 0 ? (
                     <VStack gap={4} align="stretch">
-                      {species.videos.map((video, key) => (
+                      {videos.map((video, key) => (
                         <Box key={key}>
                           <AspectRatio ratio={16 / 9} width="100%">
                             <ReactPlayer
@@ -173,9 +266,9 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                 )}
                 
                 {activeTab === 'sounds' && (
-                  species.sounds.length > 0 ? (
+                  sounds.length > 0 ? (
                     <VStack gap={4} align="stretch">
-                      {species.sounds.map((sound, key) => (
+                      {sounds.map((sound, key) => (
                         <Box key={key}>
                           <Box>
                             <audio controls style={{ width: '100%' }}>
@@ -196,6 +289,7 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
                     </Text>
                   )
                 )}
+                </>
               </DialogBodyComponent>
 
               <DialogFooterComponent>

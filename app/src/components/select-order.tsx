@@ -20,8 +20,14 @@ const SelectTaxOrder = () => {
     }
   }, [game?.tax_order, taxOrder, taxOrders, setTaxOrder]);
 
-  const onChange = (order: TaxOrder | undefined) => {
-    setTaxOrder?.(order);
+  const onChange = (orderName: string | undefined) => {
+    if (!orderName) {
+      setTaxOrder?.(undefined);
+      return;
+    }
+    const orders = Array.isArray(taxOrders) ? taxOrders : [];
+    const found = orders.find((t) => t.tax_order === orderName);
+    setTaxOrder?.(found);
   };
 
   const placeholder = intl.formatMessage({
@@ -36,9 +42,10 @@ const SelectTaxOrder = () => {
       </Heading>
       <TaxOrderCombobox
         taxOrders={Array.isArray(taxOrders) ? taxOrders : []}
-        value={taxOrder}
+        value={taxOrder?.tax_order}
         onChange={onChange}
         placeholder={placeholder}
+        allowAll={false}
       />
     </Box>
   );

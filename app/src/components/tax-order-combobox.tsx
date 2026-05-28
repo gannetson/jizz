@@ -2,19 +2,23 @@ import React, { useMemo } from "react";
 import ReactSelect, { StylesConfig } from "react-select";
 import { Box } from "@chakra-ui/react";
 import { useIntl } from "react-intl";
-import type { TaxOrder } from "../user/use-tax-order";
+import { checklistSelectStyles } from "./checklist/checklist-select-styles";
+
+export type TaxOrderOption = { tax_order: string; count: number };
 
 interface OptionType {
   label: string;
   value: string;
-  original: TaxOrder;
 }
 
 interface TaxOrderComboboxProps {
-  taxOrders: TaxOrder[];
-  value: TaxOrder | undefined;
-  onChange: (order: TaxOrder | undefined) => void;
+  taxOrders: TaxOrderOption[];
+  value: string | undefined;
+  onChange: (taxOrder: string | undefined) => void;
   placeholder?: string;
+  /** When true, first option clears the filter (checklist). Game setup omits this. */
+  allowAll?: boolean;
+  size?: 'default' | 'large';
 }
 
 const defaultStyles: StylesConfig<OptionType, false> = {
@@ -34,43 +38,51 @@ export const TaxOrderCombobox = ({
   value,
   onChange,
   placeholder,
+  allowAll = false,
+  size = 'default',
 }: TaxOrderComboboxProps) => {
   const intl = useIntl();
 
   const options = useMemo(() => {
-    const list = Array.isArray(taxOrders) ? taxOrders : [];
-    return list.map((t) => ({
-      label: `${t.tax_order} (${t.count})`,
-      value: t.tax_order,
-      original: t,
+    const rows: OptionType[] = taxOrders.map((row) => ({
+      label: `${row.tax_order} (${row.count})`,
+      value: row.tax_order,
     }));
-  }, [taxOrders]);
+    rows.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+    if (!allowAll) return rows;
+    return [
+      {
+        label: intl.formatMessage({ id: "checklist_order_all", defaultMessage: "All orders" }),
+        value: "",
+      },
+      ...rows,
+    ];
+  }, [taxOrders, intl, allowAll]);
 
   const selectedOption = useMemo(
-    () => options.find((o) => o.value === value?.tax_order) ?? null,
-    [options, value?.tax_order]
+    () => options.find((o) => o.value === (value ?? "")) ?? options[0] ?? null,
+    [options, value]
   );
-
-  const handleChange = (option: OptionType | null) => {
-    onChange(option?.original);
-  };
 
   return (
     <Box>
       <ReactSelect<OptionType>
         options={options}
         value={selectedOption}
-        onChange={handleChange}
+        onChange={(option) => {
+          const v = option?.value ?? "";
+          onChange(v ? v : undefined);
+        }}
         isSearchable
-        isClearable
+        isClearable={false}
         placeholder={
           placeholder ??
-          intl.formatMessage({ id: "select order placeholder", defaultMessage: "Select order..." })
+          intl.formatMessage({ id: "checklist_select_order", defaultMessage: "Select order..." })
         }
         noOptionsMessage={() =>
           intl.formatMessage({ id: "no options found", defaultMessage: "No options found" })
         }
-        styles={defaultStyles}
+        styles={size === 'large' ? checklistSelectStyles<OptionType>() : defaultStyles}
       />
     </Box>
   );

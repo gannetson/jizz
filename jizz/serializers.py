@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
-from jizz.models import Country, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
+from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
     ChallengeLevel, Language, Page, SpeciesName, UserProfile, BirdrJourney, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
@@ -215,6 +215,28 @@ class OrderListSerializer(serializers.ModelSerializer):
         fields = ('tax_order', 'count')
 
 
+class SpeciesCoverSerializer(serializers.ModelSerializer):
+    """Cover image for species UI (may trigger illustration generation)."""
+
+    illustration_url = serializers.SerializerMethodField()
+    illustration_status = serializers.SerializerMethodField()
+
+    def get_illustration_url(self, obj):
+        from jizz.services.species_cover import species_cover_url
+
+        request = self.context.get('request')
+        return species_cover_url(obj, request)
+
+    def get_illustration_status(self, obj):
+        from jizz.services.species_illustration import get_illustration_status
+
+        return get_illustration_status(obj)
+
+    class Meta:
+        model = Species
+        fields = ('id', 'illustration_url', 'illustration_status')
+
+
 class SpeciesDetailSerializer(serializers.ModelSerializer):
     images = QuestionMediaSerializer(many=True)
     videos = QuestionMediaSerializer(many=True)
@@ -246,7 +268,93 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Species
-        fields = ('name', 'code', 'name_latin', 'name_nl', 'name_translated', 'id', 'images', 'videos', 'sounds')
+        fields = (
+            'name', 'code', 'name_latin', 'name_nl', 'name_translated', 'id',
+            'images', 'videos', 'sounds',
+        )
+
+class QuestionOptionPlaySerializer(serializers.ModelSerializer):
+    """Multiple-choice option without loading all species media."""
+
+    name_translated = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
+    videos = serializers.SerializerMethodField()
+    sounds = serializers.SerializerMethodField()
+
+    def get_images(self, obj):
+        return []
+
+    def get_videos(self, obj):
+        return []
+
+    def get_sounds(self, obj):
+        return []
+
+    def get_name_translated(self, obj):
+        names = self.context.get('play_species_names') or {}
+        lang = self.context.get('play_language')
+        if lang and (obj.id, lang) in names:
+            return names[(obj.id, lang)]
+        return obj.name
+
+    class Meta:
+        model = Species
+        fields = (
+            'id', 'code', 'name', 'name_latin', 'name_nl', 'name_translated',
+            'images', 'videos', 'sounds',
+        )
+
+
+class QuestionPlaySerializer(serializers.ModelSerializer):
+    """
+    Lean payload for live play: one eligible media item per type (by question.number)
+    and option species without embedded media lists.
+    """
+
+    images = serializers.SerializerMethodField()
+    videos = serializers.SerializerMethodField()
+    sounds = serializers.SerializerMethodField()
+    options = serializers.SerializerMethodField()
+    game = serializers.SerializerMethodField()
+
+    def _media_slice(self, obj, media_type: str):
+        by_species = self.context.get('play_media_by_species') or {}
+        items = by_species.get(obj.species_id, [])
+        if not items:
+            return []
+        idx = min(max(obj.number, 0), len(items) - 1)
+        return QuestionMediaSerializer([items[idx]], many=True).data
+
+    def get_images(self, obj):
+        if self.context.get('play_media_type') != 'image':
+            return []
+        return self._media_slice(obj, 'image')
+
+    def get_videos(self, obj):
+        if self.context.get('play_media_type') != 'video':
+            return []
+        return self._media_slice(obj, 'video')
+
+    def get_sounds(self, obj):
+        if self.context.get('play_media_type') != 'audio':
+            return []
+        return self._media_slice(obj, 'audio')
+
+    def get_options(self, obj):
+        opts = list(obj.options.all())
+        return QuestionOptionPlaySerializer(
+            [op.species for op in opts],
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_game(self, obj):
+        return {'token': obj.game.token}
+
+    class Meta:
+        model = Question
+        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number', 'sequence', 'game')
+
 
 class QuestionSerializer(serializers.ModelSerializer):
     images = QuestionMediaSerializer(source='species.images', many=True)
@@ -276,11 +384,25 @@ class AnswerSerializer(serializers.ModelSerializer):
     player_token = serializers.CharField(write_only=True)
     correct = serializers.BooleanField(read_only=True)
     species = SpeciesDetailSerializer(source='question.species', read_only=True)
+    species_frequency = serializers.SerializerMethodField()
     answer = SpeciesDetailSerializer(read_only=True)
     answer_id = serializers.IntegerField(write_only=True)
     question_id = serializers.IntegerField(write_only=True)
     number = serializers.IntegerField(read_only=True, source='question.number')
     sequence = serializers.IntegerField(source='question.sequence', read_only=True)
+
+    def get_species_frequency(self, obj):
+        game = self.context.get('game') or obj.question.game
+        if not game.country_id:
+            return None
+        return (
+            CountrySpecies.objects.filter(
+                country_id=game.country_id,
+                species_id=obj.question.species_id,
+            )
+            .values_list('frequency', flat=True)
+            .first()
+        )
 
     def create(self, validated_data):
         player = Player.objects.get(token=validated_data.pop('player_token'))
@@ -295,11 +417,11 @@ class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
         fields = (
-            'id', 'question_id', 'player_token', 
-            'answer', 'correct', 'species', 
+            'id', 'question_id', 'player_token',
+            'answer', 'correct', 'species', 'species_frequency',
             'answer_id', 'number', 'score',
-            'sequence'
-            )
+            'sequence',
+        )
         unique_together = ('question', 'player')
 
 
@@ -724,6 +846,7 @@ class PlayerScoreListSerializer(serializers.ModelSerializer):
     media = serializers.CharField(source='game.media', read_only=True)
     level = serializers.CharField(source='game.level', read_only=True)
     length = serializers.IntegerField(source='game.length', read_only=True)
+    rarity = serializers.CharField(source='game.rarity', read_only=True)
     ranking = serializers.IntegerField(source='score_rank', read_only=True)
 
     def get_country(self, obj):
@@ -733,7 +856,7 @@ class PlayerScoreListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlayerScore
-        fields = ('id', 'name', 'country', 'media', 'level', 'length', 'score', 'ranking')
+        fields = ('id', 'name', 'country', 'media', 'level', 'length', 'rarity', 'score', 'ranking')
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -745,6 +868,15 @@ class GameSerializer(serializers.ModelSerializer):
         many=True, 
         read_only=True
     )
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and 'rarity' not in data and 'include_rare' in data:
+            data = data.copy()
+            from jizz.models import Game
+            data['rarity'] = (
+                Game.RARIT_REGULAR if data.get('include_rare') else Game.RARIT_FAMILIAR
+            )
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         # Handle country field - convert code to Country object
@@ -771,7 +903,7 @@ class GameSerializer(serializers.ModelSerializer):
             'current_highscore',
             'tax_order',
             'tax_family',
-            'include_rare',
+            'rarity',
             'include_escapes',
             'scores'
         )
@@ -831,7 +963,7 @@ class UserGameSerializer(serializers.ModelSerializer):
             'host', 'ended',
             'tax_order',
             'tax_family',
-            'include_rare',
+            'rarity',
             'include_escapes',
             'user_score',
             'correct_count',
@@ -1057,7 +1189,7 @@ class GameDetailWithAnswersSerializer(serializers.ModelSerializer):
             'ended',
             'tax_order',
             'tax_family',
-            'include_rare',
+            'rarity',
             'include_escapes',
             'questions',
             'total_score'
@@ -1115,7 +1247,7 @@ class ChallengeLevelSerializer(serializers.ModelSerializer):
             'sequence', 'level', 
             'title', 'description', 
             'title_nl', 'description_nl',
-            'length', 'media', 'jokers'
+            'length', 'media', 'jokers', 'rarity'
         ]
 
 

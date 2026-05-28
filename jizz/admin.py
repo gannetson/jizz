@@ -16,10 +16,10 @@ from django.utils.safestring import mark_safe
 from jizz.models import (Answer, BirdrJourney, ChallengeLevel, Country, CountryChallenge,
                          CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
-                         Species, SpeciesImage, SpeciesSound, SpeciesVideo,
+                         Species, SpeciesIllustration, SpeciesImage, SpeciesSound, SpeciesVideo,
                          Update, CountryGame, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
-                         DailyChallengeInvite, DailyChallengeRound, DeviceToken)
+                         DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
@@ -254,9 +254,25 @@ class MediaInline(admin.TabularInline):
         return True
 
 
+class SpeciesIllustrationInline(admin.StackedInline):
+    model = SpeciesIllustration
+    extra = 0
+    max_num = 1
+    readonly_fields = ['status', 'model_name', 'error_message', 'created', 'updated']
+    fields = ['image', 'status', 'model_name', 'error_message', 'created']
+
+
+@register(SpeciesIllustration)
+class SpeciesIllustrationAdmin(admin.ModelAdmin):
+    list_display = ['species', 'status', 'model_name', 'created']
+    list_filter = ['status']
+    search_fields = ['species__name', 'species__name_latin', 'species__code']
+    raw_id_fields = ['species']
+
+
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
-    inlines = [MediaInline]
+    inlines = [SpeciesIllustrationInline, MediaInline]
     search_fields = ['name', 'name_nl', 'name_latin']
     readonly_fields = ['sync_media', 'pic_count', 'infer_machine_predictions']
     list_display = ['name', 'name_nl', 'pic_count']
@@ -754,7 +770,7 @@ class GameAdmin(admin.ModelAdmin):
     readonly_fields = ['token', 'created', 'correct', 'errors', 'total']
     fields = [
         'country', 'language', 'host', 'created', 'token',
-        'length', 'multiplayer', 'media', 'repeat', 'include_escapes', 'include_rare', 
+        'length', 'multiplayer', 'media', 'repeat', 'rarity', 'include_escapes',
         'tax_order', 'tax_family'
     ]
     list_display = ['country', 'created', 'level', 'length', 'player_count', 'top_score']
@@ -921,8 +937,8 @@ class CountryChallengeAdmin(admin.ModelAdmin):
 
 @admin.register(ChallengeLevel)
 class ChallengeLevelAdmin(admin.ModelAdmin):
-    list_display = ['sequence', 'level', 'title', 'media', 'length', 'jokers', 'include_rare', 'include_escapes']
-    list_filter = ['level', 'media', 'include_rare', 'include_escapes']
+    list_display = ['sequence', 'level', 'title', 'media', 'length', 'jokers', 'rarity', 'include_escapes']
+    list_filter = ['level', 'media', 'rarity', 'include_escapes']
     search_fields = ['title', 'description']
     ordering = ['sequence']
 
@@ -994,4 +1010,12 @@ class DeviceTokenAdmin(admin.ModelAdmin):
     list_display = ['user', 'platform', 'created', 'last_used']
     list_filter = ['platform', 'created']
     search_fields = ['user__username']
+    raw_id_fields = ['user']
+
+
+@admin.register(PushDevice)
+class PushDeviceAdmin(admin.ModelAdmin):
+    list_display = ['user', 'platform', 'enabled', 'updated_at']
+    list_filter = ['platform', 'enabled']
+    search_fields = ['user__username', 'expo_push_token']
     raw_id_fields = ['user']

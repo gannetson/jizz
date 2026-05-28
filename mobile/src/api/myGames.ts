@@ -15,7 +15,7 @@ export type UserGame = {
   media: string;
   repeat?: boolean;
   ended?: boolean;
-  include_rare?: boolean;
+  rarity?: string;
   include_escapes?: boolean;
   user_score?: number;
   correct_count?: number;
@@ -84,7 +84,7 @@ export type GameDetailWithAnswers = {
   ended: boolean;
   tax_order?: string;
   tax_family?: string;
-  include_rare: boolean;
+  rarity: string;
   include_escapes: boolean;
   questions: QuestionWithAnswer[];
   total_score: number;

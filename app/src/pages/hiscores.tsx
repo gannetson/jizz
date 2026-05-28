@@ -18,11 +18,13 @@ const HomePage = () => {
   const [length, setLength] = useState<string | undefined>("10");
   const [media, setMedia] = useState<string | undefined>("");
   const [country, setCountry] = useState<Country | undefined>({ code: "", name: "All countries" });
+  const [rarity, setRarity] = useState<string>("");
   const countriesList = Array.isArray(countries) ? countries : [];
 
   const loadScores = async () => {
     setLoading(true)
-    const url = apiUrl(`/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}`)
+    const rarityParam = rarity ? `&game__rarity=${rarity}` : ''
+    const url = apiUrl(`/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}${rarityParam}`)
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',
@@ -45,7 +47,7 @@ const HomePage = () => {
 
   useEffect(() => {
     loadScores()
-  }, [level, length, media, country]);
+  }, [level, length, media, country, rarity]);
 
   const levels = [
     {value: '', label: 'Any levels'},
@@ -67,6 +69,13 @@ const HomePage = () => {
     {value: 'images', label: 'Images'},
     {value: 'audio', label: 'Sounds'},
     {value: 'video', label: 'Videos'},
+  ];
+
+  const rarities = [
+    {value: '', label: 'Any rarity'},
+    {value: 'familiar', label: 'Familiar'},
+    {value: 'regular', label: 'Regular'},
+    {value: 'exceptional', label: 'Exceptional'},
   ];
 
   const mediaCollection = useMemo(() => {
@@ -99,9 +108,20 @@ const HomePage = () => {
     return createListCollection({ items });
   }, [lengths]);
 
+  const rarityCollection = useMemo(() => {
+    const items = rarities.map((r, index) => ({
+      label: r.label,
+      value: r.value,
+      original: r,
+      index,
+    }));
+    return createListCollection({ items });
+  }, [rarities]);
+
   const mediaValue = media || '';
   const levelValue = level || '';
   const lengthValue = length || '';
+  const rarityValue = rarity || '';
 
   const handleCountryChange = (c: Country | null) => {
     setCountry(c ?? { code: "", name: "All countries" });
@@ -120,6 +140,11 @@ const HomePage = () => {
   const handleLengthChange = (details: { value: string[] }) => {
     const selectedValue = details.value[0] || '';
     setLength(selectedValue);
+  };
+
+  const handleRarityChange = (details: { value: string[] }) => {
+    const selectedValue = details.value[0] || '';
+    setRarity(selectedValue);
   };
 
   const renderSelect = (collection: any, value: string | undefined, onValueChange: (details: { value: string[] }) => void, placeholder: string) => (
@@ -173,6 +198,7 @@ const HomePage = () => {
           {renderSelect(mediaCollection, mediaValue, handleMediaChange, intl.formatMessage({ id: 'select media placeholder', defaultMessage: 'Select media...' }))}
           {renderSelect(levelCollection, levelValue, handleLevelChange, intl.formatMessage({ id: 'select level placeholder', defaultMessage: 'Select level...' }))}
           {renderSelect(lengthCollection, lengthValue, handleLengthChange, intl.formatMessage({ id: 'select length placeholder', defaultMessage: 'Select length...' }))}
+          {renderSelect(rarityCollection, rarityValue, handleRarityChange, intl.formatMessage({ id: 'select rarity placeholder', defaultMessage: 'Select rarity...' }))}
         </Flex>
         <>
           {loading ? (
@@ -193,6 +219,7 @@ const HomePage = () => {
                     </TableColumnHeader>
                     <TableColumnHeader>Lvl</TableColumnHeader>
                     <TableColumnHeader>n</TableColumnHeader>
+                    <TableColumnHeader>Rar</TableColumnHeader>
                     <TableColumnHeader>Score</TableColumnHeader>
                   </TableRow>
                 </TableHeader>

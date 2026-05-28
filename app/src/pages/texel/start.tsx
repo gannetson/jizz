@@ -20,7 +20,7 @@ const TexelStartPage = () => {
         {loading ? (
           <Loading/>
         ) : (
-          <CreateGame country={'NL-NH'} level={'advanced'} length={'35'} mediaType={'images'} includeRare={true}/>
+          <CreateGame country={'NL-NH'} level={'advanced'} length={'35'} mediaType={'images'} rarity={'exceptional'}/>
         )}
       </Page.Body>
     </Page>

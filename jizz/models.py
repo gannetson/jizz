@@ -125,6 +125,46 @@ class Species(models.Model):
         return self.name
 
 
+class SpeciesIllustration(models.Model):
+    """AI-generated field-guide style drawing (white background), one per species."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_READY = 'ready'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_READY, 'Ready'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    species = models.OneToOneField(
+        Species,
+        on_delete=models.CASCADE,
+        related_name='illustration',
+    )
+    image = models.ImageField(
+        upload_to='species_illustrations/',
+        null=True,
+        blank=True,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    model_name = models.CharField(max_length=64, blank=True, default='')
+    error_message = models.TextField(blank=True, default='')
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'species illustration'
+        verbose_name_plural = 'species illustrations'
+
+    def __str__(self):
+        return f'Illustration for {self.species_id} ({self.status})'
+
+
 class Language(models.Model):
     code = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(max_length=200)
@@ -233,7 +273,46 @@ class Game(models.Model):
     length = models.IntegerField(default=0)
     media = models.CharField(max_length=10, default='images', choices=MEDIA_CHOICES)
     repeat = models.BooleanField(default=False)
-    include_rare = models.BooleanField(default=True)
+    RARIT_FAMILIAR = 'familiar'
+    RARIT_REGULAR = 'regular'
+    RARIT_EXCEPTIONAL = 'exceptional'
+    RARIT_CHOICES = [
+        (RARIT_FAMILIAR, 'Familiar'),
+        (RARIT_REGULAR, 'Regular'),
+        (RARIT_EXCEPTIONAL, 'Exceptional'),
+    ]
+    # Relative abundance tiers allowed when picking species (CountrySpecies.frequency).
+    RARIT_FREQUENCY_TIERS = {
+        RARIT_FAMILIAR: (
+            'abundant',
+            'very_common',
+            'common',
+        ),
+        RARIT_REGULAR: (
+            'abundant',
+            'very_common',
+            'common',
+            'fairly_common',
+            'uncommon',
+            'rare',
+        ),
+        RARIT_EXCEPTIONAL: (
+            'abundant',
+            'very_common',
+            'common',
+            'fairly_common',
+            'uncommon',
+            'rare',
+            'very_rare',
+            'vagrant',
+        ),
+    }
+    rarity = models.CharField(
+        max_length=20,
+        default=RARIT_REGULAR,
+        choices=RARIT_CHOICES,
+        help_text='Filter CountrySpecies by frequency tier for question selection.',
+    )
     include_escapes = models.BooleanField(default=False)
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
     force_ended = models.BooleanField(
@@ -259,11 +338,34 @@ class Game(models.Model):
         blank=True
     )
 
+    @classmethod
+    def frequency_filter_q(cls, rarity=None) -> Q:
+        """Q filter for species linked to the game country with allowed frequency tiers."""
+        tier = rarity or cls.RARIT_REGULAR
+        freqs = cls.RARIT_FREQUENCY_TIERS.get(tier, cls.RARIT_FREQUENCY_TIERS[cls.RARIT_REGULAR])
+        q = Q(countryspecies__frequency__in=freqs)
+        if tier in (cls.RARIT_REGULAR, cls.RARIT_EXCEPTIONAL):
+            q |= Q(countryspecies__frequency__isnull=True) | Q(countryspecies__frequency='')
+        return q
+
+    @classmethod
+    def country_species_rarity_q(cls, rarity=None) -> Q:
+        """Same tier rules as ``frequency_filter_q`` on ``CountrySpecies`` rows."""
+        tier = rarity or cls.RARIT_REGULAR
+        freqs = cls.RARIT_FREQUENCY_TIERS.get(tier, cls.RARIT_FREQUENCY_TIERS[cls.RARIT_REGULAR])
+        q = Q(frequency__in=freqs)
+        if tier in (cls.RARIT_REGULAR, cls.RARIT_EXCEPTIONAL):
+            q |= Q(frequency__isnull=True) | Q(frequency='')
+        return q
+
     @property
     def current_highscore(self):
         return PlayerScore.highscore_by_type(
-            level=self.level, country=self.country,
-            length=self.length, media=self.media
+            level=self.level,
+            country=self.country,
+            length=self.length,
+            media=self.media,
+            rarity=self.rarity,
         )
 
     @property
@@ -318,201 +420,9 @@ class Game(models.Model):
     @staticmethod
     def _add_question_body(game):
         """Create the next question row; caller must hold ``game`` locked in ``add_question``."""
-        statuses = ['native', 'endemic']
-        if game.include_rare:
-            statuses.extend(['rare', 'extirpated'])
-        if game.include_escapes:
-            statuses.extend(['introduced', 'uncertain', 'unknown'])
+        from jizz.game_question_selection import create_question_for_game
 
-        if game.country.code == 'NL-NH' and random() < 0.3:
-            statuses = ['rare']
-
-        if game.tax_family:
-            all_species = Species.objects.filter(
-                media__isnull=False,
-                media__type='image',
-                countryspecies__status__in=statuses,
-                countryspecies__country=game.country,
-                tax_family=game.tax_family
-            ).distinct().order_by('id')
-        elif game.tax_order:
-            all_species = Species.objects.filter(
-                media__isnull=False,
-                media__type='image',
-                countryspecies__status__in=statuses,
-                countryspecies__country=game.country,
-                tax_order=game.tax_order
-            ).distinct().order_by('id')
-        else:
-            all_species = Species.objects.filter(
-                media__isnull=False,
-                media__type='image',
-                countryspecies__status__in=statuses,
-                countryspecies__country=game.country
-            ).distinct().order_by('id')
-        if game.media == 'video':
-            if game.tax_family:
-                all_species = Species.objects.filter(
-                    media__isnull=False,
-                    media__type='video',
-                    countryspecies__status__in=statuses,
-                    countryspecies__country=game.country,
-                    tax_family=game.tax_family
-                ).distinct().order_by('id')
-            elif game.tax_order:
-                all_species = Species.objects.filter(
-                    media__isnull=False,
-                    media__type='video',
-                    countryspecies__status__in=statuses,
-                    countryspecies__country=game.country,
-                    tax_order=game.tax_order
-                ).distinct().order_by('id')
-            else:
-                all_species = Species.objects.filter(
-                    media__isnull=False,
-                    media__type='video',
-                    countryspecies__status__in=statuses,
-                    countryspecies__country=game.country
-                ).distinct().order_by('id')
-        if game.media == 'audio':
-            if game.tax_family:
-                all_species = Species.objects.filter(
-                    media__isnull=False,
-                    media__type='audio',
-                    countryspecies__status__in=statuses,
-                    countryspecies__country=game.country,
-                    tax_family=game.tax_family
-                ).distinct().order_by('id')
-            elif game.tax_order:
-                all_species = Species.objects.filter(
-                    media__isnull=False,
-                    media__type='audio',
-                    countryspecies__status__in=statuses,
-                    countryspecies__country=game.country,
-                    tax_order=game.tax_order
-                ).distinct().order_by('id')
-            else:
-                all_species = Species.objects.filter(
-                    media__isnull=False,
-                    media__type='audio',
-                    countryspecies__status__in=statuses,
-                    countryspecies__country=game.country
-                ).distinct().order_by('id')
-
-        left_species = all_species.exclude(id__in=game.questions.values_list('species_id', flat=True))
-        if left_species.exists():
-            species = left_species.order_by('?').first()
-        else:
-            species = all_species.order_by('?').first()
-
-        sequence = game.questions.count() + 1
-        
-        # Eligible media: approved only, or if none approved then not rejected (same as Species.images/videos/sounds)
-        # Retry with another species if selected one has no eligible media
-        max_retries = 10
-        retry_count = 0
-        media_count = 0
-        while retry_count < max_retries:
-            if game.media == 'video':
-                media_count = species.videos.count()
-            elif game.media == 'audio':
-                media_count = species.sounds.count()
-            else:
-                media_count = species.images.count()
-
-            # If we have eligible media, break out of retry loop
-            if media_count > 0:
-                break
-
-            # Try another species
-            retry_count += 1
-            remaining = all_species.exclude(id=species.id).exclude(id__in=game.questions.values_list('species_id', flat=True))
-            if remaining.exists():
-                species = remaining.order_by('?').first()
-            else:
-                # Fall back to any species (even if already used)
-                remaining = all_species.exclude(id=species.id)
-                if remaining.exists():
-                    species = remaining.order_by('?').first()
-                else:
-                    # No more species available
-                    raise ValueError(f"No species with {game.media} media available for game {game.id}")
-
-        if media_count == 0:
-            raise ValueError(f"Species {species.id} ({species.name}) has no eligible {game.media} media (approved or not rejected) after {max_retries} retries")
-
-        number = randint(1, media_count) - 1
-
-        if game.level == 'advanced':
-            options1 = all_species.filter(id__lt=species.id).order_by('-id')[:2]
-            next = 5 - options1.count()
-            options2 = all_species.filter(id__gt=species.id).order_by('id')[:next]
-            if options2.count() < 2:
-                prev = 5 - options2.count()
-                options1 = all_species.filter(id__lt=species.id).order_by('-id')[:prev]
-
-            options = list(options1) + list(options2) + [species]
-            shuffle(options)
-            question = game.questions.create(species=species, number=number, sequence=sequence)
-            for index, species in enumerate(options):
-                QuestionOption.objects.create(
-                    question=question,
-                    species=species,
-                    order=index
-                )
-            return question
-
-        elif game.level == 'beginner':
-            # Distractors must be at least 20 away from answer by species id
-            far_species = (
-                all_species.exclude(id=species.id)
-                .filter(
-                    models.Q(id__lte=species.id - 20)
-                    | models.Q(id__gte=species.id + 20)
-                )
-                .distinct()
-            )
-            # Joins on all_species can multiply rows; [:3] after order_by('?') may repeat the same PK.
-            distractor_ids = set()
-            options = []
-            for s in far_species.order_by('?'):
-                if len(options) >= 3:
-                    break
-                if s.id in distractor_ids:
-                    continue
-                distractor_ids.add(s.id)
-                options.append(s)
-            # If not enough far species, fill with any other species (excluding answer)
-            if len(options) < 3:
-                remaining = (
-                    all_species.exclude(id=species.id)
-                    .exclude(id__in=distractor_ids)
-                    .distinct()
-                )
-                for s in remaining.order_by('?'):
-                    if len(options) >= 3:
-                        break
-                    if s.id in distractor_ids:
-                        continue
-                    distractor_ids.add(s.id)
-                    options.append(s)
-            question = game.questions.create(
-                species=species, number=number, sequence=sequence
-            )
-            options = options + [species]
-            shuffle(options)
-            for index, opt in enumerate(options):
-                QuestionOption.objects.create(
-                    question=question,
-                    species=opt,
-                    order=index
-                )
-            return question
-        else:
-            question = game.questions.create(
-                species=species, number=number, sequence=sequence
-            )
-            return question
+        return create_question_for_game(game)
 
     @property
     def question(self):
@@ -635,19 +545,26 @@ class PlayerScore(models.Model):
         return f'{hours} hours and {minutes} minutes'
 
     @classmethod
-    def highscore_by_type(cls, level=None, country=None, media=None, length=None):
-        return cls.objects.filter(
+    def highscore_by_type(cls, level=None, country=None, media=None, length=None, rarity=None):
+        qs = cls.objects.filter(
             game__level=level,
             game__country=country,
             game__media=media,
-            game__length=length
-        ).order_by('-score').first()
+            game__length=length,
+        )
+        if rarity is not None:
+            qs = qs.filter(game__rarity=rarity)
+        return qs.order_by('-score').first()
 
     @property
     def ranking(self):
-        scores = PlayerScore.objects.filter(game__level=self.game.level, game__country=self.game.country,
-                                            game__media=self.game.media, game__length=self.game.length).order_by(
-            '-score').all()
+        scores = PlayerScore.objects.filter(
+            game__level=self.game.level,
+            game__country=self.game.country,
+            game__media=self.game.media,
+            game__length=self.game.length,
+            game__rarity=self.game.rarity,
+        ).order_by('-score').all()
         return list(scores).index(self) + 1
 
     @property
@@ -808,12 +725,14 @@ class CountrySpecies(models.Model):
     status = models.CharField(max_length=100, default='unknown', choices=STATUS_CHOICES)
 
     FREQUENCY_CHOICES = [
+        ('abundant', 'Abundant'),
         ('very_common', 'Very common'),
         ('common', 'Common'),
         ('fairly_common', 'Fairly common'),
         ('uncommon', 'Uncommon'),
         ('rare', 'Rare'),
         ('very_rare', 'Very rare'),
+        ('vagrant', 'Vagrant'),
     ]
     frequency = models.CharField(
         max_length=20,
@@ -985,7 +904,11 @@ class ChallengeLevel(models.Model):
     )
     length = models.IntegerField(default=0)
     jokers = models.IntegerField(default=0)
-    include_rare = models.BooleanField(default=False)
+    rarity = models.CharField(
+        max_length=20,
+        default=Game.RARIT_REGULAR,
+        choices=Game.RARIT_CHOICES,
+    )
     include_escapes = models.BooleanField(default=False)
     media = models.CharField(max_length=10, default='images')
     title = models.CharField(max_length=200)
@@ -1292,7 +1215,7 @@ class DailyChallengeRound(models.Model):
 
 
 class DeviceToken(models.Model):
-    """Push notification device token (FCM or Expo)."""
+    """Push notification device token (FCM or Expo). Legacy; prefer PushDevice."""
     PLATFORM_CHOICES = [
         ('ios', 'iOS'),
         ('android', 'Android'),
@@ -1310,4 +1233,29 @@ class DeviceToken(models.Model):
     class Meta:
         unique_together = ('user', 'token')
         ordering = ['-last_used']
+
+
+class PushDevice(models.Model):
+    """Expo push token for mobile app (one row per device token)."""
+
+    PLATFORM_CHOICES = [
+        ('ios', 'iOS'),
+        ('android', 'Android'),
+    ]
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='push_devices',
+    )
+    expo_push_token = models.CharField(max_length=500, unique=True)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'{self.user_id} {self.platform} ({self.expo_push_token[:24]}…)'
 

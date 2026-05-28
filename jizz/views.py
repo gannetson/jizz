@@ -87,6 +87,8 @@ from jizz.serializers import (
     SpeciesWithMediaReviewSerializer,
     PlayerSerializer,
     QuestionSerializer,
+    QuestionPlaySerializer,
+    SpeciesCoverSerializer,
     SpeciesDetailSerializer,
     SpeciesListSerializer,
     UpdateSerializer,
@@ -171,6 +173,24 @@ class SpeciesDetailView(RetrieveAPIView):
     queryset = Species.objects.all()
     permission_classes = [AllowAny]
     authentication_classes = []  # No authentication required for public species data
+
+
+class SpeciesCoverView(RetrieveAPIView):
+    """Cover / field-guide illustration; may call OpenAI to generate on first request."""
+
+    serializer_class = SpeciesCoverSerializer
+    queryset = Species.objects.prefetch_related('illustration')
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def retrieve(self, request, *args, **kwargs):
+        from jizz.services.species_illustration import ensure_species_illustration
+
+        instance = self.get_object()
+        ensure_species_illustration(instance)
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance, context=self.get_serializer_context())
+        return Response(serializer.data)
 
 
 class LanguageListView(ListAPIView):
@@ -615,7 +635,7 @@ class GameDetailView(RetrieveAPIView):
 
 
 class QuestionView(RetrieveAPIView):
-    serializer_class = QuestionSerializer
+    serializer_class = QuestionPlaySerializer
     queryset = Question.objects.all()
     permission_classes = [AllowAny]
 
@@ -627,7 +647,18 @@ class QuestionView(RetrieveAPIView):
         game.refresh_from_db()
         if not game.question:
             game.add_question()
-        return game.question
+        from jizz.question_play import build_play_serializer_context, load_question_for_play
+
+        question = load_question_for_play(game.question.id)
+        self._play_serializer_context = build_play_serializer_context(question)
+        return question
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        extra = getattr(self, '_play_serializer_context', None)
+        if extra:
+            ctx.update(extra)
+        return ctx
 
 
 class AnswerView(CreateAPIView):
@@ -677,6 +708,49 @@ class QuestionMediaReadyView(APIView):
         return Response({'ok': True, 'ready_at': ts.isoformat()})
 
 
+class QuestionNextMediaView(APIView):
+    """POST after flagging media: advance to next eligible image/video/sound for this question."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        from jizz.question_play import (
+            advance_question_media_after_exclusion,
+            load_question_for_play,
+            serialize_question_for_play,
+        )
+
+        player_token = request.data.get('player_token')
+        if not player_token:
+            return Response({'error': 'player_token required'}, status=400)
+        question = get_object_or_404(Question, pk=pk)
+        player = get_object_or_404(Player, token=player_token)
+        if not PlayerScore.objects.filter(player=player, game=question.game).exists():
+            return Response({'error': 'Player is not in this game'}, status=403)
+
+        excluded = request.data.get('excluded_media_id')
+        if excluded is not None:
+            try:
+                excluded = int(excluded)
+            except (TypeError, ValueError):
+                return Response({'error': 'invalid excluded_media_id'}, status=400)
+
+        updated = advance_question_media_after_exclusion(question, excluded)
+        if not updated:
+            return Response({'error': 'no_alternate_media'}, status=409)
+
+        loaded = load_question_for_play(updated.id)
+        data = serialize_question_for_play(loaded)
+        return Response(
+            {
+                'number': data['number'],
+                'images': data['images'],
+                'videos': data['videos'],
+                'sounds': data['sounds'],
+            }
+        )
+
+
 class QuestionDetailView(RetrieveUpdateAPIView):
     serializer_class = QuestionSerializer
     queryset = Question.objects.all()
@@ -690,7 +764,7 @@ class PlayerScoreListView(ListAPIView):
     serializer_class = PlayerScoreListSerializer
     pagination_class = PlayerScorePagination
 
-    filterset_fields = ["game__media", "game__length", "game__level", "game__country"]
+    filterset_fields = ["game__media", "game__length", "game__level", "game__country", "game__rarity"]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
     ordering = ["-score"]
@@ -1770,7 +1844,7 @@ class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):
             level=challenge_level.level,
             length=challenge_level.length,
             media=challenge_level.media,
-            include_rare=challenge_level.include_rare,
+            rarity=challenge_level.rarity,
             include_escapes=challenge_level.include_escapes,
             tax_order=challenge_level.tax_order,
             host=country_challenge.player,

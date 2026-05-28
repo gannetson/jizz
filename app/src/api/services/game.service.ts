@@ -10,7 +10,7 @@ export interface CreateGameRequest {
   media: string;
   tax_order?: string;
   tax_family?: string;
-  include_rare: boolean;
+  rarity: 'familiar' | 'regular' | 'exceptional';
   include_escapes: boolean;
 }
 

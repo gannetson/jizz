@@ -5,6 +5,7 @@ import * as authApi from '../api/auth';
 import * as playerApi from '../api/player';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { registerForPushNotificationsAsync } from '../lib/notifications';
 
 type AuthContextType = {
   isAuthenticated: boolean;
@@ -26,6 +27,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * (e.g. they signed up before ever playing), we do nothing — when they create a player later
  * via createPlayer(..., accessToken), the backend already links it (POST /api/player/ with Auth).
  */
+function afterAuthSuccess(): void {
+  void linkStoredPlayerToAccount();
+  void registerForPushNotificationsAsync();
+}
+
 async function linkStoredPlayerToAccount(): Promise<void> {
   try {
     const accessToken = await authApi.ensureFreshAccessToken();
@@ -66,7 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       const access = await authApi.ensureFreshAccessToken();
-      setIsAuthenticated(!!access);
+      const authed = !!access;
+      setIsAuthenticated(authed);
+      if (authed) {
+        void registerForPushNotificationsAsync();
+      }
     } catch {
       setIsAuthenticated(false);
     } finally {
@@ -91,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
       setIsAuthenticated(true);
-      linkStoredPlayerToAccount();
+      afterAuthSuccess();
       return true;
     } catch {
       return false;
@@ -103,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const tokens = await authApi.loginWithEmail(email, password);
       await authApi.storeTokens(tokens);
       setIsAuthenticated(true);
-      linkStoredPlayerToAccount();
+      afterAuthSuccess();
     },
     []
   );
@@ -113,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const tokens = await authApi.register(email, password, username);
       await authApi.storeTokens(tokens);
       setIsAuthenticated(true);
-      linkStoredPlayerToAccount();
+      afterAuthSuccess();
     },
     []
   );
@@ -137,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const tokens = await authApi.loginWithGoogleToken(result.data.idToken);
       await authApi.storeTokens(tokens);
       setIsAuthenticated(true);
-      linkStoredPlayerToAccount();
+      afterAuthSuccess();
       return true;
     } catch (e: any) {
       throw e;
@@ -169,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       await authApi.storeTokens(tokens);
       setIsAuthenticated(true);
-      linkStoredPlayerToAccount();
+      afterAuthSuccess();
       return true;
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') {

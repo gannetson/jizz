@@ -9,6 +9,7 @@ export type Score = {
   country: { code: string; name: string };
   media: string;
   length: number;
+  rarity?: string;
 };
 
 type ScoresResponse = { results: Score[] };
@@ -18,6 +19,7 @@ export async function loadScores(params: {
   length?: string;
   media?: string;
   country?: string;
+  rarity?: string;
   /** Set to true to bypass HTTP cache (e.g. after user taps refresh). */
   cacheBust?: boolean;
 }): Promise<Score[]> {
@@ -26,6 +28,7 @@ export async function loadScores(params: {
   if (params.length) q.set('game__length', params.length);
   if (params.media) q.set('game__media', params.media);
   if (params.country) q.set('game__country', params.country);
+  if (params.rarity) q.set('game__rarity', params.rarity);
   if (params.cacheBust) q.set('_', String(Date.now()));
   const url = apiUrl(`/api/scores/?${q.toString()}`);
   const response = await fetch(url, {

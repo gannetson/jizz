@@ -18,6 +18,8 @@ import { MediaCredits } from './MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from './FlagMediaModal';
 import { apiUrl } from '../api/config';
 import { getMedia, type MediaItem } from '../api/media';
+import { fetchSpeciesDetail, type SpeciesDetail } from '../api/fetchSpeciesDetail';
+import { fetchSpeciesCover } from '../api/fetchSpeciesCover';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 
@@ -35,6 +37,8 @@ export type SpeciesMediaData = {
   name_nl?: string;
   name_latin?: string;
   name_translated?: string;
+  illustration_url?: string | null;
+  illustration_status?: string;
   images?: MediaEntry[];
   videos?: MediaEntry[];
   sounds?: MediaEntry[];
@@ -103,19 +107,51 @@ function AudioPlayer({ uri }: { uri: string }) {
 
 export function SpeciesMediaModal({ visible, onClose, species, language, playerToken }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('images');
+  const [detail, setDetail] = useState<SpeciesDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null | undefined>(undefined);
+  const [coverStatus, setCoverStatus] = useState<string | undefined>(undefined);
+  const [coverLoading, setCoverLoading] = useState(false);
   const [fetched, setFetched] = useState<{ images: MediaEntry[]; videos: MediaEntry[]; sounds: MediaEntry[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [flagMedia, setFlagMedia] = useState<FlagMediaInfo | null>(null);
 
-  const hasInlineMedia = species &&
-    ((species.images && species.images.length > 0) ||
-     (species.videos && species.videos.length > 0) ||
-     (species.sounds && species.sounds.length > 0));
+  const hasDetailMedia = Boolean(
+    detail &&
+      ((detail.images && detail.images.length > 0) ||
+        (detail.videos && detail.videos.length > 0) ||
+        (detail.sounds && detail.sounds.length > 0))
+  );
 
-  const images = hasInlineMedia ? (species!.images ?? []) : (fetched?.images ?? []);
-  const videos = hasInlineMedia ? (species!.videos ?? []) : (fetched?.videos ?? []);
-  const sounds = hasInlineMedia ? (species!.sounds ?? []) : (fetched?.sounds ?? []);
+  const hasInlineMedia =
+    species &&
+    !hasDetailMedia &&
+    ((species.images && species.images.length > 0) ||
+      (species.videos && species.videos.length > 0) ||
+      (species.sounds && species.sounds.length > 0));
+
+  const images = hasDetailMedia
+    ? (detail!.images ?? [])
+    : hasInlineMedia
+      ? (species!.images ?? [])
+      : (fetched?.images ?? []);
+  const videos = hasDetailMedia
+    ? (detail!.videos ?? [])
+    : hasInlineMedia
+      ? (species!.videos ?? [])
+      : (fetched?.videos ?? []);
+  const sounds = hasDetailMedia
+    ? (detail!.sounds ?? [])
+    : hasInlineMedia
+      ? (species!.sounds ?? [])
+      : (fetched?.sounds ?? []);
+
+  const illustrationUrl =
+    coverUrl !== undefined ? coverUrl : species?.illustration_url ?? null;
+  const illustrationStatus = coverStatus ?? species?.illustration_status;
+  const illustrationPending = coverLoading || illustrationStatus === 'pending';
+  const showIllustration = Boolean(illustrationUrl) || illustrationPending;
 
   const fetchFallback = useCallback(async (speciesId: number) => {
     setLoading(true);
@@ -145,15 +181,57 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
   }, []);
 
   useEffect(() => {
-    if (visible && species && !hasInlineMedia) {
+    if (!visible || !species) {
+      setDetail(null);
+      setFetched(null);
+      setCoverUrl(undefined);
+      setCoverStatus(undefined);
+      setActiveTab('images');
+      setImageErrors(new Set());
+      return;
+    }
+    setCoverUrl(species.illustration_url ?? null);
+    setCoverStatus(species.illustration_status);
+
+    let cancelled = false;
+    setDetailLoading(true);
+    fetchSpeciesDetail(species.id, language)
+      .then((data) => {
+        if (!cancelled) setDetail(data);
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+
+    setCoverLoading(true);
+    fetchSpeciesCover(species.id)
+      .then((data) => {
+        if (!cancelled) {
+          setCoverUrl(data.illustration_url);
+          setCoverStatus(data.illustration_status);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setCoverLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, species?.id, language, species?.illustration_url, species?.illustration_status]);
+
+  useEffect(() => {
+    if (visible && species && !hasDetailMedia && !hasInlineMedia) {
       fetchFallback(species.id);
     }
     if (!visible) {
       setFetched(null);
-      setActiveTab('images');
-      setImageErrors(new Set());
     }
-  }, [visible, species?.id]);
+  }, [visible, species?.id, hasDetailMedia, hasInlineMedia, fetchFallback]);
 
   if (!species) return null;
 
@@ -188,6 +266,20 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
           </TouchableOpacity>
         </View>
 
+        {showIllustration && (
+          <View style={styles.illustrationBanner}>
+            {illustrationUrl ? (
+              <Image
+                source={{ uri: resolveUrl(illustrationUrl) }}
+                style={styles.illustrationImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <ActivityIndicator size="small" color={colors.primary[500]} />
+            )}
+          </View>
+        )}
+
         <View style={styles.tabBar}>
           {tabs.map((tab) => (
             <TouchableOpacity
@@ -202,7 +294,7 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
           ))}
         </View>
 
-        {loading ? (
+        {loading || (detailLoading && !hasDetailMedia && !hasInlineMedia && !fetched) ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={colors.primary[500]} />
           </View>
@@ -310,6 +402,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeBtnText: { fontSize: 18, color: colors.primary[700], fontWeight: '600' },
+  illustrationBanner: {
+    backgroundColor: '#fff',
+    minHeight: 140,
+    marginHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  illustrationImage: { width: '100%', height: 140 },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 24,

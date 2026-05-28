@@ -1,35 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Linking } from 'react-native';
-import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { loadUpdates, Update } from '../api/updates';
 import { colors } from '../theme';
-
-const ANDROID_PACKAGE = 'pro.birdr.app';
-const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
-
-function getAppStoreReviewUrl(): string | null {
-  const appStoreId = Constants.expoConfig?.extra?.appStoreId as string | undefined;
-  if (appStoreId?.trim()) {
-    return `https://apps.apple.com/app/id${appStoreId.trim()}?action=write-review`;
-  }
-  return null;
-}
+import { APP_STORE_URL, PLAY_STORE_URL } from '../constants/storeUrls';
 
 function openStoreReview() {
   if (Platform.OS === 'android') {
     Linking.openURL(PLAY_STORE_URL);
     return;
   }
-  const url = getAppStoreReviewUrl();
-  if (url) {
-    Linking.openURL(url);
-  } else {
-    Linking.openURL('https://apps.apple.com/search?term=birdr');
-  }
+  Linking.openURL(`${APP_STORE_URL}?action=write-review`);
 }
 
 type RootStackParamList = {

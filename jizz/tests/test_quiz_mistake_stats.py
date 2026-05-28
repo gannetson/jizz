@@ -97,24 +97,19 @@ class QuizMistakeStatsTests(TestCase):
 
     def test_species_columns_and_error_rate(self):
         rows = {r["species_id"]: r for r in get_species_mistake_rows()}
-        # B: shown on q1 (10 answers) + q2 (10) = 20; wrong picks of B on q1 only = 10
-        self.assertEqual(rows[self.sp_b.id]["times_shown"], 20)
+        # B: picked wrong on q1 only = 10
+        self.assertEqual(rows[self.sp_b.id]["times_shown"], 10)
         self.assertEqual(rows[self.sp_b.id]["correctly_answered"], 0)
         self.assertEqual(rows[self.sp_b.id]["wrongly_answered"], 10)
-        self.assertEqual(rows[self.sp_b.id]["unanswered"], 10)
         self.assertAlmostEqual(rows[self.sp_b.id]["error_rate"], 100.0)
 
-        self.assertEqual(rows[self.sp_a.id]["times_shown"], 20)
+        # A: picked wrong on q2 only = 10
+        self.assertEqual(rows[self.sp_a.id]["times_shown"], 10)
         self.assertEqual(rows[self.sp_a.id]["wrongly_answered"], 10)
-        self.assertEqual(rows[self.sp_a.id]["unanswered"], 10)
         self.assertAlmostEqual(rows[self.sp_a.id]["error_rate"], 100.0)
 
-        # C: always an option, never chosen
-        self.assertEqual(rows[self.sp_c.id]["times_shown"], 20)
-        self.assertEqual(rows[self.sp_c.id]["correctly_answered"], 0)
-        self.assertEqual(rows[self.sp_c.id]["wrongly_answered"], 0)
-        self.assertEqual(rows[self.sp_c.id]["unanswered"], 20)
-        self.assertIsNone(rows[self.sp_c.id]["error_rate"])
+        # C: never chosen → not included (times_shown=0 < MIN_TIMES_SHOWN)
+        self.assertNotIn(self.sp_c.id, rows)
 
     def test_pair_aggregation_undirected_and_directed(self):
         """Same pair (A,B) from A→B wrong and B→A wrong ends up one bucket."""

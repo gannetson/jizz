@@ -24,6 +24,7 @@ from jizz.quiz_mistake_views import (
 )
 from jizz.birdr_journey_views import BirdrJourneyView
 from jizz.checklist_views import ChecklistView
+from jizz.app_version_views import AppVersionView
 from jizz.daily_challenge_views import (
     FriendsListView,
     FriendRequestsListView,
@@ -164,6 +165,7 @@ urlpatterns = [
     re_path(r"^api/scores/$", PlayerScoreListView.as_view(), name="scores"),
 
     re_path(r"^api/feedback/$", FeedbackListView.as_view(), name="feedback"),
+    path('api/app-version/', AppVersionView.as_view(), name='app-version'),
     re_path(r"^api/updates/$", UpdateView.as_view(), name="updates"),
     re_path(r"^api/updates/reactions/$", ReactionView.as_view(), name="reactions"),
 

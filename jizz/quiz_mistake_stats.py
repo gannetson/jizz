@@ -50,11 +50,10 @@ def _error_rate_pct(wrong: int, correct: int) -> float | None:
 
 def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, Any]]:
     """
-    Per species (when shown as an option on a question the player answered):
+    Per species (only when the player explicitly picked the species):
 
-    - times_shown: answer rows where this species was one of the question's options.
+    - times_shown: answers where the player picked this species (correct or incorrect).
     - correctly_answered / wrongly_answered: answers where the player picked this species.
-    - unanswered: times_shown − correctly_answered − wrongly_answered (player chose another option).
     - error_rate: % wrong among picks of this species = wrong / (wrong + correct).
 
     If country_code is set, only answers from games in that country; CountrySpecies excludes
@@ -62,25 +61,18 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
     """
     cc = normalize_country_filter(country_code)
     answers = Answer.objects.all()
-    options = QuestionOption.objects.all()
     if cc:
         answers = answers.filter(question__game__country_id=cc)
-        options = options.filter(question__game__country_id=cc)
         allowed = _allowed_species_ids_for_country(cc)
         answers = answers.filter(
             question__species_id__in=allowed,
             answer_id__in=allowed,
         )
-        options = options.filter(species_id__in=allowed)
 
-    opts_by_q: dict[int, set[int]] = defaultdict(set)
-    for qid, sid in options.values_list("question_id", "species_id"):
-        opts_by_q[qid].add(sid)
-
-    times_shown: dict[int, int] = defaultdict(int)
-    for qid in answers.values_list("question_id", flat=True):
-        for sid in opts_by_q.get(qid, ()):
-            times_shown[sid] += 1
+    times_shown = {
+        row["answer_id"]: row["c"]
+        for row in answers.values("answer_id").annotate(c=Count("id"))
+    }
 
     picked_correct = {
         row["answer_id"]: row["c"]
@@ -108,7 +100,6 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
             continue
         cor = picked_correct.get(sid, 0)
         wr = picked_wrong.get(sid, 0)
-        un = ts - cor - wr
         rows.append(
             {
                 "species_id": sid,
@@ -117,7 +108,6 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
                 "times_shown": ts,
                 "correctly_answered": cor,
                 "wrongly_answered": wr,
-                "unanswered": un,
                 "error_rate": _error_rate_pct(wr, cor),
             }
         )
@@ -219,7 +209,6 @@ def render_species_mistakes_csv(species_rows: list[dict[str, Any]]) -> str:
             "times_shown",
             "correctly_answered",
             "wrongly_answered",
-            "unanswered",
             "error_rate_pct",
         ]
     )
@@ -232,7 +221,6 @@ def render_species_mistakes_csv(species_rows: list[dict[str, Any]]) -> str:
                 row["times_shown"],
                 row["correctly_answered"],
                 row["wrongly_answered"],
-                row["unanswered"],
                 f'{row["error_rate"]:.4f}' if row["error_rate"] is not None else "",
             ]
         )

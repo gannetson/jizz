@@ -13,7 +13,8 @@ from jizz.country_region_codes_data import ALPHA2_TO_ALPHA3, ALPHA3_TO_ALPHA2
 
 # Netherlands: ST country row is NLD only (not Caribbean BON/SXM via NL).
 _NL_ST_REGIONS = ("NLD",)
-# United Kingdom: app country UK uses England ST stats (ENG), not GBR.
+# United Kingdom: app country uses England ST stats (ENG), not GBR.
+# Some DBs use "UK" while others use ISO "GB" as the Country.pk.
 _UK_ST_REGIONS = ("ENG",)
 
 
@@ -37,7 +38,7 @@ def st_region_codes_for_app_country(
     regions: set[str] = set()
     if cc == "NL":
         regions.update(_NL_ST_REGIONS)
-    elif cc == "UK":
+    elif cc in ("UK", "GB"):
         regions.update(_UK_ST_REGIONS)
     else:
         a3 = alpha3_for_alpha2(cc)
@@ -66,6 +67,10 @@ def app_country_for_st_region(
     if len(rc) == 3:
         return alpha2_for_alpha3(rc)
     if len(rc) == 2 and rc in ALPHA2_TO_ALPHA3:
+        return rc
+    # Preserve subregion codes like "US-CA" / "US-EAST" when they exist in the app DB.
+    # These are not ISO alpha-2/3 and should not be coerced.
+    if "-" in rc and len(rc) <= 10:
         return rc
     return None
 

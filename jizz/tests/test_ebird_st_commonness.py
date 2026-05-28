@@ -83,6 +83,9 @@ class ExpandRegionCodesTests(SimpleTestCase):
     def test_uk_maps_to_eng_only(self):
         self.assertEqual(expand_region_codes("UK"), ["ENG"])
 
+    def test_gb_maps_to_eng_only(self):
+        self.assertEqual(expand_region_codes("GB"), ["ENG"])
+
 
 class ClassifyFromAbundanceTests(SimpleTestCase):
     def test_abundance_thresholds(self):
@@ -294,6 +297,35 @@ class CountriesInRegionalStatsTests(SimpleTestCase):
         self.assertEqual(app_country_for_st_region("USA"), "US")
         self.assertEqual(expand_region_codes("US"), ["US", "USA"])
 
+    def test_keeps_us_state_codes(self):
+        df = pd.DataFrame(
+            [
+                {"region_code": "US-CA", "region_type": "subnational1", "abundance_mean": 1.0},
+                {"region_code": "NLD", "region_type": "country", "abundance_mean": 2.0},
+            ]
+        )
+        self.assertEqual(countries_in_regional_stats(df, ["US-CA"]), ["US-CA"])
+
+
+class ParseSpeciesCommonnessSubnationalTests(SimpleTestCase):
+    def test_parses_subnational1_row(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "region_code": "US-CA",
+                    "region_type": "subnational1",
+                    "season": "breeding",
+                    "abundance_mean": 1.2,
+                    "range_occupied_percent": 0.3,
+                    "range_days_occupation": 120,
+                }
+            ]
+        )
+        parsed = parse_species_commonness(df, "US-CA")
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertAlmostEqual(parsed["abundance_mean_max"], 1.2)
+
 
 class SpeciesCodesForSelectedCountriesTests(TestCase):
     def setUp(self):
@@ -371,3 +403,51 @@ class ApplyVagrantFrequencyTests(TestCase):
         self.assertEqual(n, 1)
         self.cs_rare.refresh_from_db()
         self.assertEqual(self.cs_rare.frequency, "vagrant")
+
+
+class ApplyNativeEndemicDefaultRareTests(TestCase):
+    def setUp(self):
+        from jizz.models import Country, CountrySpecies, Species
+
+        self.country = Country.objects.create(code="NR", name="Native Rare Land")
+        self.sp_native_missing = Species.objects.create(
+            name="Native Missing", name_latin="Native m", code="natmis"
+        )
+        self.sp_endemic_missing = Species.objects.create(
+            name="Endemic Missing", name_latin="Endemic m", code="endmis"
+        )
+        self.sp_native_set = Species.objects.create(
+            name="Native Set", name_latin="Native s", code="natset"
+        )
+        self.cs_native_missing = CountrySpecies.objects.create(
+            country=self.country,
+            species=self.sp_native_missing,
+            status="native",
+            frequency=None,
+        )
+        self.cs_endemic_missing = CountrySpecies.objects.create(
+            country=self.country,
+            species=self.sp_endemic_missing,
+            status="endemic",
+            frequency="",
+        )
+        self.cs_native_set = CountrySpecies.objects.create(
+            country=self.country,
+            species=self.sp_native_set,
+            status="native",
+            frequency="common",
+        )
+
+    def test_sets_missing_native_and_endemic_to_rare_only(self):
+        from jizz.management.commands.ebird_st_commonness import (
+            apply_native_endemic_default_rare,
+        )
+
+        n = apply_native_endemic_default_rare("NR", force=False)
+        self.assertEqual(n, 2)
+        self.cs_native_missing.refresh_from_db()
+        self.cs_endemic_missing.refresh_from_db()
+        self.cs_native_set.refresh_from_db()
+        self.assertEqual(self.cs_native_missing.frequency, "rare")
+        self.assertEqual(self.cs_endemic_missing.frequency, "rare")
+        self.assertEqual(self.cs_native_set.frequency, "common")

@@ -26,9 +26,8 @@
     </form>
 
     <p class="muted">
-        Only species with this species on the option list for at least <strong>10</strong> answered questions (<strong>times shown</strong>).
-        <strong>Unanswered</strong> = player saw this species as an option but chose a different species.
-        <strong>Error rate</strong> = wrongly answered / (wrongly + correctly answered) when this species was chosen—among picks only, not “unanswered”.
+        Only species with at least <strong>10</strong> picks (<strong>times shown</strong>).
+        <strong>Error rate</strong> = wrongly answered / (wrongly + correctly answered) when this species was chosen.
     </p>
     <p class="muted">
         Sort by:
@@ -44,7 +43,6 @@
                 <th class="num">Times shown</th>
                 <th class="num">Correctly answered</th>
                 <th class="num">Wrongly answered</th>
-                <th class="num">Unanswered</th>
                 <th class="num">Error rate %</th>
             </tr>
         </thead>
@@ -58,11 +56,10 @@
                 <td class="num">{{ row.times_shown }}</td>
                 <td class="num">{{ row.correctly_answered }}</td>
                 <td class="num">{{ row.wrongly_answered }}</td>
-                <td class="num">{{ row.unanswered }}</td>
                 <td class="num">{% if row.error_rate is not None %}{{ row.error_rate|floatformat:2 }}%{% else %}—{% endif %}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="6">No data.</td></tr>
+            <tr><td colspan="5">No data.</td></tr>
             {% endfor %}
         </tbody>
     </table>

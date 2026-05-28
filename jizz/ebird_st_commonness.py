@@ -426,9 +426,9 @@ def countries_in_regional_stats(
 
     sub = df.copy()
     if "region_type" in sub.columns:
-        sub = sub[
-            sub["region_type"].astype(str).str.strip().str.lower().eq("country")
-        ]
+        # Include subnational rows (e.g. US states: region_code "US-CA", region_type "subnational1")
+        rt = sub["region_type"].astype(str).str.strip().str.lower()
+        sub = sub[rt.isin(("country", "subnational1"))]
     if sub.empty:
         return []
 
@@ -734,7 +734,9 @@ def parse_species_commonness(
     rc = df["region_code"].astype(str).str.strip().str.upper()
     mask = rc.isin([c.upper() for c in codes])
     if "region_type" in df.columns:
-        mask &= df["region_type"].astype(str).str.strip().str.lower().eq("country")
+        rt = df["region_type"].astype(str).str.strip().str.lower()
+        # Same rule as countries_in_regional_stats: allow subnational1 in addition to country.
+        mask &= rt.isin(("country", "subnational1"))
     sub = df[mask].copy()
     if sub.empty:
         return None

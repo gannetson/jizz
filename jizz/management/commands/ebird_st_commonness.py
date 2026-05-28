@@ -19,17 +19,13 @@ from collections import defaultdict
 from typing import Dict, List, Optional
 
 import pandas as pd
-import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from django.db.models.functions import Lower
 
 from jizz.ebird_st_commonness import (
     classify_from_abundance,
     countries_in_regional_stats,
-    download_regional_stats,
-    ebird_st_access_key_from_local_py,
     load_species_codes_from_file,
     normalize_st_species_code,
     parse_species_commonness,
@@ -40,14 +36,114 @@ from jizz.ebird_st_commonness import (
 from jizz.models import CountrySpecies
 
 
+_US_EAST = (
+    "US-ND",
+    "US-SD",
+    "US-NE",
+    "US-KS",
+    "US-OK",
+    "US-TX",
+    "US-MN",
+    "US-IA",
+    "US-MO",
+    "US-AR",
+    "US-LA",
+    "US-WI",
+    "US-IL",
+    "US-IN",
+    "US-OH",
+    "US-KY",
+    "US-TN",
+    "US-MS",
+    "US-MI",
+    "US-AL",
+    "US-GA",
+    "US-FL",
+    "US-SC",
+    "US-NC",
+    "US-VA",
+    "US-WV",
+    "US-PA",
+    "US-NY",
+    "US-VT",
+    "US-NH",
+    "US-ME",
+    "US-MA",
+    "US-CT",
+    "US-RI",
+    "US-NJ",
+    "US-DE",
+    "US-MD",
+    "US-DC",
+)
+
+_US_WEST = (
+    "US-CA",
+    "US-OR",
+    "US-WA",
+    "US-ID",
+    "US-NV",
+    "US-UT",
+    "US-AZ",
+    "US-MT",
+    "US-WY",
+    "US-CO",
+    "US-NM",
+)
+
+_US_SMART_EXPANSION = ("US-EAST", "US-WEST", "US-AK", "US-HI") + _US_EAST + _US_WEST
+
+
+def _resolve_country_alias(code: str) -> str:
+    """
+    Normalize user input to the actual Country.pk used in the DB.
+
+    Historically this project has used both GB and UK to represent "United Kingdom"
+    depending on data source. Prefer whichever one actually has CountrySpecies rows.
+    """
+    cc = (code or "").strip().upper()
+    if cc not in {"UK", "GB"}:
+        return cc
+
+    # If the requested code has rows, keep it.
+    if CountrySpecies.objects.filter(country_id=cc).exists():
+        return cc
+
+    other = "GB" if cc == "UK" else "UK"
+    if CountrySpecies.objects.filter(country_id=other).exists():
+        return other
+    return cc
+
+
+def _expand_country_smart(countries: List[str]) -> List[str]:
+    """
+    Expand the country selection for convenience.
+
+    When the run includes "US", also process:
+    - aggregates: US-EAST, US-WEST
+    - special: US-AK, US-HI
+    - all states listed in _US_EAST/_US_WEST
+    """
+    selected = [c.strip().upper() for c in countries if c and str(c).strip()]
+    if "US" not in selected:
+        return selected
+    out: List[str] = []
+    seen: set[str] = set()
+    for cc in selected + list(_US_SMART_EXPANSION):
+        token = cc.strip().upper()
+        if token and token not in seen:
+            seen.add(token)
+            out.append(token)
+    return out
+
+
 def _country_species_has_frequency(country_code: str, species_code: str) -> bool:
     """True if the CountrySpecies row exists and ``frequency`` is already set."""
-    country_code = country_code.strip().upper()
+    country_code = _resolve_country_alias(country_code)
     code = normalize_st_species_code(str(species_code))
     return (
         CountrySpecies.objects.filter(country_id=country_code)
-        .annotate(_lc=Lower("species__code"))
-        .filter(_lc=code)
+        .filter(species__code__iexact=code)
         .exclude(Q(frequency__isnull=True) | Q(frequency=""))
         .exists()
     )
@@ -65,8 +161,7 @@ def _species_needs_scoring(
     code = normalize_st_species_code(species_code)
     return (
         CountrySpecies.objects.filter(country_id__in=countries)
-        .annotate(_lc=Lower("species__code"))
-        .filter(_lc=code)
+        .filter(species__code__iexact=code)
         .filter(Q(frequency__isnull=True) | Q(frequency=""))
         .exists()
     )
@@ -82,12 +177,11 @@ def _update_country_species_frequency_one(
     Set ``CountrySpecies.frequency`` / ``frequency_pct`` for one (country, species).
     Returns the number of rows updated (0 or 1). Matches species code case-insensitively.
     """
-    country_code = country_code.strip().upper()
+    country_code = _resolve_country_alias(country_code)
     code = normalize_st_species_code(str(species_code))
     pk = (
         CountrySpecies.objects.filter(country_id=country_code)
-        .annotate(_lc=Lower("species__code"))
-        .filter(_lc=code)
+        .filter(species__code__iexact=code)
         .values_list("pk", flat=True)
         .first()
     )
@@ -110,12 +204,28 @@ def apply_vagrant_frequency(country_code: str, *, force: bool = False) -> int:
     return qs.update(frequency="vagrant")
 
 
+def apply_native_endemic_default_rare(country_code: str, *, force: bool = False) -> int:
+    """
+    Set ``frequency='rare'`` on ``status in ('native', 'endemic')`` rows when missing.
+
+    This is a fallback for countries where we have checklist presence (status) but
+    no eBird-based frequency yet.
+    """
+    qs = CountrySpecies.objects.filter(
+        country_id=country_code.strip().upper(),
+        status__in=("native", "endemic"),
+    )
+    if not force:
+        qs = qs.filter(Q(frequency__isnull=True) | Q(frequency=""))
+    return qs.update(frequency="rare")
+
+
 def countries_to_process(country_arg: Optional[str]) -> List[str]:
     if country_arg:
-        return [country_arg.strip().upper()]
+        return _expand_country_smart([_resolve_country_alias(country_arg)])
     env_cc = (os.environ.get("COUNTRY_CODE") or "").strip().upper()
     if env_cc:
-        return [env_cc]
+        return _expand_country_smart([_resolve_country_alias(env_cc)])
     return sorted(
         CountrySpecies.objects.values_list("country_id", flat=True).distinct()
     )
@@ -152,13 +262,14 @@ def _row_from_parsed(
 
 class Command(BaseCommand):
     help = (
-        "Download eBird S&T regional/species_stats CSVs (if missing), score commonness "
+        "Score commonness from cached eBird S&T regional_stats CSVs (no downloads). "
         "per country, write SQLite + CSV, update CountrySpecies.frequency / frequency_pct, "
         "then set frequency=vagrant where status=rare. Default: all countries with "
         "CountrySpecies rows (use --country for one). Loads Species linked to those "
-        "countries, fetches one CSV per species, scores every country present in that "
-        "CSV, and updates matching CountrySpecies rows. Skips rows that already have "
-        "frequency unless --force."
+        "countries, loads one cached CSV per species, scores every selected country "
+        "present in that CSV, and updates matching CountrySpecies rows. If a CSV is "
+        "missing, prints 'csv not found' and skips that species. Skips rows that already "
+        "have frequency unless --force."
     )
 
     def add_arguments(self, parser):
@@ -194,26 +305,6 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
-            "--year",
-            type=int,
-            default=int(os.environ.get("EBIRD_ST_VERSION_YEAR", "2021")),
-            help=(
-                "S&T product year (list-obj / ZIP paths). Older years are tried automatically "
-                "when the requested year has no listing."
-            ),
-        )
-        parser.add_argument(
-            "--no-cache",
-            action="store_true",
-            help="Re-download CSVs even if present.",
-        )
-        parser.add_argument(
-            "--access-key",
-            type=str,
-            default="",
-            help="Override EBIRD_ST_ACCESS_KEY (default: Django settings, then local.py parse).",
-        )
-        parser.add_argument(
             "--db-path",
             type=str,
             default=None,
@@ -231,7 +322,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--skip-species-stats",
             action="store_true",
-            help="Do not download *_species_stats.csv.",
+            help="(deprecated) No-op; downloads were removed.",
         )
         parser.add_argument(
             "--no-db-species",
@@ -261,6 +352,19 @@ class Command(BaseCommand):
                 self.style.ERROR("No countries to process (no CountrySpecies rows in DB).")
             )
             return
+        us_clone_targets = [c for c in ("US-EAST", "US-WEST") if c in countries]
+        missing_countries = [
+            cc for cc in countries if not CountrySpecies.objects.filter(country_id=cc).exists()
+        ]
+        if missing_countries:
+            self.stderr.write(
+                self.style.WARNING(
+                    "No CountrySpecies rows found for "
+                    + ", ".join(missing_countries)
+                    + ". This usually means you passed the wrong country code "
+                    + "(e.g. GB vs UK)."
+                )
+            )
 
         base = settings.BASE_DIR
         if options["data_dir"]:
@@ -279,33 +383,10 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR("No species codes to process."))
             return
 
-        access_key = (options["access_key"] or "").strip() or getattr(
-            settings, "EBIRD_ST_ACCESS_KEY", ""
-        ) or ""
-        if not access_key:
-            access_key = ebird_st_access_key_from_local_py()
-
-        use_cache = not options["no_cache"]
-        cache_complete = all(
-            os.path.isfile(os.path.join(data_dir, f"{s}_regional_stats.csv"))
-            for s in species_list
-        )
-        if not access_key and not (cache_complete and use_cache):
-            self.stderr.write(
-                self.style.ERROR(
-                    "Set EBIRD_ST_ACCESS_KEY in Django settings (e.g. local.py) or pass --access-key. "
-                    "Not required if all regional_stats CSVs exist and cache is enabled."
-                )
-            )
-            return
-
         self.stdout.write(
             f"Species: {len(species_list)} from Species (linked to selected countries); "
             f"each CSV scored for all country rows in that file."
         )
-
-        session = requests.Session()
-        science_year_cache: dict = {}
         rows_by_country: Dict[str, List[dict]] = defaultdict(list)
         total_db_updated = 0
         skipped_pairs = 0
@@ -318,27 +399,24 @@ class Command(BaseCommand):
                 )
                 continue
 
+            cache_path = os.path.join(data_dir, f"{normalize_st_species_code(sp)}_regional_stats.csv")
+            if not os.path.isfile(cache_path):
+                self.stdout.write(f"[{i}/{n_species}] {sp} … csv not found")
+                continue
             self.stdout.write(f"[{i}/{n_species}] {sp} …")
-
-            df = download_regional_stats(
-                sp,
-                access_key,
-                options["year"],
-                data_dir,
-                use_cache,
-                session,
-                None,
-                science_year_cache=science_year_cache,
-            )
-            if df is None:
+            try:
+                df = pd.read_csv(cache_path)
+            except Exception:
+                self.stdout.write(f"[{i}/{n_species}] {sp} … csv not found")
                 continue
 
-            file_countries = countries_in_regional_stats(df, None)
+            file_countries = countries_in_regional_stats(df, countries)
             if not file_countries:
                 self.stdout.write("    (no country-level rows in CSV)")
                 continue
 
             for country in file_countries:
+                country = _resolve_country_alias(country)
                 if not options["force"] and _country_species_has_frequency(country, sp):
                     skipped_pairs += 1
                     continue
@@ -370,7 +448,34 @@ class Command(BaseCommand):
                     f"score={row_out['score']:.4f}{cap_note}{db_note}"
                 )
 
+                # Convenience: when scoring US from ST "country" rows, also fill US-EAST/US-WEST
+                # with the same values (if those app countries are part of this run).
+                if country == "US" and us_clone_targets:
+                    for target in us_clone_targets:
+                        if not options["force"] and _country_species_has_frequency(target, sp):
+                            skipped_pairs += 1
+                            continue
+                        clone_out = dict(row_out)
+                        clone_out["country_code"] = target
+                        rows_by_country[target].append(clone_out)
+
+                        n_db2 = 0
+                        if not options["skip_country_species_write"]:
+                            n_db2 = _update_country_species_frequency_one(
+                                target, sp, freq, clone_out["frequency_pct"]
+                            )
+                            total_db_updated += int(n_db2)
+                        db_note2 = ""
+                        if not options["skip_country_species_write"]:
+                            db_note2 = "  db=ok" if n_db2 else "  db=— (no CountrySpecies row)"
+                        self.stdout.write(
+                            f"    {target}: frequency={freq}  "
+                            f"frequency_pct={clone_out['frequency_pct']:.2f}%  "
+                            f"score={clone_out['score']:.4f}{cap_note}{db_note2}"
+                        )
+
         total_vagrant = 0
+        total_default_rare = 0
         if not options["skip_country_species_write"]:
             for country in countries:
                 vagrant_n = apply_vagrant_frequency(country, force=options["force"])
@@ -380,6 +485,17 @@ class Command(BaseCommand):
                         self.style.SUCCESS(
                             f"{country}: set frequency=vagrant on {vagrant_n} row(s) "
                             f"with status=rare."
+                        )
+                    )
+                default_rare_n = apply_native_endemic_default_rare(
+                    country, force=options["force"]
+                )
+                total_default_rare += default_rare_n
+                if default_rare_n:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"{country}: set frequency=rare on {default_rare_n} row(s) "
+                            f"with status in (native, endemic) and missing frequency."
                         )
                     )
 
@@ -420,7 +536,8 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     f"CountrySpecies DB: {total_db_updated} row(s) updated from ST scoring; "
-                    f"{total_vagrant} row(s) set to frequency=vagrant (status=rare)."
+                    f"{total_vagrant} row(s) set to frequency=vagrant (status=rare); "
+                    f"{total_default_rare} row(s) set to frequency=rare (native/endemic fallback)."
                 )
             )
         else:

@@ -15,6 +15,7 @@ import { ProfileProvider } from './src/context/ProfileContext';
 import { TranslationProvider } from './src/i18n/TranslationContext';
 import { DeepLinkHandler } from './src/components/DeepLinkHandler';
 import AppNavigator from './src/navigation/AppNavigator';
+import { AppVersionGate } from './src/components/AppVersionGate';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from './src/api/config';
 
 export default function App() {
@@ -45,7 +46,9 @@ export default function App() {
                 <GameWebSocketProvider>
                   <DeepLinkHandler>
                     <MenuProvider>
-                      <AppNavigator />
+                      <AppVersionGate>
+                        <AppNavigator />
+                      </AppVersionGate>
                     </MenuProvider>
                   </DeepLinkHandler>
                 </GameWebSocketProvider>

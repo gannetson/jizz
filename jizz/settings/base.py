@@ -347,3 +347,14 @@ SPECIES_ILLUSTRATION_SIZE = os.environ.get('SPECIES_ILLUSTRATION_SIZE', '1024x10
 # DALL-E: standard | hd. GPT image models: low | medium | high | auto
 SPECIES_ILLUSTRATION_QUALITY = os.environ.get('SPECIES_ILLUSTRATION_QUALITY', 'low')
 SPECIES_ILLUSTRATION_OUTPUT_FORMAT = os.environ.get('SPECIES_ILLUSTRATION_OUTPUT_FORMAT', 'png')
+
+# Native mobile app minimum semver (force-update gate in iOS/Android clients).
+APP_MIN_VERSION = os.environ.get('APP_MIN_VERSION', '1.63.0')
+APP_STORE_URL = os.environ.get(
+    'APP_STORE_URL',
+    'https://apps.apple.com/us/app/birdr/id6745144189',
+)
+PLAY_STORE_URL = os.environ.get(
+    'PLAY_STORE_URL',
+    'https://play.google.com/store/apps/details?id=pro.birdr.app',
+)

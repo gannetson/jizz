@@ -11,6 +11,10 @@ export const translations: Record<string, Record<string, string>> = {
     submit: 'Submit',
     save: 'Save',
     version: 'Version',
+    force_update_title: 'Update required',
+    force_update_message:
+      'This version of Birdr is too old to use. Please update to version {minVersion} or newer from the app store.',
+    force_update_button: 'Update in store',
     // Auth
     login: 'Login',
     logout: 'Logout',
@@ -389,6 +393,10 @@ export const translations: Record<string, Record<string, string>> = {
     submit: 'Verzenden',
     save: 'Opslaan',
     version: 'Versie',
+    force_update_title: 'Update vereist',
+    force_update_message:
+      'Deze versie van Birdr is te oud. Werk bij naar versie {minVersion} of nieuwer via de app store.',
+    force_update_button: 'Bijwerken in store',
     login: 'Inloggen',
     logout: 'Uitloggen',
     register: 'Registreren',

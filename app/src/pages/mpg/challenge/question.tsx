@@ -156,16 +156,6 @@ export const ChallengeQuestion = () => {
   return (
     <>
       <Page>
-        <>
-          {showFeedback && (
-            <AnswerFeedback
-              correct={isCorrect}
-              speciesFrequency={response?.species_frequency}
-              onAnimationComplete={handleAnimationComplete}
-            />
-          )}
-        </>
-
         <Page.Header>
           <Heading color={'gray.800'} size={'lg'} m={0}>
             {player ? player.name : <FormattedMessage id='welcome' defaultMessage={'Welcome'}/>}
@@ -204,7 +194,7 @@ export const ChallengeQuestion = () => {
 
         <Box position={'relative'}>
           {game.media === 'video' && currentVideo && (
-            <>
+            <Box position="relative" minH="220px">
               <ReactPlayer
                 key={`${question.id}-video-${currentMediaIndex}`}
                 width={'100%'}
@@ -214,22 +204,38 @@ export const ChallengeQuestion = () => {
                 playing={true}
                 onReady={notifyMediaReady}
               />
-            </>
+              {showFeedback && (
+                <AnswerFeedback
+                  correct={isCorrect}
+                  speciesFrequency={response?.species_frequency}
+                  onAnimationComplete={handleAnimationComplete}
+                />
+              )}
+            </Box>
           )}
           {game.media === 'images' && currentImage && (
-            <ZoomablePlayImage
-              key={`${question.id}-img-${currentMediaIndex}`}
-              previewSrc={currentImage.url.replace('/1800', '/900')}
-              fullSrc={currentImage.url}
-              onLoad={notifyMediaReady}
-              onError={(e) => {
-                e.currentTarget.src = '/images/birdr-logo.png';
-                notifyMediaReady()
-              }}
-            />
+            <Box position="relative" minH="280px">
+              <ZoomablePlayImage
+                key={`${question.id}-img-${currentMediaIndex}`}
+                previewSrc={currentImage.url.replace('/1800', '/900')}
+                fullSrc={currentImage.url}
+                onLoad={notifyMediaReady}
+                onError={(e) => {
+                  e.currentTarget.src = '/images/birdr-logo.png';
+                  notifyMediaReady()
+                }}
+              />
+              {showFeedback && (
+                <AnswerFeedback
+                  correct={isCorrect}
+                  speciesFrequency={response?.species_frequency}
+                  onAnimationComplete={handleAnimationComplete}
+                />
+              )}
+            </Box>
           )}
           {game.media === 'audio' && currentSound && (
-            <Box py={8}>
+            <Box position="relative" minH="80px" py={8}>
               <ReactPlayer
                 key={`${question.id}-audio-${currentMediaIndex}`}
                 width={'100%'}
@@ -239,6 +245,13 @@ export const ChallengeQuestion = () => {
                 playing={true}
                 onReady={notifyMediaReady}
               />
+              {showFeedback && (
+                <AnswerFeedback
+                  correct={isCorrect}
+                  speciesFrequency={response?.species_frequency}
+                  onAnimationComplete={handleAnimationComplete}
+                />
+              )}
             </Box>
 
           )}

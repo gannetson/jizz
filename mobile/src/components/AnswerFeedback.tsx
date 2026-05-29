@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Modal } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { colors } from '../theme';
 import { ConfettiOverlay } from './ConfettiOverlay';
@@ -35,46 +35,33 @@ export function AnswerFeedback({ correct, speciesFrequency, onAnimationComplete 
   }, [correct, duration, onAnimationComplete]);
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
-      <View style={styles.modalRoot} pointerEvents="none">
-        <ConfettiOverlay active={vagrantMega} />
-        <View style={styles.overlay}>
-          <View
-            style={[
-              styles.circle,
-              correct ? (vagrantMega ? styles.vagrantMega : styles.correct) : styles.incorrect,
-              vagrantMega && styles.circleMega,
-            ]}
-          >
-            {correct ? (
-              vagrantMega ? (
-                <>
-                  <FontAwesome5 name="star" solid size={44} color="#eab308" />
-                  <Text style={styles.megaLabel}>{t('mega', 'MEGA!')}</Text>
-                </>
-              ) : (
-                <Text style={styles.icon}>✓</Text>
-              )
-            ) : (
-              <Text style={styles.icon}>✗</Text>
-            )}
-          </View>
-        </View>
+    <>
+      <ConfettiOverlay active={vagrantMega} />
+      <View
+        style={[
+          styles.circle,
+          correct ? (vagrantMega ? styles.vagrantMega : styles.correct) : styles.incorrect,
+          vagrantMega && styles.circleMega,
+        ]}
+      >
+        {correct ? (
+          vagrantMega ? (
+            <>
+              <FontAwesome5 name="star" solid size={44} color="#eab308" />
+              <Text style={styles.megaLabel}>{t('mega', 'MEGA!')}</Text>
+            </>
+          ) : (
+            <Text style={styles.icon}>✓</Text>
+          )
+        ) : (
+          <Text style={styles.icon}>✗</Text>
+        )}
       </View>
-    </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
   circle: {
     width: 100,
     height: 100,

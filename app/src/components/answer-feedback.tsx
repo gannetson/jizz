@@ -1,7 +1,7 @@
 import {Box, Icon, Text} from "@chakra-ui/react"
 import {motion} from "framer-motion"
 import {FaCheckCircle, FaHeart, FaHeartBroken, FaStar} from "react-icons/fa"
-import {useState, useEffect} from "react"
+import {useState, useEffect, useRef} from "react"
 import Confetti from "react-confetti"
 import {FormattedMessage} from "react-intl"
 
@@ -24,8 +24,22 @@ export const AnswerFeedback = ({
                                  onAnimationComplete,
                                }: AnswerFeedbackProps) => {
   const [heartState, setHeartState] = useState<"whole" | "broken">("whole")
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [hostSize, setHostSize] = useState({width: 0, height: 0})
   const vagrantMega = isVagrantMega(correct, speciesFrequency)
   const duration = vagrantMega ? VAGRANT_FEEDBACK_MS : FEEDBACK_MS
+
+  useEffect(() => {
+    const el = hostRef.current
+    if (!el) return
+    const update = () => {
+      setHostSize({width: el.clientWidth, height: el.clientHeight})
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!correct) {
@@ -49,27 +63,25 @@ export const AnswerFeedback = ({
     return () => clearTimeout(done)
   }, [correct, duration, onAnimationComplete])
 
-  const windowSize =
-    typeof window !== "undefined"
-      ? {width: window.innerWidth, height: window.innerHeight}
-      : {width: 0, height: 0}
-
   return (
-    <>
-      {vagrantMega && windowSize.width > 0 && (
-        <Box
-          position="fixed"
-          inset={0}
-          zIndex={999}
-          pointerEvents="none"
-          aria-hidden
-        >
+    <Box
+      ref={hostRef}
+      position="absolute"
+      inset={0}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      zIndex={20}
+      pointerEvents="none"
+    >
+      {vagrantMega && hostSize.width > 0 && (
+        <Box position="absolute" inset={0} pointerEvents="none" aria-hidden>
           <Confetti
-            width={windowSize.width}
-            height={windowSize.height}
+            width={hostSize.width}
+            height={hostSize.height}
             run
             recycle={false}
-            numberOfPieces={350}
+            numberOfPieces={200}
           />
         </Box>
       )}
@@ -78,14 +90,11 @@ export const AnswerFeedback = ({
         animate={{opacity: 1}}
         exit={{opacity: 0}}
         style={{
-          position: "fixed",
-          top: 250,
-          left: 0,
-          right: 0,
+          position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          zIndex: 1000,
+          zIndex: 1,
         }}
       >
         {correct ? (
@@ -191,6 +200,6 @@ export const AnswerFeedback = ({
           </motion.div>
         )}
       </motion.div>
-    </>
+    </Box>
   )
 }

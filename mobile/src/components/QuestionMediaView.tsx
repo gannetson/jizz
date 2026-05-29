@@ -58,7 +58,28 @@ export type QuestionMediaViewProps = {
   expandImageHint?: string;
   /** Label for the full-screen viewer close control */
   closeFullScreenLabel?: string;
+  /** Centered over the image/video/audio area (not credits row). */
+  feedbackOverlay?: React.ReactNode;
 };
+
+function MediaStage({
+  children,
+  feedbackOverlay,
+}: {
+  children: React.ReactNode;
+  feedbackOverlay?: React.ReactNode;
+}) {
+  return (
+    <View style={styles.mediaStage}>
+      {children}
+      {feedbackOverlay ? (
+        <View style={styles.feedbackOverlay} pointerEvents="none">
+          {feedbackOverlay}
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 export function QuestionMediaView({
   mediaType,
@@ -86,6 +107,7 @@ export function QuestionMediaView({
   expandImageLabel = 'View image full screen',
   expandImageHint = 'Opens full screen. Pinch to zoom.',
   closeFullScreenLabel = 'Close',
+  feedbackOverlay,
 }: QuestionMediaViewProps) {
   const [fullScreenImage, setFullScreenImage] = React.useState(false);
   const mediaReadyOnce = React.useRef(false);
@@ -174,7 +196,7 @@ export function QuestionMediaView({
       {mediaType === 'images' && (
         <>
           {imageUri && !imageError ? (
-            <>
+            <MediaStage feedbackOverlay={feedbackOverlay}>
               <Pressable
                 onPress={() => setFullScreenImage(true)}
                 accessibilityRole="button"
@@ -209,15 +231,17 @@ export function QuestionMediaView({
                 onClose={() => setFullScreenImage(false)}
                 closeLabel={closeFullScreenLabel}
               />
-            </>
+            </MediaStage>
           ) : imageError !== undefined || (imageUri && imageError) ? (
-            <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
-              <Text style={styles.placeholderText}>🖼</Text>
-              <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
-              {imageError ? (
-                <Text style={styles.placeholderSubtext}>{imageError}</Text>
-              ) : null}
-            </View>
+            <MediaStage feedbackOverlay={feedbackOverlay}>
+              <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
+                <Text style={styles.placeholderText}>🖼</Text>
+                <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
+                {imageError ? (
+                  <Text style={styles.placeholderSubtext}>{imageError}</Text>
+                ) : null}
+              </View>
+            </MediaStage>
           ) : null}
           {renderCreditsRow()}
         </>
@@ -225,21 +249,36 @@ export function QuestionMediaView({
 
       {mediaType === 'video' && displayVideoUri && (
         <>
-          <VideoView
-            key={displayVideoUri}
-            player={videoPlayer}
-            style={[styles.video, videoHeight != null && { height: videoHeight }]}
-            nativeControls={true}
-            contentFit="contain"
-          />
+          <MediaStage feedbackOverlay={feedbackOverlay}>
+            <VideoView
+              key={displayVideoUri}
+              player={videoPlayer}
+              style={[styles.video, videoHeight != null && { height: videoHeight }]}
+              nativeControls={true}
+              contentFit="contain"
+            />
+          </MediaStage>
           {renderCreditsRow()}
         </>
       )}
 
       {mediaType === 'audio' && soundUri && (
         <>
-          {pulsatingStyle ? (
-            <Animated.View style={soundPlaying ? pulsatingStyle : undefined}>
+          <MediaStage feedbackOverlay={feedbackOverlay}>
+            {pulsatingStyle ? (
+              <Animated.View style={soundPlaying ? pulsatingStyle : undefined}>
+                <TouchableOpacity
+                  style={[styles.mediaLink, soundPlaying && styles.mediaLinkPlaying]}
+                  onPress={onPlaySound}
+                >
+                  <Text
+                    style={[styles.mediaLinkText, soundPlaying && styles.mediaLinkTextPlaying]}
+                  >
+                    {playSoundLabel}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            ) : (
               <TouchableOpacity
                 style={[styles.mediaLink, soundPlaying && styles.mediaLinkPlaying]}
                 onPress={onPlaySound}
@@ -250,28 +289,19 @@ export function QuestionMediaView({
                   {playSoundLabel}
                 </Text>
               </TouchableOpacity>
-            </Animated.View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.mediaLink, soundPlaying && styles.mediaLinkPlaying]}
-              onPress={onPlaySound}
-            >
-              <Text
-                style={[styles.mediaLinkText, soundPlaying && styles.mediaLinkTextPlaying]}
-              >
-                {playSoundLabel}
-              </Text>
-            </TouchableOpacity>
-          )}
+            )}
+          </MediaStage>
           {renderCreditsRow()}
         </>
       )}
 
       {showLoadingPlaceholder && !hasMedia && (
-        <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
-          <Text style={styles.placeholderText}>🖼</Text>
-          <Text style={styles.placeholderSubtext}>{loadingLabel}</Text>
-        </View>
+        <MediaStage feedbackOverlay={feedbackOverlay}>
+          <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
+            <Text style={styles.placeholderText}>🖼</Text>
+            <Text style={styles.placeholderSubtext}>{loadingLabel}</Text>
+          </View>
+        </MediaStage>
       )}
     </View>
   );
@@ -281,6 +311,15 @@ const styles = StyleSheet.create({
   mediaWrap: {
     minHeight: 200,
     marginBottom: 0,
+  },
+  mediaStage: {
+    position: 'relative',
+  },
+  feedbackOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
   },
   creditsRow: {
     flexDirection: 'row',

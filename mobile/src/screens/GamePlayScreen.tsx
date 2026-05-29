@@ -354,13 +354,6 @@ export function GamePlayScreen() {
     <GamePlayAudio soundUri={soundUri}>
       {({ playSound, soundPlaying, pulsatingStyle }) => (
     <View style={styles.playRoot}>
-      {showFeedback && resultsReadyForCurrentQuestion && (
-        <AnswerFeedback
-          correct={Boolean(answer?.correct)}
-          speciesFrequency={normalizeSpeciesFrequency(answer?.species_frequency)}
-          onAnimationComplete={() => setShowFeedback(false)}
-        />
-      )}
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">
       <FlagMediaModal
         visible={flagModalVisible}
@@ -371,6 +364,15 @@ export function GamePlayScreen() {
       />
 
       <QuestionMediaView
+        feedbackOverlay={
+          showFeedback && resultsReadyForCurrentQuestion ? (
+            <AnswerFeedback
+              correct={Boolean(answer?.correct)}
+              speciesFrequency={normalizeSpeciesFrequency(answer?.species_frequency)}
+              onAnimationComplete={() => setShowFeedback(false)}
+            />
+          ) : undefined
+        }
         mediaType={mediaType as 'images' | 'video' | 'audio'}
         imageUri={imageUri}
         imageError={imageError}

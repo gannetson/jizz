@@ -10,7 +10,6 @@ def forwards(apps, schema_editor):
 
     CountrySpecies.objects.filter(
         status="rare",
-        frequency="rare",
     ).update(frequency="vagrant")
 
     CountrySpecies.objects.filter(

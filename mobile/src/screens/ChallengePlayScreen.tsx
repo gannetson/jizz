@@ -477,14 +477,16 @@ export function ChallengePlayScreen() {
 
       </View>
       <View style={styles.mediaWrap}>
-        {showFeedback && feedback !== null && (
-          <AnswerFeedback
-            correct={feedback.correct}
-            speciesFrequency={normalizeSpeciesFrequency(feedback.species_frequency)}
-            onAnimationComplete={() => setShowFeedback(false)}
-          />
-        )}
         <QuestionMediaView
+          feedbackOverlay={
+            showFeedback && feedback !== null ? (
+              <AnswerFeedback
+                correct={feedback.correct}
+                speciesFrequency={normalizeSpeciesFrequency(feedback.species_frequency)}
+                onAnimationComplete={() => setShowFeedback(false)}
+              />
+            ) : undefined
+          }
           mediaType={mediaType}
           imageUri={imageUri}
           imageMedia={image}

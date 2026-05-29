@@ -282,26 +282,26 @@ export const QuestionComponent = () => {
         }}
       />
       {nextButton}
-      <>
-        {showFeedback && answer != null && (
-          <AnswerFeedback
-            correct={Boolean(answer.correct)}
-            speciesFrequency={answer.species_frequency}
-            onAnimationComplete={handleAnimationComplete}
-          />
-        )}
-      </>
       <Box position={'relative'}>
         {game.media === 'video' && currentVideo && (
           <>
-            <ReactPlayer
-              width={'100%'}
-              height={'50%'}
-              url={currentVideo.url}
-              controls={true}
-              playing={true}
-              onReady={notifyMediaReady}
-            />
+            <Box position="relative" minH="220px">
+              <ReactPlayer
+                width={'100%'}
+                height={'50%'}
+                url={currentVideo.url}
+                controls={true}
+                playing={true}
+                onReady={notifyMediaReady}
+              />
+              {showFeedback && answer != null && (
+                <AnswerFeedback
+                  correct={Boolean(answer.correct)}
+                  speciesFrequency={answer.species_frequency}
+                  onAnimationComplete={handleAnimationComplete}
+                />
+              )}
+            </Box>
             <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
               <MediaCredits media={currentVideo} />
               {flag}
@@ -310,15 +310,24 @@ export const QuestionComponent = () => {
         )}
         {game.media === 'images' && currentImage && (
           <>
-            <ZoomablePlayImage
-              previewSrc={currentImage.url.replace('/1800', '/900')}
-              fullSrc={currentImage.url}
-              onLoad={notifyMediaReady}
-              onError={(e) => {
-                e.currentTarget.src = '/images/birdr-logo.png';
-                notifyMediaReady()
-              }}
-            />
+            <Box position="relative" minH="280px">
+              <ZoomablePlayImage
+                previewSrc={currentImage.url.replace('/1800', '/900')}
+                fullSrc={currentImage.url}
+                onLoad={notifyMediaReady}
+                onError={(e) => {
+                  e.currentTarget.src = '/images/birdr-logo.png';
+                  notifyMediaReady()
+                }}
+              />
+              {showFeedback && answer != null && (
+                <AnswerFeedback
+                  correct={Boolean(answer.correct)}
+                  speciesFrequency={answer.species_frequency}
+                  onAnimationComplete={handleAnimationComplete}
+                />
+              )}
+            </Box>
             <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
               <MediaCredits 
                 media={currentImage} 
@@ -332,14 +341,23 @@ export const QuestionComponent = () => {
         {game.media === 'audio' && currentSound && (
           <Box py={8}>
             <>
-              <ReactPlayer
-                width={'100%'}
-                height={'50px'}
-                url={currentSound.url}
-                controls={true}
-                playing={true}
-                onReady={notifyMediaReady}
-              />
+              <Box position="relative" minH="80px">
+                <ReactPlayer
+                  width={'100%'}
+                  height={'50px'}
+                  url={currentSound.url}
+                  controls={true}
+                  playing={true}
+                  onReady={notifyMediaReady}
+                />
+                {showFeedback && answer != null && (
+                  <AnswerFeedback
+                    correct={Boolean(answer.correct)}
+                    speciesFrequency={answer.species_frequency}
+                    onAnimationComplete={handleAnimationComplete}
+                  />
+                )}
+              </Box>
               <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
                 <MediaCredits media={currentSound} />
                 {flag}

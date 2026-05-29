@@ -10,7 +10,7 @@ from jizz.models import (
     Question,
     Species,
 )
-from jizz.serializers import AnswerSerializer
+from jizz.serializers import AnswerSerializer, PlayerScoreSerializer
 
 
 class AnswerSpeciesFrequencyTestCase(TestCase):
@@ -55,3 +55,11 @@ class AnswerSpeciesFrequencyTestCase(TestCase):
             context={'game': self.game},
         ).data
         self.assertEqual(data['species_frequency'], 'vagrant')
+
+    def test_player_score_serializer_when_player_has_no_answer_yet(self):
+        """last_answer must be null, not the legacy string 'waiting'."""
+        other_player = Player.objects.create(name='Waiting Player')
+        waiting_score = PlayerScore.objects.create(player=other_player, game=self.game)
+        self.assertIsNone(waiting_score.last_answer)
+        data = PlayerScoreSerializer(waiting_score).data
+        self.assertIsNone(data['last_answer'])

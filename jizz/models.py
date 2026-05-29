@@ -586,11 +586,11 @@ class PlayerScore(models.Model):
 
     @property
     def last_answer(self):
+        """Answer on the current (last) question, or None if still waiting."""
         question = self.game_id and self.game.questions.last()
         if not question:
-            return 'waiting'
-        answer = self.answers.filter(question=question).first()
-        return answer
+            return None
+        return self.answers.filter(question=question).first()
 
     class Meta:
         unique_together = ('player', 'game')

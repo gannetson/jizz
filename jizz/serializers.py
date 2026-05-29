@@ -392,6 +392,8 @@ class AnswerSerializer(serializers.ModelSerializer):
     sequence = serializers.IntegerField(source='question.sequence', read_only=True)
 
     def get_species_frequency(self, obj):
+        if not hasattr(obj, 'question'):
+            return None
         game = self.context.get('game') or obj.question.game
         if not game.country_id:
             return None
@@ -828,6 +830,12 @@ class PlayerScoreSerializer(serializers.ModelSerializer):
     def get_is_host(self, obj):
         """Check if this player is the host of the game"""
         return obj.game.host_id == obj.player_id
+
+    def get_last_answer(self, obj):
+        answer = obj.last_answer
+        if answer is None:
+            return None
+        return AnswerSerializer(answer, context={'game': obj.game, **self.context}).data
 
     class Meta:
         model = PlayerScore

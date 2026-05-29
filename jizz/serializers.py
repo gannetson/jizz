@@ -403,16 +403,11 @@ class AnswerSerializer(serializers.ModelSerializer):
         if not hasattr(obj, 'question'):
             return None
         game = self.context.get('game') or obj.question.game
-        if not game.country_id:
+        if not game or not game.country_id:
             return None
-        return (
-            CountrySpecies.objects.filter(
-                country_id=game.country_id,
-                species_id=obj.question.species_id,
-            )
-            .values_list('frequency', flat=True)
-            .first()
-        )
+        from jizz.species_frequency import species_frequency_for_game
+
+        return species_frequency_for_game(game, obj.question.species_id)
 
     def create(self, validated_data):
         player = Player.objects.get(token=validated_data.pop('player_token'))

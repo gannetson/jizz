@@ -5,7 +5,7 @@ import * as authApi from '../api/auth';
 import * as playerApi from '../api/player';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { registerForPushNotificationsAsync } from '../lib/notifications';
+import { syncPushRegistrationIfPermittedAsync } from '../lib/notifications';
 
 type AuthContextType = {
   isAuthenticated: boolean;
@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  */
 function afterAuthSuccess(): void {
   void linkStoredPlayerToAccount();
-  void registerForPushNotificationsAsync();
+  void syncPushRegistrationIfPermittedAsync();
 }
 
 async function linkStoredPlayerToAccount(): Promise<void> {
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const authed = !!access;
       setIsAuthenticated(authed);
       if (authed) {
-        void registerForPushNotificationsAsync();
+        void syncPushRegistrationIfPermittedAsync();
       }
     } catch {
       setIsAuthenticated(false);

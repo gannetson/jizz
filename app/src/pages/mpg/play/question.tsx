@@ -73,7 +73,14 @@ export const QuestionComponent = () => {
 
   useEffect(() => {
     setAdvancingQuestion(false)
+    setShowFeedback(false)
   }, [question?.id])
+
+  useEffect(() => {
+    if (answer) {
+      setShowFeedback(true)
+    }
+  }, [answer])
 
   const gameMedia = game?.media ?? 'images'
   const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0
@@ -106,8 +113,7 @@ export const QuestionComponent = () => {
         player,
         answer: species,
       }
-      await submitAnswer(answer)
-      setShowFeedback(true)
+      submitAnswer(answer)
     }
   }
 
@@ -277,10 +283,10 @@ export const QuestionComponent = () => {
       />
       {nextButton}
       <>
-        {showFeedback && (
+        {showFeedback && answer != null && (
           <AnswerFeedback
-            correct={Boolean(answer?.correct)}
-            speciesFrequency={answer?.species_frequency}
+            correct={Boolean(answer.correct)}
+            speciesFrequency={answer.species_frequency}
             onAnimationComplete={handleAnimationComplete}
           />
         )}

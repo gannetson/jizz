@@ -28,7 +28,7 @@ import { apiUrl } from '../api/config';
 import type { Species } from '../types/game';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
-import { AnswerFeedback } from '../components/AnswerFeedback';
+import { AnswerFeedback, normalizeSpeciesFrequency } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
@@ -480,7 +480,7 @@ export function ChallengePlayScreen() {
         {showFeedback && feedback !== null && (
           <AnswerFeedback
             correct={feedback.correct}
-            speciesFrequency={feedback.species_frequency}
+            speciesFrequency={normalizeSpeciesFrequency(feedback.species_frequency)}
             onAnimationComplete={() => setShowFeedback(false)}
           />
         )}

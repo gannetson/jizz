@@ -11,8 +11,8 @@ import {useNavigate} from "react-router-dom"
 import {SelectMediaType} from "./select-media-type"
 import {SetName} from "./set-name"
 import {SelectSpeciesStatus} from "./select-species-status"
-import {SelectRarity, type Rarity} from "./select-rarity"
 import {UseCountries} from "../user/use-countries"
+import {playLevelFromSettings, type PlayLevel} from "../core/play-level"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
 
@@ -21,7 +21,9 @@ type GameProps = {
   country?: string;
   length?: string;
   level?: string;
-  rarity?: Rarity
+  /** @deprecated use playLevel */
+  rarity?: 'familiar' | 'regular' | 'exceptional';
+  playLevel?: PlayLevel;
   mediaType?: string;
 }
 
@@ -30,6 +32,7 @@ export const CreateGame = ({
                              length: pickLength,
                              level: pickLevel,
                              rarity: pickRarity,
+                             playLevel: pickPlayLevel,
                              mediaType: pickMediaType
                            }: GameProps) => {
 
@@ -38,10 +41,9 @@ export const CreateGame = ({
     createPlayer,
     country,
     setCountry,
-    setLevel,
     setLength,
     createGame,
-    setRarity,
+    setPlayLevel,
     setMediaType,
     playerName,
     setPlayerName,
@@ -61,20 +63,21 @@ export const CreateGame = ({
     if (pickLength) {
       setLength(pickLength)
     }
-    if (pickLevel) {
-      setLevel(pickLevel)
-    }
     if (pickMediaType) {
       setMediaType(pickMediaType)
     }
-    if (pickRarity !== undefined) {
-      setRarity(pickRarity)
+    if (pickPlayLevel) {
+      setPlayLevel(pickPlayLevel)
+    } else if (pickLevel && pickRarity !== undefined) {
+      setPlayLevel(playLevelFromSettings(pickLevel, pickRarity))
+    } else if (pickLevel) {
+      setPlayLevel(playLevelFromSettings(pickLevel, 'regular'))
     }
 
   }, [
     countries.length, pickCountry,
-    pickLevel, pickLength, pickMediaType, pickRarity,
-    setLevel, setMediaType, setRarity, setLength, setCountry
+    pickLevel, pickLength, pickMediaType, pickRarity, pickPlayLevel,
+    setPlayLevel, setMediaType, setLength, setCountry
   ]);
 
 
@@ -134,10 +137,9 @@ export const CreateGame = ({
 
         <Heading size={'lg'}><FormattedMessage id='more game settings' defaultMessage={'More game settings'}/></Heading>
 
-        {pickRarity === undefined && <SelectRarity/>}
-        {pickRarity === undefined && <SelectSpeciesStatus/>}
+        {pickPlayLevel === undefined && pickLevel === undefined && <SelectSpeciesStatus/>}
         {!pickLength && <SelectLength/>}
-        {!pickLevel && <SelectLevel/>}
+        {pickPlayLevel === undefined && pickLevel === undefined && <SelectLevel/>}
         {!pickMediaType && <SelectMediaType/>}
         <SelectTaxOrder/>
         <SelectTaxFamily/>

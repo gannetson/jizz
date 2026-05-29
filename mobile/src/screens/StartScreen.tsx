@@ -32,11 +32,14 @@ import {
   type TaxOrderRow,
   type TaxFamilyRow,
 } from '../api/taxonomy';
+import type { PlayLevel } from '../game/playLevel';
 
-const LEVELS = [
-  { value: 'beginner', labelKey: 'beginner', subKey: 'very_easy_multiple_choice' },
-  { value: 'advanced', labelKey: 'advanced', subKey: 'multiple_choice_similar' },
-  { value: 'expert', labelKey: 'expert', subKey: 'text_input_autocomplete' },
+const PLAY_LEVELS: { value: PlayLevel; labelKey: string; subKey: string }[] = [
+  { value: 'beginner', labelKey: 'beginner', subKey: 'play_level_beginner_sub' },
+  { value: 'novice', labelKey: 'novice', subKey: 'play_level_novice_sub' },
+  { value: 'advanced', labelKey: 'advanced', subKey: 'play_level_advanced_sub' },
+  { value: 'pro', labelKey: 'pro', subKey: 'play_level_pro_sub' },
+  { value: 'expert', labelKey: 'expert', subKey: 'play_level_expert_sub' },
 ];
 
 const LENGTHS = ['10', '20', '50', '100'];
@@ -59,16 +62,14 @@ export function StartScreen() {
     setCountry,
     language,
     setLanguage,
-    level,
-    setLevel,
+    playLevel,
+    setPlayLevel,
     length,
     setLength,
     mediaType,
     setMediaType,
     soundsScope,
     setSoundsScope,
-    rarity,
-    setRarity,
     taxOrder,
     setTaxOrder,
     taxFamily,
@@ -457,21 +458,6 @@ export function StartScreen() {
         )}
       </TouchableOpacity>
 
-      <Text style={styles.label}>{t('rarity_label')}</Text>
-      <View style={styles.row}>
-        {(['familiar', 'regular', 'exceptional'] as const).map((tier) => (
-          <TouchableOpacity
-            key={tier}
-            style={[styles.chip, rarity === tier && styles.chipSelected]}
-            onPress={() => setRarity(tier)}
-          >
-            <Text style={[styles.chipText, rarity === tier && styles.chipTextSelected]}>
-              {t(`rarity_${tier}`)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <Text style={styles.label}>{t('questions')}</Text>
       <View style={styles.pickerRow}>
         {LENGTHS.map((l) => (
@@ -486,14 +472,18 @@ export function StartScreen() {
       </View>
 
       <Text style={styles.label}>{t('level')}</Text>
-      {LEVELS.map((l) => (
+      {PLAY_LEVELS.map((l) => (
         <TouchableOpacity
           key={l.value}
-          style={[styles.levelRow, level === l.value && styles.levelRowSelected]}
-          onPress={() => setLevel(l.value)}
+          style={[styles.levelRow, playLevel === l.value && styles.levelRowSelected]}
+          onPress={() => setPlayLevel(l.value)}
         >
-          <Text style={[styles.levelLabel, level === l.value && styles.levelLabelSelected]}>{t(l.labelKey)}</Text>
-          <Text style={[styles.levelSub, level === l.value && styles.levelSubSelected]}>{t(l.subKey)}</Text>
+          <Text style={[styles.levelLabel, playLevel === l.value && styles.levelLabelSelected]}>
+            {t(l.labelKey)}
+          </Text>
+          <Text style={[styles.levelSub, playLevel === l.value && styles.levelSubSelected]}>
+            {t(l.subKey)}
+          </Text>
         </TouchableOpacity>
       ))}
 

@@ -5,6 +5,8 @@ export type PushRegisterPayload = {
   expo_push_token: string;
   timezone: string;
   platform: 'ios' | 'android';
+  /** When true, backend sends the one-time welcome push. Omit/false on token refresh. */
+  send_welcome?: boolean;
 };
 
 export type PushRegisterResponse = {

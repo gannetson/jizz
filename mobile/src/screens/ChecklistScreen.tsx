@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  SectionList,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
@@ -27,6 +28,7 @@ import {
   type ChecklistStatusFilterKey,
 } from '../components/checklist/ChecklistStatusFilter';
 import { ChecklistSpeciesCard } from '../components/checklist/ChecklistSpeciesCard';
+import { buildChecklistSections } from '../components/checklist/checklistUtils';
 import {
   SpeciesMediaModal,
   type SpeciesMediaData,
@@ -128,6 +130,11 @@ export function ChecklistScreen() {
   const taxOrderLabel = taxOrder
     ? taxOrderOptions.find((r) => r.tax_order === taxOrder)?.tax_order ?? taxOrder
     : t('checklist_order_all', 'All orders');
+
+  const raritySections = useMemo(() => {
+    if (sort !== 'rarity') return null;
+    return buildChecklistSections(species, t);
+  }, [sort, species, t]);
 
   const loadPage = useCallback(
     async (page: number, replace: boolean) => {
@@ -312,32 +319,56 @@ export function ChecklistScreen() {
     </>
   );
 
+  const listRefresh = (
+    <RefreshControl
+      refreshing={loading && !!data}
+      onRefresh={() => loadPage(1, true)}
+      tintColor={colors.primary[600]}
+    />
+  );
+
+  const listFooter = loadingMore ? (
+    <ActivityIndicator style={{ marginVertical: 16 }} color={colors.primary[600]} />
+  ) : null;
+
   return (
     <View style={styles.root}>
-      <FlatList
-        data={species}
-        keyExtractor={(item) => String(item.id)}
-        numColumns={1}
-        ListHeaderComponent={ListHeader}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading && !!data}
-            onRefresh={() => loadPage(1, true)}
-            tintColor={colors.primary[600]}
-          />
-        }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.3}
-        ListFooterComponent={
-          loadingMore ? (
-            <ActivityIndicator style={{ marginVertical: 16 }} color={colors.primary[600]} />
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <ChecklistSpeciesCard species={item} onPress={() => openSpecies(item)} t={t} />
-        )}
-        contentContainerStyle={styles.listContent}
-      />
+      {sort === 'rarity' && raritySections ? (
+        <SectionList
+          sections={raritySections}
+          keyExtractor={(item) => String(item.id)}
+          ListHeaderComponent={ListHeader}
+          refreshControl={listRefresh}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={listFooter}
+          stickySectionHeadersEnabled
+          renderSectionHeader={({ section }) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>{section.title}</Text>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <ChecklistSpeciesCard species={item} onPress={() => openSpecies(item)} t={t} />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      ) : (
+        <FlatList
+          data={species}
+          keyExtractor={(item) => String(item.id)}
+          numColumns={1}
+          ListHeaderComponent={ListHeader}
+          refreshControl={listRefresh}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={listFooter}
+          renderItem={({ item }) => (
+            <ChecklistSpeciesCard species={item} onPress={() => openSpecies(item)} t={t} />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
 
       <Modal visible={taxOrderModalVisible} transparent animationType="slide">
         <Pressable
@@ -532,6 +563,19 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   legendItem: { fontSize: 11, color: colors.primary[600] },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
+    backgroundColor: '#ebe4d8',
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary[800],
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     backgroundColor: '#fff',

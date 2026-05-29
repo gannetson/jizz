@@ -18,7 +18,7 @@ import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdow
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { AnswerFeedback } from '../components/AnswerFeedback';
+import { AnswerFeedback, normalizeSpeciesFrequency } from '../components/AnswerFeedback';
 import { MediaCredits } from '../components/MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
@@ -123,8 +123,16 @@ export function GamePlayScreen() {
     }
   }, [game?.ended, navigation, dailyChallengeId]);
 
+  const prevQuestionIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (question) setMediaIndex(question.number ?? 0);
+    if (
+      prevQuestionIdRef.current !== undefined &&
+      question?.id !== prevQuestionIdRef.current
+    ) {
+      setShowFeedback(false);
+    }
+    prevQuestionIdRef.current = question?.id;
   }, [question?.id]);
 
   // Title bar: "Game - 4 of 10" (see AppNavigator: custom header respects options.title)
@@ -345,6 +353,14 @@ export function GamePlayScreen() {
   return (
     <GamePlayAudio soundUri={soundUri}>
       {({ playSound, soundPlaying, pulsatingStyle }) => (
+    <View style={styles.playRoot}>
+      {showFeedback && resultsReadyForCurrentQuestion && (
+        <AnswerFeedback
+          correct={Boolean(answer?.correct)}
+          speciesFrequency={normalizeSpeciesFrequency(answer?.species_frequency)}
+          onAnimationComplete={() => setShowFeedback(false)}
+        />
+      )}
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">
       <FlagMediaModal
         visible={flagModalVisible}
@@ -353,16 +369,6 @@ export function GamePlayScreen() {
         playerToken={(player as any)?.token}
         onSuccess={onFlagSuccess}
       />
-
-      {showFeedback && answer !== undefined && (
-        <AnswerFeedback
-          correct={Boolean(answer?.correct)}
-          speciesFrequency={
-            typeof answer?.species_frequency === 'string' ? answer.species_frequency : null
-          }
-          onAnimationComplete={() => setShowFeedback(false)}
-        />
-      )}
 
       <QuestionMediaView
         mediaType={mediaType as 'images' | 'video' | 'audio'}
@@ -568,12 +574,14 @@ export function GamePlayScreen() {
         playerToken={(player as any)?.token}
       />
     </ScrollView>
+    </View>
       )}
     </GamePlayAudio>
   );
 }
 
 const styles = StyleSheet.create({
+  playRoot: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 24, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },

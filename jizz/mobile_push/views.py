@@ -28,14 +28,16 @@ class PushRegisterView(APIView):
             platform,
             timezone=timezone or None,
         )
-        test_push_sent = send_expo_push(
-            token,
-            'Birdr',
-            "You're good to go!",
-            data={'type': 'signup_test'},
-        )
-        # Also try async in case sync path is slow; idempotent for user.
-        send_signup_test_push_async(token)
+        send_welcome = serializer.validated_data.get('send_welcome', False)
+        test_push_sent = False
+        if send_welcome:
+            test_push_sent = send_expo_push(
+                token,
+                'Birdr',
+                "You're good to go!",
+                data={'type': 'signup_test'},
+            )
+            send_signup_test_push_async(token)
 
         return Response(
             {

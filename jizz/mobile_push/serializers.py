@@ -5,6 +5,7 @@ class PushRegisterSerializer(serializers.Serializer):
     expo_push_token = serializers.CharField(max_length=500)
     timezone = serializers.CharField(max_length=63, required=False, allow_blank=True, default='')
     platform = serializers.ChoiceField(choices=['ios', 'android'])
+    send_welcome = serializers.BooleanField(required=False, default=False)
 
     def validate_expo_push_token(self, value):
         value = (value or '').strip()

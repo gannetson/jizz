@@ -4,6 +4,7 @@ import type { ChecklistSpecies } from '../../api/checklist';
 import { colors } from '../../theme';
 import {
   frequencyLabel,
+  isMega,
   isVeryRare,
   speciesDisplayName,
   statsLine,
@@ -18,7 +19,7 @@ type Props = {
 };
 
 export function ChecklistSpeciesCard({ species, onPress, t }: Props) {
-  const rarity = frequencyLabel(species.frequency);
+  const rarity = frequencyLabel(species.frequency, t);
   const dimmed = species.status === 'unseen' || species.status === 'missed';
   const statusLabel =
     species.status === 'identified'
@@ -70,7 +71,12 @@ export function ChecklistSpeciesCard({ species, onPress, t }: Props) {
           </Text>
           {rarity ? (
             <Text
-              style={[styles.rarity, isVeryRare(species.frequency) && styles.rarityVeryRare]}
+              style={[
+                styles.rarity,
+                (isVeryRare(species.frequency) || isMega(species.frequency)) &&
+                  styles.rarityVeryRare,
+                isMega(species.frequency) && styles.rarityMega,
+              ]}
               numberOfLines={1}
             >
               {rarity}
@@ -153,4 +159,5 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   rarityVeryRare: { color: '#b8860b' },
+  rarityMega: { fontWeight: '800', color: '#b45309' },
 });

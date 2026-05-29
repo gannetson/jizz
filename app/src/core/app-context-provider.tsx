@@ -9,6 +9,11 @@ import axios from '../api/axios-config';
 import { apiUrl } from '../api/baseUrl';
 import { authService } from '../api/services/auth.service';
 import { profileService, UserProfile } from '../api/services/profile.service';
+import {
+  playLevelFromSettings,
+  settingsFromPlayLevel,
+  type PlayLevel,
+} from './play-level';
 
 type Props = {
   children: ReactNode;
@@ -36,6 +41,13 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [species, setSpecies] = useState<Species[]>([])
   const [game, setGame] = useState<Game | undefined>(undefined)
   const [rarity, setRarity] = useState<'familiar' | 'regular' | 'exceptional'>('regular')
+  const [playLevel, setPlayLevelState] = useState<PlayLevel>('advanced')
+  const setPlayLevel = useCallback((pl: PlayLevel) => {
+    setPlayLevelState(pl);
+    const preset = settingsFromPlayLevel(pl);
+    setLevel(preset.level);
+    setRarity(preset.rarity);
+  }, []);
   const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
   const [countryChallenge, setCountryChallenge] = useState<CountryChallenge | undefined>(undefined)
   const [challengeQuestion, setChallengeQuestion] = useState<Question | undefined>(undefined)
@@ -515,6 +527,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setIncludeEscapes,
       rarity,
       setRarity,
+      playLevel,
+      setPlayLevel,
       level,
       setLevel,
       taxOrder,

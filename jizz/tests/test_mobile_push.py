@@ -52,6 +52,7 @@ class MobilePushRegisterTestCase(TestCase):
                 'expo_push_token': self.token,
                 'timezone': 'America/New_York',
                 'platform': 'ios',
+                'send_welcome': True,
             },
             format='json',
         )
@@ -63,6 +64,25 @@ class MobilePushRegisterTestCase(TestCase):
         profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(profile.timezone, 'America/New_York')
         mock_test_push.assert_called_once_with(self.token)
+
+    @patch('jizz.mobile_push.views.send_signup_test_push_async')
+    @patch('jizz.mobile_push.views.send_expo_push')
+    def test_register_without_send_welcome_skips_test_push(
+        self, mock_send_expo, mock_test_push
+    ):
+        response = self.client.post(
+            '/api/mobile/push/register/',
+            {
+                'expo_push_token': self.token,
+                'timezone': 'UTC',
+                'platform': 'android',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['test_push_sent'])
+        mock_send_expo.assert_not_called()
+        mock_test_push.assert_not_called()
 
     @patch('jizz.mobile_push.views.send_signup_test_push_async')
     def test_register_reassigns_token_to_current_user(self, _mock_test_push):

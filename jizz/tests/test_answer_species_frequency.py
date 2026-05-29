@@ -56,6 +56,35 @@ class AnswerSpeciesFrequencyTestCase(TestCase):
         ).data
         self.assertEqual(data['species_frequency'], 'vagrant')
 
+    def test_species_frequency_falls_back_to_country_codes_alias(self):
+        sub = Country.objects.create(
+            code='NL-NH',
+            name='Noord-Holland',
+            codes='NL',
+        )
+        game = Game.objects.create(
+            country=sub,
+            level='advanced',
+            length=5,
+            media='images',
+            host=self.player,
+        )
+        player_score = PlayerScore.objects.create(player=self.player, game=game)
+        question = Question.objects.create(
+            game=game,
+            species=self.species,
+            sequence=1,
+            number=0,
+        )
+        answer_row = Answer.objects.create(
+            player_score=player_score,
+            question=question,
+            answer=self.species,
+            correct=True,
+        )
+        data = AnswerSerializer(answer_row, context={'game': game}).data
+        self.assertEqual(data['species_frequency'], 'vagrant')
+
     def test_player_score_serializer_when_player_has_no_answer_yet(self):
         """last_answer must be null, not the legacy string 'waiting'."""
         other_player = Player.objects.create(name='Waiting Player')

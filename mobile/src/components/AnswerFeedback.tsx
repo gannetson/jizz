@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Modal } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { colors } from '../theme';
 import { ConfettiOverlay } from './ConfettiOverlay';
+import { useTranslation } from '../i18n/TranslationContext';
 
 type Props = {
   correct: boolean;
@@ -11,56 +12,65 @@ type Props = {
 };
 
 const FEEDBACK_MS = 1800;
-const VAGRANT_FEEDBACK_MS = 2600;
+const VAGRANT_FEEDBACK_MS = 2800;
+
+export function normalizeSpeciesFrequency(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const value = raw.trim().toLowerCase();
+  return value || null;
+}
 
 export function isVagrantMega(correct: boolean, speciesFrequency?: string | null): boolean {
-  return correct && speciesFrequency === 'vagrant';
+  return correct && normalizeSpeciesFrequency(speciesFrequency) === 'vagrant';
 }
 
 export function AnswerFeedback({ correct, speciesFrequency, onAnimationComplete }: Props) {
+  const { t } = useTranslation();
   const vagrantMega = isVagrantMega(correct, speciesFrequency);
   const duration = vagrantMega ? VAGRANT_FEEDBACK_MS : FEEDBACK_MS;
 
   useEffect(() => {
-    const t = setTimeout(onAnimationComplete, duration);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onAnimationComplete, duration);
+    return () => clearTimeout(timer);
   }, [correct, duration, onAnimationComplete]);
 
   return (
-    <>
-      <ConfettiOverlay active={vagrantMega} />
-      <View style={styles.overlay}>
-        <View
-          style={[
-            styles.circle,
-            correct ? (vagrantMega ? styles.vagrantMega : styles.correct) : styles.incorrect,
-            vagrantMega && styles.circleMega,
-          ]}
-        >
-          {correct ? (
-            vagrantMega ? (
-              <>
-                <FontAwesome5 name="star" solid size={44} color="#eab308" />
-                <Text style={styles.megaLabel}>MEAGA</Text>
-              </>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
+      <View style={styles.modalRoot} pointerEvents="none">
+        <ConfettiOverlay active={vagrantMega} />
+        <View style={styles.overlay}>
+          <View
+            style={[
+              styles.circle,
+              correct ? (vagrantMega ? styles.vagrantMega : styles.correct) : styles.incorrect,
+              vagrantMega && styles.circleMega,
+            ]}
+          >
+            {correct ? (
+              vagrantMega ? (
+                <>
+                  <FontAwesome5 name="star" solid size={44} color="#eab308" />
+                  <Text style={styles.megaLabel}>{t('mega', 'MEGA!')}</Text>
+                </>
+              ) : (
+                <Text style={styles.icon}>✓</Text>
+              )
             ) : (
-              <Text style={styles.icon}>✓</Text>
-            )
-          ) : (
-            <Text style={styles.icon}>✗</Text>
-          )}
+              <Text style={styles.icon}>✗</Text>
+            )}
+          </View>
         </View>
       </View>
-    </>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+  },
   overlay: {
-    position: 'absolute',
-    top: 120,
-    left: 0,
-    right: 0,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
@@ -75,12 +85,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
-    elevation: 10,
+    elevation: 24,
   },
   circleMega: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
     backgroundColor: '#fff',
     borderWidth: 2,
     borderColor: '#fcd34d',
@@ -91,7 +101,7 @@ const styles = StyleSheet.create({
   icon: { fontSize: 48, color: '#fff', fontWeight: '700' },
   megaLabel: {
     marginTop: 6,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
     letterSpacing: 2,
     color: '#b45309',

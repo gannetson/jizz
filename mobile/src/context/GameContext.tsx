@@ -4,6 +4,7 @@ import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
 import type { Player } from '../api/player';
 import type { Game, Rarity } from '../api/games';
+import { settingsFromPlayLevel, type PlayLevel } from '../game/playLevel';
 import type { TaxOrderRow, TaxFamilyRow } from '../api/taxonomy';
 import * as playerApi from '../api/player';
 import * as gamesApi from '../api/games';
@@ -21,6 +22,8 @@ type GameContextType = {
   setLanguage: (v: string) => void;
   level: string;
   setLevel: (v: string) => void;
+  playLevel: PlayLevel;
+  setPlayLevel: (v: PlayLevel) => void;
   length: string;
   setLength: (v: string) => void;
   mediaType: string;
@@ -56,11 +59,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [playerName, setPlayerName] = useState('');
   const [country, setCountry] = useState<Country | undefined>(undefined);
   const [language, setLanguage] = useState('en');
+  const [playLevel, setPlayLevelState] = useState<PlayLevel>('advanced');
   const [level, setLevel] = useState('advanced');
   const [length, setLength] = useState('10');
   const [mediaType, setMediaType] = useState('images');
   const [soundsScope, setSoundsScope] = useState<'all' | 'passerines'>('all');
   const [rarity, setRarity] = useState<Rarity>('regular');
+  const setPlayLevel = useCallback((pl: PlayLevel) => {
+    setPlayLevelState(pl);
+    const preset = settingsFromPlayLevel(pl);
+    setLevel(preset.level);
+    setRarity(preset.rarity);
+  }, []);
   const [taxOrder, setTaxOrder] = useState<TaxOrderRow | undefined>(undefined);
   const [taxFamily, setTaxFamily] = useState<TaxFamilyRow | undefined>(undefined);
   const [player, setPlayer] = useState<Player | null>(null);
@@ -224,6 +234,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setLanguage,
         level,
         setLevel,
+        playLevel,
+        setPlayLevel,
         length,
         setLength,
         mediaType,

@@ -1,6 +1,6 @@
 import {Box, Icon, Text} from "@chakra-ui/react"
 import {motion} from "framer-motion"
-import {FaCheckCircle, FaHeart, FaHeartBroken, FaStarOfLife} from "react-icons/fa"
+import {FaCheckCircle, FaHeart, FaHeartBroken, FaStar} from "react-icons/fa"
 import {useState, useEffect} from "react"
 import Confetti from "react-confetti"
 import {FormattedMessage} from "react-intl"
@@ -108,36 +108,42 @@ export const AnswerFeedback = ({
               flexDirection="column"
               alignItems="center"
               justifyContent="center"
-              backgroundColor={"white"}
-              borderRadius={"50%"}
-              p={4}
+              backgroundColor="white"
+              borderRadius={vagrantMega ? "xl" : "50%"}
+              borderWidth={vagrantMega ? "2px" : undefined}
+              borderColor={vagrantMega ? "#fcd34d" : undefined}
+              p={vagrantMega ? 6 : 4}
+              minW={vagrantMega ? "140px" : undefined}
             >
-              <Icon
-                as={vagrantMega ? FaStarOfLife : FaCheckCircle}
-                boxSize={vagrantMega ? 40 : 32}
-                color={vagrantMega ? "#bc6106" : "success.500"}
-                position="relative"
-                zIndex={2}
-              />
-            </Box>
-            {vagrantMega && (
-              <Box
-                  borderRadius="20px"
-                   bg="white"
-                   padding={1}
-              >
-                <Text
-                  fontSize="50px"
-                  fontWeight="900"
-                  letterSpacing="wider"
-                  color="#b45309"
+              {vagrantMega ? (
+                <>
+                  <Icon
+                    as={FaStar}
+                    boxSize={11}
+                    color="#eab308"
+                    position="relative"
+                    zIndex={2}
+                  />
+                  <Text
+                    fontSize="xl"
+                    fontWeight="900"
+                    letterSpacing="wider"
+                    color="#b45309"
+                    mt={2}
+                  >
+                    <FormattedMessage id="mega" defaultMessage="MEGA!" />
+                  </Text>
+                </>
+              ) : (
+                <Icon
+                  as={FaCheckCircle}
+                  boxSize={32}
+                  color="success.500"
                   position="relative"
-                  textAlign='center'
-                >
-                  <FormattedMessage id='mega' defaultMessage={'MEGA!'}/>
-                </Text>
-              </Box>
-            )}
+                  zIndex={2}
+                />
+              )}
+            </Box>
           </motion.div>
         ) : (
           <motion.div

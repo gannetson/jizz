@@ -56,16 +56,17 @@ function getDeviceTimezone(): string {
 async function requestNotificationPermission(): Promise<{
   granted: boolean;
   canAskAgain: boolean;
+  newlyGranted: boolean;
 }> {
   const existing = await Notifications.getPermissionsAsync();
   if (existing.status === Notifications.PermissionStatus.GRANTED) {
-    return { granted: true, canAskAgain: true };
+    return { granted: true, canAskAgain: true, newlyGranted: false };
   }
   if (
     existing.status === Notifications.PermissionStatus.DENIED &&
     existing.canAskAgain === false
   ) {
-    return { granted: false, canAskAgain: false };
+    return { granted: false, canAskAgain: false, newlyGranted: false };
   }
   const requested = await Notifications.requestPermissionsAsync({
     ios: {
@@ -74,10 +75,17 @@ async function requestNotificationPermission(): Promise<{
       allowSound: true,
     },
   });
+  const granted = requested.status === Notifications.PermissionStatus.GRANTED;
   return {
-    granted: requested.status === Notifications.PermissionStatus.GRANTED,
+    granted,
     canAskAgain: requested.canAskAgain !== false,
+    newlyGranted: granted,
   };
+}
+
+async function hasNotificationPermission(): Promise<boolean> {
+  const existing = await Notifications.getPermissionsAsync();
+  return existing.status === Notifications.PermissionStatus.GRANTED;
 }
 
 /** Show welcome banner immediately (works in foreground + background). */
@@ -95,7 +103,10 @@ async function showLocalWelcomeNotification(): Promise<void> {
   });
 }
 
-async function registerTokenWithBackend(expoPushToken: string): Promise<{
+async function registerTokenWithBackend(
+  expoPushToken: string,
+  options: { sendWelcome?: boolean } = {}
+): Promise<{
   ok: boolean;
   testPushSent?: boolean;
   error?: string;
@@ -109,6 +120,7 @@ async function registerTokenWithBackend(expoPushToken: string): Promise<{
       expo_push_token: expoPushToken,
       timezone: getDeviceTimezone(),
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
+      send_welcome: options.sendWelcome === true,
     });
     return { ok: true, testPushSent: result.test_push_sent };
   } catch (e) {
@@ -126,22 +138,53 @@ function maybeShowDevPushAlert(result: PushOnboardingResult, detail?: string): v
 }
 
 /**
+ * Register push token when permission is already granted (e.g. app launch).
+ * Does not prompt or send welcome notifications.
+ */
+export async function syncPushRegistrationIfPermittedAsync(): Promise<void> {
+  try {
+    await ensureAndroidChannel();
+    if (!(await hasNotificationPermission())) {
+      return;
+    }
+    if (!Device.isDevice) {
+      return;
+    }
+    const projectId = getExpoProjectId();
+    const tokenResponse = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
+    const expoPushToken = tokenResponse.data;
+    if (!expoPushToken) {
+      return;
+    }
+    await registerTokenWithBackend(expoPushToken, { sendWelcome: false });
+  } catch (e) {
+    if (__DEV__) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[push] syncPushRegistrationIfPermittedAsync failed', msg);
+    }
+  }
+}
+
+/**
  * Ask for push permission and register with the API when logged in.
- * Always shows a local welcome notification when permission is granted.
+ * Welcome notification (local + server) only when the user newly grants permission.
  */
 export async function registerForPushNotificationsAsync(): Promise<PushOnboardingResult> {
   try {
     await ensureAndroidChannel();
 
-    const { granted, canAskAgain } = await requestNotificationPermission();
+    const { granted, canAskAgain, newlyGranted } = await requestNotificationPermission();
     if (!granted) {
       const result = canAskAgain ? 'denied' : 'denied_can_open_settings';
       maybeShowDevPushAlert(result);
       return result;
     }
 
-    // Always show something on-device (server push may be off or app in foreground).
-    await showLocalWelcomeNotification();
+    if (newlyGranted) {
+      await showLocalWelcomeNotification();
+    }
 
     if (!Device.isDevice) {
       maybeShowDevPushAlert('granted_local_only', 'simulator');
@@ -166,7 +209,9 @@ export async function registerForPushNotificationsAsync(): Promise<PushOnboardin
       return 'granted_no_token';
     }
 
-    const backend = await registerTokenWithBackend(expoPushToken);
+    const backend = await registerTokenWithBackend(expoPushToken, {
+      sendWelcome: newlyGranted,
+    });
     if (backend.ok) {
       const detail = backend.testPushSent
         ? 'server test push sent'

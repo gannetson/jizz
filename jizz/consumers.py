@@ -247,22 +247,30 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
         correct = answer_id == question.species_id
 
-        existing = await sync_to_async(
-            lambda: Answer.objects.filter(
-                player_score=player_score, question=question
-            ).first()
-        )()
-        if existing:
-            answer = existing
-        else:
-            answer = await sync_to_async(Answer.objects.create)(
+        def _load_answer_for_serialize():
+            from jizz.models import Answer
+
+            qs = Answer.objects.select_related(
+                'question__game__country',
+                'question__species',
+                'answer',
+            )
+            row = qs.filter(player_score=player_score, question=question).first()
+            if row:
+                return row
+            return Answer.objects.create(
                 answer_id=answer_id,
                 player_score=player_score,
                 question=question,
                 correct=correct,
             )
 
-        serializer = AnswerSerializer(answer, context={"game": question.game})
+        answer = await sync_to_async(_load_answer_for_serialize)()
+
+        game = await sync_to_async(
+            lambda: type(question).objects.select_related('game__country').get(pk=question.pk).game
+        )()
+        serializer = AnswerSerializer(answer, context={"game": game})
         answer_data = await sync_to_async(lambda: serializer.data)()
         await self.send(
             text_data=json.dumps({"action": "answer_checked", "answer": answer_data})

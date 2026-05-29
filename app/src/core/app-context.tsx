@@ -226,6 +226,8 @@ type SharedState = {
   loadPlayer: (playerToken: string) => Promise<Player | undefined>
   level: string
   setLevel: Dispatch<SetStateAction<string>>
+  playLevel: import('./play-level').PlayLevel
+  setPlayLevel: (playLevel: import('./play-level').PlayLevel) => void
   taxOrder?: TaxOrder
   setTaxOrder?: Dispatch<SetStateAction<TaxOrder | undefined>>
   taxFamily?: TaxFamily
@@ -266,6 +268,8 @@ const AppContext = createContext<SharedState>({
   setRarity: () => {},
   level: 'advanced',
   setLevel: () => {},
+  playLevel: 'advanced',
+  setPlayLevel: () => {},
   taxOrder: undefined,
   setTaxOrder: () => {},
   taxFamily: undefined,

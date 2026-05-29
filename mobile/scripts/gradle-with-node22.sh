@@ -32,5 +32,7 @@ fi
 # Daemon may have been started with an older Node on PATH; refresh so autolinking sees the right runtime
 (cd android && ./gradlew --stop 2>/dev/null) || true
 
+export NODE_BINARY="$(command -v node)"
+
 cd "$MOBILE_DIR/android"
 exec ./gradlew "$@"

@@ -31,4 +31,6 @@ if [ -d "android" ] && [ -f "android/gradlew" ]; then
   (cd android && ./gradlew --stop 2>/dev/null) || true
 fi
 
+export NODE_BINARY="$(command -v node)"
+
 exec npx expo run:android "$@"

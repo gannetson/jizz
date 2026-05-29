@@ -17,13 +17,16 @@ project.ext.nodeExecutable = resolveNodeExecutable()
 
 def runNodeCommand(List<String> args) {
     def cmd = [project.ext.nodeExecutable] + args
-    def proc = cmd.execute(null, rootDir)
-    proc.waitFor()
-    def out = proc.text.trim()
-    if (proc.exitValue() != 0) {
-        def err = proc.err.text.trim()
+    def result = providers.exec {
+        workingDir(rootDir)
+        commandLine(cmd)
+    }
+    def exit = result.result.get().exitValue
+    def out = result.standardOutput.asText.get().trim()
+    if (exit != 0) {
+        def err = result.standardError.asText.get().trim()
         throw new GradleException(
-            "Node command failed (exit ${proc.exitValue()}): ${cmd.join(' ')}\n${err}\n" +
+            "Node command failed (exit ${exit}): ${cmd.join(' ')}\n${err}\n" +
             "Fix: use Node 22+ on PATH when building, set NODE_BINARY in android/gradle.properties, or run ./scripts/gradle-with-node22.sh"
         )
     }

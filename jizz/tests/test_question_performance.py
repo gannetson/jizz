@@ -9,7 +9,7 @@ from django.test.utils import CaptureQueriesContext
 from django.db import connection
 
 from jizz.game_question_selection import candidate_species_ids, create_question_for_game
-from jizz.models import Country, CountrySpecies, Game, Player, Species
+from jizz.models import Country, CountrySpecies, Game, Player, Question, Species
 from jizz.question_play import load_question_for_play, serialize_question_for_play
 from media.models import Media
 
@@ -81,8 +81,52 @@ class QuestionPerformanceTestCase(TestCase):
         loaded = load_question_for_play(question.id)
         with CaptureQueriesContext(connection) as ctx:
             data = serialize_question_for_play(loaded)
-        self.assertEqual(len(data['images']), 1)
+        self.assertGreaterEqual(len(data['images']), 1)
+        self.assertEqual(data['number'], 0)
         self.assertLessEqual(len(ctx), 8)
+
+    def test_serialize_play_rotates_active_media_to_index_zero(self):
+        sp = Species.objects.create(
+            name='Multi Media',
+            name_latin='Multi m',
+            code='MULTI1',
+        )
+        CountrySpecies.objects.create(
+            country=self.country,
+            species=sp,
+            status='native',
+            frequency='abundant',
+        )
+        m0 = Media.objects.create(
+            species=sp, type='image', url='https://example.com/m0.jpg', source='test'
+        )
+        m1 = Media.objects.create(
+            species=sp, type='image', url='https://example.com/m1.jpg', source='test'
+        )
+        m2 = Media.objects.create(
+            species=sp, type='image', url='https://example.com/m2.jpg', source='test'
+        )
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player,
+            rarity='regular',
+        )
+        question = Question.objects.create(
+            game=game,
+            species=sp,
+            sequence=1,
+            number=1,
+        )
+        loaded = load_question_for_play(question.id)
+        data = serialize_question_for_play(loaded)
+        self.assertEqual(data['number'], 0)
+        self.assertEqual(len(data['images']), 3)
+        self.assertEqual(data['images'][0]['id'], m1.id)
+        self.assertEqual(data['images'][1]['id'], m2.id)
+        self.assertEqual(data['images'][2]['id'], m0.id)
 
     def test_add_question_timing_smoke(self):
         """Regression guard: small fixture should stay well under multi-second stalls."""

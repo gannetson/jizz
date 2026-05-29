@@ -307,8 +307,9 @@ class QuestionOptionPlaySerializer(serializers.ModelSerializer):
 
 class QuestionPlaySerializer(serializers.ModelSerializer):
     """
-    Lean payload for live play: one eligible media item per type (by question.number)
-    and option species without embedded media lists.
+    Live play payload: all eligible media for the active type, rotated so index 0 is
+    the current item (``question.number`` in DB). Serialized ``number`` is always 0.
+    Option species omit embedded media lists.
     """
 
     images = serializers.SerializerMethodField()
@@ -316,29 +317,36 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
     sounds = serializers.SerializerMethodField()
     options = serializers.SerializerMethodField()
     game = serializers.SerializerMethodField()
+    number = serializers.SerializerMethodField()
 
-    def _media_slice(self, obj, media_type: str):
+    def _media_list_for_play(self, obj):
+        from jizz.question_play import rotate_media_list_for_play
+
         by_species = self.context.get('play_media_by_species') or {}
         items = by_species.get(obj.species_id, [])
         if not items:
             return []
-        idx = min(max(obj.number, 0), len(items) - 1)
-        return QuestionMediaSerializer([items[idx]], many=True).data
+        rotated = rotate_media_list_for_play(items, obj.number or 0)
+        return QuestionMediaSerializer(rotated, many=True).data
+
+    def get_number(self, obj):
+        # Active media is always at array index 0 after rotation.
+        return 0
 
     def get_images(self, obj):
         if self.context.get('play_media_type') != 'image':
             return []
-        return self._media_slice(obj, 'image')
+        return self._media_list_for_play(obj)
 
     def get_videos(self, obj):
         if self.context.get('play_media_type') != 'video':
             return []
-        return self._media_slice(obj, 'video')
+        return self._media_list_for_play(obj)
 
     def get_sounds(self, obj):
         if self.context.get('play_media_type') != 'audio':
             return []
-        return self._media_slice(obj, 'audio')
+        return self._media_list_for_play(obj)
 
     def get_options(self, obj):
         opts = list(obj.options.all())

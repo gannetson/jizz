@@ -13,6 +13,21 @@ from jizz.serializers import QuestionPlaySerializer
 from media.models import Media, MediaReview
 
 
+def rotate_media_list_for_play(items: list[Media], active_index: int) -> list[Media]:
+    """
+    Return eligible media with the active item first.
+
+    Play API responses include the full list for newer clients; index 0 is always
+    the current clip so older clients that only read ``images[0]`` stay correct.
+    """
+    if not items:
+        return []
+    idx = min(max(active_index, 0), len(items) - 1)
+    if idx == 0:
+        return items
+    return items[idx:] + items[:idx]
+
+
 def _eligible_media_list(media_rows: list[Media]) -> list[Media]:
     """Same rules as Species._eligible_media, in Python after prefetch reviews."""
     if not media_rows:

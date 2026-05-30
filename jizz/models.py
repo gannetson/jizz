@@ -998,8 +998,78 @@ class CountryGame(models.Model):
 # --- Birdr Journey ---
 
 
+class JourneyLevel(models.Model):
+    sequence = models.PositiveSmallIntegerField(unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(default='')
+    title_nl = models.CharField(max_length=200, null=True, blank=True)
+    description_nl = models.TextField(default='', null=True, blank=True)
+    icon = models.ImageField(upload_to='journey_levels/')
+
+    class Meta:
+        ordering = ['sequence']
+
+    def __str__(self):
+        return f'Level {self.sequence}: {self.title}'
+
+    @property
+    def is_champion(self):
+        return not self.steps.exists()
+
+
+class JourneyStep(models.Model):
+    STEP_TYPE_CHOICES = [
+        ('plain', 'Plain'),
+    ]
+
+    journey_level = models.ForeignKey(
+        JourneyLevel,
+        related_name='steps',
+        on_delete=models.CASCADE,
+    )
+    sequence = models.PositiveSmallIntegerField(default=0)
+    step_type = models.CharField(
+        max_length=32,
+        choices=STEP_TYPE_CHOICES,
+        default='plain',
+    )
+    level = models.CharField(
+        max_length=20,
+        choices=ChallengeLevel.LEVEL_CHOICES,
+        default='advanced',
+    )
+    length = models.IntegerField(default=0)
+    jokers = models.IntegerField(default=0)
+    rarity = models.CharField(
+        max_length=20,
+        default=Game.RARIT_REGULAR,
+        choices=Game.RARIT_CHOICES,
+    )
+    include_escapes = models.BooleanField(default=False)
+    media = models.CharField(max_length=10, default='images')
+    tax_order = models.CharField(
+        'Order',
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text='Only show birds from this taxonomic order',
+    )
+
+    class Meta:
+        ordering = ['journey_level', 'sequence']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['journey_level', 'sequence'],
+                name='journey_step_unique_level_sequence',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Level {self.journey_level.sequence} step {self.sequence}'
+
+
 class BirdrJourney(models.Model):
-    """Solo level progression (sequences 0–7) per country for a user or guest player."""
+    """Solo level progression per country for a user or guest player."""
     user = models.ForeignKey(
         'auth.User',
         null=True,
@@ -1019,7 +1089,11 @@ class BirdrJourney(models.Model):
         on_delete=models.CASCADE,
         related_name='birdr_journeys',
     )
-    current_sequence = models.PositiveSmallIntegerField(default=0)
+    current_sequence = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='0-based index into JourneyLevel rows ordered by sequence',
+    )
+    current_step_sequence = models.PositiveSmallIntegerField(default=0)
     streak_days = models.PositiveIntegerField(default=0)
     last_played_date = models.DateField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
@@ -1049,6 +1123,46 @@ class BirdrJourney(models.Model):
     def __str__(self):
         owner = self.user_id or f'player:{self.player_id}'
         return f'Journey {owner} @ {self.country_id} seq={self.current_sequence}'
+
+
+class BirdrJourneyGame(models.Model):
+    birdr_journey = models.ForeignKey(
+        BirdrJourney,
+        related_name='games',
+        on_delete=models.CASCADE,
+    )
+    journey_step = models.ForeignKey(
+        JourneyStep,
+        related_name='journey_games',
+        on_delete=models.CASCADE,
+    )
+    game = models.ForeignKey(
+        Game,
+        related_name='birdr_journey_games',
+        on_delete=models.CASCADE,
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def remaining_jokers(self):
+        failed = self.game.questions.filter(
+            answers__correct=False,
+            answers__answer__isnull=False,
+        ).count()
+        return self.journey_step.jokers - failed
+
+    @property
+    def status(self):
+        if self.remaining_jokers < 0:
+            return 'failed'
+        if self.game.ended and self.remaining_jokers >= 0:
+            return 'passed'
+        if self.game.questions.count():
+            return 'running'
+        return 'new'
+
+    class Meta:
+        ordering = ['-id']
 
 
 # --- Daily Challenge & Friends ---

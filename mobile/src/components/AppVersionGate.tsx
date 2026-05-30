@@ -17,7 +17,7 @@ type Props = {
 export function AppVersionGate({ children }: Props) {
   const [checking, setChecking] = useState(true);
   const [needsUpdate, setNeedsUpdate] = useState(false);
-  const [minVersion, setMinVersion] = useState('1.63.0');
+  const [minVersion, setMinVersion] = useState('1.64.0');
   const [storeUrls, setStoreUrls] = useState<{ ios: string; android: string } | null>(null);
 
   useEffect(() => {

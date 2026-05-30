@@ -228,7 +228,9 @@ export async function getChallengeQuestion(
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const msg = data.detail ?? data.error ?? data.message ?? 'Failed to load question';
-      throw new Error(typeof msg === 'string' ? msg : 'Failed to load question');
+      if (typeof msg === 'string') throw new Error(msg);
+      if (Array.isArray(msg)) throw new Error(msg.join(', '));
+      throw new Error('Failed to load question');
     }
     const question = data as ChallengeQuestion;
     if (question?.game?.token !== gameToken) {

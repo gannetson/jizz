@@ -19,7 +19,6 @@ import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { MyGamesScreen } from '../screens/MyGamesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { ChallengeScreen } from '../screens/ChallengeScreen';
 import { ChallengeLevelIntroScreen } from '../screens/ChallengeLevelIntroScreen';
 import { ChallengePlayScreen } from '../screens/ChallengePlayScreen';
 import { GameDetailScreen } from '../screens/GameDetailScreen';
@@ -29,6 +28,9 @@ import { DailyChallengeCreateScreen } from '../screens/DailyChallengeCreateScree
 import { BirdrJourneyIntroScreen } from '../screens/BirdrJourneyIntroScreen';
 import { BirdrJourneyCountryScreen } from '../screens/BirdrJourneyCountryScreen';
 import { BirdrJourneyProgressScreen } from '../screens/BirdrJourneyProgressScreen';
+import { BirdrJourneyStepIntroScreen } from '../screens/BirdrJourneyStepIntroScreen';
+import { BirdrJourneyStepResultsScreen } from '../screens/BirdrJourneyStepResultsScreen';
+import { BirdrJourneyLevelCelebrationScreen } from '../screens/BirdrJourneyLevelCelebrationScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
 
 const Stack = createNativeStackNavigator();
@@ -37,10 +39,12 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'Home', titleKey: 'app_name', component: HomeScreen },
   { name: 'Start', titleKey: 'new_game', component: StartScreen },
   { name: 'Scores', titleKey: 'high_scores', component: ScoresScreen },
-  { name: 'Challenge', titleKey: 'country_challenge', component: ChallengeScreen },
-  { name: 'BirdrJourneyIntro', titleKey: 'birdr_journey', component: BirdrJourneyIntroScreen },
+  { name: 'BirdrJourneyIntro', titleKey: 'country_challenge', component: BirdrJourneyIntroScreen },
   { name: 'BirdrJourneyCountry', titleKey: 'birdr_journey_select_country', component: BirdrJourneyCountryScreen },
-  { name: 'BirdrJourneyProgress', titleKey: 'birdr_journey', component: BirdrJourneyProgressScreen },
+  { name: 'BirdrJourneyProgress', titleKey: 'country_challenge', component: BirdrJourneyProgressScreen },
+  { name: 'BirdrJourneyStepIntro', titleKey: 'country_challenge', component: BirdrJourneyStepIntroScreen },
+  { name: 'BirdrJourneyStepResults', titleKey: 'country_challenge', component: BirdrJourneyStepResultsScreen },
+  { name: 'BirdrJourneyLevelCelebration', titleKey: 'country_challenge', component: BirdrJourneyLevelCelebrationScreen },
   { name: 'ChallengeLevelIntro', titleKey: 'level', component: ChallengeLevelIntroScreen },
   { name: 'DailyChallenge', titleKey: 'daily_challenge', component: DailyChallengeListScreen },
   { name: 'DailyChallengeDetail', titleKey: 'daily_challenge', component: DailyChallengeDetailScreen },

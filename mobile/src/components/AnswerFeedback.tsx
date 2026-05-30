@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { colors } from '../theme';
-import { ConfettiOverlay } from './ConfettiOverlay';
+import { MegaConfetti } from './MegaConfetti';
 import { useTranslation } from '../i18n/TranslationContext';
 
 type Props = {
@@ -36,7 +36,7 @@ export function AnswerFeedback({ correct, speciesFrequency, onAnimationComplete 
 
   return (
     <>
-      <ConfettiOverlay active={vagrantMega} />
+      {vagrantMega && <MegaConfetti active />}
       <View
         style={[
           styles.circle,
@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,

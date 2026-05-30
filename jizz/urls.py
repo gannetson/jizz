@@ -22,7 +22,12 @@ from jizz.quiz_mistake_views import (
     quiz_mistake_species_view,
     quiz_mistake_stats_legacy_redirect,
 )
-from jizz.birdr_journey_views import BirdrJourneyView
+from jizz.birdr_journey_views import (
+    BirdrJourneyView,
+    BirdrJourneyStartStepView,
+    BirdrJourneyCompleteStepView,
+    BirdrJourneyAdvanceLevelView,
+)
 from jizz.checklist_views import ChecklistView
 from jizz.app_version_views import AppVersionView
 from jizz.daily_challenge_views import (
@@ -176,6 +181,21 @@ urlpatterns = [
     ),
 
     path('api/birdr-journey/', BirdrJourneyView.as_view(), name='birdr-journey'),
+    path(
+        'api/birdr-journey/<int:journey_id>/start-step/',
+        BirdrJourneyStartStepView.as_view(),
+        name='birdr-journey-start-step',
+    ),
+    path(
+        'api/birdr-journey/<int:journey_id>/complete-step/',
+        BirdrJourneyCompleteStepView.as_view(),
+        name='birdr-journey-complete-step',
+    ),
+    path(
+        'api/birdr-journey/<int:journey_id>/advance-level/',
+        BirdrJourneyAdvanceLevelView.as_view(),
+        name='birdr-journey-advance-level',
+    ),
 
     # Friends
     path('api/friends/', FriendsListView.as_view(), name='friends-list'),

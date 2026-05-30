@@ -1,5 +1,5 @@
 import { Alert, Linking, Platform } from 'react-native';
-import * as Device from 'expo-device';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { getAccessToken } from '../api/auth';
@@ -9,6 +9,21 @@ import { navigateToDailyChallenge } from '../navigation/navigationRef';
 const WELCOME_TITLE = 'Birdr';
 const WELCOME_BODY = "You're good to go!";
 const ANDROID_CHANNEL_ID = 'default';
+
+/** Avoid top-level `expo-device` import (loads ExpoDevice native module at bundle eval). */
+function isPhysicalDevice(): boolean {
+  if (Platform.OS === 'web') return true;
+  const expoDevice = requireOptionalNativeModule<{ isDevice?: boolean }>('ExpoDevice');
+  if (expoDevice && typeof expoDevice.isDevice === 'boolean') {
+    return expoDevice.isDevice;
+  }
+  if (__DEV__) {
+    console.warn(
+      '[push] ExpoDevice native module unavailable — rebuild the iOS dev client (npm run ios). Treating as simulator.'
+    );
+  }
+  return false;
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -147,7 +162,7 @@ export async function syncPushRegistrationIfPermittedAsync(): Promise<void> {
     if (!(await hasNotificationPermission())) {
       return;
     }
-    if (!Device.isDevice) {
+    if (!isPhysicalDevice()) {
       return;
     }
     const projectId = getExpoProjectId();
@@ -186,7 +201,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushOnboardin
       await showLocalWelcomeNotification();
     }
 
-    if (!Device.isDevice) {
+    if (!isPhysicalDevice()) {
       maybeShowDevPushAlert('granted_local_only', 'simulator');
       return 'granted_local_only';
     }

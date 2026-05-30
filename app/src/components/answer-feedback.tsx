@@ -1,9 +1,24 @@
 import {Box, Icon, Text} from "@chakra-ui/react"
 import {motion} from "framer-motion"
 import {FaCheckCircle, FaHeart, FaHeartBroken, FaStar} from "react-icons/fa"
-import {useState, useEffect, useRef} from "react"
+import {useState, useEffect} from "react"
 import Confetti from "react-confetti"
 import {FormattedMessage} from "react-intl"
+
+const MEGA_CONFETTI_COLORS = [
+  "#e8d4b8",
+  "#d4b88a",
+  "#c09c5c",
+  "#ac802e",
+  "#8b6419",
+  "#cc6600",
+  "#fcd34d",
+  "#fbbf24",
+  "#f59e0b",
+  "#eab308",
+  "#d97706",
+  "#b45309",
+]
 
 interface AnswerFeedbackProps {
   correct: boolean
@@ -24,21 +39,18 @@ export const AnswerFeedback = ({
                                  onAnimationComplete,
                                }: AnswerFeedbackProps) => {
   const [heartState, setHeartState] = useState<"whole" | "broken">("whole")
-  const hostRef = useRef<HTMLDivElement>(null)
-  const [hostSize, setHostSize] = useState({width: 0, height: 0})
+  const [windowSize, setWindowSize] = useState({width: 0, height: 0})
   const vagrantMega = isVagrantMega(correct, speciesFrequency)
   const duration = vagrantMega ? VAGRANT_FEEDBACK_MS : FEEDBACK_MS
 
   useEffect(() => {
-    const el = hostRef.current
-    if (!el) return
+    if (typeof window === "undefined") return
     const update = () => {
-      setHostSize({width: el.clientWidth, height: el.clientHeight})
+      setWindowSize({width: window.innerWidth, height: window.innerHeight})
     }
     update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    return () => ro.disconnect()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
   }, [])
 
   useEffect(() => {
@@ -64,8 +76,31 @@ export const AnswerFeedback = ({
   }, [correct, duration, onAnimationComplete])
 
   return (
+    <>
+      {vagrantMega && windowSize.width > 0 && (
+        <Box
+          position="fixed"
+          inset={0}
+          zIndex={999}
+          pointerEvents="none"
+          aria-hidden
+        >
+          <Confetti
+            width={windowSize.width}
+            height={windowSize.height}
+            run={vagrantMega}
+            recycle={false}
+            numberOfPieces={140}
+            initialVelocityY={20}
+            initialVelocityX={10}
+            gravity={0.32}
+            friction={0.97}
+            tweenDuration={8}
+            colors={MEGA_CONFETTI_COLORS}
+          />
+        </Box>
+      )}
     <Box
-      ref={hostRef}
       position="absolute"
       inset={0}
       display="flex"
@@ -74,28 +109,11 @@ export const AnswerFeedback = ({
       zIndex={20}
       pointerEvents="none"
     >
-      {vagrantMega && hostSize.width > 0 && (
-        <Box position="absolute" inset={0} pointerEvents="none" aria-hidden>
-          <Confetti
-            width={hostSize.width}
-            height={hostSize.height}
-            run
-            recycle={false}
-            numberOfPieces={200}
-          />
-        </Box>
-      )}
       <motion.div
         initial={{opacity: 0}}
         animate={{opacity: 1}}
         exit={{opacity: 0}}
-        style={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1,
-        }}
+        style={{position: "relative", zIndex: 2}}
       >
         {correct ? (
           <motion.div
@@ -201,5 +219,6 @@ export const AnswerFeedback = ({
         )}
       </motion.div>
     </Box>
+    </>
   )
 }

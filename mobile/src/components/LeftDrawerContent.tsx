@@ -9,7 +9,7 @@ const MENU_ITEMS: { route: string; label: string }[] = [
   { route: 'Home', label: 'Home' },
   { route: 'Start', label: 'New game' },
   { route: 'Scores', label: 'High scores' },
-  { route: 'Challenge', label: 'Country challenge' },
+  { route: 'BirdrJourneyIntro', label: 'Country challenge' },
   { route: 'Updates', label: 'Updates' },
   { route: 'Help', label: 'Help' },
   { route: 'Privacy', label: 'Privacy' },

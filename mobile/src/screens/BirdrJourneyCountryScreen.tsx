@@ -91,14 +91,14 @@ export function BirdrJourneyCountryScreen() {
       return true;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t('failed_load');
-      Alert.alert(t('birdr_journey'), msg);
+      Alert.alert(t('country_challenge'), msg);
       return false;
     }
   };
 
   const handleConfirm = async () => {
     if (!country) {
-      Alert.alert(t('birdr_journey'), t('please_select_country'));
+      Alert.alert(t('country_challenge'), t('please_select_country'));
       return;
     }
     const ok = await ensureAuth();
@@ -110,7 +110,7 @@ export function BirdrJourneyCountryScreen() {
       (navigation as any).navigate('BirdrJourneyProgress', { countryCode: country.code });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t('failed_load');
-      Alert.alert(t('birdr_journey'), msg);
+      Alert.alert(t('country_challenge'), msg);
     } finally {
       setSubmitting(false);
     }

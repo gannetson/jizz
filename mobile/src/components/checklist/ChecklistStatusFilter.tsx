@@ -27,7 +27,6 @@ type Props = {
 export function ChecklistStatusFilter({ value, onChange, totals, t }: Props) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{t('checklist_status_filter', 'Status')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

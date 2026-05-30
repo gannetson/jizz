@@ -24,7 +24,7 @@ const MENU_ITEMS: { route: string; labelKey: string }[] = [
   { route: 'Home', labelKey: 'home' },
   { route: 'Start', labelKey: 'new_game' },
   { route: 'Scores', labelKey: 'high_scores' },
-  { route: 'Challenge', labelKey: 'country_challenge' },
+  { route: 'BirdrJourneyIntro', labelKey: 'country_challenge' },
   { route: 'Updates', labelKey: 'updates' },
   { route: 'Help', labelKey: 'help' },
   { route: 'Privacy', labelKey: 'privacy' },

@@ -12,7 +12,6 @@ import {
   RefreshControl,
   TextInput,
 } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
@@ -29,6 +28,7 @@ import {
 } from '../components/checklist/ChecklistStatusFilter';
 import { ChecklistSpeciesCard } from '../components/checklist/ChecklistSpeciesCard';
 import { buildChecklistSections } from '../components/checklist/checklistUtils';
+import { ProgressRing } from '../components/ProgressRing';
 import {
   SpeciesMediaModal,
   type SpeciesMediaData,
@@ -40,39 +40,6 @@ import { API_BASE_URL } from '../api/config';
 
 type FilterKey = ChecklistStatusFilterKey | 'very_rare';
 type SortKey = 'recent' | 'species' | 'rarity';
-
-function ProgressRing({ percent }: { percent: number }) {
-  const size = 72;
-  const stroke = 6;
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (Math.min(100, Math.max(0, percent)) / 100) * circ;
-  return (
-    <Svg width={size} height={size}>
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        stroke={colors.primary[100]}
-        strokeWidth={stroke}
-        fill="none"
-      />
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        stroke={colors.primary[600]}
-        strokeWidth={stroke}
-        fill="none"
-        strokeDasharray={`${circ} ${circ}`}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        rotation="-90"
-        origin={`${size / 2}, ${size / 2}`}
-      />
-    </Svg>
-  );
-}
 
 export function ChecklistScreen() {
   const navigation = useNavigation();
@@ -268,14 +235,6 @@ export function ChecklistScreen() {
               .replace('{identified}', String(progress?.identified_count ?? 0))
               .replace('{total}', String(progress?.total_count ?? 0))}
           </Text>
-          {progress?.next_milestone != null ? (
-            <Text style={styles.milestone}>
-              {t('checklist_next_milestone', 'Next milestone: {n} birds').replace(
-                '{n}',
-                String(progress.next_milestone)
-              )}
-            </Text>
-          ) : null}
         </View>
       </View>
 
@@ -309,12 +268,6 @@ export function ChecklistScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
-
-      <View style={styles.legend}>
-        <Text style={styles.legendItem}>✓ {t('checklist_legend_seen', 'Seen')}</Text>
-        <Text style={styles.legendItem}>○ {t('checklist_legend_missed', 'Missed')}</Text>
-        <Text style={styles.legendItem}>? {t('checklist_legend_unseen', 'Unseen')}</Text>
       </View>
     </>
   );

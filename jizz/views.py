@@ -31,7 +31,7 @@ import logging
 logger = logging.getLogger(__name__)
 from social_django.views import complete as social_complete
 from rest_framework import status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, APIException
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
 from .models import CountryChallenge, CountryGame, ChallengeLevel, Game, Language, Page
@@ -634,6 +634,12 @@ class GameDetailView(RetrieveAPIView):
     lookup_field = "token"
 
 
+class NoSpeciesForGame(APIException):
+    status_code = 422
+    default_detail = 'No species available for this country and game settings.'
+    default_code = 'no_species'
+
+
 class QuestionView(RetrieveAPIView):
     serializer_class = QuestionPlaySerializer
     queryset = Question.objects.all()
@@ -645,8 +651,17 @@ class QuestionView(RetrieveAPIView):
             raise NotFound("Game has ended")
         # Ensure we see latest state (e.g. after a previous request marked question done)
         game.refresh_from_db()
-        if not game.question:
-            game.add_question()
+        try:
+            if not game.question:
+                game.add_question()
+        except ValueError:
+            raise NoSpeciesForGame(
+                detail=(
+                    f'No birds available for {game.country_id} with these step settings. '
+                    'In admin, set rarity to Regular, clear taxonomic order, '
+                    'or enable include escapes.'
+                )
+            )
         from jizz.question_play import build_play_serializer_context, load_question_for_play
 
         question = load_question_for_play(game.question.id)
@@ -661,6 +676,25 @@ class QuestionView(RetrieveAPIView):
         return ctx
 
 
+def _stop_game_if_jokers_exhausted(game):
+    """End country-challenge and Birdr Journey games after a wrong answer uses the last joker."""
+    from jizz.models import BirdrJourneyGame, CountryGame
+
+    for link in BirdrJourneyGame.objects.filter(game=game).select_related('journey_step'):
+        if link.remaining_jokers < 0:
+            if not game.force_ended:
+                game.force_ended = True
+                game.save(update_fields=['force_ended'])
+            return True
+    for link in CountryGame.objects.filter(game=game).select_related('challenge_level'):
+        if link.remaining_jokers < 0:
+            if not game.force_ended:
+                game.force_ended = True
+                game.save(update_fields=['force_ended'])
+            return True
+    return False
+
+
 class AnswerView(CreateAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
@@ -671,6 +705,8 @@ class AnswerView(CreateAPIView):
         answer.question.done = True
         answer.question.save()
         game = answer.question.game
+        if not answer.correct and _stop_game_if_jokers_exhausted(game):
+            return
         game.add_question()
 
 

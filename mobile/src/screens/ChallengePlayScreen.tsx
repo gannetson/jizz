@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   type QuestionOption,
   type CountryGameLevel,
 } from '../api/challenge';
+import { getStoredBirdrJourneyPlayerToken, getBirdrJourney, resolveBirdrJourneyPlayerToken, type BirdrJourneyGame } from '../api/birdrJourney';
 import { postQuestionMediaReady } from '../api/games';
 import { getSpeciesForCountry } from '../api/species';
 import { apiUrl } from '../api/config';
@@ -33,12 +34,14 @@ import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
+import { BirdrMoodHero } from '../components/BirdrMoodHero';
 import { useTranslation } from '../i18n/TranslationContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 type ChallengePlayParams = {
   gameToken: string;
   challengeId: number;
+  journeyId?: number;
   countryCode?: string;
   language?: string;
   gameLevel?: string;
@@ -71,11 +74,26 @@ function ChallengePlayAudio({
   return <>{children({ playSound, soundPlaying, pulsatingStyle })}</>;
 }
 
+function JourneyCalculatingView() {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.centered}>
+      <BirdrMoodHero
+        mood="waiting"
+        title={t('calculating_progress')}
+        showSpinner
+        pulse
+        testID="challengePlay.calculatingProgress"
+      />
+    </View>
+  );
+}
+
 export function ChallengePlayScreen() {
   const { t } = useTranslation();
   const route = useRoute<RouteProp<{ ChallengePlay: ChallengePlayParams }, 'ChallengePlay'>>();
   const navigation = useNavigation();
-  const { gameToken, challengeId, countryCode, language: paramLanguage, gameLevel, gameMedia } = route.params ?? {};
+  const { gameToken, challengeId, journeyId, countryCode, language: paramLanguage, gameLevel, gameMedia } = route.params ?? {};
   const [question, setQuestion] = useState<ChallengeQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -91,6 +109,8 @@ export function ChallengePlayScreen() {
   } | null>(null);
   const [levelEnded, setLevelEnded] = useState(false);
   const [level, setLevel] = useState<CountryGameLevel | null>(null);
+  const [journeyGame, setJourneyGame] = useState<BirdrJourneyGame | null>(null);
+  const [journeyCountryName, setJourneyCountryName] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
   const [nextLevelLoading, setNextLevelLoading] = useState(false);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
@@ -102,20 +122,64 @@ export function ChallengePlayScreen() {
   const [mediaReady, setMediaReady] = useState(false);
   /** After flagging, advance to next media item (same as MPG GamePlayScreen). */
   const [mediaIndex, setMediaIndex] = useState<number | null>(null);
+  const [questionLoadError, setQuestionLoadError] = useState<string | null>(null);
+  const [journeyStepFailed, setJourneyStepFailed] = useState(false);
+  const [hadQuestion, setHadQuestion] = useState(false);
+
+  const getPlayPlayerToken = useCallback(async () => {
+    if (journeyId) {
+      const stored = await resolveBirdrJourneyPlayerToken();
+      if (stored) return stored;
+      if (countryCode) {
+        try {
+          const journey = await getBirdrJourney(countryCode);
+          return journey?.player_token ?? null;
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+    return getStoredChallengePlayerToken();
+  }, [journeyId, countryCode]);
+
+  const navigateJourneyResults = useCallback(() => {
+    if (!journeyId || !gameToken || !countryCode) return;
+    (navigation as any).replace('BirdrJourneyStepResults', {
+      journeyId,
+      countryCode,
+      gameToken,
+    });
+  }, [journeyId, gameToken, countryCode, navigation]);
+
+  const handleFeedbackComplete = useCallback(() => {
+    setShowFeedback(false);
+    if (journeyId && journeyStepFailed) {
+      setJourneyStepFailed(false);
+      navigateJourneyResults();
+    }
+  }, [journeyId, journeyStepFailed, navigateJourneyResults]);
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
     setLoading(true);
+    setQuestionLoadError(null);
     try {
-      const token = await getStoredChallengePlayerToken();
+      const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
       setQuestion(q);
+      if (!q && !journeyId) {
+        setQuestionLoadError(t('error_loading_question'));
+      }
     } catch (e) {
       setQuestion(null);
+      if (!journeyId) {
+        setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
+      }
     } finally {
       setLoading(false);
     }
-  }, [gameToken]);
+  }, [gameToken, getPlayPlayerToken, journeyId, t]);
 
   /** Fetch next question when user taps "Next question". */
   const fetchNextQuestion = useCallback(async () => {
@@ -127,10 +191,22 @@ export function ChallengePlayScreen() {
     setQuestion(null);
     setLoading(true);
     try {
-      const token = await getStoredChallengePlayerToken();
+      const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
       setQuestion(q ?? null);
-      if (challengeId && token) {
+      if (!q && journeyId && countryCode) {
+        try {
+          const journey = await getBirdrJourney(countryCode);
+          const currentGame =
+            journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
+          if (currentGame?.status === 'failed' || currentGame?.status === 'passed') {
+            setLevelEnded(true);
+          }
+        } catch {
+          // Calculating UI + checkLevelEndAndNavigate will handle navigation.
+        }
+      }
+      if (challengeId && token && !journeyId) {
         const challenge = await loadCountryChallenge(token, { cacheBust: true });
         const currentLevel =
           challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
@@ -141,14 +217,18 @@ export function ChallengePlayScreen() {
     } finally {
       setLoading(false);
     }
-  }, [gameToken, challengeId]);
+  }, [gameToken, challengeId, journeyId, countryCode, getPlayPlayerToken]);
 
   useEffect(() => {
     loadQuestion();
   }, [loadQuestion]);
 
   useEffect(() => {
-    if (question) setMediaIndex(question.number ?? 0);
+    if (question) {
+      setMediaIndex(question.number ?? 0);
+      setHadQuestion(true);
+    }
+    setJourneyStepFailed(false);
   }, [question?.id]);
 
   useEffect(() => {
@@ -157,15 +237,34 @@ export function ChallengePlayScreen() {
 
   useEffect(() => {
     if (!gameToken) return;
-    getStoredChallengePlayerToken().then((token) => {
+    getPlayPlayerToken().then((token) => {
       if (token) setChallengePlayerToken(token);
     });
-  }, [gameToken]);
+  }, [gameToken, getPlayPlayerToken]);
+
+  /** Load journey step game (jokers, progress) for Birdr Journey play. */
+  const loadJourneyGame = useCallback(async () => {
+    if (!journeyId || !gameToken || !countryCode) return;
+    try {
+      const journey = await getBirdrJourney(countryCode);
+      if (!journey) {
+        setJourneyGame(null);
+        return;
+      }
+      setJourneyCountryName(journey.country?.name ?? countryCode);
+      const currentGame =
+        journey.current_game?.game?.token === gameToken ? journey.current_game : null;
+      setJourneyGame(currentGame);
+    } catch {
+      setJourneyGame(null);
+    }
+  }, [journeyId, gameToken, countryCode]);
 
   /** Load level (jokers, progress) from challenge. Use cacheBust when we need fresh data (e.g. after new question). */
   const loadLevel = useCallback(async (cacheBust?: boolean) => {
-    if (!challengeId || !gameToken) return;
-    const token = await getStoredChallengePlayerToken();
+    if (!gameToken || journeyId) return;
+    if (!challengeId) return;
+    const token = await getPlayPlayerToken();
     if (!token) return;
     try {
       const challenge = await loadCountryChallenge(token, cacheBust ? { cacheBust: true } : undefined);
@@ -175,18 +274,28 @@ export function ChallengePlayScreen() {
     } catch {
       setLevel(null);
     }
-  }, [challengeId, gameToken]);
+  }, [challengeId, gameToken, journeyId, getPlayPlayerToken]);
 
   useEffect(() => {
     loadLevel();
   }, [loadLevel]);
 
+  useEffect(() => {
+    loadJourneyGame();
+  }, [loadJourneyGame]);
+
   /** Whenever a new question is set, refresh level so jokers and progress render correctly. */
   useEffect(() => {
-    if (question?.id && challengeId && gameToken) {
+    if (question?.id && challengeId && gameToken && !journeyId) {
       loadLevel(true);
     }
-  }, [question?.id, question?.sequence, challengeId, gameToken, loadLevel]);
+  }, [question?.id, question?.sequence, challengeId, gameToken, journeyId, loadLevel]);
+
+  useEffect(() => {
+    if (question?.id && journeyId && gameToken) {
+      loadJourneyGame();
+    }
+  }, [question?.id, question?.sequence, journeyId, gameToken, loadJourneyGame]);
 
   useEffect(() => {
     if (question && countryCode && paramLanguage) {
@@ -318,7 +427,20 @@ export function ChallengePlayScreen() {
   }, [question, mediaType, mediaIndex]);
 
   const checkLevelEndAndNavigate = useCallback(async () => {
-    const token = await getStoredChallengePlayerToken();
+    if (journeyId && countryCode && gameToken) {
+      try {
+        const journey = await getBirdrJourney(countryCode);
+        const currentGame =
+          journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
+        if (currentGame?.status === 'failed' || currentGame?.status === 'passed') {
+          navigateJourneyResults();
+        }
+      } catch (_) {
+        // Keep showing retry UI when journey state cannot be loaded.
+      }
+      return;
+    }
+    const token = await getPlayPlayerToken();
     if (!token || !gameToken) return;
     try {
       const challenge = await loadCountryChallenge(token, { cacheBust: true });
@@ -328,7 +450,7 @@ export function ChallengePlayScreen() {
         navigation.goBack();
       }
     } catch (_) {}
-  }, [navigation, gameToken]);
+  }, [navigation, gameToken, journeyId, countryCode, navigateJourneyResults, getPlayPlayerToken]);
 
   useEffect(() => {
     if (!loading && !question && gameToken) {
@@ -338,12 +460,16 @@ export function ChallengePlayScreen() {
 
   const giveAnswer = async (option: QuestionOption | Species) => {
     if (!question || submitting || feedback) return;
-    const playerToken = await getStoredChallengePlayerToken();
-    if (!playerToken) return;
+    const playerToken = await getPlayPlayerToken();
+    if (!playerToken) {
+      setQuestionLoadError(t('error_loading_question'));
+      return;
+    }
     setSubmitting(true);
     setFeedback(null);
     setAnswerResult(null);
     setLevelEnded(false);
+    setJourneyStepFailed(false);
     try {
       const response = await submitChallengeAnswer(
         {
@@ -363,12 +489,37 @@ export function ChallengePlayScreen() {
       });
       setShowFeedback(true);
       setAnswerResult({ correct, userAnswer, correctSpecies });
-      const challenge = await loadCountryChallenge(playerToken, { cacheBust: true });
-      const levelData =
-        challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
-      setLevel(levelData ?? null);
-      if (levelData?.status === 'failed' || levelData?.status === 'passed') {
+      const jokersBeforeAnswer = journeyGame?.remaining_jokers;
+      const failedFromJokers =
+        !correct && jokersBeforeAnswer !== undefined && jokersBeforeAnswer <= 0;
+      if (failedFromJokers) {
+        setJourneyStepFailed(true);
         setLevelEnded(true);
+      }
+      if (journeyId && countryCode) {
+        const journey = await getBirdrJourney(countryCode);
+        const currentGame =
+          journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
+        if (currentGame) {
+          setJourneyGame(currentGame);
+          setJourneyCountryName(journey?.country?.name ?? countryCode);
+        }
+        const gameStatus = currentGame?.status ?? null;
+        const stepFailed = gameStatus === 'failed' || failedFromJokers;
+        if (stepFailed) {
+          setJourneyStepFailed(true);
+          setLevelEnded(true);
+        } else if (gameStatus === 'passed') {
+          setLevelEnded(true);
+        }
+      } else {
+        const challenge = await loadCountryChallenge(playerToken, { cacheBust: true });
+        const levelData =
+          challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
+        setLevel(levelData ?? null);
+        if (levelData?.status === 'failed' || levelData?.status === 'passed') {
+          setLevelEnded(true);
+        }
       }
     } catch (e) {
       setFeedback({ correct: false, species_frequency: null });
@@ -394,7 +545,16 @@ export function ChallengePlayScreen() {
     );
   }
 
+  const showJourneyCalculating =
+    !!journeyId &&
+    !question &&
+    !questionLoadError &&
+    (hadQuestion || levelEnded || journeyStepFailed);
+
   if (loading && !question) {
+    if (showJourneyCalculating) {
+      return <JourneyCalculatingView />;
+    }
     return (
       <View style={styles.centered} testID="challengePlay.loading">
         <ActivityIndicator size="large" color={colors.primary[500]} />
@@ -404,9 +564,12 @@ export function ChallengePlayScreen() {
   }
 
   if (!question) {
+    if (showJourneyCalculating) {
+      return <JourneyCalculatingView />;
+    }
     return (
       <View style={styles.centered}>
-        <Text style={styles.muted}>{t('error_loading_question')}</Text>
+        <Text style={styles.muted}>{questionLoadError ?? t('error_loading_question')}</Text>
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => loadQuestion()}
@@ -428,13 +591,24 @@ export function ChallengePlayScreen() {
       )
     : expertSpecies.slice(0, 50);
 
-  const countryName = level?.game?.country?.name ?? countryCode ?? 'Country';
+  const countryName =
+    (journeyId ? journeyCountryName : level?.game?.country?.name) ?? countryCode ?? 'Country';
 
-  // Progress icons: previous answers from level.game.scores[0].answers; current question from answerResult.
+  const totalJokers = journeyId
+    ? (journeyGame?.journey_step?.jokers ?? 0)
+    : (level?.challenge_level?.jokers ?? 0);
+  const remainingJokers = journeyId
+    ? (journeyGame?.remaining_jokers ?? 0)
+    : (level?.remaining_jokers ?? 0);
+
+  // Progress icons: previous answers from game scores; current question from answerResult.
   type ProgressResult = 'open' | 'correct' | 'joker' | 'incorrect';
-  const levelLength =
-    level?.game?.length ?? level?.challenge_level?.length ?? 0;
-  const answers = level?.game?.scores?.[0]?.answers ?? [];
+  const levelLength = journeyId
+    ? (journeyGame?.game?.length ?? 0)
+    : (level?.game?.length ?? level?.challenge_level?.length ?? 0);
+  const answers = journeyId
+    ? (journeyGame?.game?.scores?.[0]?.answers ?? [])
+    : (level?.game?.scores?.[0]?.answers ?? []);
   const progressResults: ProgressResult[] = Array.from({ length: levelLength }, () => 'open');
   answers.forEach((a: { sequence?: number; correct?: boolean }) => {
     const idx = (Number(a.sequence ?? 1) - 1);
@@ -450,10 +624,12 @@ export function ChallengePlayScreen() {
   const incorrectIndices = progressResults
     .map((r, i) => (r === 'incorrect' ? i : -1))
     .filter((i) => i >= 0);
-  const jokerCount = level?.challenge_level?.jokers ?? 0;
+  const jokerCount = totalJokers;
   incorrectIndices.slice(0, jokerCount).forEach((idx) => {
     progressResults[idx] = 'joker';
   });
+
+  const currentQuestionNum = question?.sequence ?? 1;
 
   return (
     <ChallengePlayAudio soundUri={soundUri}>
@@ -461,11 +637,11 @@ export function ChallengePlayScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="challengePlay.screen">
       <View style={styles.row}>
       <Text style={styles.screenTitle}>{countryName}</Text>
-      {level && level.challenge_level.jokers > 0 ? (
+      {totalJokers > 0 ? (
         <View>
           <View style={styles.jokersHearts}>
-            {Array.from({ length: level.challenge_level.jokers }).map((_, i) =>
-              i < level.remaining_jokers ? (
+            {Array.from({ length: totalJokers }).map((_, i) =>
+              i < remainingJokers ? (
                 <FontAwesome5 key={i} name="heart" solid size={22} color={colors.primary[500]} />
               ) : (
                 <FontAwesome5 key={i} name="heart-broken" solid size={22} color={colors.primary[300]} />
@@ -476,6 +652,11 @@ export function ChallengePlayScreen() {
       ) : null}
 
       </View>
+      {levelLength > 0 && question ? (
+        <Text style={styles.questionProgress}>
+          {t('question_of', { current: String(currentQuestionNum), total: String(levelLength) })}
+        </Text>
+      ) : null}
       <View style={styles.mediaWrap}>
         <QuestionMediaView
           feedbackOverlay={
@@ -483,7 +664,7 @@ export function ChallengePlayScreen() {
               <AnswerFeedback
                 correct={feedback.correct}
                 speciesFrequency={normalizeSpeciesFrequency(feedback.species_frequency)}
-                onAnimationComplete={() => setShowFeedback(false)}
+                onAnimationComplete={handleFeedbackComplete}
               />
             ) : undefined
           }
@@ -508,7 +689,7 @@ export function ChallengePlayScreen() {
             setMediaReady(true);
             if (!question?.id) return;
             const run = async () => {
-              const token = challengePlayerToken ?? (await getStoredChallengePlayerToken());
+              const token = challengePlayerToken ?? (await getPlayPlayerToken());
               if (token) {
                 postQuestionMediaReady(question.id, token).catch(() => {});
               }
@@ -521,7 +702,17 @@ export function ChallengePlayScreen() {
       {answerResult !== null ? (
         <View style={styles.nextSection}>
           {levelEnded ? (
-            level?.status === 'failed' ? (
+            journeyId ? (
+              journeyStepFailed ? null : (
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={navigateJourneyResults}
+                  testID="journeyPlay.viewResults"
+                >
+                  <Text style={styles.primaryButtonText}>{t('continue')}</Text>
+                </TouchableOpacity>
+              )
+            ) : level?.status === 'failed' ? (
               <>
                 <Text style={styles.levelFailedText}>{t('level_failed')}</Text>
                 <TouchableOpacity
@@ -689,41 +880,7 @@ export function ChallengePlayScreen() {
           )}
         </View>
       ) : null}
-      {levelLength > 0 ? (
-        <View style={styles.progressSection}>
-          <Text style={styles.progressHeading}>{t('progress')}</Text>
-          <View style={styles.progressCard}>
-            {/* Previous answers from level.game.scores[0].answers; current from answerResult. */}
-            <View style={styles.progressRow}>
-              {progressResults.map((result, i) => {
-                const isCurrent = question && (question.sequence ?? 1) === i + 1 && answerResult === null;
-                const iconColor = isCurrent
-                  ? colors.primary[700]
-                  : result === 'open' || result === 'incorrect'
-                    ? colors.primary[300]
-                    : colors.primary[600];
-                const size = 20;
-                return (
-                  <View key={i} style={isCurrent ? styles.progressIconCurrentWrap : undefined}>
-                    {result === 'open' && (
-                      <FontAwesome5 name="circle" size={size} color={iconColor} />
-                    )}
-                    {result === 'correct' && (
-                      <FontAwesome5 name="check-circle" solid size={size} color={iconColor} />
-                    )}
-                    {result === 'joker' && (
-                      <FontAwesome5 name="heart" solid size={size} color={iconColor} />
-                    )}
-                    {result === 'incorrect' && (
-                      <FontAwesome5 name="heart-broken" solid size={size} color={iconColor} />
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-      ) : null}
+
       <SpeciesMediaModal
         visible={!!mediaSpecies}
         onClose={() => setMediaSpecies(null)}
@@ -812,7 +969,8 @@ const styles = StyleSheet.create({
   speciesListWrap: { marginBottom: 16 },
   speciesListEmpty: { fontSize: 14, color: colors.primary[500], paddingVertical: 16, paddingHorizontal: 12 },
   speciesListItem: { marginBottom: 8 },
-  screenTitle: { fontSize: 20, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
+  screenTitle: { fontSize: 20, fontWeight: '700', color: colors.primary[800], marginBottom: 4 },
+  questionProgress: { fontSize: 16, color: colors.primary[700], marginBottom: 12 },
   progressSection: { marginTop: 24, marginBottom: 16 },
   progressHeading: { fontSize: 18, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },
   progressCard: { backgroundColor: colors.primary[100], padding: 16, borderRadius: 8 },

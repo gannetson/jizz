@@ -32,6 +32,11 @@ def country_statuses_for_game(game: Game) -> list[str]:
     return statuses
 
 
+def game_has_candidate_species(game: Game) -> bool:
+    """True when at least one species matches this game's country and filters."""
+    return bool(candidate_species_ids(game))
+
+
 def candidate_species_ids(game: Game) -> list[int]:
     """
     Species IDs eligible for this game: country list + rarity + tax filter + has media of game type.

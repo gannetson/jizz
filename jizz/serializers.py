@@ -6,7 +6,8 @@ from rest_framework import serializers
 
 from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
     Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, Page, SpeciesName, UserProfile, BirdrJourney, \
+    ChallengeLevel, Language, Page, SpeciesName, UserProfile, BirdrJourney, BirdrJourneyGame, \
+    JourneyLevel, JourneyStep, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
 
@@ -1287,58 +1288,178 @@ class CountryChallengeSerializer(serializers.ModelSerializer):
 # --- Birdr Journey ---
 
 
+class JourneyStepSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JourneyStep
+        fields = [
+            'id',
+            'sequence',
+            'step_type',
+            'level',
+            'length',
+            'jokers',
+            'rarity',
+            'include_escapes',
+            'media',
+            'tax_order',
+            'status',
+        ]
+
+    def get_status(self, obj):
+        step_statuses = self.context.get('step_statuses') or {}
+        return step_statuses.get(obj.id, 'locked')
+
+
+class JourneyLevelSerializer(serializers.ModelSerializer):
+    icon_url = serializers.SerializerMethodField()
+    is_champion = serializers.SerializerMethodField()
+    steps = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JourneyLevel
+        fields = [
+            'sequence',
+            'title',
+            'description',
+            'title_nl',
+            'description_nl',
+            'icon_url',
+            'is_champion',
+            'steps',
+        ]
+
+    def get_icon_url(self, obj):
+        if not obj.icon:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.icon.url)
+        return obj.icon.url
+
+    def get_is_champion(self, obj):
+        return obj.is_champion
+
+    def get_steps(self, obj):
+        if not self.context.get('include_steps', True):
+            return []
+        steps = obj.steps.all()
+        return JourneyStepSerializer(steps, many=True, context=self.context).data
+
+
+class BirdrJourneyGameSerializer(serializers.ModelSerializer):
+    journey_step = JourneyStepSerializer(read_only=True)
+    remaining_jokers = serializers.IntegerField(read_only=True)
+    game = GameSerializer(read_only=True)
+    status = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = BirdrJourneyGame
+        fields = ['id', 'journey_step', 'game', 'created', 'status', 'remaining_jokers']
+
+
 class BirdrJourneySerializer(serializers.ModelSerializer):
     country = CountrySerializer(read_only=True)
+    player_token = serializers.SerializerMethodField()
     current_level = serializers.SerializerMethodField()
     next_level = serializers.SerializerMethodField()
-    roadmap = serializers.SerializerMethodField()
+    active_step = serializers.SerializerMethodField()
+    is_champion = serializers.SerializerMethodField()
+    pending_level_celebration = serializers.SerializerMethodField()
     can_play_today = serializers.SerializerMethodField()
+    current_game = serializers.SerializerMethodField()
 
     class Meta:
         model = BirdrJourney
         fields = [
             'id',
             'country',
+            'player_token',
             'current_sequence',
+            'current_step_sequence',
             'streak_days',
             'last_played_date',
             'can_play_today',
+            'is_champion',
+            'pending_level_celebration',
             'current_level',
             'next_level',
-            'roadmap',
+            'active_step',
+            'current_game',
             'created',
             'updated',
         ]
 
-    def get_can_play_today(self, obj):
-        return False
+    def get_player_token(self, obj):
+        from jizz.birdr_journey_views import get_journey_host
 
-    def _level_payload(self, sequence):
-        if sequence is None:
-            return None
-        from jizz.birdr_journey_views import MAX_JOURNEY_SEQUENCE, get_challenge_level_for_sequence
+        host = get_journey_host(obj)
+        return host.token if host else None
 
-        if sequence > MAX_JOURNEY_SEQUENCE:
-            return None
-        level = get_challenge_level_for_sequence(sequence)
-        if not level:
-            return {'sequence': sequence, 'title': '', 'description': ''}
-        return ChallengeLevelSerializer(level).data
+    def _serializer_context(self):
+        journey = self.instance
+        from jizz.birdr_journey_views import compute_step_statuses
+
+        ctx = dict(self.context)
+        ctx['step_statuses'] = compute_step_statuses(journey)
+        ctx['include_steps'] = True
+        return ctx
+
+    def _level_for_sequence(self, sequence):
+        from jizz.birdr_journey_views import get_journey_level
+
+        return get_journey_level(sequence)
 
     def get_current_level(self, obj):
-        return self._level_payload(obj.current_sequence)
+        level = self._level_for_sequence(obj.current_sequence)
+        if not level:
+            return None
+        return JourneyLevelSerializer(level, context=self._serializer_context()).data
 
     def get_next_level(self, obj):
-        from jizz.birdr_journey_views import MAX_JOURNEY_SEQUENCE
-
-        if obj.current_sequence >= MAX_JOURNEY_SEQUENCE:
+        level = self._level_for_sequence(obj.current_sequence + 1)
+        if not level:
             return None
-        return self._level_payload(obj.current_sequence + 1)
+        ctx = dict(self._serializer_context())
+        ctx['include_steps'] = False
+        return JourneyLevelSerializer(level, context=ctx).data
 
-    def get_roadmap(self, obj):
-        from jizz.birdr_journey_views import build_roadmap
+    def get_active_step(self, obj):
+        from jizz.birdr_journey_views import get_active_journey_step
 
-        return build_roadmap(obj.current_sequence)
+        step = get_active_journey_step(obj)
+        if not step:
+            return None
+        ctx = self._serializer_context()
+        return JourneyStepSerializer(step, context=ctx).data
+
+    def get_is_champion(self, obj):
+        level = self._level_for_sequence(obj.current_sequence)
+        return bool(level and level.is_champion)
+
+    def get_pending_level_celebration(self, obj):
+        from jizz.birdr_journey_views import is_pending_level_celebration
+
+        return is_pending_level_celebration(obj)
+
+    def get_can_play_today(self, obj):
+        from jizz.birdr_journey_views import get_active_journey_step, is_pending_level_celebration
+
+        if is_pending_level_celebration(obj):
+            return False
+        level = self._level_for_sequence(obj.current_sequence)
+        if not level or level.is_champion:
+            return False
+        return get_active_journey_step(obj) is not None
+
+    def get_current_game(self, obj):
+        from jizz.birdr_journey_views import get_current_journey_game
+
+        journey_game = get_current_journey_game(obj)
+        if not journey_game:
+            return None
+        return BirdrJourneyGameSerializer(journey_game, context=self.context).data
 
 
 # --- Friends & Daily Challenge ---

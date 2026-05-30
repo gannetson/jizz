@@ -1,41 +1,107 @@
 import { apiUrl } from './config';
 import { getAuthHeaders } from './auth';
-import { createChallengePlayer, type PlayerRef } from './challenge';
+import {
+  createChallengePlayer,
+  setStoredChallengePlayerToken,
+  type PlayerRef,
+} from './challenge';
+import { PLAYER_TOKEN_STORAGE_KEY } from './player';
 
 export type CountryRef = { code: string; name: string };
 
+export type JourneyStepStatus = 'completed' | 'current' | 'locked';
+
+export type JourneyStep = {
+  id: number;
+  sequence: number;
+  step_type: string;
+  level: string;
+  length: number;
+  jokers: number;
+  rarity: string;
+  include_escapes?: boolean;
+  media: string;
+  tax_order?: string | null;
+  status: JourneyStepStatus;
+};
+
 export type JourneyLevel = {
   sequence: number;
-  level?: string;
   title: string;
   description: string;
   title_nl?: string;
   description_nl?: string;
-  length?: number;
-  media?: string;
-  jokers?: number;
+  icon_url: string | null;
+  is_champion: boolean;
+  steps: JourneyStep[];
 };
 
-export type RoadmapNode = {
-  sequence: number;
-  status: 'completed' | 'current' | 'locked';
+export type JourneyGameRef = {
+  token: string;
+  level: string;
+  length: number;
+  media: string;
+  ended?: boolean;
+  scores?: Array<{ answers?: Array<{ sequence?: number; correct?: boolean }> }>;
+};
+
+export type BirdrJourneyGame = {
+  id: number;
+  journey_step: JourneyStep;
+  game: JourneyGameRef;
+  status: 'new' | 'running' | 'passed' | 'failed';
+  remaining_jokers: number;
+  created: string;
 };
 
 export type BirdrJourney = {
   id: number;
   country: CountryRef;
+  /** Host player token for submitting answers (guest or logged-in user). */
+  player_token?: string | null;
   current_sequence: number;
+  current_step_sequence: number;
   streak_days: number;
   last_played_date: string | null;
   can_play_today: boolean;
+  is_champion: boolean;
+  pending_level_celebration: boolean;
   current_level: JourneyLevel | null;
   next_level: JourneyLevel | null;
-  roadmap: RoadmapNode[];
+  active_step: JourneyStep | null;
+  current_game: BirdrJourneyGame | null;
   created: string;
   updated: string;
 };
 
+export type StartStepResponse = {
+  journey: BirdrJourney;
+  journey_game: BirdrJourneyGame;
+};
+
+export type CompleteStepResponse = {
+  journey: BirdrJourney;
+  level_complete: boolean;
+  status: string;
+};
+
 const BIRDR_JOURNEY_PLAYER_KEY = 'birdr_journey_player_token';
+const BIRDR_JOURNEY_COUNTRY_KEY = 'birdr_journey_country_code';
+
+export async function getStoredBirdrJourneyCountryCode(): Promise<string | null> {
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  return AsyncStorage.getItem(BIRDR_JOURNEY_COUNTRY_KEY);
+}
+
+export async function setStoredBirdrJourneyCountryCode(code: string): Promise<void> {
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  await AsyncStorage.setItem(BIRDR_JOURNEY_COUNTRY_KEY, code.trim().toUpperCase());
+}
+
+async function persistJourneyCountry(journey: BirdrJourney | null | undefined): Promise<void> {
+  const code = journey?.country?.code?.trim();
+  if (code) await setStoredBirdrJourneyCountryCode(code);
+}
 
 export async function getStoredBirdrJourneyPlayerToken(): Promise<string | null> {
   const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
@@ -45,6 +111,60 @@ export async function getStoredBirdrJourneyPlayerToken(): Promise<string | null>
 export async function setStoredBirdrJourneyPlayerToken(token: string): Promise<void> {
   const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
   await AsyncStorage.setItem(BIRDR_JOURNEY_PLAYER_KEY, token);
+}
+
+/** Persist host player token from a journey API response for answer submission. */
+export async function syncBirdrJourneyPlayerToken(journey: BirdrJourney | null | undefined): Promise<string | null> {
+  await persistJourneyCountry(journey);
+  const token = journey?.player_token?.trim();
+  if (!token) return getStoredBirdrJourneyPlayerToken();
+  await setStoredBirdrJourneyPlayerToken(token);
+  await setStoredChallengePlayerToken(token);
+  return token;
+}
+
+/** True when the user has started a journey and has not reached the champion level. */
+export function isBirdrJourneyInProgress(journey: BirdrJourney): boolean {
+  return !journey.is_champion;
+}
+
+async function canQueryBirdrJourney(): Promise<boolean> {
+  const headers = (await getAuthHeaders()) as Record<string, string>;
+  if (headers.Authorization) return true;
+  return !!(await getStoredBirdrJourneyPlayerToken());
+}
+
+/** Load an in-progress journey for the home screen (stored country, then fallbacks). */
+export async function findInProgressBirdrJourney(
+  countryCandidates: Array<string | null | undefined>
+): Promise<BirdrJourney | null> {
+  if (!(await canQueryBirdrJourney())) return null;
+  const tried = new Set<string>();
+  for (const raw of countryCandidates) {
+    const code = raw?.trim()?.toUpperCase();
+    if (!code || tried.has(code)) continue;
+    tried.add(code);
+    try {
+      const journey = await getBirdrJourney(code);
+      if (journey && isBirdrJourneyInProgress(journey)) return journey;
+    } catch {
+      // Auth or network error — skip this candidate.
+    }
+  }
+  return null;
+}
+
+/** Resolve stored journey player token, with fallbacks for logged-in users. */
+export async function resolveBirdrJourneyPlayerToken(): Promise<string | null> {
+  const stored = await getStoredBirdrJourneyPlayerToken();
+  if (stored) return stored;
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  const mpgToken = (await AsyncStorage.getItem(PLAYER_TOKEN_STORAGE_KEY))?.trim();
+  if (mpgToken) {
+    await setStoredBirdrJourneyPlayerToken(mpgToken);
+    return mpgToken;
+  }
+  return null;
 }
 
 export async function clearStoredBirdrJourneyPlayerToken(): Promise<void> {
@@ -97,7 +217,9 @@ export async function getBirdrJourney(countryCode: string): Promise<BirdrJourney
   if (!response.ok) {
     throw new Error(parseError(data, 'Failed to load journey'));
   }
-  return data as BirdrJourney;
+  const journey = data as BirdrJourney;
+  await syncBirdrJourneyPlayerToken(journey);
+  return journey;
 }
 
 /** Get or create journey at sequence 0 for country. */
@@ -111,5 +233,56 @@ export async function startBirdrJourney(countryCode: string): Promise<BirdrJourn
   if (!response.ok) {
     throw new Error(parseError(data, 'Failed to start journey'));
   }
-  return data as BirdrJourney;
+  const journey = data as BirdrJourney;
+  await syncBirdrJourneyPlayerToken(journey);
+  return journey;
+}
+
+/** Start or resume the active step game. */
+export async function startJourneyStep(journeyId: number): Promise<StartStepResponse> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/start-step/`), {
+    method: 'POST',
+    headers: await journeyAuthHeaders(),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to start step'));
+  }
+  const result = data as StartStepResponse;
+  await syncBirdrJourneyPlayerToken(result.journey);
+  return result;
+}
+
+/** Sync step progress after a game ends. */
+export async function completeJourneyStep(
+  journeyId: number,
+  gameToken?: string
+): Promise<CompleteStepResponse> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/complete-step/`), {
+    method: 'POST',
+    headers: await journeyAuthHeaders(),
+    body: JSON.stringify(gameToken ? { game_token: gameToken } : {}),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to complete step'));
+  }
+  const result = data as CompleteStepResponse;
+  await syncBirdrJourneyPlayerToken(result.journey);
+  return result;
+}
+
+/** Advance to the next level after celebration. */
+export async function advanceJourneyLevel(journeyId: number): Promise<BirdrJourney> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/advance-level/`), {
+    method: 'POST',
+    headers: await journeyAuthHeaders(),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to advance level'));
+  }
+  const journey = data as BirdrJourney;
+  await syncBirdrJourneyPlayerToken(journey);
+  return journey;
 }

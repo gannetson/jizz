@@ -1,13 +1,12 @@
 import React from 'react';
 import { View, Image, StyleSheet, ImageStyle, StyleProp } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import { getLevelAsset } from '../constants/birdrLevels';
 import { colors } from '../theme';
 
 export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed';
 
 type Props = {
-  sequence: number;
+  iconUrl?: string | null;
   variant: BirdrLevelImageVariant;
   size?: number;
   style?: StyleProp<ImageStyle>;
@@ -20,9 +19,8 @@ const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
   completed: 88,
 };
 
-export function BirdrLevelImage({ sequence, variant, size, style }: Props) {
+export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
   const dimension = size ?? SIZE_BY_VARIANT[variant];
-  const source = getLevelAsset(sequence);
   const isSilhouette = variant === 'next' || variant === 'locked';
   const isCompleted = variant === 'completed';
 
@@ -34,19 +32,24 @@ export function BirdrLevelImage({ sequence, variant, size, style }: Props) {
         variant === 'current' && styles.frameCurrent,
       ]}
     >
-      <Image
-        source={source}
-        style={[
-          styles.image,
-          { width: dimension, height: dimension },
-          isSilhouette && styles.silhouette,
-          isCompleted && styles.completed,
-          style,
-        ]}
-        resizeMode="contain"
-        accessibilityIgnoresInvertColors
-      />
-      {isSilhouette && <View style={[styles.overlay, { borderRadius: dimension * 0.12 }]} />}
+      {iconUrl ? (
+        <Image
+          source={{ uri: iconUrl }}
+          style={[
+            styles.image,
+            { width: dimension, height: dimension },
+            isSilhouette && styles.silhouette,
+            isCompleted && styles.completed,
+            style,
+          ]}
+          blurRadius={isSilhouette ? 8 : 0}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View style={[styles.placeholder, { width: dimension, height: dimension }]} />
+      )}
+      {isSilhouette && iconUrl && <View style={[styles.overlay, { borderRadius: dimension * 0.12 }]} />}
       {variant === 'locked' && (
         <View style={styles.lockBadge}>
           <FontAwesome5 name="lock" size={14} color={colors.primary[50]} />
@@ -63,7 +66,7 @@ export function BirdrLevelImage({ sequence, variant, size, style }: Props) {
 
 const styles = StyleSheet.create({
   frame: {
-    backgroundColor: colors.primary[900],
+    backgroundColor: colors.primary[100],
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -75,8 +78,12 @@ const styles = StyleSheet.create({
   image: {
     backgroundColor: 'transparent',
   },
+  placeholder: {
+    backgroundColor: colors.primary[700],
+  },
   silhouette: {
-    opacity: 0.45,
+    backgroundColor: colors.primary[900],
+    opacity: 0.8
   },
   completed: {
     opacity: 0.75,

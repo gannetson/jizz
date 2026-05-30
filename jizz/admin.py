@@ -13,8 +13,9 @@ from django.urls import path, re_path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from jizz.models import (Answer, BirdrJourney, ChallengeLevel, Country, CountryChallenge,
-                         CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, Page, Player,
+from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, ChallengeLevel, Country, CountryChallenge,
+                         CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, JourneyLevel,
+                         JourneyStep, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesIllustration, SpeciesImage, SpeciesSound, SpeciesVideo,
                          Update, CountryGame, Language, SpeciesName, UserProfile,
@@ -943,13 +944,69 @@ class ChallengeLevelAdmin(admin.ModelAdmin):
     ordering = ['sequence']
 
 
+class JourneyStepInline(admin.TabularInline):
+    model = JourneyStep
+    extra = 1
+    fields = [
+        'sequence', 'step_type', 'level', 'length', 'jokers', 'rarity',
+        'include_escapes', 'media', 'tax_order',
+    ]
+
+
+@admin.register(JourneyLevel)
+class JourneyLevelAdmin(admin.ModelAdmin):
+    list_display = ['sequence', 'title', 'icon_preview', 'step_count']
+    search_fields = ['title', 'description']
+    ordering = ['sequence']
+    inlines = [JourneyStepInline]
+
+    def icon_preview(self, obj):
+        if obj.icon:
+            return format_html(
+                '<img src="{}" style="max-width: 48px; max-height: 48px;" />',
+                obj.icon.url,
+            )
+        return '-'
+    icon_preview.short_description = 'Icon'
+
+    def step_count(self, obj):
+        return obj.steps.count()
+    step_count.short_description = 'Steps'
+
+
+class BirdrJourneyGameInline(admin.TabularInline):
+    model = BirdrJourneyGame
+    readonly_fields = ['journey_step', 'game', 'created', 'status', 'remaining_jokers']
+    fields = readonly_fields
+    can_delete = False
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        return False
+
+
+@admin.register(BirdrJourneyGame)
+class BirdrJourneyGameAdmin(admin.ModelAdmin):
+    list_display = ['birdr_journey', 'journey_step', 'game', 'status', 'remaining_jokers', 'created']
+    list_filter = ['created']
+    readonly_fields = ['birdr_journey', 'journey_step', 'game', 'created', 'status', 'remaining_jokers']
+    raw_id_fields = ['birdr_journey', 'journey_step', 'game']
+
+    def has_add_permission(self, request):
+        return False
+
+
 @admin.register(BirdrJourney)
 class BirdrJourneyAdmin(admin.ModelAdmin):
-    list_display = ['user', 'player', 'country', 'current_sequence', 'streak_days', 'last_played_date', 'updated']
+    list_display = [
+        'user', 'player', 'country', 'current_sequence', 'current_step_sequence',
+        'streak_days', 'last_played_date', 'updated',
+    ]
     list_filter = ['country', 'current_sequence']
     search_fields = ['user__username', 'player__name']
     readonly_fields = ['created', 'updated']
     raw_id_fields = ['user', 'player', 'country']
+    inlines = [BirdrJourneyGameInline]
 
 
 @register(UserProfile)

@@ -30,6 +30,13 @@ import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
 import { MyGamesPage } from "./pages/my-games"
 import ChecklistPage from "./pages/checklist"
+import { BirdrJourneyIntroPage } from "./pages/birdr-journey/intro"
+import { BirdrJourneyCountryPage } from "./pages/birdr-journey/country"
+import { BirdrJourneyProgressPage } from "./pages/birdr-journey/progress"
+import { BirdrJourneyStepIntroPage } from "./pages/birdr-journey/step-intro"
+import { BirdrJourneyStepResultsPage } from "./pages/birdr-journey/step-results"
+import { BirdrJourneyLevelCelebrationPage } from "./pages/birdr-journey/level-celebration"
+import { BirdrJourneyPlayPage } from "./pages/birdr-journey/play"
 import { GameDetailPage } from "./pages/game-detail"
 import { MediaReviewPage } from "./pages/media-review"
 import { HelpOverviewPage, HelpPageDetail } from "./pages/help"
@@ -68,6 +75,13 @@ export const MainContent = () => {
             <Route path="/settings" element={<ProfilePage />} />
             <Route path="/my-games" element={<MyGamesPage />} />
             <Route path="/checklist" element={<ChecklistPage />} />
+            <Route path="/journey/intro" element={<BirdrJourneyIntroPage />} />
+            <Route path="/journey/country" element={<BirdrJourneyCountryPage />} />
+            <Route path="/journey/play" element={<BirdrJourneyPlayPage />} />
+            <Route path="/journey/:countryCode/celebration" element={<BirdrJourneyLevelCelebrationPage />} />
+            <Route path="/journey/:countryCode/step" element={<BirdrJourneyStepIntroPage />} />
+            <Route path="/journey/:countryCode/results" element={<BirdrJourneyStepResultsPage />} />
+            <Route path="/journey/:countryCode" element={<BirdrJourneyProgressPage />} />
             <Route path="/my-games/:token" element={<GameDetailPage />} />
             <Route path='/start/' element={<StartPage />}/>
             <Route path='/join/' element={<JoinPage />}/>

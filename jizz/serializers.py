@@ -394,6 +394,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     correct = serializers.BooleanField(read_only=True)
     species = SpeciesDetailSerializer(source='question.species', read_only=True)
     species_frequency = serializers.SerializerMethodField()
+    checklist_added = serializers.SerializerMethodField()
     answer = SpeciesDetailSerializer(read_only=True)
     answer_id = serializers.IntegerField(write_only=True)
     question_id = serializers.IntegerField(write_only=True)
@@ -410,21 +411,39 @@ class AnswerSerializer(serializers.ModelSerializer):
 
         return species_frequency_for_game(game, obj.question.species_id)
 
+    def get_checklist_added(self, obj):
+        return bool(getattr(obj, 'checklist_added', False))
+
     def create(self, validated_data):
         player = Player.objects.get(token=validated_data.pop('player_token'))
-        question = Question.objects.get(id=validated_data.pop('question_id'))
+        question = Question.objects.select_related('game__country').get(
+            id=validated_data.pop('question_id')
+        )
         answer = Species.objects.get(id=validated_data.pop('answer_id'))
         correct = answer == question.species
         player_score, _created = PlayerScore.objects.get_or_create(player=player, game=question.game)
         if Answer.objects.filter(player_score=player_score, question=question).exists():
-            return Answer.objects.filter(player_score=player_score, question=question).first()
-        return Answer.objects.create(player_score=player_score, question=question, answer=answer, correct=correct)
+            existing = Answer.objects.filter(player_score=player_score, question=question).first()
+            existing.checklist_added = False
+            return existing
+        from jizz.services.checklist import compute_checklist_added
+
+        request = self.context.get('request')
+        auth_user = getattr(request, 'user', None) if request else None
+        checklist_added = compute_checklist_added(
+            player, question, correct, user=auth_user
+        )
+        row = Answer.objects.create(
+            player_score=player_score, question=question, answer=answer, correct=correct
+        )
+        row.checklist_added = checklist_added
+        return row
 
     class Meta:
         model = Answer
         fields = (
             'id', 'question_id', 'player_token',
-            'answer', 'correct', 'species', 'species_frequency',
+            'answer', 'correct', 'species', 'species_frequency', 'checklist_added',
             'answer_id', 'number', 'score',
             'sequence',
         )

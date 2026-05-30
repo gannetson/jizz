@@ -1,6 +1,6 @@
-import {Box, Icon, Text} from "@chakra-ui/react"
+import {Box, Flex, Icon, Text} from "@chakra-ui/react"
 import {motion} from "framer-motion"
-import {FaCheckCircle, FaHeart, FaHeartBroken, FaStar} from "react-icons/fa"
+import {FaCheckCircle, FaCheckSquare, FaHeart, FaHeartBroken, FaStar} from "react-icons/fa"
 import {useState, useEffect} from "react"
 import Confetti from "react-confetti"
 import {FormattedMessage} from "react-intl"
@@ -23,25 +23,68 @@ const MEGA_CONFETTI_COLORS = [
 interface AnswerFeedbackProps {
   correct: boolean
   speciesFrequency?: string | null
+  checklistAdded?: boolean
   onAnimationComplete: () => void
 }
 
 const FEEDBACK_MS = 2000
 const VAGRANT_FEEDBACK_MS = 2800
+const CHECKLIST_EXTRA_MS = 700
 
 export function isVagrantMega(correct: boolean, speciesFrequency?: string | null): boolean {
   return correct && speciesFrequency === "vagrant"
 }
 
+export function normalizeChecklistAdded(raw: unknown): boolean {
+  return raw === true
+}
+
+function ChecklistAddedBadge({visible}: {visible: boolean}) {
+  if (!visible) return null
+
+  return (
+    <motion.div
+      initial={{opacity: 0, y: 12, scale: 0.85}}
+      animate={{opacity: 1, y: 0, scale: 1}}
+      transition={{delay: 0.28, type: "spring", stiffness: 420, damping: 22}}
+    >
+      <Flex
+        align="center"
+        gap={2}
+        mt={4}
+        px={4}
+        py={2}
+        bg="white"
+        borderRadius="full"
+        borderWidth="2px"
+        borderColor="success.400"
+        boxShadow="0 4px 14px rgba(0,0,0,0.12)"
+        maxW="280px"
+      >
+        <Icon as={FaCheckSquare} boxSize={5} color="success.600" flexShrink={0} />
+        <Text fontSize="sm" fontWeight="700" color="success.700" lineHeight="short">
+          <FormattedMessage id="checklist_added_toast" defaultMessage="Added to your checklist!" />
+        </Text>
+      </Flex>
+    </motion.div>
+  )
+}
+
 export const AnswerFeedback = ({
                                  correct,
                                  speciesFrequency,
+                                 checklistAdded = false,
                                  onAnimationComplete,
                                }: AnswerFeedbackProps) => {
   const [heartState, setHeartState] = useState<"whole" | "broken">("whole")
   const [windowSize, setWindowSize] = useState({width: 0, height: 0})
   const vagrantMega = isVagrantMega(correct, speciesFrequency)
-  const duration = vagrantMega ? VAGRANT_FEEDBACK_MS : FEEDBACK_MS
+  const showChecklistBadge = correct && checklistAdded
+  const duration = vagrantMega
+    ? VAGRANT_FEEDBACK_MS
+    : showChecklistBadge
+      ? FEEDBACK_MS + CHECKLIST_EXTRA_MS
+      : FEEDBACK_MS
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -113,7 +156,7 @@ export const AnswerFeedback = ({
         initial={{opacity: 0}}
         animate={{opacity: 1}}
         exit={{opacity: 0}}
-        style={{position: "relative", zIndex: 2}}
+        style={{position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center"}}
       >
         {correct ? (
           <motion.div
@@ -217,6 +260,7 @@ export const AnswerFeedback = ({
             </Box>
           </motion.div>
         )}
+        <ChecklistAddedBadge visible={showChecklistBadge} />
       </motion.div>
     </Box>
     </>

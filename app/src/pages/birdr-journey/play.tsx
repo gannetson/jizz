@@ -26,8 +26,7 @@ import {
   submitChallengeAnswer,
   type BirdrJourneyGame,
 } from '../../api/birdrJourney';
-import { AnswerFeedback } from '../../components/answer-feedback';
-import { BirdrMoodHero } from '../../components/birdr-mood-hero';
+import { AnswerFeedback, normalizeChecklistAdded } from '../../components/answer-feedback';
 import { FlagMediaButton } from '../../components/flag-media-button';
 import { Loading } from '../../components/loading';
 import SpeciesCombobox from '../../components/species-combobox';
@@ -52,22 +51,6 @@ const iconMapping: Record<ResultType, IconType> = {
   incorrect: FaSkull,
 };
 
-function JourneyCalculatingView() {
-  return (
-    <Page>
-      <Page.Body>
-        <BirdrMoodHero
-          mood="waiting"
-          titleId="calculating_progress"
-          titleDefault="Calculating progress…"
-          showSpinner
-          pulse
-        />
-      </Page.Body>
-    </Page>
-  );
-}
-
 export function BirdrJourneyPlayPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -89,7 +72,6 @@ export function BirdrJourneyPlayPage() {
   const [journeyGame, setJourneyGame] = useState<BirdrJourneyGame | null>(null);
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
   const [levelEnded, setLevelEnded] = useState(false);
-  const [hadQuestion, setHadQuestion] = useState(false);
   const mediaPostedForQuestionId = useRef<number | null>(null);
   const playerTokenRef = useRef<string | null>(null);
 
@@ -132,7 +114,6 @@ export function BirdrJourneyPlayPage() {
   useEffect(() => {
     if (question) {
       setMediaIndex(question.number ?? 0);
-      setHadQuestion(true);
       setJourneyStepFailed(false);
     }
   }, [question?.id]);
@@ -154,12 +135,6 @@ export function BirdrJourneyPlayPage() {
     }
   }, [loading, question, gameToken, countryCode, navigateResults]);
 
-  const showJourneyCalculating =
-    !!journeyId &&
-    !question &&
-    !loading &&
-    (hadQuestion || levelEnded || journeyStepFailed);
-
   if (!gameToken || !journeyId || !countryCode) {
     return (
       <Page>
@@ -171,12 +146,10 @@ export function BirdrJourneyPlayPage() {
   }
 
   if (loading && !question) {
-    if (showJourneyCalculating) return <JourneyCalculatingView />;
     return <Loading />;
   }
 
   if (!question) {
-    if (showJourneyCalculating) return <JourneyCalculatingView />;
     return <Loading />;
   }
 
@@ -348,6 +321,7 @@ export function BirdrJourneyPlayPage() {
                 <AnswerFeedback
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
+                  checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
                   onAnimationComplete={handleFeedbackComplete}
                 />
               )}
@@ -369,6 +343,7 @@ export function BirdrJourneyPlayPage() {
                 <AnswerFeedback
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
+                  checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
                   onAnimationComplete={handleFeedbackComplete}
                 />
               )}
@@ -389,6 +364,7 @@ export function BirdrJourneyPlayPage() {
                 <AnswerFeedback
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
+                  checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
                   onAnimationComplete={handleFeedbackComplete}
                 />
               )}

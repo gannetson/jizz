@@ -257,13 +257,18 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             row = qs.filter(player_score=player_score, question=question).first()
             if row:
+                row.checklist_added = False
                 return row
-            return Answer.objects.create(
+            from jizz.services.checklist import compute_checklist_added
+
+            row = Answer.objects.create(
                 answer_id=answer_id,
                 player_score=player_score,
                 question=question,
                 correct=correct,
             )
+            row.checklist_added = compute_checklist_added(player, question, correct)
+            return row
 
         answer = await sync_to_async(_load_answer_for_serialize)()
 

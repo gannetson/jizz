@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const authed = !!access;
       setIsAuthenticated(authed);
       if (authed) {
+        void linkStoredPlayerToAccount();
         void syncPushRegistrationIfPermittedAsync();
       }
     } catch {

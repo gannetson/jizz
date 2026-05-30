@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Linking, ActivityIndicator, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ import { BirdrLevelImage } from '../components/BirdrLevelImage';
 import { ProgressRing } from '../components/ProgressRing';
 import { colors } from '../theme';
 import { APP_STORE_URL, PLAY_STORE_URL } from '../constants/storeUrls';
+import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
 
 function openStoreReview() {
   if (Platform.OS === 'android') {
@@ -205,12 +206,18 @@ export function HomeScreen() {
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={styles.primaryButton}
+          style={styles.journeyHeroButton}
           onPress={() => navigation.navigate('BirdrJourneyIntro')}
           testID="home.birdrJourney"
-          accessibilityLabel={t('country_challenge')}
+          accessibilityLabel={`${t('country_challenge')}, ${t('country_challenge_new_improved')}`}
         >
-          <Text style={styles.primaryButtonText}>{t('country_challenge')}</Text>
+          <Image source={BIRDR_MOOD_IMAGES.success} style={styles.journeyNewHeroImage} resizeMode="contain" />
+          <View style={styles.journeyHeroText}>
+            <Text style={styles.journeyHeroLevel} numberOfLines={2}>
+              {t('country_challenge')}
+            </Text>
+            <Text style={styles.journeyHeroHint}>{t('country_challenge_new_improved')}</Text>
+          </View>
         </TouchableOpacity>
       )}
 
@@ -374,6 +381,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.primary[300],
+  },
+  journeyNewHeroImage: {
+    width: 88,
+    height: 88,
   },
   checklistLoadingWrap: {
     paddingVertical: 28,

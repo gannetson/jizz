@@ -13,7 +13,7 @@ import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaQuestion, FaSkull
 import { IconType } from "react-icons"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { AnswerFeedback } from "../../../components/answer-feedback"
+import { AnswerFeedback, normalizeChecklistAdded } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
 import SpeciesCombobox from "../../../components/species-combobox"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
@@ -208,6 +208,7 @@ export const ChallengeQuestion = () => {
                 <AnswerFeedback
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
+                  checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}
@@ -229,6 +230,7 @@ export const ChallengeQuestion = () => {
                 <AnswerFeedback
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
+                  checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}
@@ -249,6 +251,7 @@ export const ChallengeQuestion = () => {
                 <AnswerFeedback
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
+                  checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}

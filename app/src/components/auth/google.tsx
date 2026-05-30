@@ -2,6 +2,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom';
 import { Box, Alert, AlertIndicator } from '@chakra-ui/react';
 import { authService, AuthError } from '../../api/services/auth.service';
+import { linkStoredPlayerToAccount } from '../../api/player';
 import { useState } from 'react';
 
 // Define types for the response from Google login
@@ -18,6 +19,7 @@ const GoogleAuth = () => {
     try {
       const tokens = await authService.loginWithGoogleToken(response.credential);
       authService.storeTokens(tokens);
+      await linkStoredPlayerToAccount();
       navigate("/start");
     } catch (err: any) {
       const authError = err as AuthError;

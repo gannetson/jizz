@@ -242,14 +242,22 @@ export async function getChallengeQuestion(
   }
 }
 
-/** Submit an answer for the challenge. */
+/** Submit an answer for the challenge. Sends JWT when logged in so checklist updates apply. */
 export async function submitChallengeAnswer(
   payload: AnswerPayload,
   playerToken: string
 ): Promise<SubmitChallengeAnswerResponse> {
+  const { getAuthHeaders } = await import('./auth');
+  const authHeaders = (await getAuthHeaders()) as Record<string, string>;
+  const headers: Record<string, string> = {
+    ...playerAuthHeaders(playerToken) as Record<string, string>,
+  };
+  if (authHeaders.Authorization) {
+    headers.Authorization = authHeaders.Authorization;
+  }
   const response = await fetch(apiUrl('/api/answer/'), {
     method: 'POST',
-    headers: playerAuthHeaders(playerToken),
+    headers,
     body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));

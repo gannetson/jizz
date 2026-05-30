@@ -17,6 +17,7 @@ import {
 import { FormattedMessage, useIntl } from "react-intl";
 import { SiGoogle, SiApple } from "react-icons/si";
 import { authService, AuthError } from "../../api/services/auth.service";
+import { linkStoredPlayerToAccount } from "../../api/player";
 
 type LoginModalProps = {
   isOpen: boolean;
@@ -64,6 +65,7 @@ export const LoginModal = ({ isOpen, onClose, defaultMode = 'login' }: LoginModa
       }
 
       authService.storeTokens(tokens);
+      await linkStoredPlayerToAccount();
       onClose();
       // Refresh the page to update auth state
       window.location.reload();

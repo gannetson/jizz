@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Box, Spinner, Text, VStack } from "@chakra-ui/react";
 import { authService, AuthError } from "../../api/services/auth.service";
+import { linkStoredPlayerToAccount } from "../../api/player";
 
 export const AuthCallback = () => {
   const { provider } = useParams();
@@ -30,6 +31,7 @@ export const AuthCallback = () => {
             access: accessToken,
             refresh: refreshToken,
           });
+          await linkStoredPlayerToAccount();
           navigate("/start");
           return;
         }
@@ -54,6 +56,7 @@ export const AuthCallback = () => {
         try {
           const tokens = await authService.convertOAuthToken(code, backend);
           authService.storeTokens(tokens);
+          await linkStoredPlayerToAccount();
           navigate("/start");
         } catch (error: any) {
           console.error("Error during token exchange:", error);

@@ -315,9 +315,16 @@ export async function submitChallengeAnswer(
   payload: { question_id: number; answer_id: number; player_token: string },
   playerToken: string
 ): Promise<Answer> {
+  const headers: Record<string, string> = {
+    ...playerAuthHeaders(playerToken),
+  };
+  const jwt = authService.getAccessToken();
+  if (jwt) {
+    headers.Authorization = `Bearer ${jwt}`;
+  }
   const response = await fetch(apiUrl('/api/answer/'), {
     method: 'POST',
-    headers: playerAuthHeaders(playerToken),
+    headers,
     body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));

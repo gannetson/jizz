@@ -29,12 +29,11 @@ import { apiUrl } from '../api/config';
 import type { Species } from '../types/game';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
-import { AnswerFeedback, normalizeSpeciesFrequency } from '../components/AnswerFeedback';
+import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
-import { BirdrMoodHero } from '../components/BirdrMoodHero';
 import { useTranslation } from '../i18n/TranslationContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
@@ -74,21 +73,6 @@ function ChallengePlayAudio({
   return <>{children({ playSound, soundPlaying, pulsatingStyle })}</>;
 }
 
-function JourneyCalculatingView() {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.centered}>
-      <BirdrMoodHero
-        mood="waiting"
-        title={t('calculating_progress')}
-        showSpinner
-        pulse
-        testID="challengePlay.calculatingProgress"
-      />
-    </View>
-  );
-}
-
 export function ChallengePlayScreen() {
   const { t } = useTranslation();
   const route = useRoute<RouteProp<{ ChallengePlay: ChallengePlayParams }, 'ChallengePlay'>>();
@@ -100,6 +84,7 @@ export function ChallengePlayScreen() {
   const [feedback, setFeedback] = useState<{
     correct: boolean;
     species_frequency?: string | null;
+    checklist_added?: boolean;
   } | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [answerResult, setAnswerResult] = useState<{
@@ -124,7 +109,6 @@ export function ChallengePlayScreen() {
   const [mediaIndex, setMediaIndex] = useState<number | null>(null);
   const [questionLoadError, setQuestionLoadError] = useState<string | null>(null);
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
-  const [hadQuestion, setHadQuestion] = useState(false);
 
   const getPlayPlayerToken = useCallback(async () => {
     if (journeyId) {
@@ -486,6 +470,7 @@ export function ChallengePlayScreen() {
         correct,
         species_frequency:
           typeof response?.species_frequency === 'string' ? response.species_frequency : null,
+        checklist_added: normalizeChecklistAdded(response?.checklist_added),
       });
       setShowFeedback(true);
       setAnswerResult({ correct, userAnswer, correctSpecies });
@@ -545,16 +530,7 @@ export function ChallengePlayScreen() {
     );
   }
 
-  const showJourneyCalculating =
-    !!journeyId &&
-    !question &&
-    !questionLoadError &&
-    (hadQuestion || levelEnded || journeyStepFailed);
-
   if (loading && !question) {
-    if (showJourneyCalculating) {
-      return <JourneyCalculatingView />;
-    }
     return (
       <View style={styles.centered} testID="challengePlay.loading">
         <ActivityIndicator size="large" color={colors.primary[500]} />
@@ -564,9 +540,6 @@ export function ChallengePlayScreen() {
   }
 
   if (!question) {
-    if (showJourneyCalculating) {
-      return <JourneyCalculatingView />;
-    }
     return (
       <View style={styles.centered}>
         <Text style={styles.muted}>{questionLoadError ?? t('error_loading_question')}</Text>
@@ -664,6 +637,7 @@ export function ChallengePlayScreen() {
               <AnswerFeedback
                 correct={feedback.correct}
                 speciesFrequency={normalizeSpeciesFrequency(feedback.species_frequency)}
+                checklistAdded={normalizeChecklistAdded(feedback.checklist_added)}
                 onAnimationComplete={handleFeedbackComplete}
               />
             ) : undefined

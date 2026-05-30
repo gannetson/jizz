@@ -18,7 +18,7 @@ import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdow
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { AnswerFeedback, normalizeSpeciesFrequency } from '../components/AnswerFeedback';
+import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded } from '../components/AnswerFeedback';
 import { MediaCredits } from '../components/MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
@@ -369,6 +369,7 @@ export function GamePlayScreen() {
             <AnswerFeedback
               correct={Boolean(answer?.correct)}
               speciesFrequency={normalizeSpeciesFrequency(answer?.species_frequency)}
+              checklistAdded={normalizeChecklistAdded(answer?.checklist_added)}
               onAnimationComplete={() => setShowFeedback(false)}
             />
           ) : undefined

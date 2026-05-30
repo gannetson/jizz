@@ -121,6 +121,34 @@ def _species_sets(game_ids: list[int], scores: QuerySet) -> tuple[set[int], set[
     return encountered, identified
 
 
+def compute_checklist_added(player: Player, question, correct: bool, user=None) -> bool:
+    """
+    True when a correct answer is the user's first identification of this species
+    for the game's country (logged-in users only; species must be on the checklist).
+    Call before persisting the new Answer row.
+    """
+    if not correct:
+        return False
+    user_id = None
+    if user is not None and getattr(user, 'is_authenticated', False):
+        user_id = user.id
+    elif player.user_id:
+        user_id = player.user_id
+    if not user_id:
+        return False
+    game = question.game
+    if not game.country_id:
+        return False
+    if not _country_species_qs(game.country).filter(species_id=question.species_id).exists():
+        return False
+    return not Answer.objects.filter(
+        player_score__player__user_id=user_id,
+        question__game__country_id=game.country_id,
+        question__species_id=question.species_id,
+        answer_id=F('question__species_id'),
+    ).exists()
+
+
 def _compute_totals(
     country: Country,
     encountered: set[int],

@@ -175,8 +175,34 @@ const HomePage = () => {
                 </Flex>
               </Button>
             ) : (
-              <Button colorPalette="primary" onClick={() => navigate('/journey/intro')}>
-                <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
+              <Button
+                onClick={() => navigate('/journey/intro')}
+                colorPalette="primary"
+                height="auto"
+                py={4}
+                px={4}
+                bg="primary.800"
+                borderWidth="2px"
+                borderColor="primary.400"
+              >
+                <Flex align="center" gap={4} width="full" textAlign="left">
+                  <Image
+                    src="/images/birdr-success.png"
+                    alt=""
+                    width="88px"
+                    height="88px"
+                    objectFit="contain"
+                    flexShrink={0}
+                  />
+                  <Flex direction="column" flex={1} minW={0}>
+                    <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
+                      <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
+                    </Text>
+                    <Text fontSize="sm" fontWeight="600" color="primary.300">
+                      <FormattedMessage id="country_challenge_new_improved" defaultMessage="New and improved!" />
+                    </Text>
+                  </Flex>
+                </Flex>
               </Button>
             )}
 
@@ -198,7 +224,7 @@ const HomePage = () => {
                 >
                   {checklistSummary ? (
                     <Flex align="center" gap={4} width="full" textAlign="left">
-                      <Box position="relative" width="88px" height="88px" flexShrink={0}>
+                      <Box position="relative" width="80px" height="80px" flexShrink={0}>
                         <ProgressRing
                           percent={checklistSummary.progress.percent}
                           size={80}
@@ -206,18 +232,22 @@ const HomePage = () => {
                           trackColor="var(--chakra-colors-primary-500)"
                           progressColor="var(--chakra-colors-primary-100)"
                         />
-                        <Text
+                        <Flex
                           position="absolute"
                           inset={0}
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                          fontSize="lg"
-                          fontWeight="800"
-                          color="primary.50"
+                          align="center"
+                          justify="center"
+                          pointerEvents="none"
                         >
-                          {checklistPercent}%
-                        </Text>
+                          <Text
+                            fontSize="lg"
+                            fontWeight="800"
+                            color="primary.50"
+                            lineHeight="1"
+                          >
+                            {checklistPercent}%
+                          </Text>
+                        </Flex>
                       </Box>
                       <Flex direction="column" flex={1} minW={0}>
                         <Text fontSize="xl" fontWeight="700" color="primary.50">

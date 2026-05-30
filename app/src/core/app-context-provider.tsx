@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios-config';
 import { apiUrl } from '../api/baseUrl';
 import { authService } from '../api/services/auth.service';
+import { linkStoredPlayerToAccount } from '../api/player';
 import { profileService, UserProfile } from '../api/services/profile.service';
 import {
   playLevelFromSettings,
@@ -96,6 +97,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
         setProfile(null);
         return;
       }
+      await linkStoredPlayerToAccount();
+      if (cancelled) return;
       profileService
         .getProfile()
         .then((p) => {
@@ -439,11 +442,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return
     }
 
+    const jwt = authService.getAccessToken()
     const response = await fetch(apiUrl(`/api/answer/`), {
       method: 'POST',
       headers: {
         ...noCacheHeaders,
-        'Authorization': `Token ${player.token}`,
+        Authorization: jwt ? `Bearer ${jwt}` : `Token ${player.token}`,
       },
       body: JSON.stringify({
         question_id: question_id,

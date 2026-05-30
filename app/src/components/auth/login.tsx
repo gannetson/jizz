@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { FormattedMessage, useIntl } from "react-intl";
 import { SiGoogle, SiApple } from "react-icons/si";
 import { authService, AuthError } from "../../api/services/auth.service";
+import { linkStoredPlayerToAccount } from "../../api/player";
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export const Login = () => {
       }
 
       authService.storeTokens(tokens);
+      await linkStoredPlayerToAccount();
       navigate("/start");
     } catch (err: any) {
       const authError = err as AuthError;

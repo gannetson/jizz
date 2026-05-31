@@ -1,40 +1,10 @@
 import {Flex, Link} from "@chakra-ui/react";
-import {useCallback, useEffect, useState} from "react";
 import {FormattedMessage} from "react-intl"
-import {Link as RouterLink, useLocation} from "react-router-dom";
+import {Link as RouterLink} from "react-router-dom";
 import ChangeLanguage from "../../../components/change-language";
-import {
-  getCountryChallengePath,
-  getStoredBirdrJourneyCountryCode,
-} from "../../../api/birdrJourney";
-import {authService} from "../../../api/services/auth.service";
-import {profileService} from "../../../api/services/profile.service";
+import { getCountryChallengesPath } from "../../../api/birdrJourney";
 
 export const BirdrMenu = () => {
-    const location = useLocation();
-    const [challengePath, setChallengePath] = useState('/journey/intro');
-
-    const loadChallengePath = useCallback(async () => {
-      let profileCountry: string | null = null;
-      if (authService.getAccessToken()) {
-        try {
-          const profile = await profileService.getProfile();
-          profileCountry = profile.country_code ?? null;
-        } catch {
-          /* ignore */
-        }
-      }
-      const path = await getCountryChallengePath([
-        getStoredBirdrJourneyCountryCode(),
-        profileCountry,
-      ]);
-      setChallengePath(path);
-    }, []);
-
-    useEffect(() => {
-      loadChallengePath();
-    }, [loadChallengePath, location.pathname]);
-
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'} textDecoration="none">
@@ -47,8 +17,8 @@ export const BirdrMenu = () => {
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
             </Link>
             <Link asChild textDecoration="none">
-              <RouterLink to={challengePath}>
-                <FormattedMessage id={'country_challenge'} defaultMessage={'Country challenge'} />
+              <RouterLink to={getCountryChallengesPath()}>
+                <FormattedMessage id={'country_challenges'} defaultMessage={'Country challenges'} />
               </RouterLink>
             </Link>
             <Link href={'/checklist'} textDecoration="none">

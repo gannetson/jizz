@@ -104,9 +104,33 @@ export function setStoredBirdrJourneyCountryCode(code: string): void {
   }
 }
 
+export function clearStoredBirdrJourneyCountryCode(): void {
+  try {
+    localStorage.removeItem(BIRDR_JOURNEY_COUNTRY_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function persistJourneyCountry(journey: BirdrJourney | null | undefined): void {
   const code = journey?.country?.code?.trim();
   if (code) setStoredBirdrJourneyCountryCode(code);
+}
+
+function reconcileStoredBirdrJourneyCountry(journeys: BirdrJourney[]): void {
+  const stored = getStoredBirdrJourneyCountryCode()?.trim()?.toUpperCase();
+  if (!stored) return;
+  const codes = new Set(journeys.map((j) => j.country.code.trim().toUpperCase()));
+  if (!codes.has(stored)) {
+    clearStoredBirdrJourneyCountryCode();
+  }
+}
+
+function clearStoredCountryIfMatches(countryCode: string): void {
+  const stored = getStoredBirdrJourneyCountryCode()?.trim()?.toUpperCase();
+  if (stored && stored === countryCode.trim().toUpperCase()) {
+    clearStoredBirdrJourneyCountryCode();
+  }
 }
 
 export const BIRDR_JOURNEY_PLAYER_KEY = 'birdr_journey_player_token';
@@ -123,6 +147,14 @@ export function setStoredBirdrJourneyPlayerToken(token: string): void {
   try {
     localStorage.setItem(BIRDR_JOURNEY_PLAYER_KEY, token);
     localStorage.setItem('player-token', token);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearStoredBirdrJourneyPlayerToken(): void {
+  try {
+    localStorage.removeItem(BIRDR_JOURNEY_PLAYER_KEY);
   } catch {
     /* ignore */
   }
@@ -163,16 +195,64 @@ export async function findInProgressBirdrJourney(
       /* skip candidate */
     }
   }
-  return null;
+  try {
+    const journeys = await listBirdrJourneys();
+    return journeys.find(isBirdrJourneyInProgress) ?? null;
+  } catch {
+    return null;
+  }
 }
 
-/** Menu / nav target: ongoing journey progress or intro to start one. */
-export async function getCountryChallengePath(
-  countryCandidates: Array<string | null | undefined>
-): Promise<string> {
-  const journey = await findInProgressBirdrJourney(countryCandidates);
-  const code = journey?.country?.code?.trim()?.toUpperCase();
-  return code ? `/journey/${code}` : '/journey/intro';
+/** List all country challenges for the current user or guest player. */
+export async function listBirdrJourneys(): Promise<BirdrJourney[]> {
+  return fetchBirdrJourneyList(false);
+}
+
+async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourney[]> {
+  const response = await fetch(apiUrl('/api/birdr-journey/'), {
+    method: 'GET',
+    headers: await journeyAuthHeaders(),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status === 401 && !retried) {
+    clearStoredBirdrJourneyPlayerToken();
+    if (authService.getAccessToken()) {
+      return fetchBirdrJourneyList(true);
+    }
+    reconcileStoredBirdrJourneyCountry([]);
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to load journeys'));
+  }
+  if (!Array.isArray(data)) {
+    throw new Error(parseError(data, 'Failed to load journeys'));
+  }
+
+  const journeys = data as BirdrJourney[];
+  reconcileStoredBirdrJourneyCountry(journeys);
+  if (journeys.length > 0) {
+    await syncBirdrJourneyPlayerToken(journeys[0]);
+  }
+  return journeys;
+}
+
+/** Remove a country challenge and its progress. */
+export async function deleteBirdrJourney(journeyId: number): Promise<void> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/`), {
+    method: 'DELETE',
+    headers: await journeyAuthHeaders(),
+  });
+  if (response.status === 204) return;
+  const data = await response.json().catch(() => ({}));
+  throw new Error(parseError(data, 'Failed to remove challenge'));
+}
+
+/** Menu link: country challenges overview. */
+export function getCountryChallengesPath(): string {
+  return '/journey';
 }
 
 export async function resolveBirdrJourneyPlayerToken(): Promise<string | null> {
@@ -226,7 +306,10 @@ export async function getBirdrJourney(countryCode: string): Promise<BirdrJourney
     method: 'GET',
     headers: await journeyAuthHeaders(),
   });
-  if (response.status === 404) return null;
+  if (response.status === 404) {
+    clearStoredCountryIfMatches(countryCode);
+    return null;
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(parseError(data, 'Failed to load journey'));

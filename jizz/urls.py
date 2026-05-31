@@ -24,6 +24,7 @@ from jizz.quiz_mistake_views import (
 )
 from jizz.birdr_journey_views import (
     BirdrJourneyView,
+    BirdrJourneyDetailView,
     BirdrJourneyStartStepView,
     BirdrJourneyCompleteStepView,
     BirdrJourneyAdvanceLevelView,
@@ -174,6 +175,11 @@ urlpatterns = [
     re_path(r"^api/updates/reactions/$", ReactionView.as_view(), name="reactions"),
 
     path('api/birdr-journey/', BirdrJourneyView.as_view(), name='birdr-journey'),
+    path(
+        'api/birdr-journey/<int:journey_id>/',
+        BirdrJourneyDetailView.as_view(),
+        name='birdr-journey-detail',
+    ),
     path(
         'api/birdr-journey/<int:journey_id>/start-step/',
         BirdrJourneyStartStepView.as_view(),

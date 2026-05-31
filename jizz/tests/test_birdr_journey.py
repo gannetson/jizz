@@ -338,3 +338,53 @@ class BirdrJourneyApiTestCase(TestCase):
         self.assertTrue(response.data['is_champion'])
         self.assertFalse(response.data['can_play_today'])
         self.assertEqual(response.data['current_level']['title'], 'Birdr Champion')
+
+    def test_list_journeys_without_country_code(self):
+        _player_auth(self.client, self.player)
+        be = Country.objects.get_or_create(code='BE', defaults={'name': 'Belgium'})[0]
+        BirdrJourney.objects.create(
+            player=self.player,
+            country=self.country,
+            current_sequence=0,
+            current_step_sequence=0,
+            user=None,
+        )
+        BirdrJourney.objects.create(
+            player=self.player,
+            country=be,
+            current_sequence=1,
+            current_step_sequence=0,
+            user=None,
+        )
+        response = self.client.get('/api/birdr-journey/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        codes = {item['country']['code'] for item in response.data}
+        self.assertEqual(codes, {'NL', 'BE'})
+
+    def test_delete_journey(self):
+        _player_auth(self.client, self.player)
+        journey = BirdrJourney.objects.create(
+            player=self.player,
+            country=self.country,
+            current_sequence=0,
+            current_step_sequence=0,
+            user=None,
+        )
+        response = self.client.delete(f'/api/birdr-journey/{journey.id}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(BirdrJourney.objects.filter(id=journey.id).exists())
+
+    def test_delete_journey_other_player_forbidden(self):
+        other = Player.objects.create(name='Other', language='en')
+        journey = BirdrJourney.objects.create(
+            player=other,
+            country=self.country,
+            current_sequence=0,
+            current_step_sequence=0,
+            user=None,
+        )
+        _player_auth(self.client, self.player)
+        response = self.client.delete(f'/api/birdr-journey/{journey.id}/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(BirdrJourney.objects.filter(id=journey.id).exists())

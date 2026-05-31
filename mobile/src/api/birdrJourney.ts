@@ -98,9 +98,31 @@ export async function setStoredBirdrJourneyCountryCode(code: string): Promise<vo
   await AsyncStorage.setItem(BIRDR_JOURNEY_COUNTRY_KEY, code.trim().toUpperCase());
 }
 
+export async function clearStoredBirdrJourneyCountryCode(): Promise<void> {
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  await AsyncStorage.removeItem(BIRDR_JOURNEY_COUNTRY_KEY);
+}
+
 async function persistJourneyCountry(journey: BirdrJourney | null | undefined): Promise<void> {
   const code = journey?.country?.code?.trim();
   if (code) await setStoredBirdrJourneyCountryCode(code);
+}
+
+/** Drop stored active country when it no longer exists on the server. */
+async function reconcileStoredBirdrJourneyCountry(journeys: BirdrJourney[]): Promise<void> {
+  const stored = (await getStoredBirdrJourneyCountryCode())?.trim()?.toUpperCase();
+  if (!stored) return;
+  const codes = new Set(journeys.map((j) => j.country.code.trim().toUpperCase()));
+  if (!codes.has(stored)) {
+    await clearStoredBirdrJourneyCountryCode();
+  }
+}
+
+async function clearStoredCountryIfMatches(countryCode: string): Promise<void> {
+  const stored = (await getStoredBirdrJourneyCountryCode())?.trim()?.toUpperCase();
+  if (stored && stored === countryCode.trim().toUpperCase()) {
+    await clearStoredBirdrJourneyCountryCode();
+  }
 }
 
 export async function getStoredBirdrJourneyPlayerToken(): Promise<string | null> {
@@ -135,7 +157,7 @@ async function canQueryBirdrJourney(): Promise<boolean> {
   return !!(await getStoredBirdrJourneyPlayerToken());
 }
 
-/** Load an in-progress journey for the home screen (stored country, then fallbacks). */
+/** Load the active in-progress journey (stored country, then most recently updated). */
 export async function findInProgressBirdrJourney(
   countryCandidates: Array<string | null | undefined>
 ): Promise<BirdrJourney | null> {
@@ -152,14 +174,68 @@ export async function findInProgressBirdrJourney(
       // Auth or network error — skip this candidate.
     }
   }
-  return null;
+  try {
+    const journeys = await listBirdrJourneys();
+    return journeys.find(isBirdrJourneyInProgress) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** List all country challenges for the current user or guest player. */
+export async function listBirdrJourneys(): Promise<BirdrJourney[]> {
+  return fetchBirdrJourneyList(false);
+}
+
+async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourney[]> {
+  const response = await fetch(apiUrl('/api/birdr-journey/'), {
+    method: 'GET',
+    headers: await journeyAuthHeaders(),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status === 401 && !retried) {
+    await clearStoredBirdrJourneyPlayerToken();
+    const headers = (await getAuthHeaders()) as Record<string, string>;
+    if (headers.Authorization) {
+      return fetchBirdrJourneyList(true);
+    }
+    await reconcileStoredBirdrJourneyCountry([]);
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to load journeys'));
+  }
+  if (!Array.isArray(data)) {
+    throw new Error(parseError(data, 'Failed to load journeys'));
+  }
+
+  const journeys = data as BirdrJourney[];
+  await reconcileStoredBirdrJourneyCountry(journeys);
+  if (journeys.length > 0) {
+    await syncBirdrJourneyPlayerToken(journeys[0]);
+  }
+  return journeys;
+}
+
+/** Remove a country challenge and its progress. */
+export async function deleteBirdrJourney(journeyId: number): Promise<void> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/`), {
+    method: 'DELETE',
+    headers: await journeyAuthHeaders(),
+  });
+  if (response.status === 204) return;
+  const data = await response.json().catch(() => ({}));
+  throw new Error(parseError(data, 'Failed to remove challenge'));
 }
 
 export type CountryChallengeNavTarget =
   | { name: 'BirdrJourneyProgress'; params: { countryCode: string } }
-  | { name: 'BirdrJourneyIntro' };
+  | { name: 'BirdrJourneyIntro' }
+  | { name: 'BirdrJourneyList' };
 
-/** Menu / nav target: ongoing journey progress or intro to start one. */
+/** Home hero: ongoing journey progress or intro to start one. */
 export async function resolveCountryChallengeRoute(
   countryCandidates: Array<string | null | undefined>
 ): Promise<CountryChallengeNavTarget> {
@@ -172,6 +248,7 @@ export async function resolveCountryChallengeRoute(
 }
 
 const COUNTRY_CHALLENGE_ROUTE_NAMES = new Set([
+  'BirdrJourneyList',
   'BirdrJourneyIntro',
   'BirdrJourneyCountry',
   'BirdrJourneyProgress',
@@ -249,7 +326,10 @@ export async function getBirdrJourney(
     method: 'GET',
     headers: await journeyAuthHeaders(),
   });
-  if (response.status === 404) return null;
+  if (response.status === 404) {
+    await clearStoredCountryIfMatches(countryCode);
+    return null;
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(parseError(data, 'Failed to load journey'));

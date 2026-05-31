@@ -175,11 +175,17 @@ class BirdrJourneyMixin(GetPlayerMixin):
 
 
 class BirdrJourneyView(BirdrJourneyMixin, APIView):
-    """GET ?country_code=XX — load journey; POST { country_code } — get or create at first level."""
+    """GET — list journeys, or ?country_code=XX load one; POST { country_code } — get or create."""
 
     def get(self, request):
         owner = self._resolve_owner(request)
         country_code = request.query_params.get('country_code')
+        if not country_code or not str(country_code).strip():
+            journeys = self._journey_queryset(owner).order_by('-updated')
+            return Response([
+                self._serialize_journey(journey, request)
+                for journey in journeys
+            ])
         country = self._get_country(country_code)
         journey = self._get_journey(owner, country)
         if not journey:
@@ -206,6 +212,15 @@ class BirdrJourneyView(BirdrJourneyMixin, APIView):
             self._serialize_journey(journey, request),
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+
+class BirdrJourneyDetailView(BirdrJourneyMixin, APIView):
+    """DELETE — remove a journey and its linked step games."""
+
+    def delete(self, request, journey_id):
+        journey = self._get_owned_journey(request, journey_id)
+        journey.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):

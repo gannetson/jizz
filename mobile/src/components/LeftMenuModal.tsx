@@ -14,11 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '../i18n/TranslationContext';
-import { useProfile } from '../context/ProfileContext';
 import {
-  getStoredBirdrJourneyCountryCode,
   isCountryChallengeRoute,
-  resolveCountryChallengeRoute,
 } from '../api/birdrJourney';
 import { colors } from '../theme';
 import { getAppVersionDisplay } from '../utils/appVersion';
@@ -30,7 +27,7 @@ const MENU_ITEMS: { route: string; labelKey: string }[] = [
   { route: 'Home', labelKey: 'home' },
   { route: 'Start', labelKey: 'new_game' },
   { route: 'Scores', labelKey: 'high_scores' },
-  { route: 'BirdrJourneyIntro', labelKey: 'country_challenge' },
+  { route: 'BirdrJourneyList', labelKey: 'country_challenges' },
   { route: 'Updates', labelKey: 'updates' },
   { route: 'Help', labelKey: 'help' },
   { route: 'Privacy', labelKey: 'privacy' },
@@ -41,22 +38,12 @@ export function LeftMenuModal() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { profile, ready: profileReady } = useProfile();
   const { leftMenuVisible, closeLeftMenu, currentRouteName } = useMenu();
   const slideAnim = useRef(new Animated.Value(-PANEL_WIDTH)).current;
 
-  const openCountryChallenge = useCallback(async () => {
-    const storedCountry = await getStoredBirdrJourneyCountryCode();
-    const target = await resolveCountryChallengeRoute([
-      storedCountry,
-      profileReady ? profile?.country_code : null,
-    ]);
-    if (target.name === 'BirdrJourneyProgress') {
-      (navigation as any).navigate(target.name, target.params);
-    } else {
-      (navigation as any).navigate(target.name);
-    }
-  }, [navigation, profile?.country_code, profileReady]);
+  const openCountryChallenges = useCallback(() => {
+    (navigation as any).navigate('BirdrJourneyList');
+  }, [navigation]);
 
   useEffect(() => {
     Animated.timing(slideAnim, {
@@ -68,8 +55,8 @@ export function LeftMenuModal() {
 
   const handleItem = (routeName: string) => {
     closeLeftMenu();
-    if (routeName === 'BirdrJourneyIntro') {
-      void openCountryChallenge();
+    if (routeName === 'BirdrJourneyList') {
+      void openCountryChallenges();
       return;
     }
     if (routeName === 'Privacy') {
@@ -116,7 +103,7 @@ export function LeftMenuModal() {
               </View>
               {MENU_ITEMS.map((item) => {
                 const isFocused =
-                  item.route === 'BirdrJourneyIntro'
+                  item.route === 'BirdrJourneyList'
                     ? isCountryChallengeRoute(currentRoute)
                     : currentRoute === item.route;
                 const label = t(item.labelKey);

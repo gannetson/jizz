@@ -93,7 +93,7 @@ export function BirdrJourneyProgressScreen() {
   };
 
   const handleAnotherCountry = () => {
-    (navigation as any).navigate('BirdrJourneyCountry');
+    (navigation as any).navigate('BirdrJourneyList');
   };
 
   if (loading && !journey) {

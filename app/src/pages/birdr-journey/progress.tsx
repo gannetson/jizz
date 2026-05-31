@@ -104,7 +104,7 @@ export function BirdrJourneyProgressPage() {
                 defaultMessage="You completed the full country challenge for this country."
               />
             </Text>
-            <Button colorPalette="primary" width="full" onClick={() => navigate('/journey/country')}>
+            <Button colorPalette="primary" width="full" onClick={() => navigate('/journey')}>
               <FormattedMessage id="birdr_journey_another_country" defaultMessage="Start a journey in another country" />
             </Button>
           </VStack>

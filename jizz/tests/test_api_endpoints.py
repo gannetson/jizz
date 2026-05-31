@@ -620,6 +620,7 @@ class ApiFeedbackTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('Love the checklist', mail.outbox[0].body)
         self.assertIn('fb@example.com', mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].reply_to, ['fbuser <fb@example.com>'])
 
     def test_feedback_requires_comment(self):
         response = self.client.post(

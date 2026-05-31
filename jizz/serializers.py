@@ -1449,7 +1449,14 @@ class BirdrJourneySerializer(serializers.ModelSerializer):
         return get_active_journey_step(obj) is not None
 
     def get_current_game(self, obj):
-        from jizz.birdr_journey_views import get_current_journey_game
+        from jizz.birdr_journey_views import get_current_journey_game, get_journey_game_by_token
+
+        request = self.context.get('request')
+        game_token = (request.query_params.get('game_token') or '').strip() if request else ''
+        if game_token:
+            journey_game = get_journey_game_by_token(obj, game_token)
+            if journey_game:
+                return BirdrJourneyGameSerializer(journey_game, context=self.context).data
 
         journey_game = get_current_journey_game(obj)
         if not journey_game:

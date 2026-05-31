@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from jizz.birdr_journey_views import get_journey_level, get_level_steps_ordered
 from jizz.models import (
     BirdrJourney,
     BirdrJourneyGame,
@@ -230,6 +231,34 @@ class BirdrJourneyApiTestCase(TestCase):
         self.assertEqual(advance.status_code, status.HTTP_200_OK)
         self.assertEqual(advance.data['current_sequence'], 1)
         self.assertEqual(advance.data['current_step_sequence'], 0)
+
+    def test_get_journey_resolves_current_game_by_game_token(self):
+        _player_auth(self.client, self.player)
+        create = self.client.post('/api/birdr-journey/', {'country_code': 'NL'}, format='json')
+        journey_id = create.data['id']
+        start = self.client.post(f'/api/birdr-journey/{journey_id}/start-step/', format='json')
+        game_token = start.data['journey_game']['game']['token']
+
+        pending = self.client.get(
+            '/api/birdr-journey/',
+            {'country_code': 'NL', 'game_token': game_token},
+        )
+        self.assertEqual(pending.status_code, status.HTTP_200_OK)
+        self.assertEqual(pending.data['current_game']['game']['token'], game_token)
+        self.assertEqual(pending.data['current_game']['journey_step']['jokers'], 2)
+
+        journey = BirdrJourney.objects.get(id=journey_id)
+        journey.current_step_sequence = len(get_level_steps_ordered(get_journey_level(0)))
+        journey.save(update_fields=['current_step_sequence'])
+
+        without_token = self.client.get('/api/birdr-journey/', {'country_code': 'NL'})
+        self.assertIsNone(without_token.data['current_game'])
+
+        with_token = self.client.get(
+            '/api/birdr-journey/',
+            {'country_code': 'NL', 'game_token': game_token},
+        )
+        self.assertEqual(with_token.data['current_game']['game']['token'], game_token)
 
     def test_works_with_one_based_level_sequences(self):
         JourneyLevel.objects.all().delete()

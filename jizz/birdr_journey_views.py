@@ -64,6 +64,19 @@ def get_active_journey_step(journey):
     return steps[journey.current_step_sequence]
 
 
+def get_journey_game_by_token(journey, game_token):
+    """Return the journey game link for an in-progress or completed step game."""
+    token = (game_token or '').strip()
+    if not token:
+        return None
+    return (
+        journey.games.filter(game__token=token)
+        .select_related('game', 'journey_step', 'journey_step__journey_level')
+        .order_by('-created')
+        .first()
+    )
+
+
 def get_current_journey_game(journey):
     step = get_active_journey_step(journey)
     if not step:
@@ -99,6 +112,19 @@ def is_pending_level_celebration(journey):
     if step_count == 0:
         return False
     return journey.current_step_sequence >= step_count
+
+
+def journey_game_step_status(journey_game):
+    """Resolved step outcome from game state (not cached ORM properties)."""
+    game = journey_game.game
+    game.refresh_from_db()
+    if journey_game.remaining_jokers < 0:
+        return 'failed'
+    if game.ended:
+        return 'passed'
+    if game.questions.exists():
+        return 'running'
+    return 'new'
 
 
 class BirdrJourneyMixin(GetPlayerMixin):
@@ -272,7 +298,8 @@ class BirdrJourneyCompleteStepView(BirdrJourneyMixin, APIView):
                 raise ValidationError({'error': 'No active journey game found.'})
 
         level_complete = False
-        if journey_game.status == 'passed':
+        status = journey_game_step_status(journey_game)
+        if status == 'passed':
             step = journey_game.journey_step
             level = step.journey_level
             step_index = get_step_index(level, step)
@@ -286,7 +313,7 @@ class BirdrJourneyCompleteStepView(BirdrJourneyMixin, APIView):
         return Response({
             'journey': self._serialize_journey(journey, request),
             'level_complete': level_complete,
-            'status': journey_game.status,
+            'status': status,
         })
 
 

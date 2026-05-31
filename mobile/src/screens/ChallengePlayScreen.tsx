@@ -40,6 +40,8 @@ type ChallengePlayParams = {
   language?: string;
   gameLevel?: string;
   gameMedia?: string;
+  stepJokers?: number;
+  stepLength?: number;
 };
 
 function speciesDisplayName(s: QuestionOption | Species, lang?: string): string {
@@ -72,7 +74,7 @@ export function ChallengePlayScreen() {
   const { t } = useTranslation();
   const route = useRoute<RouteProp<{ ChallengePlay: ChallengePlayParams }, 'ChallengePlay'>>();
   const navigation = useNavigation();
-  const { gameToken, journeyId, countryCode, language: paramLanguage, gameLevel, gameMedia } = route.params ?? {};
+  const { gameToken, journeyId, countryCode, language: paramLanguage, gameLevel, gameMedia, stepJokers: paramStepJokers, stepLength: paramStepLength } = route.params ?? {};
   const [question, setQuestion] = useState<ChallengeQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -150,37 +152,44 @@ export function ChallengePlayScreen() {
     }
   }, [gameToken, getPlayPlayerToken, t]);
 
+  /** Load journey step game (jokers, progress) for Birdr Journey play. */
+  const loadJourneyGame = useCallback(async () => {
+    if (!gameToken || !countryCode) return;
+    try {
+      const journey = await getBirdrJourney(countryCode, { gameToken });
+      if (!journey) {
+        setJourneyGame(null);
+        return;
+      }
+      setJourneyCountryName(journey.country?.name ?? countryCode);
+      const currentGame =
+        journey.current_game?.game?.token === gameToken ? journey.current_game : null;
+      setJourneyGame(currentGame);
+    } catch {
+      setJourneyGame(null);
+    }
+  }, [gameToken, countryCode]);
+
   /** Fetch next question when user taps "Next question". */
   const fetchNextQuestion = useCallback(async () => {
     if (!gameToken) return;
-    setAnswerResult(null);
-    setLevelEnded(false);
-    setFeedback(null);
-    setShowFeedback(false);
-    setQuestion(null);
-    setLoading(true);
     try {
       const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
-      setQuestion(q ?? null);
-      if (!q && countryCode) {
-        try {
-          const journey = await getBirdrJourney(countryCode);
-          const currentGame =
-            journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
-          if (currentGame?.status === 'failed' || currentGame?.status === 'passed') {
-            setLevelEnded(true);
-          }
-        } catch {
-          // Calculating UI + checkLevelEndAndNavigate will handle navigation.
-        }
+      if (!q) {
+        navigateJourneyResults();
+        return;
       }
+      setAnswerResult(null);
+      setLevelEnded(false);
+      setFeedback(null);
+      setShowFeedback(false);
+      setQuestion(q);
+      await loadJourneyGame();
     } catch (e) {
-      setQuestion(null);
-    } finally {
-      setLoading(false);
+      setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
     }
-  }, [gameToken, countryCode, getPlayPlayerToken]);
+  }, [gameToken, getPlayPlayerToken, loadJourneyGame, navigateJourneyResults, t]);
 
   useEffect(() => {
     loadQuestion();
@@ -203,24 +212,6 @@ export function ChallengePlayScreen() {
       if (token) setChallengePlayerToken(token);
     });
   }, [gameToken, getPlayPlayerToken]);
-
-  /** Load journey step game (jokers, progress) for Birdr Journey play. */
-  const loadJourneyGame = useCallback(async () => {
-    if (!gameToken || !countryCode) return;
-    try {
-      const journey = await getBirdrJourney(countryCode);
-      if (!journey) {
-        setJourneyGame(null);
-        return;
-      }
-      setJourneyCountryName(journey.country?.name ?? countryCode);
-      const currentGame =
-        journey.current_game?.game?.token === gameToken ? journey.current_game : null;
-      setJourneyGame(currentGame);
-    } catch {
-      setJourneyGame(null);
-    }
-  }, [gameToken, countryCode]);
 
   useEffect(() => {
     loadJourneyGame();
@@ -312,7 +303,7 @@ export function ChallengePlayScreen() {
   const checkLevelEndAndNavigate = useCallback(async () => {
     if (!countryCode || !gameToken) return;
     try {
-      const journey = await getBirdrJourney(countryCode);
+      const journey = await getBirdrJourney(countryCode, { gameToken });
       const currentGame =
         journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
       if (currentGame?.status === 'failed' || currentGame?.status === 'passed') {
@@ -336,6 +327,9 @@ export function ChallengePlayScreen() {
       setQuestionLoadError(t('error_loading_question'));
       return;
     }
+    const stepLength =
+      journeyGame?.journey_step?.length ?? journeyGame?.game?.length ?? paramStepLength ?? 0;
+    const isLastQuestion = stepLength > 0 && (question.sequence ?? 1) >= stepLength;
     setSubmitting(true);
     setFeedback(null);
     setAnswerResult(null);
@@ -365,12 +359,9 @@ export function ChallengePlayScreen() {
       const jokersBeforeAnswer = journeyGame?.remaining_jokers;
       const failedFromJokers =
         !correct && jokersBeforeAnswer !== undefined && jokersBeforeAnswer <= 0;
-      if (failedFromJokers) {
-        setJourneyStepFailed(true);
-        setLevelEnded(true);
-      }
+      let stepFailed = failedFromJokers;
       if (countryCode) {
-        const journey = await getBirdrJourney(countryCode);
+        const journey = await getBirdrJourney(countryCode, { gameToken });
         const currentGame =
           journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
         if (currentGame) {
@@ -378,13 +369,13 @@ export function ChallengePlayScreen() {
           setJourneyCountryName(journey?.country?.name ?? countryCode);
         }
         const gameStatus = currentGame?.status ?? null;
-        const stepFailed = gameStatus === 'failed' || failedFromJokers;
-        if (stepFailed) {
-          setJourneyStepFailed(true);
-          setLevelEnded(true);
-        } else if (gameStatus === 'passed') {
-          setLevelEnded(true);
-        }
+        stepFailed = gameStatus === 'failed' || failedFromJokers;
+      }
+      if (stepFailed) {
+        setJourneyStepFailed(true);
+        setLevelEnded(true);
+      } else if (isLastQuestion) {
+        setLevelEnded(true);
       }
     } catch (e) {
       setFeedback({ correct: false, species_frequency: null });
@@ -446,12 +437,13 @@ export function ChallengePlayScreen() {
 
   const countryName = journeyCountryName ?? countryCode ?? 'Country';
 
-  const totalJokers = journeyGame?.journey_step?.jokers ?? 0;
-  const remainingJokers = journeyGame?.remaining_jokers ?? 0;
+  const totalJokers = journeyGame?.journey_step?.jokers ?? paramStepJokers ?? 0;
+  const remainingJokers = journeyGame?.remaining_jokers ?? totalJokers;
 
   // Progress icons: previous answers from game scores; current question from answerResult.
   type ProgressResult = 'open' | 'correct' | 'joker' | 'incorrect';
-  const levelLength = journeyGame?.game?.length ?? 0;
+  const levelLength =
+    journeyGame?.journey_step?.length ?? journeyGame?.game?.length ?? paramStepLength ?? 0;
   const answers = journeyGame?.game?.scores?.[0]?.answers ?? [];
   const progressResults: ProgressResult[] = Array.from({ length: levelLength }, () => 'open');
   answers.forEach((a: { sequence?: number; correct?: boolean }) => {
@@ -474,6 +466,8 @@ export function ChallengePlayScreen() {
   });
 
   const currentQuestionNum = question?.sequence ?? 1;
+  const isLastQuestion = levelLength > 0 && currentQuestionNum >= levelLength;
+  const showStepContinue = levelEnded || (answerResult !== null && isLastQuestion);
 
   return (
     <ChallengePlayAudio soundUri={soundUri}>
@@ -547,7 +541,7 @@ export function ChallengePlayScreen() {
 
       {answerResult !== null ? (
         <View style={styles.nextSection}>
-          {levelEnded ? (
+          {showStepContinue ? (
             journeyStepFailed ? null : (
               <TouchableOpacity
                 style={styles.primaryButton}

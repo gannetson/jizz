@@ -10,9 +10,9 @@ import {
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import {
   completeJourneyStep,
-  getBirdrJourney,
   startJourneyStep,
   getStoredBirdrJourneyPlayerToken,
+  type BirdrJourney,
 } from '../api/birdrJourney';
 import { setStoredChallengePlayerToken } from '../api/challenge';
 import { BirdrMoodHero } from '../components/BirdrMoodHero';
@@ -36,6 +36,7 @@ export function BirdrJourneyStepResultsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [passed, setPassed] = useState(false);
   const [levelComplete, setLevelComplete] = useState(false);
+  const [syncedJourney, setSyncedJourney] = useState<BirdrJourney | null>(null);
   const [retrying, setRetrying] = useState(false);
 
   useFocusEffect(
@@ -45,12 +46,20 @@ export function BirdrJourneyStepResultsScreen() {
         setLoading(true);
         setError(null);
         try {
-          const result = await completeJourneyStep(journeyId, gameToken);
+          let result = await completeJourneyStep(journeyId, gameToken);
+          if (
+            !cancelled
+            && (result.status === 'new' || result.status === 'running')
+            && gameToken
+          ) {
+            result = await completeJourneyStep(journeyId, gameToken);
+          }
           if (cancelled) return;
           if (result.status === 'new' || result.status === 'running') {
             (navigation as any).replace('BirdrJourneyStepIntro', { journeyId, countryCode, gameToken });
             return;
           }
+          setSyncedJourney(result.journey);
           setPassed(result.status === 'passed');
           setLevelComplete(result.level_complete);
         } catch (e: unknown) {
@@ -62,7 +71,7 @@ export function BirdrJourneyStepResultsScreen() {
         }
       })();
       return () => { cancelled = true; };
-    }, [journeyId, gameToken, t])
+    }, [journeyId, gameToken, countryCode, navigation, t])
   );
 
   const handleContinue = () => {
@@ -73,7 +82,10 @@ export function BirdrJourneyStepResultsScreen() {
       });
       return;
     }
-    (navigation as any).replace('BirdrJourneyProgress', { countryCode });
+    (navigation as any).replace('BirdrJourneyProgress', {
+      countryCode,
+      advancedJourney: syncedJourney ?? undefined,
+    });
   };
 
   const handleRetry = async () => {

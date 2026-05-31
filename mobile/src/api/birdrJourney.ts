@@ -237,8 +237,14 @@ export async function createBirdrJourneyPlayer(
 }
 
 /** Load journey for country; null if 404. */
-export async function getBirdrJourney(countryCode: string): Promise<BirdrJourney | null> {
-  const url = apiUrl(`/api/birdr-journey/?country_code=${encodeURIComponent(countryCode)}`);
+export async function getBirdrJourney(
+  countryCode: string,
+  options?: { gameToken?: string }
+): Promise<BirdrJourney | null> {
+  const params = new URLSearchParams({ country_code: countryCode });
+  const gameToken = options?.gameToken?.trim();
+  if (gameToken) params.set('game_token', gameToken);
+  const url = apiUrl(`/api/birdr-journey/?${params.toString()}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: await journeyAuthHeaders(),

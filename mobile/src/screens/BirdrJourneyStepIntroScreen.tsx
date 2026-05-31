@@ -97,6 +97,8 @@ export function BirdrJourneyStepIntroScreen() {
         language: 'en',
         gameLevel: stepData.level,
         gameMedia: stepData.media,
+        stepJokers: stepData.jokers,
+        stepLength: stepData.length,
       });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t('failed_load'));

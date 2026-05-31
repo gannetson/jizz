@@ -22,6 +22,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from jizz.authentication import PlayerTokenAuthentication
 from rest_framework_social_oauth2.views import ConvertTokenView
 from django.conf import settings
 from django.shortcuts import redirect
@@ -699,6 +701,23 @@ class AnswerView(CreateAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
     permission_classes = [AllowAny]
+    # JWT before player token so logged-in users are recognized for checklist_added.
+    authentication_classes = [JWTAuthentication, PlayerTokenAuthentication]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        data = dict(serializer.data)
+        if serializer.instance is not None:
+            data['checklist_added'] = bool(
+                getattr(serializer.instance, 'checklist_added', False)
+            )
+            data['checklist_missed'] = bool(
+                getattr(serializer.instance, 'checklist_missed', False)
+            )
+        headers = self.get_success_headers(data)
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         answer = serializer.save()

@@ -1,11 +1,40 @@
 import {Flex, Link} from "@chakra-ui/react";
-import AppContext from "../../../core/app-context";
-import {useContext} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {FormattedMessage} from "react-intl"
+import {Link as RouterLink, useLocation} from "react-router-dom";
 import ChangeLanguage from "../../../components/change-language";
+import {
+  getCountryChallengePath,
+  getStoredBirdrJourneyCountryCode,
+} from "../../../api/birdrJourney";
+import {authService} from "../../../api/services/auth.service";
+import {profileService} from "../../../api/services/profile.service";
 
 export const BirdrMenu = () => {
-    const {game} = useContext(AppContext);
+    const location = useLocation();
+    const [challengePath, setChallengePath] = useState('/journey/intro');
+
+    const loadChallengePath = useCallback(async () => {
+      let profileCountry: string | null = null;
+      if (authService.getAccessToken()) {
+        try {
+          const profile = await profileService.getProfile();
+          profileCountry = profile.country_code ?? null;
+        } catch {
+          /* ignore */
+        }
+      }
+      const path = await getCountryChallengePath([
+        getStoredBirdrJourneyCountryCode(),
+        profileCountry,
+      ]);
+      setChallengePath(path);
+    }, []);
+
+    useEffect(() => {
+      loadChallengePath();
+    }, [loadChallengePath, location.pathname]);
+
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
             <Link href={'/'} textDecoration="none">
@@ -17,8 +46,10 @@ export const BirdrMenu = () => {
             <Link href={'/scores'} textDecoration="none">
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
             </Link>
-            <Link href={'/journey/intro'} textDecoration="none">
-              <FormattedMessage id={'country_challenge'} defaultMessage={'Country challenge'} />
+            <Link asChild textDecoration="none">
+              <RouterLink to={challengePath}>
+                <FormattedMessage id={'country_challenge'} defaultMessage={'Country challenge'} />
+              </RouterLink>
             </Link>
             <Link href={'/checklist'} textDecoration="none">
               <FormattedMessage id="checklist_title" defaultMessage="My Checklist" />
@@ -45,4 +76,3 @@ export const BirdrMenu = () => {
 }
 
 export default BirdrMenu;
-

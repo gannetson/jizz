@@ -15,9 +15,12 @@ if TYPE_CHECKING:
     from jizz.models import Species
 
 
-def _absolute_url(url: str, request) -> str:
+def absolute_media_url(url: str, request=None) -> str:
+    """Turn a FileField .url (often /media/...) into an absolute HTTPS URL for clients."""
+    if not url:
+        return url
     if url.startswith('http://') or url.startswith('https://'):
-        if request and not getattr(settings, 'DEBUG', True) and url.startswith('http://'):
+        if not getattr(settings, 'DEBUG', True) and url.startswith('http://'):
             return 'https://' + url[7:]
         return url
     if request:
@@ -25,7 +28,14 @@ def _absolute_url(url: str, request) -> str:
         if not getattr(settings, 'DEBUG', True) and built.startswith('http://'):
             return 'https://' + built[7:]
         return built
+    site = getattr(settings, 'SITE_URL', 'https://birdr.pro').rstrip('/')
+    if url.startswith('/'):
+        return site + url
     return url
+
+
+def _absolute_url(url: str, request) -> str:
+    return absolute_media_url(url, request)
 
 
 def _stored_illustration_url(species: Species, request) -> str | None:

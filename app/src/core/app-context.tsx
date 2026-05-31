@@ -125,6 +125,7 @@ export type Answer = {
   species?: Species
   species_frequency?: string | null
   checklist_added?: boolean
+  checklist_missed?: boolean
   player?: Player
   error?: number
   number?: number

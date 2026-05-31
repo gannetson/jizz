@@ -21,7 +21,7 @@ import { MediaCredits } from "../../../components/media-credits"
 import {keyframes} from "@emotion/react"
 import {ViewSpecies} from "../../../components/view-species"
 import {SpeciesModal} from "../../../components/species-modal"
-import {AnswerFeedback, normalizeChecklistAdded} from "../../../components/answer-feedback"
+import {AnswerFeedback, normalizeChecklistAdded, normalizeChecklistMissed} from "../../../components/answer-feedback"
 import {WaitingComponent} from "./waiting"
 import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
@@ -299,6 +299,7 @@ export const QuestionComponent = () => {
                   correct={Boolean(answer.correct)}
                   speciesFrequency={answer.species_frequency}
                   checklistAdded={normalizeChecklistAdded(answer?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(answer?.checklist_missed)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}
@@ -326,6 +327,7 @@ export const QuestionComponent = () => {
                   correct={Boolean(answer.correct)}
                   speciesFrequency={answer.species_frequency}
                   checklistAdded={normalizeChecklistAdded(answer?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(answer?.checklist_missed)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}
@@ -357,6 +359,7 @@ export const QuestionComponent = () => {
                     correct={Boolean(answer.correct)}
                     speciesFrequency={answer.species_frequency}
                     checklistAdded={normalizeChecklistAdded(answer?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(answer?.checklist_missed)}
                     onAnimationComplete={handleAnimationComplete}
                   />
                 )}

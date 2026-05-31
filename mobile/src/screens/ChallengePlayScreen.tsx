@@ -29,7 +29,7 @@ import { apiUrl } from '../api/config';
 import type { Species } from '../types/game';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
-import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded } from '../components/AnswerFeedback';
+import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
@@ -85,6 +85,7 @@ export function ChallengePlayScreen() {
     correct: boolean;
     species_frequency?: string | null;
     checklist_added?: boolean;
+    checklist_missed?: boolean;
   } | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [answerResult, setAnswerResult] = useState<{
@@ -210,7 +211,6 @@ export function ChallengePlayScreen() {
   useEffect(() => {
     if (question) {
       setMediaIndex(question.number ?? 0);
-      setHadQuestion(true);
     }
     setJourneyStepFailed(false);
   }, [question?.id]);
@@ -471,6 +471,7 @@ export function ChallengePlayScreen() {
         species_frequency:
           typeof response?.species_frequency === 'string' ? response.species_frequency : null,
         checklist_added: normalizeChecklistAdded(response?.checklist_added),
+        checklist_missed: normalizeChecklistMissed(response?.checklist_missed),
       });
       setShowFeedback(true);
       setAnswerResult({ correct, userAnswer, correctSpecies });
@@ -638,6 +639,7 @@ export function ChallengePlayScreen() {
                 correct={feedback.correct}
                 speciesFrequency={normalizeSpeciesFrequency(feedback.species_frequency)}
                 checklistAdded={normalizeChecklistAdded(feedback.checklist_added)}
+                checklistMissed={normalizeChecklistMissed(feedback.checklist_missed)}
                 onAnimationComplete={handleFeedbackComplete}
               />
             ) : undefined

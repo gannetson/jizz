@@ -35,8 +35,19 @@ function afterAuthSuccess(): void {
 async function linkStoredPlayerToAccount(): Promise<void> {
   try {
     const accessToken = await authApi.ensureFreshAccessToken();
-    const playerToken = (await AsyncStorage.getItem(playerApi.PLAYER_TOKEN_STORAGE_KEY))?.trim();
-    if (accessToken && playerToken && playerToken.length >= 4) {
+    if (!accessToken) return;
+    const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+    const keys = [
+      playerApi.PLAYER_TOKEN_STORAGE_KEY,
+      'birdr_journey_player_token',
+      'challenge_player_token',
+    ];
+    const tokens = new Set<string>();
+    for (const key of keys) {
+      const t = (await AsyncStorage.getItem(key))?.trim();
+      if (t && t.length >= 4) tokens.add(t);
+    }
+    for (const playerToken of tokens) {
       await playerApi.linkPlayerToAccount(accessToken, playerToken);
     }
   } catch {

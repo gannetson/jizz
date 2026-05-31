@@ -79,7 +79,6 @@ export type CompleteStepResponse = {
   status: string;
 };
 
-const BIRDR_JOURNEY_PLAYER_KEY = 'birdr_journey_player_token';
 const BIRDR_JOURNEY_COUNTRY_KEY = 'birdr_journey_country_code';
 
 function parseError(data: Record<string, unknown>, fallback: string): string {
@@ -109,6 +108,8 @@ function persistJourneyCountry(journey: BirdrJourney | null | undefined): void {
   const code = journey?.country?.code?.trim();
   if (code) setStoredBirdrJourneyCountryCode(code);
 }
+
+export const BIRDR_JOURNEY_PLAYER_KEY = 'birdr_journey_player_token';
 
 export function getStoredBirdrJourneyPlayerToken(): string | null {
   try {
@@ -163,6 +164,15 @@ export async function findInProgressBirdrJourney(
     }
   }
   return null;
+}
+
+/** Menu / nav target: ongoing journey progress or intro to start one. */
+export async function getCountryChallengePath(
+  countryCandidates: Array<string | null | undefined>
+): Promise<string> {
+  const journey = await findInProgressBirdrJourney(countryCandidates);
+  const code = journey?.country?.code?.trim()?.toUpperCase();
+  return code ? `/journey/${code}` : '/journey/intro';
 }
 
 export async function resolveBirdrJourneyPlayerToken(): Promise<string | null> {
@@ -316,11 +326,15 @@ export async function submitChallengeAnswer(
   playerToken: string
 ): Promise<Answer> {
   const headers: Record<string, string> = {
-    ...playerAuthHeaders(playerToken),
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
   };
+  await authService.ensureValidAccessToken();
   const jwt = authService.getAccessToken();
   if (jwt) {
     headers.Authorization = `Bearer ${jwt}`;
+  } else {
+    Object.assign(headers, playerAuthHeaders(playerToken));
   }
   const response = await fetch(apiUrl('/api/answer/'), {
     method: 'POST',

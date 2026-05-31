@@ -121,7 +121,48 @@ def _species_sets(game_ids: list[int], scores: QuerySet) -> tuple[set[int], set[
     return encountered, identified
 
 
-def compute_checklist_added(player: Player, question, correct: bool, user=None) -> bool:
+def resolve_checklist_user(player: Player, request=None):
+    """Logged-in user from JWT/session or from the answering player's account link."""
+    if request is not None:
+        auth_user = getattr(request, 'user', None)
+        if auth_user is not None and getattr(auth_user, 'is_authenticated', False):
+            return auth_user
+    if player.user_id:
+        return player.user
+    return None
+
+
+def _checklist_feedback_context(player: Player, question, user=None, request=None):
+    """(user_id, country_id, species_id) when species is checklist-eligible; else None."""
+    resolved = user if user is not None else resolve_checklist_user(player, request)
+    if resolved is None:
+        return None
+    game = question.game
+    if not game.country_id:
+        return None
+    if not _country_species_qs(game.country).filter(species_id=question.species_id).exists():
+        return None
+    return resolved.id, game.country_id, question.species_id
+
+
+def _user_identified_species(user_id: int, country_id: int, species_id: int) -> bool:
+    return Answer.objects.filter(
+        player_score__player__user_id=user_id,
+        question__game__country_id=country_id,
+        question__species_id=species_id,
+        answer_id=F('question__species_id'),
+    ).exists()
+
+
+def _user_encountered_species(user_id: int, country_id: int, species_id: int) -> bool:
+    return Answer.objects.filter(
+        player_score__player__user_id=user_id,
+        question__game__country_id=country_id,
+        question__species_id=species_id,
+    ).exists()
+
+
+def compute_checklist_added(player: Player, question, correct: bool, user=None, request=None) -> bool:
     """
     True when a correct answer is the user's first identification of this species
     for the game's country (logged-in users only; species must be on the checklist).
@@ -129,24 +170,28 @@ def compute_checklist_added(player: Player, question, correct: bool, user=None) 
     """
     if not correct:
         return False
-    user_id = None
-    if user is not None and getattr(user, 'is_authenticated', False):
-        user_id = user.id
-    elif player.user_id:
-        user_id = player.user_id
-    if not user_id:
+    ctx = _checklist_feedback_context(player, question, user=user, request=request)
+    if ctx is None:
         return False
-    game = question.game
-    if not game.country_id:
+    user_id, country_id, species_id = ctx
+    return not _user_identified_species(user_id, country_id, species_id)
+
+
+def compute_checklist_missed(player: Player, question, correct: bool, user=None, request=None) -> bool:
+    """
+    True when a wrong answer is the user's first encounter with this checklist species
+    for the game's country (logged-in users only; species not yet identified).
+    Call before persisting the new Answer row.
+    """
+    if correct:
         return False
-    if not _country_species_qs(game.country).filter(species_id=question.species_id).exists():
+    ctx = _checklist_feedback_context(player, question, user=user, request=request)
+    if ctx is None:
         return False
-    return not Answer.objects.filter(
-        player_score__player__user_id=user_id,
-        question__game__country_id=game.country_id,
-        question__species_id=question.species_id,
-        answer_id=F('question__species_id'),
-    ).exists()
+    user_id, country_id, species_id = ctx
+    if _user_identified_species(user_id, country_id, species_id):
+        return False
+    return not _user_encountered_species(user_id, country_id, species_id)
 
 
 def _compute_totals(

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Image, StyleSheet, ImageStyle, StyleProp } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { colors } from '../theme';
+import { resolveMediaUrl } from '../api/config';
 
 export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed';
 
@@ -23,6 +24,7 @@ export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
   const dimension = size ?? SIZE_BY_VARIANT[variant];
   const isSilhouette = variant === 'next' || variant === 'locked';
   const isCompleted = variant === 'completed';
+  const resolvedUrl = resolveMediaUrl(iconUrl);
 
   return (
     <View
@@ -32,9 +34,9 @@ export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
         variant === 'current' && styles.frameCurrent,
       ]}
     >
-      {iconUrl ? (
+      {resolvedUrl ? (
         <Image
-          source={{ uri: iconUrl }}
+          source={{ uri: resolvedUrl }}
           style={[
             styles.image,
             { width: dimension, height: dimension },
@@ -49,7 +51,7 @@ export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
       ) : (
         <View style={[styles.placeholder, { width: dimension, height: dimension }]} />
       )}
-      {isSilhouette && iconUrl && <View style={[styles.overlay, { borderRadius: dimension * 0.12 }]} />}
+      {isSilhouette && resolvedUrl && <View style={[styles.overlay, { borderRadius: dimension * 0.12 }]} />}
       {variant === 'locked' && (
         <View style={styles.lockBadge}>
           <FontAwesome5 name="lock" size={14} color={colors.primary[50]} />

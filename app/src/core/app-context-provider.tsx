@@ -443,11 +443,15 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
 
     const jwt = authService.getAccessToken()
+    if (!jwt) {
+      await authService.ensureValidAccessToken()
+    }
+    const accessToken = authService.getAccessToken()
     const response = await fetch(apiUrl(`/api/answer/`), {
       method: 'POST',
       headers: {
         ...noCacheHeaders,
-        Authorization: jwt ? `Bearer ${jwt}` : `Token ${player.token}`,
+        Authorization: accessToken ? `Bearer ${accessToken}` : `Token ${player.token}`,
       },
       body: JSON.stringify({
         question_id: question_id,

@@ -1,6 +1,6 @@
 import {Box, Flex, Icon, Text} from "@chakra-ui/react"
 import {motion} from "framer-motion"
-import {FaCheckCircle, FaCheckSquare, FaHeart, FaHeartBroken, FaStar} from "react-icons/fa"
+import {FaCheckCircle, FaCheckSquare, FaHeart, FaHeartBroken, FaStar, FaTimesCircle} from "react-icons/fa"
 import {useState, useEffect} from "react"
 import Confetti from "react-confetti"
 import {FormattedMessage} from "react-intl"
@@ -24,6 +24,7 @@ interface AnswerFeedbackProps {
   correct: boolean
   speciesFrequency?: string | null
   checklistAdded?: boolean
+  checklistMissed?: boolean
   onAnimationComplete: () => void
 }
 
@@ -36,10 +37,28 @@ export function isVagrantMega(correct: boolean, speciesFrequency?: string | null
 }
 
 export function normalizeChecklistAdded(raw: unknown): boolean {
-  return raw === true
+  return raw === true || raw === 1 || raw === 'true'
 }
 
-function ChecklistAddedBadge({visible}: {visible: boolean}) {
+export function normalizeChecklistMissed(raw: unknown): boolean {
+  return raw === true || raw === 1 || raw === 'true'
+}
+
+function ChecklistPill({
+  visible,
+  icon,
+  messageId,
+  defaultMessage,
+  borderColor,
+  textColor,
+}: {
+  visible: boolean
+  icon: typeof FaCheckSquare
+  messageId: string
+  defaultMessage: string
+  borderColor: string
+  textColor: string
+}) {
   if (!visible) return null
 
   return (
@@ -57,16 +76,42 @@ function ChecklistAddedBadge({visible}: {visible: boolean}) {
         bg="white"
         borderRadius="full"
         borderWidth="2px"
-        borderColor="success.400"
+        borderColor={borderColor}
         boxShadow="0 4px 14px rgba(0,0,0,0.12)"
         maxW="280px"
       >
-        <Icon as={FaCheckSquare} boxSize={5} color="success.600" flexShrink={0} />
-        <Text fontSize="sm" fontWeight="700" color="success.700" lineHeight="short">
-          <FormattedMessage id="checklist_added_toast" defaultMessage="Added to your checklist!" />
+        <Icon as={icon} boxSize={5} color={textColor} flexShrink={0} />
+        <Text fontSize="sm" fontWeight="700" color={textColor} lineHeight="short">
+          <FormattedMessage id={messageId} defaultMessage={defaultMessage} />
         </Text>
       </Flex>
     </motion.div>
+  )
+}
+
+function ChecklistAddedBadge({visible}: {visible: boolean}) {
+  return (
+    <ChecklistPill
+      visible={visible}
+      icon={FaCheckSquare}
+      messageId="checklist_added_toast"
+      defaultMessage="Added to your checklist!"
+      borderColor="success.400"
+      textColor="success.700"
+    />
+  )
+}
+
+function ChecklistMissedBadge({visible}: {visible: boolean}) {
+  return (
+    <ChecklistPill
+      visible={visible}
+      icon={FaTimesCircle}
+      messageId="checklist_missed_toast"
+      defaultMessage="Missed it for your checklist!"
+      borderColor="#d97706"
+      textColor="#b45309"
+    />
   )
 }
 
@@ -74,15 +119,18 @@ export const AnswerFeedback = ({
                                  correct,
                                  speciesFrequency,
                                  checklistAdded = false,
+                                 checklistMissed = false,
                                  onAnimationComplete,
                                }: AnswerFeedbackProps) => {
   const [heartState, setHeartState] = useState<"whole" | "broken">("whole")
   const [windowSize, setWindowSize] = useState({width: 0, height: 0})
   const vagrantMega = isVagrantMega(correct, speciesFrequency)
-  const showChecklistBadge = correct && checklistAdded
+  const showChecklistAdded = correct && checklistAdded
+  const showChecklistMissed = !correct && checklistMissed
+  const showChecklistPill = showChecklistAdded || showChecklistMissed
   const duration = vagrantMega
     ? VAGRANT_FEEDBACK_MS
-    : showChecklistBadge
+    : showChecklistPill
       ? FEEDBACK_MS + CHECKLIST_EXTRA_MS
       : FEEDBACK_MS
 
@@ -260,7 +308,8 @@ export const AnswerFeedback = ({
             </Box>
           </motion.div>
         )}
-        <ChecklistAddedBadge visible={showChecklistBadge} />
+        <ChecklistAddedBadge visible={showChecklistAdded} />
+        <ChecklistMissedBadge visible={showChecklistMissed} />
       </motion.div>
     </Box>
     </>

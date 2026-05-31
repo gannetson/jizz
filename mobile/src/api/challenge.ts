@@ -247,13 +247,16 @@ export async function submitChallengeAnswer(
   payload: AnswerPayload,
   playerToken: string
 ): Promise<SubmitChallengeAnswerResponse> {
-  const { getAuthHeaders } = await import('./auth');
-  const authHeaders = (await getAuthHeaders()) as Record<string, string>;
+  const { ensureFreshAccessToken } = await import('./auth');
+  const jwt = await ensureFreshAccessToken();
   const headers: Record<string, string> = {
-    ...playerAuthHeaders(playerToken) as Record<string, string>,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
   };
-  if (authHeaders.Authorization) {
-    headers.Authorization = authHeaders.Authorization;
+  if (jwt) {
+    headers.Authorization = `Bearer ${jwt}`;
+  } else {
+    Object.assign(headers, playerAuthHeaders(playerToken) as Record<string, string>);
   }
   const response = await fetch(apiUrl('/api/answer/'), {
     method: 'POST',

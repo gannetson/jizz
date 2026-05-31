@@ -230,7 +230,9 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             return
 
-        player = await sync_to_async(Player.objects.get)(token=player_token)
+        player = await sync_to_async(
+            lambda: Player.objects.select_related('user').get(token=player_token)
+        )()
         game = await sync_to_async(Game.objects.get)(token=self.game_token)
         player_score = await sync_to_async(PlayerScore.objects.get)(
             player=player, game=game
@@ -258,8 +260,9 @@ class QuizConsumer(AsyncWebsocketConsumer):
             row = qs.filter(player_score=player_score, question=question).first()
             if row:
                 row.checklist_added = False
+                row.checklist_missed = False
                 return row
-            from jizz.services.checklist import compute_checklist_added
+            from jizz.services.checklist import compute_checklist_added, compute_checklist_missed
 
             row = Answer.objects.create(
                 answer_id=answer_id,
@@ -267,7 +270,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 question=question,
                 correct=correct,
             )
-            row.checklist_added = compute_checklist_added(player, question, correct)
+            checklist_user = player.user if player.user_id else None
+            row.checklist_added = compute_checklist_added(
+                player, question, correct, user=checklist_user
+            )
+            row.checklist_missed = compute_checklist_missed(
+                player, question, correct, user=checklist_user
+            )
             return row
 
         answer = await sync_to_async(_load_answer_for_serialize)()

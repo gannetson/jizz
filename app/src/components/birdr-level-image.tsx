@@ -1,5 +1,6 @@
 import { Box, Image } from '@chakra-ui/react';
 import { FaCheck, FaLock } from 'react-icons/fa';
+import { resolveMediaUrl } from '../api/baseUrl';
 
 export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed';
 
@@ -21,6 +22,7 @@ export function BirdrLevelImage({ iconUrl, variant, size }: Props) {
   const isSilhouette = variant === 'next' || variant === 'locked';
   const isCompleted = variant === 'completed';
   const borderRadius = `${dimension * 0.12}px`;
+  const resolvedUrl = resolveMediaUrl(iconUrl);
 
   return (
     <Box
@@ -33,10 +35,10 @@ export function BirdrLevelImage({ iconUrl, variant, size }: Props) {
       borderWidth={variant === 'current' ? '3px' : undefined}
       borderColor={variant === 'current' ? 'primary.400' : undefined}
     >
-      {iconUrl ? (
+      {resolvedUrl ? (
         <>
           <Image
-            src={iconUrl}
+            src={resolvedUrl}
             alt=""
             width={`${dimension}px`}
             height={`${dimension}px`}

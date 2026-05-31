@@ -395,6 +395,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     species = SpeciesDetailSerializer(source='question.species', read_only=True)
     species_frequency = serializers.SerializerMethodField()
     checklist_added = serializers.SerializerMethodField()
+    checklist_missed = serializers.SerializerMethodField()
     answer = SpeciesDetailSerializer(read_only=True)
     answer_id = serializers.IntegerField(write_only=True)
     question_id = serializers.IntegerField(write_only=True)
@@ -414,8 +415,13 @@ class AnswerSerializer(serializers.ModelSerializer):
     def get_checklist_added(self, obj):
         return bool(getattr(obj, 'checklist_added', False))
 
+    def get_checklist_missed(self, obj):
+        return bool(getattr(obj, 'checklist_missed', False))
+
     def create(self, validated_data):
-        player = Player.objects.get(token=validated_data.pop('player_token'))
+        player = Player.objects.select_related('user').get(
+            token=validated_data.pop('player_token')
+        )
         question = Question.objects.select_related('game__country').get(
             id=validated_data.pop('question_id')
         )
@@ -425,25 +431,29 @@ class AnswerSerializer(serializers.ModelSerializer):
         if Answer.objects.filter(player_score=player_score, question=question).exists():
             existing = Answer.objects.filter(player_score=player_score, question=question).first()
             existing.checklist_added = False
+            existing.checklist_missed = False
             return existing
-        from jizz.services.checklist import compute_checklist_added
+        from jizz.services.checklist import compute_checklist_added, compute_checklist_missed
 
         request = self.context.get('request')
-        auth_user = getattr(request, 'user', None) if request else None
         checklist_added = compute_checklist_added(
-            player, question, correct, user=auth_user
+            player, question, correct, request=request
+        )
+        checklist_missed = compute_checklist_missed(
+            player, question, correct, request=request
         )
         row = Answer.objects.create(
             player_score=player_score, question=question, answer=answer, correct=correct
         )
         row.checklist_added = checklist_added
+        row.checklist_missed = checklist_missed
         return row
 
     class Meta:
         model = Answer
         fields = (
             'id', 'question_id', 'player_token',
-            'answer', 'correct', 'species', 'species_frequency', 'checklist_added',
+            'answer', 'correct', 'species', 'species_frequency', 'checklist_added', 'checklist_missed',
             'answer_id', 'number', 'score',
             'sequence',
         )
@@ -1352,10 +1362,10 @@ class JourneyLevelSerializer(serializers.ModelSerializer):
     def get_icon_url(self, obj):
         if not obj.icon:
             return None
+        from jizz.services.species_cover import absolute_media_url
+
         request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.icon.url)
-        return obj.icon.url
+        return absolute_media_url(obj.icon.url, request)
 
     def get_is_champion(self, obj):
         return obj.is_champion

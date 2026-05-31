@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
+import { useProfile } from '../context/ProfileContext';
+import {
+  getStoredBirdrJourneyCountryCode,
+  isCountryChallengeRoute,
+  resolveCountryChallengeRoute,
+} from '../api/birdrJourney';
 import { colors } from '../theme';
 import { getAppVersionDisplay } from '../utils/appVersion';
 
@@ -18,11 +24,26 @@ const MENU_ITEMS: { route: string; label: string }[] = [
 
 export function LeftDrawerContent(props: DrawerContentComponentProps) {
   const { state, navigation } = props;
+  const { profile, ready: profileReady } = useProfile();
   const { version: appVersion, build: buildNumber, codename } = getAppVersionDisplay();
   const versionLine = (() => {
     const base = buildNumber ? `${appVersion} (${buildNumber})` : appVersion;
     return codename ? `${base} · ${codename}` : base;
   })();
+
+  const openCountryChallenge = useCallback(async () => {
+    const storedCountry = await getStoredBirdrJourneyCountryCode();
+    const target = await resolveCountryChallengeRoute([
+      storedCountry,
+      profileReady ? profile?.country_code : null,
+    ]);
+    if (target.name === 'BirdrJourneyProgress') {
+      navigation.navigate(target.name, target.params);
+    } else {
+      navigation.navigate(target.name);
+    }
+    navigation.closeDrawer();
+  }, [navigation, profile?.country_code, profileReady]);
 
   return (
     <View style={styles.container}>
@@ -32,12 +53,14 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
       </View>
       <View style={styles.footerSpacer}>
         {MENU_ITEMS.map((item) => {
-          const isFocused = state.routes[state.index]?.name === item.route;
+          const currentRoute = state.routes[state.index]?.name;
           const isHelpDetail =
-            state.routes[state.index]?.name === 'HelpDetail' &&
+            currentRoute === 'HelpDetail' &&
             (state.routes[state.index].params as { slug?: string } | undefined)?.slug;
           const focused =
-            isFocused ||
+            (item.route === 'BirdrJourneyIntro'
+              ? isCountryChallengeRoute(currentRoute)
+              : currentRoute === item.route) ||
             (item.route === 'Privacy' && isHelpDetail === 'privacy') ||
             (item.route === 'About' && isHelpDetail === 'about');
           return (
@@ -45,6 +68,10 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
               key={item.route}
               style={[styles.item, focused && styles.itemFocused]}
               onPress={() => {
+                if (item.route === 'BirdrJourneyIntro') {
+                  void openCountryChallenge();
+                  return;
+                }
                 if (item.route === 'Privacy') {
                   navigation.navigate('HelpDetail', { slug: 'privacy' });
                 } else if (item.route === 'About') {

@@ -119,6 +119,9 @@ class BirdrJourneyApiTestCase(TestCase):
         self.assertEqual(response.data['current_level']['sequence'], 0)
         self.assertEqual(response.data['next_level']['sequence'], 1)
         self.assertIn('icon_url', response.data['current_level'])
+        icon_url = response.data['current_level']['icon_url']
+        self.assertTrue(icon_url)
+        self.assertTrue(icon_url.startswith('http://') or icon_url.startswith('https://'))
         self.assertEqual(response.data['next_level']['sequence'], 1)
 
     def test_jwt_user_can_create_journey(self):

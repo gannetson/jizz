@@ -203,6 +203,7 @@ export function BirdrJourneyStepIntroScreen() {
         <>
           <BirdrMoodHero mood="stressed" />
           <Text style={styles.title}>{t('level_in_progress')}</Text>
+          <Text style={styles.description}>{t('level_in_progress_description')}</Text>
           <TouchableOpacity
             style={[styles.primaryButton, starting && styles.buttonDisabled]}
             onPress={handleStart}

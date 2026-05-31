@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -14,6 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useMenu } from '../context/MenuContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '../i18n/TranslationContext';
+import { useProfile } from '../context/ProfileContext';
+import {
+  getStoredBirdrJourneyCountryCode,
+  isCountryChallengeRoute,
+  resolveCountryChallengeRoute,
+} from '../api/birdrJourney';
 import { colors } from '../theme';
 import { getAppVersionDisplay } from '../utils/appVersion';
 
@@ -35,8 +41,22 @@ export function LeftMenuModal() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { profile, ready: profileReady } = useProfile();
   const { leftMenuVisible, closeLeftMenu, currentRouteName } = useMenu();
   const slideAnim = useRef(new Animated.Value(-PANEL_WIDTH)).current;
+
+  const openCountryChallenge = useCallback(async () => {
+    const storedCountry = await getStoredBirdrJourneyCountryCode();
+    const target = await resolveCountryChallengeRoute([
+      storedCountry,
+      profileReady ? profile?.country_code : null,
+    ]);
+    if (target.name === 'BirdrJourneyProgress') {
+      (navigation as any).navigate(target.name, target.params);
+    } else {
+      (navigation as any).navigate(target.name);
+    }
+  }, [navigation, profile?.country_code, profileReady]);
 
   useEffect(() => {
     Animated.timing(slideAnim, {
@@ -48,6 +68,10 @@ export function LeftMenuModal() {
 
   const handleItem = (routeName: string) => {
     closeLeftMenu();
+    if (routeName === 'BirdrJourneyIntro') {
+      void openCountryChallenge();
+      return;
+    }
     if (routeName === 'Privacy') {
       (navigation as any).navigate('HelpDetail', { slug: 'privacy' });
     } else if (routeName === 'About') {
@@ -91,7 +115,10 @@ export function LeftMenuModal() {
                 <Text style={styles.menuHeaderTitle}>Birdr</Text>
               </View>
               {MENU_ITEMS.map((item) => {
-                const isFocused = currentRoute === item.route;
+                const isFocused =
+                  item.route === 'BirdrJourneyIntro'
+                    ? isCountryChallengeRoute(currentRoute)
+                    : currentRoute === item.route;
                 const label = t(item.labelKey);
                 return (
                   <TouchableOpacity

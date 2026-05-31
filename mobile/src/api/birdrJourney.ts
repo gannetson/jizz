@@ -111,6 +111,7 @@ export async function getStoredBirdrJourneyPlayerToken(): Promise<string | null>
 export async function setStoredBirdrJourneyPlayerToken(token: string): Promise<void> {
   const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
   await AsyncStorage.setItem(BIRDR_JOURNEY_PLAYER_KEY, token);
+  await AsyncStorage.setItem(PLAYER_TOKEN_STORAGE_KEY, token);
 }
 
 /** Persist host player token from a journey API response for answer submission. */
@@ -152,6 +153,37 @@ export async function findInProgressBirdrJourney(
     }
   }
   return null;
+}
+
+export type CountryChallengeNavTarget =
+  | { name: 'BirdrJourneyProgress'; params: { countryCode: string } }
+  | { name: 'BirdrJourneyIntro' };
+
+/** Menu / nav target: ongoing journey progress or intro to start one. */
+export async function resolveCountryChallengeRoute(
+  countryCandidates: Array<string | null | undefined>
+): Promise<CountryChallengeNavTarget> {
+  const journey = await findInProgressBirdrJourney(countryCandidates);
+  const code = journey?.country?.code?.trim()?.toUpperCase();
+  if (code) {
+    return { name: 'BirdrJourneyProgress', params: { countryCode: code } };
+  }
+  return { name: 'BirdrJourneyIntro' };
+}
+
+const COUNTRY_CHALLENGE_ROUTE_NAMES = new Set([
+  'BirdrJourneyIntro',
+  'BirdrJourneyCountry',
+  'BirdrJourneyProgress',
+  'BirdrJourneyStepIntro',
+  'BirdrJourneyStepResults',
+  'BirdrJourneyLevelCelebration',
+  'ChallengePlay',
+  'ChallengeLevelIntro',
+]);
+
+export function isCountryChallengeRoute(routeName: string | undefined): boolean {
+  return !!routeName && COUNTRY_CHALLENGE_ROUTE_NAMES.has(routeName);
 }
 
 /** Resolve stored journey player token, with fallbacks for logged-in users. */

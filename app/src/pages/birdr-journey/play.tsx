@@ -26,7 +26,7 @@ import {
   submitChallengeAnswer,
   type BirdrJourneyGame,
 } from '../../api/birdrJourney';
-import { AnswerFeedback, normalizeChecklistAdded } from '../../components/answer-feedback';
+import { AnswerFeedback, normalizeChecklistAdded, normalizeChecklistMissed } from '../../components/answer-feedback';
 import { FlagMediaButton } from '../../components/flag-media-button';
 import { Loading } from '../../components/loading';
 import SpeciesCombobox from '../../components/species-combobox';
@@ -322,6 +322,7 @@ export function BirdrJourneyPlayPage() {
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
                   checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(response?.checklist_missed)}
                   onAnimationComplete={handleFeedbackComplete}
                 />
               )}
@@ -344,6 +345,7 @@ export function BirdrJourneyPlayPage() {
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
                   checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(response?.checklist_missed)}
                   onAnimationComplete={handleFeedbackComplete}
                 />
               )}
@@ -365,6 +367,7 @@ export function BirdrJourneyPlayPage() {
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
                   checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(response?.checklist_missed)}
                   onAnimationComplete={handleFeedbackComplete}
                 />
               )}

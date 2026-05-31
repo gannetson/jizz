@@ -181,6 +181,12 @@ export function BirdrJourneyStepIntroPage() {
               <FormattedMessage id="level in progress" defaultMessage="Level in progress" />
             </Text>
             <BirdrMoodHero mood="stressed" />
+            <Text fontSize="md" color="primary.700" lineHeight="tall" mb={6} textAlign="center">
+              <FormattedMessage
+                id="level in progress description"
+                defaultMessage="You've already started playing this level. Click the button to continue your birding trip."
+              />
+            </Text>
             <Button colorPalette="primary" width="full" onClick={handleStart} loading={starting}>
               <FormattedMessage id="continue" defaultMessage="Continue" />
             </Button>

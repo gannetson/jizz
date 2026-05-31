@@ -195,6 +195,7 @@ export const translations: Record<string, Record<string, string>> = {
     checklist_filter_unseen: 'Unseen',
     checklist_filter_very_rare: 'Very rare',
     checklist_added_toast: 'Added to your checklist!',
+    checklist_missed_toast: 'Missed it for your checklist!',
     profile: 'Profile',
     account: 'Account',
     language: 'Language',
@@ -413,6 +414,8 @@ export const translations: Record<string, Record<string, string>> = {
     congratulations_level: 'Congratulations! Level {seq} completed!',
     well_done_next: 'Well done! Ready for the next challenge?',
     level_in_progress: 'Level in progress',
+    level_in_progress_description:
+      "You've already started playing this level. Tap the button to continue your birding trip.",
   },
   nl: {
     cancel: 'Annuleren',
@@ -598,6 +601,7 @@ export const translations: Record<string, Record<string, string>> = {
     checklist_filter_unseen: 'Nog niet gezien',
     checklist_filter_very_rare: 'Zeer zeldzaam',
     checklist_added_toast: 'Toegevoegd aan je checklist!',
+    checklist_missed_toast: 'Gemist voor je checklist!',
     checklist_tax_order: 'Orde',
     profile: 'Profiel',
     account: 'Account',
@@ -812,6 +816,8 @@ export const translations: Record<string, Record<string, string>> = {
     congratulations_level: 'Gefeliciteerd! Level {seq} voltooid!',
     well_done_next: 'Goed gedaan! Klaar voor de volgende uitdaging?',
     level_in_progress: 'Level bezig',
+    level_in_progress_description:
+      'Je bent dit level al begonnen. Tik op de knop om je vogeltrip voort te zetten.',
   },
 };
 

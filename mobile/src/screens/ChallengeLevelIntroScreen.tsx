@@ -16,6 +16,7 @@ import {
   type CountryChallenge,
 } from '../api/challenge';
 import { useTranslation } from '../i18n/TranslationContext';
+import { BirdrMoodHero } from '../components/BirdrMoodHero';
 import { colors } from '../theme';
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
 
@@ -214,7 +215,9 @@ export function ChallengeLevelIntroScreen() {
         </>
       ) : (
         <>
+          <BirdrMoodHero mood="stressed" />
           <Text style={styles.title}>{t('level_in_progress')}</Text>
+          <Text style={styles.description}>{t('level_in_progress_description')}</Text>
           {(() => {
             const answersCount = level?.game?.scores?.[0]?.answers?.length ?? 0;
             const total = typeof level?.game?.length === 'number' ? level.game.length : Number(level?.game?.length) || 0;
@@ -251,7 +254,7 @@ const styles = StyleSheet.create({
   link: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
   errorBox: { backgroundColor: colors.error[50], padding: 12, borderRadius: 8, marginBottom: 16 },
   errorText: { fontSize: 14, color: colors.error[500] },
-  title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 8 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 8, textAlign: 'center' },
   questionProgress: { fontSize: 16, color: colors.primary[700], marginBottom: 12 },
   failedTitle: { color: colors.error[500] },
   subtitle: { fontSize: 20, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },

@@ -9,6 +9,7 @@ type Props = {
   correct: boolean;
   speciesFrequency?: string | null;
   checklistAdded?: boolean;
+  checklistMissed?: boolean;
   onAnimationComplete: () => void;
 };
 
@@ -23,15 +24,30 @@ export function normalizeSpeciesFrequency(raw: unknown): string | null {
 }
 
 export function normalizeChecklistAdded(raw: unknown): boolean {
-  return raw === true;
+  return raw === true || raw === 1 || raw === 'true';
+}
+
+export function normalizeChecklistMissed(raw: unknown): boolean {
+  return raw === true || raw === 1 || raw === 'true';
 }
 
 export function isVagrantMega(correct: boolean, speciesFrequency?: string | null): boolean {
   return correct && normalizeSpeciesFrequency(speciesFrequency) === 'vagrant';
 }
 
-function ChecklistAddedBadge({ visible }: { visible: boolean }) {
-  const { t } = useTranslation();
+function ChecklistPill({
+  visible,
+  icon,
+  message,
+  borderColor,
+  textColor,
+}: {
+  visible: boolean;
+  icon: string;
+  message: string;
+  borderColor: string;
+  textColor: string;
+}) {
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -65,16 +81,11 @@ function ChecklistAddedBadge({ visible }: { visible: boolean }) {
     <Animated.View
       style={[
         styles.checklistPill,
-        {
-          opacity,
-          transform: [{ scale }],
-        },
+        { borderColor, opacity, transform: [{ scale }] },
       ]}
     >
-      <FontAwesome5 name="check-square" solid size={20} color={colors.success[500]} />
-      <Text style={styles.checklistPillText}>
-        {t('checklist_added_toast')}
-      </Text>
+      <FontAwesome5 name={icon} solid size={20} color={textColor} />
+      <Text style={[styles.checklistPillText, { color: textColor }]}>{message}</Text>
     </Animated.View>
   );
 }
@@ -83,14 +94,17 @@ export function AnswerFeedback({
   correct,
   speciesFrequency,
   checklistAdded = false,
+  checklistMissed = false,
   onAnimationComplete,
 }: Props) {
   const { t } = useTranslation();
   const vagrantMega = isVagrantMega(correct, speciesFrequency);
-  const showChecklistBadge = correct && checklistAdded;
+  const showChecklistAdded = correct && checklistAdded;
+  const showChecklistMissed = !correct && checklistMissed;
+  const showChecklistPill = showChecklistAdded || showChecklistMissed;
   const duration = vagrantMega
     ? VAGRANT_FEEDBACK_MS
-    : showChecklistBadge
+    : showChecklistPill
       ? FEEDBACK_MS + CHECKLIST_EXTRA_MS
       : FEEDBACK_MS;
 
@@ -122,7 +136,20 @@ export function AnswerFeedback({
           <Text style={styles.icon}>✗</Text>
         )}
       </View>
-      <ChecklistAddedBadge visible={showChecklistBadge} />
+      <ChecklistPill
+        visible={showChecklistAdded}
+        icon="check-square"
+        message={t('checklist_added_toast')}
+        borderColor={colors.success[500]}
+        textColor={colors.success[500]}
+      />
+      <ChecklistPill
+        visible={showChecklistMissed}
+        icon="times-circle"
+        message={t('checklist_missed_toast')}
+        borderColor="#d97706"
+        textColor="#b45309"
+      />
     </View>
   );
 }
@@ -174,7 +201,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: colors.success[500],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
@@ -185,7 +211,6 @@ const styles = StyleSheet.create({
   checklistPillText: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.success[500],
     flexShrink: 1,
   },
 });

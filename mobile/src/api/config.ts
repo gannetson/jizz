@@ -29,3 +29,13 @@ export function getWebSocketUrl(path: string): string {
   const wsBase = API_BASE_URL.replace(/^https/, 'wss').replace(/^http/, 'ws');
   return `${wsBase}${p}`;
 }
+
+/** Resolve API media paths (/media/...) or upgrade http→https for journey icons, avatars, etc. */
+export function resolveMediaUrl(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('https://')) return trimmed;
+  if (trimmed.startsWith('http://')) return `https://${trimmed.slice(7)}`;
+  if (trimmed.startsWith('/')) return apiUrl(trimmed);
+  return trimmed;
+}

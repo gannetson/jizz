@@ -13,7 +13,7 @@ import { FaCheckCircle, FaDotCircle, FaHeart, FaHeartBroken, FaQuestion, FaSkull
 import { IconType } from "react-icons"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { AnswerFeedback, normalizeChecklistAdded } from "../../../components/answer-feedback"
+import { AnswerFeedback, normalizeChecklistAdded, normalizeChecklistMissed } from "../../../components/answer-feedback"
 import Flag from 'react-world-flags'
 import SpeciesCombobox from "../../../components/species-combobox"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
@@ -209,6 +209,7 @@ export const ChallengeQuestion = () => {
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
                   checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(response?.checklist_missed)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}
@@ -231,6 +232,7 @@ export const ChallengeQuestion = () => {
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
                   checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(response?.checklist_missed)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}
@@ -252,6 +254,7 @@ export const ChallengeQuestion = () => {
                   correct={isCorrect}
                   speciesFrequency={response?.species_frequency}
                   checklistAdded={normalizeChecklistAdded(response?.checklist_added)}
+                  checklistMissed={normalizeChecklistMissed(response?.checklist_missed)}
                   onAnimationComplete={handleAnimationComplete}
                 />
               )}

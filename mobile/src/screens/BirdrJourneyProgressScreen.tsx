@@ -23,7 +23,11 @@ import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
 
 type RouteParams = {
-  BirdrJourneyProgress: { countryCode: string };
+  BirdrJourneyProgress: {
+    countryCode: string;
+    /** Set after level celebration advance — avoids re-fetching pending celebration. */
+    advancedJourney?: BirdrJourney;
+  };
 };
 
 function levelTitle(level: JourneyLevel | null | undefined, locale: string): string {
@@ -44,6 +48,13 @@ export function BirdrJourneyProgressScreen() {
 
   const load = useCallback(async () => {
     setError(null);
+    const preloaded = route.params.advancedJourney;
+    if (preloaded) {
+      (navigation as any).setParams({ advancedJourney: undefined });
+      setJourney(preloaded);
+      setLoading(false);
+      return;
+    }
     try {
       let data = await getBirdrJourney(countryCode);
       if (!data) {
@@ -63,7 +74,7 @@ export function BirdrJourneyProgressScreen() {
     } finally {
       setLoading(false);
     }
-  }, [countryCode, navigation, t]);
+  }, [countryCode, navigation, route.params.advancedJourney, t]);
 
   useFocusEffect(
     useCallback(() => {

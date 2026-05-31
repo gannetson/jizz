@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { advanceJourneyLevel, getBirdrJourney, type JourneyLevel } from '../api/birdrJourney';
 import { BirdrLevelImage } from '../components/BirdrLevelImage';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -41,35 +41,39 @@ export function BirdrJourneyLevelCelebrationScreen() {
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nextLevel, setNextLevel] = useState<JourneyLevel | null>(null);
+  const advancingRef = useRef(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      (async () => {
-        setLoading(true);
-        try {
-          const journey = await getBirdrJourney(countryCode);
-          if (cancelled) return;
-          setNextLevel(journey?.next_level ?? null);
-        } catch (e: unknown) {
-          if (!cancelled) {
-            setError(e instanceof Error ? e.message : t('failed_load'));
-          }
-        } finally {
-          if (!cancelled) setLoading(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const journey = await getBirdrJourney(countryCode);
+        if (cancelled || advancingRef.current) return;
+        setNextLevel(journey?.next_level ?? null);
+      } catch (e: unknown) {
+        if (!cancelled && !advancingRef.current) {
+          setError(e instanceof Error ? e.message : t('failed_load'));
         }
-      })();
-      return () => { cancelled = true; };
-    }, [countryCode, t])
-  );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [countryCode, t]);
 
   const handleContinue = async () => {
+    advancingRef.current = true;
     setAdvancing(true);
     setError(null);
     try {
-      await advanceJourneyLevel(journeyId);
-      (navigation as any).replace('BirdrJourneyProgress', { countryCode });
+      const journey = await advanceJourneyLevel(journeyId);
+      (navigation as any).replace('BirdrJourneyProgress', {
+        countryCode,
+        advancedJourney: journey,
+      });
     } catch (e: unknown) {
+      advancingRef.current = false;
       setError(e instanceof Error ? e.message : t('failed_load'));
     } finally {
       setAdvancing(false);

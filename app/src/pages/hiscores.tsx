@@ -1,4 +1,4 @@
-import { Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection, useBreakpoint } from "@chakra-ui/react";
+import { Flex, Heading, TableRoot, Box, TableBody, TableColumnHeader, TableHeader, TableRow, Select, Portal, createListCollection, useBreakpoint } from "@chakra-ui/react";
 import { Page } from "../shared/components/layout";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useContext, useEffect, useState, useMemo } from "react";
@@ -8,23 +8,31 @@ import { ScoreLine } from "../components/score-line";
 import { UseCountries } from "../user/use-countries";
 import CountryCombobox from "../components/country-combobox";
 import { apiUrl } from "../api/baseUrl";
+import { PLAY_LEVEL_ORDER, settingsFromPlayLevel, type PlayLevel } from "../core/play-level";
 
 const HomePage = () => {
   const intl = useIntl();
   const { countries } = UseCountries();
   const { loading, setLoading } = useContext(AppContext);
   const [scores, setScores] = useState<Score[]>([]);
-  const [level, setLevel] = useState<string | undefined>("advanced");
+  const [playLevel, setPlayLevel] = useState<PlayLevel | ''>('advanced');
   const [length, setLength] = useState<string | undefined>("10");
   const [media, setMedia] = useState<string | undefined>("");
   const [country, setCountry] = useState<Country | undefined>({ code: "", name: "All countries" });
-  const [rarity, setRarity] = useState<string>("");
   const countriesList = Array.isArray(countries) ? countries : [];
 
   const loadScores = async () => {
     setLoading(true)
-    const rarityParam = rarity ? `&game__rarity=${rarity}` : ''
-    const url = apiUrl(`/api/scores/?game__level=${level}&game__length=${length}&game__media=${media}&game__country=${country?.code}${rarityParam}`)
+    const params = new URLSearchParams()
+    if (playLevel) {
+      const preset = settingsFromPlayLevel(playLevel)
+      params.set('game__level', preset.level)
+      params.set('game__rarity', preset.rarity)
+    }
+    if (length) params.set('game__length', length)
+    if (media) params.set('game__media', media)
+    if (country?.code) params.set('game__country', country.code)
+    const url = apiUrl(`/api/scores/?${params.toString()}`)
     const response = await fetch(url, {
       cache: 'no-cache',
       method: 'GET',
@@ -47,14 +55,18 @@ const HomePage = () => {
 
   useEffect(() => {
     loadScores()
-  }, [level, length, media, country, rarity]);
+  }, [playLevel, length, media, country]);
 
-  const levels = [
-    {value: '', label: 'Any levels'},
-    {value: 'beginner', label: 'Beginner'},
-    {value: 'advanced', label: 'Advanced'},
-    {value: 'expert', label: 'Expert'},
-  ];
+  const playLevels = useMemo(
+    () => [
+      { value: '', label: intl.formatMessage({ id: 'any level', defaultMessage: 'Any level' }) },
+      ...PLAY_LEVEL_ORDER.map((value) => ({
+        value,
+        label: intl.formatMessage({ id: value, defaultMessage: value.charAt(0).toUpperCase() + value.slice(1) }),
+      })),
+    ],
+    [intl]
+  );
 
   const lengths = [
     {value: '', label: 'Any length'},
@@ -71,13 +83,6 @@ const HomePage = () => {
     {value: 'video', label: 'Videos'},
   ];
 
-  const rarities = [
-    {value: '', label: 'Any rarity'},
-    {value: 'familiar', label: 'Familiar'},
-    {value: 'regular', label: 'Regular'},
-    {value: 'exceptional', label: 'Exceptional'},
-  ];
-
   const mediaCollection = useMemo(() => {
     const items = mediums.map((m, index) => ({
       label: m.label,
@@ -89,14 +94,14 @@ const HomePage = () => {
   }, [mediums]);
 
   const levelCollection = useMemo(() => {
-    const items = levels.map((l, index) => ({
+    const items = playLevels.map((l, index) => ({
       label: l.label,
       value: l.value,
       original: l,
       index,
     }));
     return createListCollection({ items });
-  }, [levels]);
+  }, [playLevels]);
 
   const lengthCollection = useMemo(() => {
     const items = lengths.map((l, index) => ({
@@ -108,20 +113,9 @@ const HomePage = () => {
     return createListCollection({ items });
   }, [lengths]);
 
-  const rarityCollection = useMemo(() => {
-    const items = rarities.map((r, index) => ({
-      label: r.label,
-      value: r.value,
-      original: r,
-      index,
-    }));
-    return createListCollection({ items });
-  }, [rarities]);
-
   const mediaValue = media || '';
-  const levelValue = level || '';
+  const playLevelValue = playLevel || '';
   const lengthValue = length || '';
-  const rarityValue = rarity || '';
 
   const handleCountryChange = (c: Country | null) => {
     setCountry(c ?? { code: "", name: "All countries" });
@@ -134,17 +128,12 @@ const HomePage = () => {
 
   const handleLevelChange = (details: { value: string[] }) => {
     const selectedValue = details.value[0] || '';
-    setLevel(selectedValue);
+    setPlayLevel(selectedValue as PlayLevel | '');
   };
 
   const handleLengthChange = (details: { value: string[] }) => {
     const selectedValue = details.value[0] || '';
     setLength(selectedValue);
-  };
-
-  const handleRarityChange = (details: { value: string[] }) => {
-    const selectedValue = details.value[0] || '';
-    setRarity(selectedValue);
   };
 
   const renderSelect = (collection: any, value: string | undefined, onValueChange: (details: { value: string[] }) => void, placeholder: string) => (
@@ -196,9 +185,8 @@ const HomePage = () => {
             />
           </Box>
           {renderSelect(mediaCollection, mediaValue, handleMediaChange, intl.formatMessage({ id: 'select media placeholder', defaultMessage: 'Select media...' }))}
-          {renderSelect(levelCollection, levelValue, handleLevelChange, intl.formatMessage({ id: 'select level placeholder', defaultMessage: 'Select level...' }))}
+          {renderSelect(levelCollection, playLevelValue, handleLevelChange, intl.formatMessage({ id: 'select level placeholder', defaultMessage: 'Select level...' }))}
           {renderSelect(lengthCollection, lengthValue, handleLengthChange, intl.formatMessage({ id: 'select length placeholder', defaultMessage: 'Select length...' }))}
-          {renderSelect(rarityCollection, rarityValue, handleRarityChange, intl.formatMessage({ id: 'select rarity placeholder', defaultMessage: 'Select rarity...' }))}
         </Flex>
         <>
           {loading ? (
@@ -219,7 +207,6 @@ const HomePage = () => {
                     </TableColumnHeader>
                     <TableColumnHeader>Lvl</TableColumnHeader>
                     <TableColumnHeader>n</TableColumnHeader>
-                    <TableColumnHeader>Rar</TableColumnHeader>
                     <TableColumnHeader>Score</TableColumnHeader>
                   </TableRow>
                 </TableHeader>

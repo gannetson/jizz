@@ -18,6 +18,7 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import type { Country } from '../api/countries';
 import { colors } from '../theme';
+import { PLAY_LEVEL_ORDER, playLevelFromSettings, type PlayLevel } from '../game/playLevel';
 
 function countryCodeToFlag(code: string): string {
   if (!code || code.length !== 2) return '';
@@ -35,10 +36,8 @@ const MEDIA_ICON: Record<string, string> = {
 };
 
 const LEVEL_VALUES = [
-  { value: '', labelKey: 'any_level' },
-  { value: 'beginner', labelKey: 'beginner' },
-  { value: 'advanced', labelKey: 'advanced' },
-  { value: 'expert', labelKey: 'expert' },
+  { value: '' as const, labelKey: 'any_level' },
+  ...PLAY_LEVEL_ORDER.map((value) => ({ value, labelKey: value })),
 ];
 
 const LENGTH_VALUES = [
@@ -54,13 +53,6 @@ const MEDIA_VALUES = [
   { value: 'images', labelKey: 'images' },
   { value: 'audio', labelKey: 'sounds' },
   { value: 'video', labelKey: 'videos' },
-];
-
-const RARITY_VALUES = [
-  { value: '', labelKey: 'any_rarity' },
-  { value: 'familiar', labelKey: 'rarity_familiar' },
-  { value: 'regular', labelKey: 'rarity_regular' },
-  { value: 'exceptional', labelKey: 'rarity_exceptional' },
 ];
 
 type FilterSelectProps<T> = {
@@ -113,7 +105,7 @@ function FilterSelect<T extends string>({ label, value, displayLabel, onSelect, 
   );
 }
 
-function ScoreCard({ score, mediaLabels, locale }: { score: Score; mediaLabels: Record<string, string>; locale: string }) {
+function ScoreCard({ score, mediaLabels, locale, playLevelLabel }: { score: Score; mediaLabels: Record<string, string>; locale: string; playLevelLabel: string }) {
   const flag = countryCodeToFlag(score.country?.code ?? '');
   const mediaIcon = MEDIA_ICON[score.media] ?? '?';
   const mediaLabel = mediaLabels[score.media] ?? score.media;
@@ -130,8 +122,7 @@ function ScoreCard({ score, mediaLabels, locale }: { score: Score; mediaLabels: 
             <Text style={styles.cardMetaText}>{mediaIcon} {mediaLabel}</Text>
             <Text style={styles.cardMetaDot}> · </Text>
             <Text style={styles.cardMetaText}>
-              {score.level} · {score.length} q
-              {score.rarity ? ` · ${score.rarity.slice(0, 3)}` : ''}
+              {playLevelLabel} · {score.length} q
             </Text>
           </View>
         </View>
@@ -148,10 +139,9 @@ export function ScoresScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [country, setCountry] = useState<Country | null>(null);
-  const [level, setLevel] = useState('');
-  const [length, setLength] = useState('');
+  const [playLevel, setPlayLevel] = useState<PlayLevel | ''>('advanced');
+  const [length, setLength] = useState('10');
   const [media, setMedia] = useState('');
-  const [rarity, setRarity] = useState('');
 
   useEffect(() => {
     loadCountries().then((list) => setCountries(list));
@@ -161,10 +151,9 @@ export function ScoresScreen() {
     setLoading(true);
     loadScores({
       country: country?.code ?? undefined,
-      level: level || undefined,
+      playLevel,
       length: length || undefined,
       media: media || undefined,
-      rarity: rarity || undefined,
       cacheBust: opts?.cacheBust,
     })
       .then(setScores)
@@ -172,11 +161,11 @@ export function ScoresScreen() {
         setLoading(false);
         setRefreshing(false);
       });
-  }, [country?.code, level, length, media, rarity]);
+  }, [country?.code, playLevel, length, media]);
 
   useEffect(() => {
     fetchScores();
-  }, [country, level, length, media, rarity]);
+  }, [country, playLevel, length, media]);
 
   const isFirstFocus = useRef(true);
   // Refetch when screen gains focus again (e.g. after playing a game) so new scores show
@@ -201,17 +190,15 @@ export function ScoresScreen() {
     label: 'labelKey' in o ? t((o as { labelKey: string }).labelKey) : (o as { valueLabel: string }).valueLabel,
   }));
   const mediaOptions = MEDIA_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
-  const rarityOptions = RARITY_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
   const countryOptions = [
     { value: '', label: t('all_countries') },
     ...countries.map((c) => ({ value: c.code, label: getCountryDisplayName(c, locale) })),
   ];
 
   const countryDisplayLabel = country ? getCountryDisplayName(country, locale) : t('all_countries');
-  const levelDisplayLabel = levelOptions.find((o) => o.value === level)?.label ?? t('any_level');
+  const levelDisplayLabel = levelOptions.find((o) => o.value === playLevel)?.label ?? t('any_level');
   const lengthDisplayLabel = lengthOptions.find((o) => o.value === length)?.label ?? t('any_length');
   const mediaDisplayLabel = mediaOptions.find((o) => o.value === media)?.label ?? t('any_media');
-  const rarityDisplayLabel = rarityOptions.find((o) => o.value === rarity)?.label ?? t('any_rarity');
 
   const mediaLabels: Record<string, string> = { images: t('images'), audio: t('sounds'), video: t('videos') };
 
@@ -258,9 +245,9 @@ export function ScoresScreen() {
       <View style={styles.filterRow}>
         <FilterSelect
           label={t('level')}
-          value={level}
+          value={playLevel}
           displayLabel={levelDisplayLabel}
-          onSelect={setLevel}
+          onSelect={(value) => setPlayLevel(value as PlayLevel | '')}
           options={levelOptions}
           closeLabel={t('close')}
         />
@@ -270,16 +257,6 @@ export function ScoresScreen() {
           displayLabel={lengthDisplayLabel}
           onSelect={setLength}
           options={lengthOptions}
-          closeLabel={t('close')}
-        />
-      </View>
-      <View style={styles.filterRow}>
-        <FilterSelect
-          label={t('rarity_label')}
-          value={rarity}
-          displayLabel={rarityDisplayLabel}
-          onSelect={setRarity}
-          options={rarityOptions}
           closeLabel={t('close')}
         />
       </View>
@@ -293,7 +270,13 @@ export function ScoresScreen() {
       ) : (
         <View style={styles.list}>
           {scores.map((s, i) => (
-            <ScoreCard key={`${s.ranking}-${s.name}-${s.score}-${i}`} score={s} mediaLabels={mediaLabels} locale={locale} />
+            <ScoreCard
+              key={`${s.ranking}-${s.name}-${s.score}-${i}`}
+              score={s}
+              mediaLabels={mediaLabels}
+              locale={locale}
+              playLevelLabel={t(playLevelFromSettings(s.level, s.rarity ?? 'regular'))}
+            />
           ))}
         </View>
       )}

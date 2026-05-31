@@ -15,12 +15,8 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import {
   getChallengeQuestion,
   submitChallengeAnswer,
-  loadCountryChallenge,
-  getNextChallengeLevel,
-  getStoredChallengePlayerToken,
   type ChallengeQuestion,
   type QuestionOption,
-  type CountryGameLevel,
 } from '../api/challenge';
 import { getStoredBirdrJourneyPlayerToken, getBirdrJourney, resolveBirdrJourneyPlayerToken, type BirdrJourneyGame } from '../api/birdrJourney';
 import { postQuestionMediaReady } from '../api/games';
@@ -39,8 +35,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 type ChallengePlayParams = {
   gameToken: string;
-  challengeId: number;
-  journeyId?: number;
+  journeyId: number;
   countryCode?: string;
   language?: string;
   gameLevel?: string;
@@ -77,7 +72,7 @@ export function ChallengePlayScreen() {
   const { t } = useTranslation();
   const route = useRoute<RouteProp<{ ChallengePlay: ChallengePlayParams }, 'ChallengePlay'>>();
   const navigation = useNavigation();
-  const { gameToken, challengeId, journeyId, countryCode, language: paramLanguage, gameLevel, gameMedia } = route.params ?? {};
+  const { gameToken, journeyId, countryCode, language: paramLanguage, gameLevel, gameMedia } = route.params ?? {};
   const [question, setQuestion] = useState<ChallengeQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -94,11 +89,8 @@ export function ChallengePlayScreen() {
     correctSpecies: QuestionOption | Species;
   } | null>(null);
   const [levelEnded, setLevelEnded] = useState(false);
-  const [level, setLevel] = useState<CountryGameLevel | null>(null);
   const [journeyGame, setJourneyGame] = useState<BirdrJourneyGame | null>(null);
   const [journeyCountryName, setJourneyCountryName] = useState<string | null>(null);
-  const [restarting, setRestarting] = useState(false);
-  const [nextLevelLoading, setNextLevelLoading] = useState(false);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [flagModalVisible, setFlagModalVisible] = useState(false);
   const [flagMediaInfo, setFlagMediaInfo] = useState<FlagMediaInfo | null>(null);
@@ -112,21 +104,18 @@ export function ChallengePlayScreen() {
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
 
   const getPlayPlayerToken = useCallback(async () => {
-    if (journeyId) {
-      const stored = await resolveBirdrJourneyPlayerToken();
-      if (stored) return stored;
-      if (countryCode) {
-        try {
-          const journey = await getBirdrJourney(countryCode);
-          return journey?.player_token ?? null;
-        } catch {
-          return null;
-        }
+    const stored = await resolveBirdrJourneyPlayerToken();
+    if (stored) return stored;
+    if (countryCode) {
+      try {
+        const journey = await getBirdrJourney(countryCode);
+        return journey?.player_token ?? null;
+      } catch {
+        return null;
       }
-      return null;
     }
-    return getStoredChallengePlayerToken();
-  }, [journeyId, countryCode]);
+    return null;
+  }, [countryCode]);
 
   const navigateJourneyResults = useCallback(() => {
     if (!journeyId || !gameToken || !countryCode) return;
@@ -153,18 +142,13 @@ export function ChallengePlayScreen() {
       const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
       setQuestion(q);
-      if (!q && !journeyId) {
-        setQuestionLoadError(t('error_loading_question'));
-      }
     } catch (e) {
       setQuestion(null);
-      if (!journeyId) {
-        setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
-      }
+      setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
     } finally {
       setLoading(false);
     }
-  }, [gameToken, getPlayPlayerToken, journeyId, t]);
+  }, [gameToken, getPlayPlayerToken, t]);
 
   /** Fetch next question when user taps "Next question". */
   const fetchNextQuestion = useCallback(async () => {
@@ -179,7 +163,7 @@ export function ChallengePlayScreen() {
       const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
       setQuestion(q ?? null);
-      if (!q && journeyId && countryCode) {
+      if (!q && countryCode) {
         try {
           const journey = await getBirdrJourney(countryCode);
           const currentGame =
@@ -191,18 +175,12 @@ export function ChallengePlayScreen() {
           // Calculating UI + checkLevelEndAndNavigate will handle navigation.
         }
       }
-      if (challengeId && token && !journeyId) {
-        const challenge = await loadCountryChallenge(token, { cacheBust: true });
-        const currentLevel =
-          challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
-        setLevel(currentLevel ?? null);
-      }
     } catch (e) {
       setQuestion(null);
     } finally {
       setLoading(false);
     }
-  }, [gameToken, challengeId, journeyId, countryCode, getPlayPlayerToken]);
+  }, [gameToken, countryCode, getPlayPlayerToken]);
 
   useEffect(() => {
     loadQuestion();
@@ -228,7 +206,7 @@ export function ChallengePlayScreen() {
 
   /** Load journey step game (jokers, progress) for Birdr Journey play. */
   const loadJourneyGame = useCallback(async () => {
-    if (!journeyId || !gameToken || !countryCode) return;
+    if (!gameToken || !countryCode) return;
     try {
       const journey = await getBirdrJourney(countryCode);
       if (!journey) {
@@ -242,44 +220,17 @@ export function ChallengePlayScreen() {
     } catch {
       setJourneyGame(null);
     }
-  }, [journeyId, gameToken, countryCode]);
-
-  /** Load level (jokers, progress) from challenge. Use cacheBust when we need fresh data (e.g. after new question). */
-  const loadLevel = useCallback(async (cacheBust?: boolean) => {
-    if (!gameToken || journeyId) return;
-    if (!challengeId) return;
-    const token = await getPlayPlayerToken();
-    if (!token) return;
-    try {
-      const challenge = await loadCountryChallenge(token, cacheBust ? { cacheBust: true } : undefined);
-      const currentLevel =
-        challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
-      setLevel(currentLevel ?? null);
-    } catch {
-      setLevel(null);
-    }
-  }, [challengeId, gameToken, journeyId, getPlayPlayerToken]);
-
-  useEffect(() => {
-    loadLevel();
-  }, [loadLevel]);
+  }, [gameToken, countryCode]);
 
   useEffect(() => {
     loadJourneyGame();
   }, [loadJourneyGame]);
 
-  /** Whenever a new question is set, refresh level so jokers and progress render correctly. */
   useEffect(() => {
-    if (question?.id && challengeId && gameToken && !journeyId) {
-      loadLevel(true);
-    }
-  }, [question?.id, question?.sequence, challengeId, gameToken, journeyId, loadLevel]);
-
-  useEffect(() => {
-    if (question?.id && journeyId && gameToken) {
+    if (question?.id && gameToken) {
       loadJourneyGame();
     }
-  }, [question?.id, question?.sequence, journeyId, gameToken, loadJourneyGame]);
+  }, [question?.id, question?.sequence, gameToken, loadJourneyGame]);
 
   useEffect(() => {
     if (question && countryCode && paramLanguage) {
@@ -290,58 +241,6 @@ export function ChallengePlayScreen() {
   useEffect(() => {
     setExpertQuery('');
   }, [question?.id]);
-
-  const handleRestartLevel = useCallback(async () => {
-    if (!challengeId) return;
-    const token = await getStoredChallengePlayerToken();
-    if (!token) return;
-    setRestarting(true);
-    try {
-      await getNextChallengeLevel(challengeId, token);
-      const challenge = await loadCountryChallenge(token, { cacheBust: true });
-      const levels = challenge?.levels ?? [];
-      const newLevel = levels.find(
-        (l) => l.game?.token !== gameToken && (l.game?.scores?.[0]?.answers?.length ?? 0) === 0
-      ) ?? levels[levels.length - 1];
-      const newGameToken = newLevel?.game?.token;
-      if (newGameToken) {
-        (navigation as any).replace('ChallengeLevelIntro', {
-          challengeId,
-          gameToken: newGameToken,
-        });
-      } else {
-        navigation.goBack();
-      }
-    } catch (_) {
-      setRestarting(false);
-    }
-  }, [challengeId, gameToken, navigation]);
-
-  const handleNextLevel = useCallback(async () => {
-    if (!challengeId) return;
-    const token = await getStoredChallengePlayerToken();
-    if (!token) return;
-    setNextLevelLoading(true);
-    try {
-      await getNextChallengeLevel(challengeId, token);
-      const challenge = await loadCountryChallenge(token, { cacheBust: true });
-      const levels = challenge?.levels ?? [];
-      const newLevel = levels.find(
-        (l) => l.game?.token !== gameToken && (l.game?.scores?.[0]?.answers?.length ?? 0) === 0
-      ) ?? levels[levels.length - 1];
-      const newGameToken = newLevel?.game?.token;
-      if (newGameToken) {
-        (navigation as any).replace('ChallengeLevelIntro', {
-          challengeId,
-          gameToken: newGameToken,
-        });
-      } else {
-        navigation.goBack();
-      }
-    } catch (_) {
-      setNextLevelLoading(false);
-    }
-  }, [challengeId, gameToken, navigation]);
 
   const lang = paramLanguage || 'en';
   const mediaType = gameMedia || (question?.game ? (question as any).game?.media : undefined) || 'images';
@@ -411,30 +310,18 @@ export function ChallengePlayScreen() {
   }, [question, mediaType, mediaIndex]);
 
   const checkLevelEndAndNavigate = useCallback(async () => {
-    if (journeyId && countryCode && gameToken) {
-      try {
-        const journey = await getBirdrJourney(countryCode);
-        const currentGame =
-          journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
-        if (currentGame?.status === 'failed' || currentGame?.status === 'passed') {
-          navigateJourneyResults();
-        }
-      } catch (_) {
-        // Keep showing retry UI when journey state cannot be loaded.
-      }
-      return;
-    }
-    const token = await getPlayPlayerToken();
-    if (!token || !gameToken) return;
+    if (!countryCode || !gameToken) return;
     try {
-      const challenge = await loadCountryChallenge(token, { cacheBust: true });
-      const level =
-        challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
-      if (level?.status === 'failed' || level?.status === 'passed') {
-        navigation.goBack();
+      const journey = await getBirdrJourney(countryCode);
+      const currentGame =
+        journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
+      if (currentGame?.status === 'failed' || currentGame?.status === 'passed') {
+        navigateJourneyResults();
       }
-    } catch (_) {}
-  }, [navigation, gameToken, journeyId, countryCode, navigateJourneyResults, getPlayPlayerToken]);
+    } catch (_) {
+      // Keep showing retry UI when journey state cannot be loaded.
+    }
+  }, [gameToken, countryCode, navigateJourneyResults]);
 
   useEffect(() => {
     if (!loading && !question && gameToken) {
@@ -482,7 +369,7 @@ export function ChallengePlayScreen() {
         setJourneyStepFailed(true);
         setLevelEnded(true);
       }
-      if (journeyId && countryCode) {
+      if (countryCode) {
         const journey = await getBirdrJourney(countryCode);
         const currentGame =
           journey?.current_game?.game?.token === gameToken ? journey.current_game : null;
@@ -496,14 +383,6 @@ export function ChallengePlayScreen() {
           setJourneyStepFailed(true);
           setLevelEnded(true);
         } else if (gameStatus === 'passed') {
-          setLevelEnded(true);
-        }
-      } else {
-        const challenge = await loadCountryChallenge(playerToken, { cacheBust: true });
-        const levelData =
-          challenge?.levels?.find((l) => l.game?.token === gameToken) ?? challenge?.levels?.[0];
-        setLevel(levelData ?? null);
-        if (levelData?.status === 'failed' || levelData?.status === 'passed') {
           setLevelEnded(true);
         }
       }
@@ -520,7 +399,7 @@ export function ChallengePlayScreen() {
     }
   };
 
-  if (!gameToken || !challengeId) {
+  if (!gameToken || !journeyId) {
     return (
       <View style={styles.centered}>
         <Text style={styles.muted}>Missing game data</Text>
@@ -565,24 +444,15 @@ export function ChallengePlayScreen() {
       )
     : expertSpecies.slice(0, 50);
 
-  const countryName =
-    (journeyId ? journeyCountryName : level?.game?.country?.name) ?? countryCode ?? 'Country';
+  const countryName = journeyCountryName ?? countryCode ?? 'Country';
 
-  const totalJokers = journeyId
-    ? (journeyGame?.journey_step?.jokers ?? 0)
-    : (level?.challenge_level?.jokers ?? 0);
-  const remainingJokers = journeyId
-    ? (journeyGame?.remaining_jokers ?? 0)
-    : (level?.remaining_jokers ?? 0);
+  const totalJokers = journeyGame?.journey_step?.jokers ?? 0;
+  const remainingJokers = journeyGame?.remaining_jokers ?? 0;
 
   // Progress icons: previous answers from game scores; current question from answerResult.
   type ProgressResult = 'open' | 'correct' | 'joker' | 'incorrect';
-  const levelLength = journeyId
-    ? (journeyGame?.game?.length ?? 0)
-    : (level?.game?.length ?? level?.challenge_level?.length ?? 0);
-  const answers = journeyId
-    ? (journeyGame?.game?.scores?.[0]?.answers ?? [])
-    : (level?.game?.scores?.[0]?.answers ?? []);
+  const levelLength = journeyGame?.game?.length ?? 0;
+  const answers = journeyGame?.game?.scores?.[0]?.answers ?? [];
   const progressResults: ProgressResult[] = Array.from({ length: levelLength }, () => 'open');
   answers.forEach((a: { sequence?: number; correct?: boolean }) => {
     const idx = (Number(a.sequence ?? 1) - 1);
@@ -678,59 +548,13 @@ export function ChallengePlayScreen() {
       {answerResult !== null ? (
         <View style={styles.nextSection}>
           {levelEnded ? (
-            journeyId ? (
-              journeyStepFailed ? null : (
-                <TouchableOpacity
-                  style={styles.primaryButton}
-                  onPress={navigateJourneyResults}
-                  testID="journeyPlay.viewResults"
-                >
-                  <Text style={styles.primaryButtonText}>{t('continue')}</Text>
-                </TouchableOpacity>
-              )
-            ) : level?.status === 'failed' ? (
-              <>
-                <Text style={styles.levelFailedText}>{t('level_failed')}</Text>
-                <TouchableOpacity
-                  style={[styles.primaryButton, restarting && styles.optionButtonDisabled]}
-                  onPress={handleRestartLevel}
-                  disabled={restarting}
-                  testID="challengePlay.restartLevel"
-                  accessibilityLabel="Start level again"
-                >
-                  {restarting ? (
-                    <ActivityIndicator size="small" color={colors.primary[50]} />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>{t('restart_level')}</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            ) : level?.status === 'passed' ? (
-              <>
-                <Text style={styles.levelCompleteTitle}>{t('level_complete')}</Text>
-                <Text style={styles.levelCompleteDescription}>{t('level_complete_description')}</Text>
-                <TouchableOpacity
-                  style={[styles.primaryButton, nextLevelLoading && styles.optionButtonDisabled]}
-                  onPress={handleNextLevel}
-                  disabled={nextLevelLoading}
-                  testID="challengePlay.nextLevel"
-                  accessibilityLabel="Next level"
-                >
-                  {nextLevelLoading ? (
-                    <ActivityIndicator size="small" color={colors.primary[50]} />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>{t('next_level')}</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            ) : (
+            journeyStepFailed ? null : (
               <TouchableOpacity
                 style={styles.primaryButton}
-                onPress={() => navigation.goBack()}
-                testID="challengePlay.endLevel"
-                accessibilityLabel="End level"
+                onPress={navigateJourneyResults}
+                testID="journeyPlay.viewResults"
               >
-                <Text style={styles.primaryButtonText}>{t('end_level')}</Text>
+                <Text style={styles.primaryButtonText}>{t('continue')}</Text>
               </TouchableOpacity>
             )
           ) : (

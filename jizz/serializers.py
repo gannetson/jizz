@@ -5,8 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
-    Feedback, Update, Reaction, CountryChallenge, CountryGame, \
-    ChallengeLevel, Language, Page, SpeciesName, UserProfile, BirdrJourney, BirdrJourneyGame, \
+    Feedback, Update, Reaction, Language, Page, SpeciesName, UserProfile, BirdrJourney, BirdrJourneyGame, \
     JourneyLevel, JourneyStep, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
@@ -1279,39 +1278,6 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ('comment', 'player_token', 'rating', 'created')
-
-
-class ChallengeLevelSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ChallengeLevel
-        fields = [
-            'sequence', 'level', 
-            'title', 'description', 
-            'title_nl', 'description_nl',
-            'length', 'media', 'jokers', 'rarity'
-        ]
-
-
-class CountryGameSerializer(serializers.ModelSerializer):
-    challenge_level = ChallengeLevelSerializer(read_only=True)
-    remaining_jokers = serializers.IntegerField(read_only=True)
-    game = GameSerializer(read_only=True)
-    status = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = CountryGame
-        fields = ['id', 'game', 'challenge_level', 'created', 'status', 'remaining_jokers']
-
-
-class CountryChallengeSerializer(serializers.ModelSerializer):
-    levels = CountryGameSerializer(source='games', many=True, read_only=True)
-    player = PlayerSerializer(read_only=True)
-    country = CountrySerializer(read_only=True)
-    country_code = serializers.CharField(source='country_id', write_only=True)
-    
-    class Meta:
-        model = CountryChallenge
-        fields = ['id', 'country', 'player', 'created', 'levels', 'country_code']
 
 
 # --- Birdr Journey ---

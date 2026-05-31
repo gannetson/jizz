@@ -92,7 +92,6 @@ export function BirdrJourneyStepIntroScreen() {
       const stepData = result.journey_game.journey_step;
       (navigation as any).navigate('ChallengePlay', {
         gameToken,
-        challengeId: journeyId,
         journeyId,
         countryCode,
         language: 'en',

@@ -22,9 +22,6 @@ from jizz.models import (
     Update,
     Reaction,
     FlagQuestion,
-    CountryChallenge,
-    CountryGame,
-    ChallengeLevel,
 )
 from media.models import Media, MediaReview, FlagMedia
 
@@ -627,115 +624,6 @@ class ApiUpdatesReactionsTestCase(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-
-class ApiCountryChallengesTestCase(TestCase):
-    """GET/POST /api/country-challenges/ (viewset list/create, retrieve uses get_object which returns last)."""
-
-    def setUp(self):
-        self.client = APIClient()
-        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
-        self.player = Player.objects.create(name='P', language='en')
-        # Signal create_initial_country_game requires ChallengeLevel(sequence=0)
-        ChallengeLevel.objects.get_or_create(
-            sequence=0,
-            defaults={
-                'level': 'beginner', 'length': 5, 'media': 'images',
-                'jokers': 2, 'rarity': 'regular', 'title': 'Level 0', 'description': 'First',
-            },
-        )
-
-    def test_country_challenges_list_requires_auth(self):
-        response = self.client.get('/api/country-challenges/')
-        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
-
-    def test_country_challenges_create_returns_201(self):
-        _player_auth(self.client, self.player)
-        response = self.client.post(
-            '/api/country-challenges/',
-            {'country_code': self.country.code},
-            format='json',
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('id', response.data)
-
-    def test_country_challenges_retrieve_returns_last(self):
-        """ViewSet get_object returns last challenge for the player."""
-        _player_auth(self.client, self.player)
-        c1 = CountryChallenge.objects.create(country=self.country, player=self.player)
-        c2 = CountryChallenge.objects.create(country=self.country, player=self.player)
-        response = self.client.get('/api/country-challenges/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data.get('results', response.data)
-        self.assertGreaterEqual(len(results), 2)
-        # Retrieve endpoint returns last (by get_object)
-        response = self.client.get(f'/api/country-challenges/{c2.id}/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], c2.id)
-
-
-class ApiChallengeNextLevelTestCase(TestCase):
-    """POST /api/challenge/<id>/next-level/."""
-
-    def setUp(self):
-        self.client = APIClient()
-        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
-        self.player = Player.objects.create(name='P', language='en')
-        # Signal create_initial_country_game requires ChallengeLevel(sequence=0)
-        self.level0 = ChallengeLevel.objects.get_or_create(
-            sequence=0,
-            defaults={
-                'level': 'beginner', 'length': 5, 'media': 'images',
-                'jokers': 2, 'rarity': 'regular', 'title': 'Level 0', 'description': 'First',
-            },
-        )[0]
-        self.challenge = CountryChallenge.objects.create(country=self.country, player=self.player)
-        self.level = self.level0
-        self.game = Game.objects.create(
-            country=self.country, level='beginner', length=5, media='images',
-            host=self.player,
-        )
-        CountryGame.objects.create(
-            country_challenge=self.challenge,
-            game=self.game,
-            challenge_level=self.level,
-        )
-
-    def test_add_challenge_level_requires_auth(self):
-        response = self.client.post(
-            f'/api/challenge/{self.challenge.id}/next-level',
-            {},
-            format='json',
-        )
-        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
-
-    def test_add_challenge_level_returns_201(self):
-        level1 = ChallengeLevel.objects.create(
-            sequence=1, level='advanced', length=10, media='images',
-            jokers=2, title='Level 1', description='Second',
-        )
-        _player_auth(self.client, self.player)
-        response = self.client.post(
-            f'/api/challenge/{self.challenge.id}/next-level',
-            {},
-            format='json',
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('game', response.data)
-
-    def test_add_challenge_level_404_wrong_player(self):
-        other_player = Player.objects.create(name='Other', language='en')
-        ChallengeLevel.objects.create(
-            sequence=1, level='advanced', length=10, media='images',
-            jokers=2, title='Level 1', description='Second',
-        )
-        _player_auth(self.client, other_player)
-        response = self.client.post(
-            f'/api/challenge/{self.challenge.id}/next-level',
-            {},
-            format='json',
-        )
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class ApiJwtTestCase(TestCase):

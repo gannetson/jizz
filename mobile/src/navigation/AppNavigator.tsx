@@ -19,7 +19,6 @@ import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { MyGamesScreen } from '../screens/MyGamesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { ChallengeLevelIntroScreen } from '../screens/ChallengeLevelIntroScreen';
 import { ChallengePlayScreen } from '../screens/ChallengePlayScreen';
 import { GameDetailScreen } from '../screens/GameDetailScreen';
 import { DailyChallengeListScreen } from '../screens/DailyChallengeListScreen';
@@ -45,7 +44,6 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'BirdrJourneyStepIntro', titleKey: 'country_challenge', component: BirdrJourneyStepIntroScreen },
   { name: 'BirdrJourneyStepResults', titleKey: 'country_challenge', component: BirdrJourneyStepResultsScreen },
   { name: 'BirdrJourneyLevelCelebration', titleKey: 'country_challenge', component: BirdrJourneyLevelCelebrationScreen },
-  { name: 'ChallengeLevelIntro', titleKey: 'level', component: ChallengeLevelIntroScreen },
   { name: 'DailyChallenge', titleKey: 'daily_challenge', component: DailyChallengeListScreen },
   { name: 'DailyChallengeDetail', titleKey: 'daily_challenge', component: DailyChallengeDetailScreen },
   { name: 'DailyChallengeCreate', titleKey: 'new_daily_challenge', component: DailyChallengeCreateScreen },

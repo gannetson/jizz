@@ -171,37 +171,6 @@ export type Update = {
   reactions: Reaction[]
 }
 
-export type ChallengeLevel = {
-  sequence: number
-  level: 'beginner' | 'advanced' | 'expert'
-  title: string 
-  title_nl: string
-  description: string
-  description_nl: string
-  length: number
-  media: string
-  jokers: number
-}
-
-export type CountryGame = {
-  id: number
-  game: Game
-  challenge_level: ChallengeLevel
-  created: string
-  status: 'new' | 'running' | 'passed' | 'failed'
-  remaining_jokers: number
-}
-
-export type CountryChallenge = {
-  id: number
-  country: Country
-  player: Player
-  created: string
-  levels: CountryGame[]
-  status: 'new' | 'running' | 'passed' | 'failed'
-}
-
-
 type SharedState = {
   playerName?: string
   setPlayerName?: Dispatch<SetStateAction<string | undefined>>
@@ -214,13 +183,6 @@ type SharedState = {
   game?: Game
   createGame: (player?: Player) => Promise<Game | undefined>
   createRematchGame: (oldGame: Game, player?: Player) => Promise<Game | undefined>
-  startCountryChallenge: (country: Country, player: Player) => Promise<void>
-  countryChallenge?: CountryChallenge
-  loadCountryChallenge: () => Promise<void>
-  challengeQuestion?: Question
-  getNewChallengeQuestion: () => Promise<void>
-  selectChallengeAnswer: (species: Species) => Promise<Answer>
-  getNewChallengLevel: () => Promise<void>
   setLoading: Dispatch<SetStateAction<boolean>>
   loadGame: (gameCode: string) => Promise<Game | undefined>
   setGame: (game?: Game) => void
@@ -285,13 +247,6 @@ const AppContext = createContext<SharedState>({
   setMediaType: () => {},
   soundsScope: 'all',
   setSoundsScope: () => {},
-  startCountryChallenge: async () => {},
-  countryChallenge: undefined,
-  loadCountryChallenge: async () => {},
-  getNewChallengeQuestion: async () => {},
-  challengeQuestion: undefined,
-  selectChallengeAnswer: async () => { return { correct: false } as Answer },
-  getNewChallengLevel: async () => {},
   setUserPreferredLanguage: () => {}
 });
 

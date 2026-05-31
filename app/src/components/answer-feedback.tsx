@@ -1,7 +1,7 @@
 import {Box, Flex, Icon, Text} from "@chakra-ui/react"
 import {motion} from "framer-motion"
 import {FaCheckCircle, FaCheckSquare, FaHeart, FaHeartBroken, FaStar, FaTimesCircle} from "react-icons/fa"
-import {useState, useEffect} from "react"
+import {useState, useEffect, useLayoutEffect, useRef} from "react"
 import Confetti from "react-confetti"
 import {FormattedMessage} from "react-intl"
 
@@ -123,7 +123,8 @@ export const AnswerFeedback = ({
                                  onAnimationComplete,
                                }: AnswerFeedbackProps) => {
   const [heartState, setHeartState] = useState<"whole" | "broken">("whole")
-  const [windowSize, setWindowSize] = useState({width: 0, height: 0})
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [hostSize, setHostSize] = useState({width: 0, height: 0})
   const vagrantMega = isVagrantMega(correct, speciesFrequency)
   const showChecklistAdded = correct && checklistAdded
   const showChecklistMissed = !correct && checklistMissed
@@ -134,15 +135,17 @@ export const AnswerFeedback = ({
       ? FEEDBACK_MS + CHECKLIST_EXTRA_MS
       : FEEDBACK_MS
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
+  useLayoutEffect(() => {
+    const el = hostRef.current
+    if (!el) return
     const update = () => {
-      setWindowSize({width: window.innerWidth, height: window.innerHeight})
+      setHostSize({width: el.clientWidth, height: el.clientHeight})
     }
     update()
-    window.addEventListener("resize", update)
-    return () => window.removeEventListener("resize", update)
-  }, [])
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [vagrantMega])
 
   useEffect(() => {
     if (!correct) {
@@ -167,21 +170,25 @@ export const AnswerFeedback = ({
   }, [correct, duration, onAnimationComplete])
 
   return (
-    <>
-      {vagrantMega && windowSize.width > 0 && (
-        <Box
-          position="fixed"
-          inset={0}
-          zIndex={999}
-          pointerEvents="none"
-          aria-hidden
-        >
+    <Box
+      ref={hostRef}
+      position="absolute"
+      inset={0}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      zIndex={20}
+      pointerEvents="none"
+      overflow="hidden"
+    >
+      {vagrantMega && hostSize.width > 0 && (
+        <Box position="absolute" inset={0} pointerEvents="none" aria-hidden zIndex={1}>
           <Confetti
-            width={windowSize.width}
-            height={windowSize.height}
+            width={hostSize.width}
+            height={hostSize.height}
             run={vagrantMega}
             recycle={false}
-            numberOfPieces={140}
+            numberOfPieces={90}
             initialVelocityY={20}
             initialVelocityX={10}
             gravity={0.32}
@@ -191,15 +198,6 @@ export const AnswerFeedback = ({
           />
         </Box>
       )}
-    <Box
-      position="absolute"
-      inset={0}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      zIndex={20}
-      pointerEvents="none"
-    >
       <motion.div
         initial={{opacity: 0}}
         animate={{opacity: 1}}
@@ -312,6 +310,5 @@ export const AnswerFeedback = ({
         <ChecklistMissedBadge visible={showChecklistMissed} />
       </motion.div>
     </Box>
-    </>
   )
 }

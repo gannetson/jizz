@@ -116,6 +116,7 @@ export function AnswerFeedback({
   return (
     <View style={styles.wrap} pointerEvents="none">
       {vagrantMega && <MegaConfetti active />}
+      <View style={styles.content}>
       <View
         style={[
           styles.circle,
@@ -150,14 +151,20 @@ export function AnswerFeedback({
         borderColor="#d97706"
         textColor="#b45309"
       />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  content: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
   },
   circle: {
     width: 100,

@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { Animated, Dimensions, Modal, StyleSheet, View } from 'react-native';
+import { Animated, LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { colors } from '../theme';
 
 /** Ochre / amber palette aligned with Birdr primary + MEGA styling. */
@@ -18,7 +18,7 @@ export const MEGA_CONFETTI_COLORS = [
   '#b45309',
 ] as const;
 
-const COUNT = 64;
+const COUNT = 48;
 
 type Particle = {
   x: number;
@@ -33,7 +33,7 @@ type Particle = {
 
 function createParticles(width: number, height: number): Particle[] {
   return Array.from({ length: COUNT }, () => {
-    const startY = Math.random() * height * 0.35 - height * 0.08;
+    const startY = Math.random() * height * 0.4 - height * 0.06;
     return {
       x: Math.random() * Math.max(width - 10, 1),
       color: MEGA_CONFETTI_COLORS[Math.floor(Math.random() * MEGA_CONFETTI_COLORS.length)],
@@ -42,7 +42,7 @@ function createParticles(width: number, height: number): Particle[] {
       drift: new Animated.Value(0),
       duration: 700 + Math.random() * 700,
       rotDegrees: (Math.random() > 0.5 ? 1 : -1) * (160 + Math.random() * 320),
-      driftEnd: (Math.random() - 0.5) * 100,
+      driftEnd: (Math.random() - 0.5) * 80,
     };
   });
 }
@@ -72,60 +72,59 @@ function runFallAnimations(particles: Particle[], height: number) {
 }
 
 export function MegaConfetti({ active }: { active: boolean }) {
-  const [screen, setScreen] = useState(() => Dimensions.get('window'));
+  const [layout, setLayout] = useState({ width: 0, height: 0 });
   const [particles, setParticles] = useState<Particle[]>([]);
 
-  useLayoutEffect(() => {
-    const sub = Dimensions.addEventListener('change', ({ window }) => {
-      setScreen(window);
-    });
-    return () => sub.remove();
-  }, []);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width > 0 && height > 0) {
+      setLayout({ width, height });
+    }
+  };
 
   useLayoutEffect(() => {
-    if (!active || screen.width <= 0 || screen.height <= 0) {
+    if (!active || layout.width <= 0 || layout.height <= 0) {
       setParticles([]);
       return;
     }
-    const burst = createParticles(screen.width, screen.height);
+    const burst = createParticles(layout.width, layout.height);
     setParticles(burst);
-    runFallAnimations(burst, screen.height);
-  }, [active, screen.width, screen.height]);
+    runFallAnimations(burst, layout.height);
+  }, [active, layout.width, layout.height]);
 
   if (!active) return null;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
-      <View style={styles.overlay} pointerEvents="none">
-        {particles.map((p, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.piece,
-              { left: p.x, backgroundColor: p.color },
-              {
-                transform: [
-                  { translateY: p.y },
-                  { translateX: p.drift },
-                  {
-                    rotate: p.rotate.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', `${p.rotDegrees}deg`],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-        ))}
-      </View>
-    </Modal>
+    <View style={styles.overlay} pointerEvents="none" onLayout={onLayout}>
+      {particles.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.piece,
+            { left: p.x, backgroundColor: p.color },
+            {
+              transform: [
+                { translateY: p.y },
+                { translateX: p.drift },
+                {
+                  rotate: p.rotate.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', `${p.rotDegrees}deg`],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
     overflow: 'hidden',
   },
   piece: {

@@ -36,10 +36,9 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound, APIException
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
-from .models import CountryChallenge, CountryGame, ChallengeLevel, Game, Language, Page
+from .models import Game, Language, Page
 from .serializers import (
     GameSerializer,
-    CountryGameSerializer,
     FamilyListSerializer,
     OrderListSerializer,
     LanguageSerializer,
@@ -51,7 +50,6 @@ from jizz.models import (
     Answer,
     QuestionMediaReady,
     Country,
-    CountryChallenge,
     CountrySpecies,
     Feedback,
     FlagQuestion,
@@ -73,7 +71,6 @@ from jizz.models import (
 from media.models import Media, MediaReview, FlagMedia
 from jizz.serializers import (
     AnswerSerializer,
-    CountryChallengeSerializer,
     CountrySerializer,
     FeedbackSerializer,
     MediaSerializer,
@@ -679,16 +676,10 @@ class QuestionView(RetrieveAPIView):
 
 
 def _stop_game_if_jokers_exhausted(game):
-    """End country-challenge and Birdr Journey games after a wrong answer uses the last joker."""
-    from jizz.models import BirdrJourneyGame, CountryGame
+    """End Birdr Journey games after a wrong answer uses the last joker."""
+    from jizz.models import BirdrJourneyGame
 
     for link in BirdrJourneyGame.objects.filter(game=game).select_related('journey_step'):
-        if link.remaining_jokers < 0:
-            if not game.force_ended:
-                game.force_ended = True
-                game.save(update_fields=['force_ended'])
-            return True
-    for link in CountryGame.objects.filter(game=game).select_related('challenge_level'):
         if link.remaining_jokers < 0:
             if not game.force_ended:
                 game.force_ended = True
@@ -853,37 +844,6 @@ class UpdateView(ListAPIView):
     serializer_class = UpdateSerializer
     queryset = Update.objects.all()
     ordering = ["-created"]
-
-
-class CountryChallengeViewSet(viewsets.ModelViewSet, GetPlayerMixin):
-    serializer_class = CountryChallengeSerializer
-
-    def get_queryset(self):
-        player = self.get_player_from_request(self.request)
-
-        return CountryChallenge.objects.filter(player=player).prefetch_related(
-            "games", "games__challenge_level", "games__game",
-            "games__game__scores", "games__game__scores__answers", "games__game__scores__answers__question"
-        )
-
-    def get_object(self):
-        player = self.get_player_from_request(self.request)
-        challenge = (
-            CountryChallenge.objects.filter(player=player)
-            .order_by('-id')
-            .prefetch_related(
-                "games", "games__challenge_level", "games__game",
-                "games__game__scores", "games__game__scores__answers", "games__game__scores__answers__question"
-            )
-            .first()
-        )
-        if not challenge:
-            raise Http404("No challenges found for this player.")
-        return challenge
-
-    def perform_create(self, serializer):
-        player = self.get_player_from_request(self.request)
-        serializer.save(player=player)
 
 
 class CustomConvertTokenView(ConvertTokenView):
@@ -1860,60 +1820,3 @@ class PasswordResetConfirmView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class AddChallengeLevelView(generics.CreateAPIView, GetPlayerMixin):
-    serializer_class = CountryGameSerializer
-
-    def get_challenge_level(self, country_challenge):
-        last_game = country_challenge.games.order_by("-created").first()
-
-        if not last_game or last_game.status == "passed":
-            # Get next challenge level
-            next_sequence = last_game.challenge_level.sequence + 1 if last_game else 0
-            challenge_level = ChallengeLevel.objects.filter(
-                sequence=next_sequence
-            ).first()
-
-            if not challenge_level:
-                return None
-        else:
-            # Retry the same level
-            challenge_level = last_game.challenge_level
-
-        return challenge_level
-
-    def perform_create(self, serializer):
-        player = self.get_player_from_request(self.request)
-        country_challenge = get_object_or_404(
-            CountryChallenge, id=self.kwargs["challenge_id"], player=player
-        )
-
-        challenge_level = self.get_challenge_level(country_challenge)
-        if not challenge_level:
-            raise ValidationError({"error": "No more levels available"})
-
-        # Create new game with the challenge level settings
-        game = Game.objects.create(
-            country=country_challenge.country,
-            level=challenge_level.level,
-            length=challenge_level.length,
-            media=challenge_level.media,
-            rarity=challenge_level.rarity,
-            include_escapes=challenge_level.include_escapes,
-            tax_order=challenge_level.tax_order,
-            host=country_challenge.player,
-            language=getattr(country_challenge.player, 'language', 'en') or 'en',
-        )
-
-        # Save the country game using the serializer
-        serializer.save(
-            country_challenge=country_challenge,
-            game=game,
-            challenge_level=challenge_level,
-        )
-
-    def create(self, request, *args, **kwargs):
-        # Response already includes full game via CountryGameSerializer.game (GameSerializer).
-        # Do not re-serialize response.data["game"]: it is a dict, not a Game instance.
-        return super().create(request, *args, **kwargs)

@@ -13,12 +13,12 @@ from django.urls import path, re_path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, ChallengeLevel, Country, CountryChallenge,
+from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, JourneyLevel,
                          JourneyStep, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesIllustration, SpeciesImage, SpeciesSound, SpeciesVideo,
-                         Update, CountryGame, Language, SpeciesName, UserProfile,
+                         Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice)
 from jizz.notifications import send_welcome_email
@@ -915,33 +915,6 @@ class UpdateAdmin(admin.ModelAdmin):
     readonly_fields = ['created']
     list_display = ['created', 'user', 'message']
     inlines = [ReactionAdminInline]
-
-
-class CountryGameInline(admin.TabularInline):
-    model = CountryGame
-    readonly_fields = ['game', 'challenge_level', 'created', 'status', 'remaining_jokers']
-    fields = readonly_fields
-    can_delete = False
-    extra = 0
-
-    def has_add_permission(self, request, obj):
-        return False
-
-@admin.register(CountryChallenge)
-class CountryChallengeAdmin(admin.ModelAdmin):
-    list_display = ['country', 'player', 'created']
-    list_filter = ['country', 'player']
-    readonly_fields = ['created']
-    inlines = [CountryGameInline]
-    raw_id_fields = ['player', 'country']
-
-
-@admin.register(ChallengeLevel)
-class ChallengeLevelAdmin(admin.ModelAdmin):
-    list_display = ['sequence', 'level', 'title', 'media', 'length', 'jokers', 'rarity', 'include_escapes']
-    list_filter = ['level', 'media', 'rarity', 'include_escapes']
-    search_fields = ['title', 'description']
-    ordering = ['sequence']
 
 
 class JourneyStepInline(admin.TabularInline):

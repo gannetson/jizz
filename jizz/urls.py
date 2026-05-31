@@ -11,9 +11,9 @@ from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesCoverView, GameListView, \
     GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, QuestionNextMediaView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
     PlayerScoreListView, \
-    PlayerStatsView, FeedbackListView, UpdateView, CountryChallengeViewSet, QuestionView, \
+    PlayerStatsView, FeedbackListView, UpdateView, QuestionView, \
     ReactionView, \
-    AddChallengeLevelView, FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
+    FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
     MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FirstAssertionReviewView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
@@ -52,7 +52,6 @@ from jizz.mobile_push.views import PushRegisterView
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
-router.register(r'country-challenges', CountryChallengeViewSet, basename='country-challenge')
 
 
 def apple_app_site_association(request):
@@ -173,12 +172,6 @@ urlpatterns = [
     path('api/app-version/', AppVersionView.as_view(), name='app-version'),
     re_path(r"^api/updates/$", UpdateView.as_view(), name="updates"),
     re_path(r"^api/updates/reactions/$", ReactionView.as_view(), name="reactions"),
-
-    path(
-        'api/challenge/<int:challenge_id>/next-level',
-        AddChallengeLevelView.as_view(),
-        name='add_challenge_level'
-    ),
 
     path('api/birdr-journey/', BirdrJourneyView.as_view(), name='birdr-journey'),
     path(

@@ -179,7 +179,6 @@ const COUNTRY_CHALLENGE_ROUTE_NAMES = new Set([
   'BirdrJourneyStepResults',
   'BirdrJourneyLevelCelebration',
   'ChallengePlay',
-  'ChallengeLevelIntro',
 ]);
 
 export function isCountryChallengeRoute(routeName: string | undefined): boolean {

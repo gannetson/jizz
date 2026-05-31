@@ -15,8 +15,6 @@ from jizz.models import (
     CountrySpecies,
     Feedback,
     Language,
-    CountryChallenge,
-    ChallengeLevel,
 )
 from compare.models import SpeciesComparison, SpeciesTrait
 
@@ -111,17 +109,6 @@ class AdminChangelistTestCase(TestCase):
     def test_language_changelist(self):
         Language.objects.get_or_create(code='en', defaults={'name': 'English'})
         response = self.client.get(reverse('admin:jizz_language_changelist'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_countrychallenge_changelist(self):
-        country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
-        player = Player.objects.create(name='P', language='en')
-        CountryChallenge.objects.create(country=country, player=player)
-        response = self.client.get(reverse('admin:jizz_countrychallenge_changelist'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_challengelevel_changelist(self):
-        response = self.client.get(reverse('admin:jizz_challengelevel_changelist'))
         self.assertEqual(response.status_code, 200)
 
 

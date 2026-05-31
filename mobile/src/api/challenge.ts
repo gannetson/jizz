@@ -1,54 +1,11 @@
 import { apiUrl } from './config';
 import { getAuthHeaders } from './auth';
 
-export type CountryRef = { code: string; name: string; count?: number };
-
-export type ChallengeLevel = {
-  sequence: number;
-  level: string;
-  title: string;
-  title_nl?: string;
-  description: string;
-  description_nl?: string;
-  length: number;
-  media: string;
-  jokers: number;
-};
-
-export type GameRef = {
-  token: string;
-  level: string;
-  length: number;
-  media: string;
-  country: CountryRef;
-  language: string;
-  progress?: number;
-  ended?: boolean;
-  scores?: Array<{ answers?: Array<{ sequence?: number; correct?: boolean }> }>;
-};
-
-export type CountryGameLevel = {
-  id: number;
-  game: GameRef;
-  challenge_level: ChallengeLevel;
-  created: string;
-  status: 'new' | 'running' | 'passed' | 'failed';
-  remaining_jokers: number;
-};
-
 export type PlayerRef = {
   id: number;
   token: string;
   name: string;
   language: string;
-};
-
-export type CountryChallenge = {
-  id: number;
-  country: CountryRef;
-  player: PlayerRef;
-  created: string;
-  levels: CountryGameLevel[];
 };
 
 export type QuestionOption = {
@@ -84,28 +41,23 @@ export type AnswerPayload = {
 export type SubmitChallengeAnswerResponse = {
   correct?: boolean;
   score?: number;
-  /** User's chosen species (from answer_id). */
   answer?: QuestionOption;
-  /** Correct species for the question. */
   species?: QuestionOption;
   [k: string]: unknown;
 };
 
 const CHALLENGE_PLAYER_KEY = 'challenge_player_token';
 
-/** Get stored challenge player token (for country challenge flow). */
 export async function getStoredChallengePlayerToken(): Promise<string | null> {
   const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
   return AsyncStorage.getItem(CHALLENGE_PLAYER_KEY);
 }
 
-/** Store challenge player token after creating/starting a challenge. */
 export async function setStoredChallengePlayerToken(token: string): Promise<void> {
   const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
   await AsyncStorage.setItem(CHALLENGE_PLAYER_KEY, token);
 }
 
-/** Clear stored challenge player token. */
 export async function clearStoredChallengePlayerToken(): Promise<void> {
   const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
   await AsyncStorage.removeItem(CHALLENGE_PLAYER_KEY);
@@ -119,7 +71,7 @@ function playerAuthHeaders(playerToken: string): HeadersInit {
   };
 }
 
-/** Create a player for the challenge (links to user if JWT sent). Returns player with token. */
+/** Create a player for journey play (links to user if JWT sent). */
 export async function createChallengePlayer(
   name: string,
   language: string
@@ -138,71 +90,6 @@ export async function createChallengePlayer(
   return data as PlayerRef & { token: string };
 }
 
-/** Load current country challenge for the given player token.
- * Returns the challenge in progress or null (404). This response is the single source of truth for
- * in-progress state, level, and progress: use challenge.levels[].game.scores[0].answers for
- * correct/incorrect per question and to derive current question index (e.g. answers.length + 1).
- * Pass cacheBust: true to avoid stale responses after answering or loading next question. */
-export async function loadCountryChallenge(
-  playerToken: string,
-  options?: { cacheBust?: boolean }
-): Promise<CountryChallenge | null> {
-  const url =
-    apiUrl('/api/country-challenges/current/') +
-    (options?.cacheBust ? `?${Date.now()}` : '');
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: playerAuthHeaders(playerToken),
-  });
-  if (response.status === 404) return null;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const msg = data.detail ?? data.error ?? data.message ?? 'Failed to load challenge';
-    throw new Error(typeof msg === 'string' ? msg : 'Failed to load challenge');
-  }
-  return data as CountryChallenge;
-}
-
-/** Start a new country challenge. */
-export async function startCountryChallenge(
-  countryCode: string,
-  playerToken: string
-): Promise<CountryChallenge> {
-  const response = await fetch(apiUrl('/api/country-challenges/'), {
-    method: 'POST',
-    headers: playerAuthHeaders(playerToken),
-    body: JSON.stringify({ country_code: countryCode }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const msg = data.detail ?? data.error ?? data.message ?? 'Failed to start challenge';
-    throw new Error(typeof msg === 'string' ? msg : 'Failed to start challenge');
-  }
-  return data as CountryChallenge;
-}
-
-/** Get next challenge level (new game or retry). Refreshes challenge state on server. */
-export async function getNextChallengeLevel(
-  challengeId: number,
-  playerToken: string
-): Promise<CountryGameLevel> {
-  const response = await fetch(apiUrl(`/api/challenge/${challengeId}/next-level`), {
-    method: 'POST',
-    headers: playerAuthHeaders(playerToken),
-  });
-  const data = await response.json().catch((e) => {
-  });
-
-  if (!response.ok) {
-    const msg = data.detail ?? data.error ?? data.message ?? 'Failed to get next level';
-    throw new Error(typeof msg === 'string' ? msg : 'Failed to get next level');
-  }
-  return data as CountryGameLevel;
-}
-
-/** Get the current question for the challenge game. Optionally pass playerToken for auth.
- * Uses cache-busting query param (like the web app) to avoid stale responses.
- * Times out after timeoutMs (default 25s) to avoid hanging. */
 export async function getChallengeQuestion(
   gameToken: string,
   playerToken?: string | null,
@@ -242,7 +129,6 @@ export async function getChallengeQuestion(
   }
 }
 
-/** Submit an answer for the challenge. Sends JWT when logged in so checklist updates apply. */
 export async function submitChallengeAnswer(
   payload: AnswerPayload,
   playerToken: string

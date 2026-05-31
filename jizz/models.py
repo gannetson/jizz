@@ -260,6 +260,12 @@ class Game(models.Model):
         ('audio', 'Audio'),
     ]
 
+    LEVEL_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('advanced', 'Advanced'),
+        ('expert', 'Expert'),
+    ]
+
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True)
     language = models.CharField(max_length=100, default='en')
     token = ShortUUIDField(
@@ -889,112 +895,6 @@ class Reaction(models.Model):
         return self.player.name
 
 
-class ChallengeLevel(models.Model):
-    LEVEL_CHOICES = [
-        ('beginner', 'Beginner'),
-        ('advanced', 'Advanced'),
-        ('expert', 'Expert'),
-    ]
-
-    sequence = models.IntegerField(default=0)  # renamed from 'level'
-    level = models.CharField(
-        max_length=20,
-        choices=LEVEL_CHOICES,
-        default='advanced'
-    )
-    length = models.IntegerField(default=0)
-    jokers = models.IntegerField(default=0)
-    rarity = models.CharField(
-        max_length=20,
-        default=Game.RARIT_REGULAR,
-        choices=Game.RARIT_CHOICES,
-    )
-    include_escapes = models.BooleanField(default=False)
-    media = models.CharField(max_length=10, default='images')
-    title = models.CharField(max_length=200)
-    description = models.TextField(default='')
-    title_nl = models.CharField(max_length=200, null=True, blank=True)
-    description_nl = models.TextField(default='', null=True, blank=True)
-    tax_order = models.CharField(
-        'Order',
-        max_length=200,
-        null=True,
-        blank=True,
-        help_text='Only show birds from this taxonomic order'
-    )
-
-
-class CountryChallenge(models.Model):
-    country = models.ForeignKey(
-        Country,
-        related_name='challenges',
-        on_delete=models.CASCADE
-    )
-    player = models.ForeignKey(
-        Player,
-        related_name='challenges',
-        on_delete=models.CASCADE
-    )
-    created = models.DateTimeField(auto_now_add=True)
-
-
-class CountryGame(models.Model):
-    STATUS_CHOICES = [
-        ('new', 'New'),
-        ('running', 'Running'),
-        ('passed', 'Passed'),
-        ('failed', 'Failed'),
-    ]
-
-    country_challenge = models.ForeignKey(
-        CountryChallenge,
-        related_name='games',
-        on_delete=models.CASCADE
-    )
-    game = models.ForeignKey(
-        Game,
-        related_name='country_games',
-        on_delete=models.CASCADE
-    )
-    challenge_level = models.ForeignKey(
-        ChallengeLevel,
-        related_name='country_games',
-        on_delete=models.CASCADE
-    )
-    created = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def remaining_jokers(self):
-        failed = self.game.questions.filter(
-            answers__correct=False,
-            answers__answer__isnull=False
-        ).count()
-        return self.challenge_level.jokers - failed
-
-    @property
-    def status(self):
-        if self.remaining_jokers < 0:
-            return 'failed'
-        elif self.game.ended and self.remaining_jokers >= 0:
-            return 'passed'
-        elif self.game.questions.count():
-            return 'running'
-        return 'new'
-
-    def update_status(self):
-        """No-op for compatibility with save(); status is a property."""
-        pass
-
-    def save(self, *args, **kwargs):
-        # Only update status if the instance already exists
-        if self.pk:
-            self.update_status()
-        super().save(*args, **kwargs)
-
-    class Meta:
-        ordering = ['-id']
-
-
 # --- Birdr Journey ---
 
 
@@ -1035,7 +935,7 @@ class JourneyStep(models.Model):
     )
     level = models.CharField(
         max_length=20,
-        choices=ChallengeLevel.LEVEL_CHOICES,
+        choices=Game.LEVEL_CHOICES,
         default='advanced',
     )
     length = models.IntegerField(default=0)

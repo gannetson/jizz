@@ -16,7 +16,6 @@ import StartPage from "./pages/start"
 import JoinPage from "./pages/join"
 import GameEnded from "./pages/mpg/results"
 import Hiscores from "./pages/hiscores"
-import {ChallengePage} from "./pages/challenge"
 import Updates from "./pages/updates"
 import {Login} from "./components/auth/login"
 import {AuthCallback} from "./components/auth/auth-callback"
@@ -25,7 +24,6 @@ import {PrivacyPage} from "./pages/privacy"
 import {ProfilePage} from "./pages/profile"
 import { ForgotPasswordPage } from "./pages/forgot-password";
 import { ResetPasswordPage } from "./pages/reset-password";
-import { ChallengeQuestion } from "./pages/mpg/challenge/question";
 import TexelStartPage from "./pages/texel/start"
 import TexelHiscorePage from "./pages/texel/hiscores"
 import { MyGamesPage } from "./pages/my-games"
@@ -91,8 +89,6 @@ export const MainContent = () => {
             <Route path='/join/:gameCode/web' element={<JoinPage/>}/>
             <Route path='/about/' element={<AboutPage/>}/>
             <Route path='/privacy/' element={<PrivacyPage/>}/>
-            <Route path='/challenge/' element={<ChallengePage />}/>
-            <Route path='/challenge/play' element={<ChallengeQuestion />}/>
             <Route path="/daily-challenge" element={<DailyChallengeListPage />} />
             <Route path="/daily-challenge/new" element={<DailyChallengeNewPage />} />
             <Route path="/daily-challenge/:id" element={<DailyChallengeDetailPage />} />

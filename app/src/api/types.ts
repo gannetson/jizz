@@ -73,15 +73,6 @@ export interface Score {
   score: number;
 }
 
-export interface CountryChallenge {
-  id: number;
-  country: Country;
-  levels: Array<{
-    challenge_level: { sequence: number };
-    game: Game;
-  }>;
-}
-
 export interface Update {
   id: number;
   message: string;

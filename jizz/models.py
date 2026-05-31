@@ -854,10 +854,19 @@ class CountrySpeciesFrequency(models.Model):
 
 
 class Feedback(models.Model):
+    user = models.ForeignKey(
+        'auth.User',
+        related_name='feedback',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
     player = models.ForeignKey(
         Player,
         related_name='feedback',
-        on_delete=models.CASCADE
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
     )
     comment = models.TextField(default='', null=True, blank=True)
     rating = models.IntegerField(default=0)

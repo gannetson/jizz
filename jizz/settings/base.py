@@ -336,6 +336,7 @@ LOGGING = {
 
 DKIM_KEY = "dkim-key"
 DEFAULT_FROM_EMAIL = "Birdr <info@birdr.pro>"
+CONTACT_EMAIL = "Loek Birdr <loek@birdr.pro>"
 
 
 MEDIA_FIRST_ASSERTION_DEFAULT_MODEL_VERSION = "first_assertion_v1"

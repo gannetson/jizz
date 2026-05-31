@@ -19,6 +19,7 @@ import { ProgressRing } from '../components/ProgressRing';
 import { colors } from '../theme';
 import { APP_STORE_URL, PLAY_STORE_URL } from '../constants/storeUrls';
 import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
+import { FeedbackForm } from '../components/FeedbackForm';
 
 function openStoreReview() {
   if (Platform.OS === 'android') {
@@ -275,15 +276,7 @@ export function HomeScreen() {
           </TouchableOpacity>
         )
       )}
-      <TouchableOpacity
-        style={styles.ghostButton}
-        onPress={() => navigation.navigate('Scores')}
-      >
-        <Text style={styles.ghostButtonText}>{t('high_scores')}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.ghostButton} onPress={openStoreReview}>
-        <Text style={styles.ghostButtonText}>{t('rate_or_review_app')}</Text>
-      </TouchableOpacity>
+      <FeedbackForm />
       {updates.length > 0 && (
         <View style={styles.updateCard}>
           <View style={styles.updateCardHeader}>

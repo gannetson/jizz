@@ -58,6 +58,8 @@
   "failed description": "Helaas! Dat was één fout antwoord te veel...",
   "failed tound": "Mislukt! {round} - {title}",
   "feedback": "Feedback",
+  "feedback invite": "Bug gevonden of positieve feedback? Laat het ons weten.",
+  "your feedback placeholder": "Jouw feedback...",
   "final results": "Eindresultaten",
   "first_name": "Voornaam",
   "flag": "Markeren",

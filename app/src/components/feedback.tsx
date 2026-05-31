@@ -1,28 +1,40 @@
-import {Box, Button, CardRoot, CardBody, Flex, Heading, Text, Textarea} from "@chakra-ui/react"
+import {Box, Button, CardRoot, Flex, Heading, Text, Textarea} from "@chakra-ui/react"
 import {FormattedMessage, useIntl} from "react-intl"
-import StarRating from "./rating/star-rating"
 import {useState} from "react"
 import { toaster } from "@/components/ui/toaster"
 import { apiUrl } from "../api/baseUrl"
+import { authService } from "../api/services/auth.service"
 
 export const Feedback = () => {
   const intl = useIntl()
-  const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
+    if (!comment.trim()) return;
+    setSubmitting(true);
     const player_token = localStorage.getItem('player-token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const accessToken = authService.getAccessToken();
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
     const response = await fetch(apiUrl('/api/feedback/'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({rating, comment, player_token})
+      headers,
+      body: JSON.stringify({
+        comment: comment.trim(),
+        ...(player_token ? { player_token } : {}),
+      }),
     })
-    
+    setSubmitting(false);
+
     if (response.ok) {
       setSubmitted(true)
+      setComment('')
       toaster.create({
         title: intl.formatMessage({id: 'thanks', defaultMessage: 'Thanks!'}),
         description: intl.formatMessage({id: 'thanks for your feedback message', defaultMessage: 'Thank you for your feedback!'}),
@@ -59,22 +71,26 @@ export const Feedback = () => {
             <Heading size={'md'}>
               <FormattedMessage id={'feedback'} defaultMessage={'Feedback'}/>
             </Heading>
-            <FormattedMessage id={'do you like this'} defaultMessage={'Do you like this app?'}/>
-            <StarRating rating={rating} setRating={setRating} count={5} size={20}/>
-            <Flex gap={2}>
-              <FormattedMessage id={'comments'} defaultMessage={'Comments / suggestions'}/>
-              <Text as={'span'} fontStyle={'italic'} color={'gray.400'}>
-                <FormattedMessage id={'optional'} defaultMessage={'optional'}/>
-              </Text>
-            </Flex>
-
-            <Textarea cursor="text" onChange={(val) => setComment(val.target.value)}/>
+            <FormattedMessage
+              id={'feedback invite'}
+              defaultMessage={'Found a bug or want to share something positive? We would love to hear from you.'}
+            />
+            <Textarea
+              cursor="text"
+              value={comment}
+              onChange={(val) => setComment(val.target.value)}
+              placeholder={intl.formatMessage({ id: 'your feedback placeholder', defaultMessage: 'Your feedback...' })}
+            />
             <Box>
-              <Button onClick={submit} disabled={!rating && !comment} colorPalette="primary">
+              <Button
+                onClick={submit}
+                disabled={!comment.trim() || submitting}
+                loading={submitting}
+                colorPalette="primary"
+              >
                 <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
               </Button>
             </Box>
-
           </>
         )}
       </Flex>

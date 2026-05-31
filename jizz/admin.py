@@ -900,8 +900,8 @@ class CountrySpeciesFrequencyAdmin(admin.ModelAdmin):
 
 @register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
-    readonly_fields = ['player', 'comment', 'rating']
-    list_display = ['player', 'comment', 'rating']
+    readonly_fields = ['user', 'player', 'comment', 'rating', 'created']
+    list_display = ['created', 'user', 'player', 'comment', 'rating']
 
 
 class ReactionAdminInline(admin.StackedInline):

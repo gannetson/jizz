@@ -11,7 +11,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGame } from '../context/GameContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { postFeedback } from '../api/feedback';
-import { StarRating } from './StarRating';
 import { colors } from '../theme';
 
 const PLAYER_TOKEN_KEY = 'player-token';
@@ -19,22 +18,20 @@ const PLAYER_TOKEN_KEY = 'player-token';
 export function FeedbackForm() {
   const { t } = useTranslation();
   const { player } = useGame();
-  const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!rating && !comment.trim()) return;
+    if (!comment.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
       const token = player?.token ?? (await AsyncStorage.getItem(PLAYER_TOKEN_KEY));
-      const ok = await postFeedback(rating, comment.trim(), token);
+      const ok = await postFeedback(comment.trim(), token);
       if (ok) {
         setSubmitted(true);
-        setRating(0);
         setComment('');
         setTimeout(() => setSubmitted(false), 3000);
       } else {
@@ -59,11 +56,7 @@ export function FeedbackForm() {
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{t('feedback')}</Text>
-      <Text style={styles.prompt}>{t('do_you_like_app')}</Text>
-      <StarRating rating={rating} onRating={setRating} count={5} size={24} />
-      <Text style={styles.label}>
-        {t('comments_optional')}
-      </Text>
+      <Text style={styles.prompt}>{t('feedback_invite')}</Text>
       <TextInput
         style={styles.input}
         placeholder={t('your_feedback_placeholder')}
@@ -71,13 +64,14 @@ export function FeedbackForm() {
         value={comment}
         onChangeText={setComment}
         multiline
-        numberOfLines={3}
+        numberOfLines={4}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <TouchableOpacity
-        style={[styles.submitBtn, (!rating && !comment.trim() || submitting) && styles.submitBtnDisabled]}
+        style={[styles.submitBtn, (!comment.trim() || submitting) && styles.submitBtnDisabled]}
         onPress={submit}
-        disabled={(!rating && !comment.trim()) || submitting}
+        disabled={!comment.trim() || submitting}
+        testID="home.feedbackSubmit"
       >
         {submitting ? (
           <ActivityIndicator size="small" color="#fff" />
@@ -96,23 +90,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 20,
     marginVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.primary[50],
   },
   cardThanks: {
     backgroundColor: colors.primary[50],
   },
   title: { fontSize: 18, fontWeight: '600', color: colors.primary[800], marginBottom: 8 },
-  prompt: { fontSize: 15, color: colors.primary[700], marginBottom: 12 },
-  label: { fontSize: 14, color: colors.primary[700], marginTop: 12, marginBottom: 6 },
-  optional: { fontStyle: 'italic', color: colors.primary[400] },
+  prompt: { fontSize: 15, color: colors.primary[700], marginBottom: 12, lineHeight: 22 },
   input: {
     borderWidth: 1,
     borderColor: colors.primary[200],
+    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
     color: colors.primary[800],
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   errorText: { fontSize: 14, color: colors.error[500], marginTop: 8 },

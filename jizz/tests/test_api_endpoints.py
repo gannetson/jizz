@@ -2,7 +2,7 @@
 Tests for all API endpoints (jizz and compare).
 Auth/profile/my-games/scores are covered in test_auth_and_profile and test_player_score_list.
 """
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -596,10 +596,38 @@ class ApiFeedbackTestCase(TestCase):
     def test_feedback_create_returns_201(self):
         response = self.client.post(
             '/api/feedback/',
-            {'comment': 'Great app', 'player_token': self.player.token, 'rating': 5},
+            {'comment': 'Great app', 'player_token': self.player.token},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Feedback.objects.count(), 1)
+        self.assertEqual(Feedback.objects.get().player_id, self.player.id)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_feedback_create_with_user_sends_email(self):
+        from django.core import mail
+
+        user = User.objects.create_user(username='fbuser', email='fb@example.com', password='pass12345')
+        self.client.force_authenticate(user=user)
+        response = self.client.post(
+            '/api/feedback/',
+            {'comment': 'Love the checklist!'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        feedback = Feedback.objects.get()
+        self.assertEqual(feedback.user_id, user.id)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Love the checklist', mail.outbox[0].body)
+        self.assertIn('fb@example.com', mail.outbox[0].body)
+
+    def test_feedback_requires_comment(self):
+        response = self.client.post(
+            '/api/feedback/',
+            {'comment': '   ', 'player_token': self.player.token},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class ApiUpdatesReactionsTestCase(TestCase):

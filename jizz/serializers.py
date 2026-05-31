@@ -1267,13 +1267,35 @@ class PageListSerializer(serializers.ModelSerializer):
 
 
 class FeedbackSerializer(serializers.ModelSerializer):
-    comment = serializers.CharField(allow_blank=True)
-    player_token = serializers.CharField(required=False)
-    rating = serializers.IntegerField()
+    comment = serializers.CharField(trim_whitespace=True)
+    player_token = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    rating = serializers.IntegerField(required=False, default=0)
+
+    def validate_comment(self, value):
+        if not value or not str(value).strip():
+            raise serializers.ValidationError('This field is required.')
+        return str(value).strip()
 
     def create(self, validated_data):
-        player = Player.objects.filter(token=validated_data.pop('player_token')).first()
-        return Feedback.objects.create(player=player, **validated_data)
+        player_token = (validated_data.pop('player_token', None) or '').strip()
+        request = self.context.get('request')
+
+        player = Player.objects.filter(token=player_token).first() if player_token else None
+        user = None
+        if request and request.user and request.user.is_authenticated:
+            user = request.user
+            if not player:
+                player = Player.objects.filter(user=user).first()
+
+        feedback = Feedback.objects.create(
+            player=player,
+            user=user,
+            **validated_data,
+        )
+        from jizz.feedback_email import send_feedback_notification
+
+        send_feedback_notification(feedback)
+        return feedback
 
     class Meta:
         model = Feedback

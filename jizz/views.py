@@ -832,7 +832,9 @@ class PlayerScoreListView(ListAPIView):
 
 class FeedbackListView(ListCreateAPIView):
     serializer_class = FeedbackSerializer
-    queryset = Feedback.objects.all()
+    queryset = Feedback.objects.select_related('user', 'player').all()
+    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
 
 
 class UpdatePagination(PageNumberPagination):

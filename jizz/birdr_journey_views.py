@@ -173,6 +173,12 @@ class BirdrJourneyMixin(GetPlayerMixin):
     def _serialize_journey(self, journey, request):
         return BirdrJourneySerializer(journey, context={'request': request}).data
 
+    def _no_cache_response(self, data, status=status.HTTP_200_OK):
+        response = Response(data, status=status)
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        return response
+
 
 class BirdrJourneyView(BirdrJourneyMixin, APIView):
     """GET — list journeys, or ?country_code=XX load one; POST { country_code } — get or create."""
@@ -182,7 +188,7 @@ class BirdrJourneyView(BirdrJourneyMixin, APIView):
         country_code = request.query_params.get('country_code')
         if not country_code or not str(country_code).strip():
             journeys = self._journey_queryset(owner).order_by('-updated')
-            return Response([
+            return self._no_cache_response([
                 self._serialize_journey(journey, request)
                 for journey in journeys
             ])
@@ -190,7 +196,7 @@ class BirdrJourneyView(BirdrJourneyMixin, APIView):
         journey = self._get_journey(owner, country)
         if not journey:
             raise Http404('No journey found for this country.')
-        return Response(self._serialize_journey(journey, request))
+        return self._no_cache_response(self._serialize_journey(journey, request))
 
     def post(self, request):
         owner = self._resolve_owner(request)
@@ -208,7 +214,7 @@ class BirdrJourneyView(BirdrJourneyMixin, APIView):
                 country=country,
                 defaults={'current_sequence': 0, 'current_step_sequence': 0, 'user': None},
             )
-        return Response(
+        return self._no_cache_response(
             self._serialize_journey(journey, request),
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
@@ -220,7 +226,7 @@ class BirdrJourneyDetailView(BirdrJourneyMixin, APIView):
     def delete(self, request, journey_id):
         journey = self._get_owned_journey(request, journey_id)
         journey.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self._no_cache_response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
@@ -243,14 +249,14 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
         )
         if existing:
             if existing.status == 'running':
-                return Response({
+                return self._no_cache_response({
                     'journey': self._serialize_journey(journey, request),
                     'journey_game': BirdrJourneyGameSerializer(
                         existing, context={'request': request}
                     ).data,
                 })
             if existing.status == 'new' and existing.game.questions.count() > 0:
-                return Response({
+                return self._no_cache_response({
                     'journey': self._serialize_journey(journey, request),
                     'journey_game': BirdrJourneyGameSerializer(
                         existing, context={'request': request}
@@ -283,7 +289,7 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             journey_step=step,
             game=game,
         )
-        return Response(
+        return self._no_cache_response(
             {
                 'journey': self._serialize_journey(journey, request),
                 'journey_game': BirdrJourneyGameSerializer(
@@ -325,7 +331,7 @@ class BirdrJourneyCompleteStepView(BirdrJourneyMixin, APIView):
                 level_complete = journey.current_step_sequence >= len(steps)
 
         journey.refresh_from_db()
-        return Response({
+        return self._no_cache_response({
             'journey': self._serialize_journey(journey, request),
             'level_complete': level_complete,
             'status': status,
@@ -347,4 +353,4 @@ class BirdrJourneyAdvanceLevelView(BirdrJourneyMixin, APIView):
         journey.current_sequence += 1
         journey.current_step_sequence = 0
         journey.save(update_fields=['current_sequence', 'current_step_sequence', 'updated'])
-        return Response(self._serialize_journey(journey, request))
+        return self._no_cache_response(self._serialize_journey(journey, request))

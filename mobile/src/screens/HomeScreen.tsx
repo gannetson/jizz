@@ -117,7 +117,7 @@ export function HomeScreen() {
       const storedCountry = await getStoredBirdrJourneyCountryCode();
       const journey = await findInProgressBirdrJourney([
         storedCountry,
-        profileReady && profile?.country_code ? profile.country_code : null,
+        isAuthenticated && profileReady && profile?.country_code ? profile.country_code : null,
       ]);
       setActiveJourney(journey);
     } catch {
@@ -125,7 +125,7 @@ export function HomeScreen() {
     } finally {
       setJourneyLoading(false);
     }
-  }, [profile?.country_code, profileReady]);
+  }, [profile?.country_code, profileReady, isAuthenticated]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,11 +136,17 @@ export function HomeScreen() {
   );
 
   useEffect(() => {
-    if (profileReady) {
+    if (!isAuthenticated) {
+      setActiveJourney(null);
+      setChecklistSummary(null);
+    }
+    if (profileReady || !isAuthenticated) {
       loadActiveJourney();
+    }
+    if (isAuthenticated && profileReady) {
       loadChecklistSummary();
     }
-  }, [profileReady, profile?.country_code, loadActiveJourney, loadChecklistSummary]);
+  }, [isAuthenticated, profileReady, profile?.country_code, loadActiveJourney, loadChecklistSummary]);
 
   const goJourneyProgress = () => {
     if (!activeJourney?.country?.code) return;

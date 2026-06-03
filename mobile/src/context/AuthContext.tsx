@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState, Rea
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authApi from '../api/auth';
+import { clearLocalSessionData } from '../api/session';
 import * as playerApi from '../api/player';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -218,7 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Ignore
     }
-    await authApi.clearTokens();
+    await clearLocalSessionData();
     setIsAuthenticated(false);
   }, []);
 

@@ -1,5 +1,6 @@
 import axios from '../axios-config';
 import { getApiBaseUrl, getSocialLoginBaseUrl } from '../baseUrl';
+import { clearBirdrJourneySession } from '../birdrJourney';
 
 export interface LoginCredentials {
   email: string;
@@ -333,6 +334,8 @@ class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('jw_token');
+    clearBirdrJourneySession();
+    localStorage.removeItem('player-token');
   }
 
   /**

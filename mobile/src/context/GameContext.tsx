@@ -9,6 +9,7 @@ import type { TaxOrderRow, TaxFamilyRow } from '../api/taxonomy';
 import * as playerApi from '../api/player';
 import * as gamesApi from '../api/games';
 import * as authApi from '../api/auth';
+import { useAuth } from './AuthContext';
 
 const PLAYER_TOKEN_KEY = playerApi.PLAYER_TOKEN_STORAGE_KEY;
 const GAME_TOKEN_KEY = 'game-token';
@@ -56,6 +57,7 @@ type GameContextType = {
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export function GameProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [playerName, setPlayerName] = useState('');
   const [country, setCountry] = useState<Country | undefined>(undefined);
   const [language, setLanguage] = useState('en');
@@ -132,6 +134,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadStoredPlayer();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setPlayer(null);
+      setGame(null);
+      setPlayerName('');
+      initialPlayerNameFilledRef.current = false;
+      lastLanguageSyncPlayerTokenRef.current = null;
+      speciesLanguageUserChosenRef.current = false;
+      return;
+    }
+    void loadStoredPlayer();
+  }, [isAuthenticated, loadStoredPlayer]);
 
   useEffect(() => {
     setTaxOrder(undefined);

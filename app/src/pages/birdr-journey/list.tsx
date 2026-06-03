@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useState } from 'react';
+import React, { useCallback, useContext, useState, useEffect } from 'react';
 import {
   Alert,
   AlertIndicator,
@@ -44,9 +44,21 @@ export function BirdrJourneyListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!authService.getAccessToken());
+
+  useEffect(() => {
+    const syncAuth = () => setIsAuthenticated(!!authService.getAccessToken());
+    syncAuth();
+    window.addEventListener('focus', syncAuth);
+    const interval = setInterval(syncAuth, 3000);
+    return () => {
+      window.removeEventListener('focus', syncAuth);
+      clearInterval(interval);
+    };
+  }, []);
 
   const ensureAuth = useCallback(async (): Promise<boolean> => {
-    if (authService.getAccessToken()) return true;
+    if (isAuthenticated) return true;
     if (getStoredBirdrJourneyPlayerToken()) return true;
     try {
       await createBirdrJourneyPlayer('Guest', locale);
@@ -55,7 +67,7 @@ export function BirdrJourneyListPage() {
       setError(err instanceof Error ? err.message : 'Failed to load');
       return false;
     }
-  }, [locale]);
+  }, [isAuthenticated, locale]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -74,7 +86,7 @@ export function BirdrJourneyListPage() {
       clearStoredBirdrJourneyCountryCode();
       clearStoredBirdrJourneyPlayerToken();
       try {
-        if (!authService.getAccessToken()) {
+        if (!isAuthenticated) {
           await createBirdrJourneyPlayer('Guest', locale);
         }
         const list = await listBirdrJourneys();
@@ -87,11 +99,20 @@ export function BirdrJourneyListPage() {
     } finally {
       setLoading(false);
     }
-  }, [ensureAuth]);
+  }, [ensureAuth, isAuthenticated, locale]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setJourneys([]);
+      setActiveCountryCode(null);
+      setError(null);
+    }
+    load();
+  }, [isAuthenticated, load]);
 
   const handleContinue = async (journey: BirdrJourney) => {
     const code = journey.country.code;
@@ -111,11 +132,14 @@ export function BirdrJourneyListPage() {
     setRemovingId(journey.id);
     try {
       await deleteBirdrJourney(journey.id);
+      setJourneys((prev) => prev.filter((j) => j.id !== journey.id));
       if (activeCountryCode === journey.country.code) {
         clearStoredBirdrJourneyCountryCode();
         setActiveCountryCode(null);
       }
-      await load();
+      const list = await listBirdrJourneys();
+      setJourneys(list);
+      setActiveCountryCode(getStoredBirdrJourneyCountryCode()?.trim()?.toUpperCase() ?? null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to remove challenge');
     } finally {

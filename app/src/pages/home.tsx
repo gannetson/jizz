@@ -43,7 +43,18 @@ const HomePage = () => {
   const [checklistSummary, setChecklistSummary] = useState<ChecklistSummary | null>(null);
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const isAuthenticated = !!authService.getAccessToken();
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!authService.getAccessToken());
+
+  useEffect(() => {
+    const syncAuth = () => setIsAuthenticated(!!authService.getAccessToken());
+    syncAuth();
+    window.addEventListener('focus', syncAuth);
+    const interval = setInterval(syncAuth, 3000);
+    return () => {
+      window.removeEventListener('focus', syncAuth);
+      clearInterval(interval);
+    };
+  }, []);
 
   const loadActiveJourney = useCallback(async () => {
     setJourneyLoading(true);
@@ -51,7 +62,7 @@ const HomePage = () => {
       const storedCountry = getStoredBirdrJourneyCountryCode();
       const journey = await findInProgressBirdrJourney([
         storedCountry,
-        profile?.country_code ?? null,
+        isAuthenticated ? profile?.country_code ?? null : null,
       ]);
       setActiveJourney(journey);
     } catch {
@@ -59,7 +70,7 @@ const HomePage = () => {
     } finally {
       setJourneyLoading(false);
     }
-  }, [profile?.country_code]);
+  }, [profile?.country_code, isAuthenticated]);
 
   const loadChecklistSummary = useCallback(async () => {
     if (!isAuthenticated) {
@@ -104,9 +115,13 @@ const HomePage = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveJourney(null);
+      setChecklistSummary(null);
+    }
     loadActiveJourney();
     loadChecklistSummary();
-  }, [loadActiveJourney, loadChecklistSummary, profile?.country_code]);
+  }, [loadActiveJourney, loadChecklistSummary, profile?.country_code, isAuthenticated]);
 
   const goJourneyProgress = () => {
     if (!activeJourney?.country?.code) return;

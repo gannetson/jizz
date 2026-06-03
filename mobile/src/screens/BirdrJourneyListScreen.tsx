@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -107,6 +107,16 @@ export function BirdrJourneyListScreen() {
     }, [load])
   );
 
+  useEffect(() => {
+    setLoading(true);
+    if (!isAuthenticated) {
+      setJourneys([]);
+      setActiveCountryCode(null);
+      setError(null);
+    }
+    load();
+  }, [isAuthenticated, load]);
+
   const handleContinue = async (journey: BirdrJourney) => {
     const code = journey.country.code;
     await setStoredBirdrJourneyCountryCode(code);
@@ -127,11 +137,15 @@ export function BirdrJourneyListScreen() {
             setRemovingId(journey.id);
             try {
               await deleteBirdrJourney(journey.id);
+              setJourneys((prev) => prev.filter((j) => j.id !== journey.id));
               if (activeCountryCode === journey.country.code) {
                 await clearStoredBirdrJourneyCountryCode();
                 setActiveCountryCode(null);
               }
-              await load();
+              const list = await listBirdrJourneys();
+              const storedCountry = await getStoredBirdrJourneyCountryCode();
+              setJourneys(list);
+              setActiveCountryCode(storedCountry?.trim()?.toUpperCase() ?? null);
             } catch (e: unknown) {
               Alert.alert(
                 t('country_challenge'),

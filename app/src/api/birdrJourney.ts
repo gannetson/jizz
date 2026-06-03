@@ -160,6 +160,12 @@ export function clearStoredBirdrJourneyPlayerToken(): void {
   }
 }
 
+/** Clear locally stored country-challenge session (logout / account switch). */
+export function clearBirdrJourneySession(): void {
+  clearStoredBirdrJourneyCountryCode();
+  clearStoredBirdrJourneyPlayerToken();
+}
+
 export async function syncBirdrJourneyPlayerToken(
   journey: BirdrJourney | null | undefined
 ): Promise<string | null> {
@@ -209,10 +215,7 @@ export async function listBirdrJourneys(): Promise<BirdrJourney[]> {
 }
 
 async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourney[]> {
-  const response = await fetch(apiUrl('/api/birdr-journey/'), {
-    method: 'GET',
-    headers: await journeyAuthHeaders(),
-  });
+  const response = await journeyRequest(apiUrl('/api/birdr-journey/'), { method: 'GET' });
   const data = await response.json().catch(() => ({}));
 
   if (response.status === 401 && !retried) {
@@ -241,9 +244,8 @@ async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourney[]> 
 
 /** Remove a country challenge and its progress. */
 export async function deleteBirdrJourney(journeyId: number): Promise<void> {
-  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/`), {
+  const response = await journeyRequest(apiUrl(`/api/birdr-journey/${journeyId}/`), {
     method: 'DELETE',
-    headers: await journeyAuthHeaders(),
   });
   if (response.status === 204) return;
   const data = await response.json().catch(() => ({}));
@@ -283,6 +285,32 @@ async function journeyAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
+const JOURNEY_NO_CACHE_HEADERS: Record<string, string> = {
+  'Cache-Control': 'no-cache',
+  Pragma: 'no-cache',
+};
+
+function journeyCacheBustUrl(url: string): string {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}_=${Date.now()}`;
+}
+
+async function journeyRequest(url: string, init: RequestInit = {}): Promise<Response> {
+  const authHeaders = await journeyAuthHeaders();
+  const method = (init.method ?? 'GET').toUpperCase();
+  const fetchUrl = method === 'GET' ? journeyCacheBustUrl(url) : url;
+  return fetch(fetchUrl, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...authHeaders,
+      ...JOURNEY_NO_CACHE_HEADERS,
+      ...(init.headers as Record<string, string> | undefined),
+    },
+    cache: 'no-store',
+  });
+}
+
 export async function createBirdrJourneyPlayer(
   name: string,
   language: string
@@ -302,10 +330,7 @@ export async function createBirdrJourneyPlayer(
 
 export async function getBirdrJourney(countryCode: string): Promise<BirdrJourney | null> {
   const url = apiUrl(`/api/birdr-journey/?country_code=${encodeURIComponent(countryCode)}`);
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: await journeyAuthHeaders(),
-  });
+  const response = await journeyRequest(url, { method: 'GET' });
   if (response.status === 404) {
     clearStoredCountryIfMatches(countryCode);
     return null;
@@ -320,9 +345,8 @@ export async function getBirdrJourney(countryCode: string): Promise<BirdrJourney
 }
 
 export async function startBirdrJourney(countryCode: string): Promise<BirdrJourney> {
-  const response = await fetch(apiUrl('/api/birdr-journey/'), {
+  const response = await journeyRequest(apiUrl('/api/birdr-journey/'), {
     method: 'POST',
-    headers: await journeyAuthHeaders(),
     body: JSON.stringify({ country_code: countryCode }),
   });
   const data = await response.json().catch(() => ({}));
@@ -335,9 +359,8 @@ export async function startBirdrJourney(countryCode: string): Promise<BirdrJourn
 }
 
 export async function startJourneyStep(journeyId: number): Promise<StartStepResponse> {
-  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/start-step/`), {
+  const response = await journeyRequest(apiUrl(`/api/birdr-journey/${journeyId}/start-step/`), {
     method: 'POST',
-    headers: await journeyAuthHeaders(),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -352,9 +375,8 @@ export async function completeJourneyStep(
   journeyId: number,
   gameToken?: string
 ): Promise<CompleteStepResponse> {
-  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/complete-step/`), {
+  const response = await journeyRequest(apiUrl(`/api/birdr-journey/${journeyId}/complete-step/`), {
     method: 'POST',
-    headers: await journeyAuthHeaders(),
     body: JSON.stringify(gameToken ? { game_token: gameToken } : {}),
   });
   const data = await response.json().catch(() => ({}));
@@ -367,9 +389,8 @@ export async function completeJourneyStep(
 }
 
 export async function advanceJourneyLevel(journeyId: number): Promise<BirdrJourney> {
-  const response = await fetch(apiUrl(`/api/birdr-journey/${journeyId}/advance-level/`), {
+  const response = await journeyRequest(apiUrl(`/api/birdr-journey/${journeyId}/advance-level/`), {
     method: 'POST',
-    headers: await journeyAuthHeaders(),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

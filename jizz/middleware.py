@@ -22,3 +22,19 @@ class SocialAuthRedirectUriMiddleware:
                 # Apple rejects redirect_uri with trailing slash; use path without trailing slash
                 request.session["social_auth_redirect_uri"] = request.build_absolute_uri("/auth/complete/apple-id")
         return self.get_response(request)
+
+
+class AppVersionNoCacheMiddleware:
+    """Force fresh responses for /api/app-version/ (nginx was caching 12h on production)."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.path.rstrip('/') == '/api/app-version':
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            if 'Expires' in response:
+                del response['Expires']
+        return response

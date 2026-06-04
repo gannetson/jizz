@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, AppState, View, StyleSheet } from 'react-native';
 import { fetchAppVersionRequirements } from '../api/appVersion';
 import { getAppVersionDisplay } from '../utils/appVersion';
 import { isVersionLessThan } from '../utils/compareVersions';
@@ -20,30 +20,40 @@ export function AppVersionGate({ children }: Props) {
   const [minVersion, setMinVersion] = useState('1.64.0');
   const [storeUrls, setStoreUrls] = useState<{ ios: string; android: string } | null>(null);
 
+  const runCheck = useCallback(async (showLoading: boolean) => {
+    if (showLoading) setChecking(true);
+    const requirements = await fetchAppVersionRequirements();
+    if (requirements?.min_version) {
+      const { version } = getAppVersionDisplay();
+      setMinVersion(requirements.min_version);
+      setStoreUrls({
+        ios: requirements.app_store_url,
+        android: requirements.play_store_url,
+      });
+      setNeedsUpdate(isVersionLessThan(version, requirements.min_version));
+    }
+    if (showLoading) setChecking(false);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-
-    (async () => {
-      const requirements = await fetchAppVersionRequirements();
+    void (async () => {
+      await runCheck(true);
       if (cancelled) return;
-
-      if (requirements?.min_version) {
-        const { version } = getAppVersionDisplay();
-        setMinVersion(requirements.min_version);
-        setStoreUrls({
-          ios: requirements.app_store_url,
-          android: requirements.play_store_url,
-        });
-        setNeedsUpdate(isVersionLessThan(version, requirements.min_version));
-      }
-
-      setChecking(false);
     })();
-
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [runCheck]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void runCheck(false);
+      }
+    });
+    return () => sub.remove();
+  }, [runCheck]);
 
   if (checking) {
     return (

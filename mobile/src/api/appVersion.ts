@@ -8,9 +8,15 @@ export type AppVersionResponse = {
 
 export async function fetchAppVersionRequirements(): Promise<AppVersionResponse | null> {
   try {
-    const response = await fetch(apiUrl('/api/app-version/'), {
+    const url = `${apiUrl('/api/app-version/')}?_=${Date.now()}`;
+    const response = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+      cache: 'no-store',
     });
     if (!response.ok) return null;
     return (await response.json()) as AppVersionResponse;

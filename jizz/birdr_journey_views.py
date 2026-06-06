@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from jizz.models import BirdrJourney, BirdrJourneyGame, Country, Game, JourneyLevel, JourneyStep, Player
+from jizz.services.journey_family import is_family_step, resolve_family_for_step
 from jizz.serializers import BirdrJourneyGameSerializer, BirdrJourneySerializer
 from jizz.views import GetPlayerMixin
 
@@ -249,17 +250,23 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
         )
         if existing:
             if existing.status == 'running':
+                step_ctx = BirdrJourneySerializer(
+                    journey, context={'request': request}
+                )._serializer_context()
                 return self._no_cache_response({
                     'journey': self._serialize_journey(journey, request),
                     'journey_game': BirdrJourneyGameSerializer(
-                        existing, context={'request': request}
+                        existing, context=step_ctx
                     ).data,
                 })
             if existing.status == 'new' and existing.game.questions.count() > 0:
+                step_ctx = BirdrJourneySerializer(
+                    journey, context={'request': request}
+                )._serializer_context()
                 return self._no_cache_response({
                     'journey': self._serialize_journey(journey, request),
                     'journey_game': BirdrJourneyGameSerializer(
-                        existing, context={'request': request}
+                        existing, context=step_ctx
                     ).data,
                 })
             # Failed attempt or empty shell (question never loaded): start fresh.
@@ -273,6 +280,15 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             except Exception:
                 pass
 
+        tax_family = None
+        if is_family_step(step):
+            family = resolve_family_for_step(step, journey.country)
+            if not family:
+                raise ValidationError(
+                    {'error': 'No families with enough species for this step.'}
+                )
+            tax_family = family.name_latin
+
         game = Game.objects.create(
             country=journey.country,
             level=step.level,
@@ -280,7 +296,7 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             media=step.media,
             rarity=step.rarity,
             include_escapes=step.include_escapes,
-            tax_order=step.tax_order,
+            tax_family=tax_family,
             host=host,
             language=language,
         )
@@ -289,11 +305,13 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             journey_step=step,
             game=game,
         )
+        journey_data = self._serialize_journey(journey, request)
+        step_ctx = BirdrJourneySerializer(journey, context={'request': request})._serializer_context()
         return self._no_cache_response(
             {
-                'journey': self._serialize_journey(journey, request),
+                'journey': journey_data,
                 'journey_game': BirdrJourneyGameSerializer(
-                    journey_game, context={'request': request}
+                    journey_game, context=step_ctx
                 ).data,
             },
             status=status.HTTP_201_CREATED,

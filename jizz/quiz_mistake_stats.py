@@ -1,5 +1,5 @@
 """
-Aggregates for quiz mistake analytics (staff-only).
+Aggregates for quiz mistake analytics (public data pages).
 """
 
 from __future__ import annotations

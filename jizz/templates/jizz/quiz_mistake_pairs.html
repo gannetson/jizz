@@ -3,15 +3,14 @@
 {% block title %}Confused pairs — quiz mistakes{% endblock %}
 
 {% block nav_extra %}
-        <span> · </span>
         <a href="?format=csv{% if selected_country %}&amp;country={{ selected_country }}{% endif %}">Download CSV</a>
 {% endblock %}
 
-{% block content %}
+{% block quiz_content %}
     <h1>Confused pairs</h1>
     <p class="muted">Incorrect answers between two species (undirected). Columns show whether the lower-ID or higher-ID species was the question target. Same country and CountrySpecies filters as the species page.</p>
 
-    <form method="get" action="{% url 'quiz-mistake-pairs' %}" style="margin-bottom: 1rem;">
+    <form method="get" action="{% url 'data-quiz-mistake-pairs' %}" class="toolbar">
         <label for="country">Country:</label>
         <select name="country" id="country" onchange="this.form.submit()">
             <option value="">All countries</option>
@@ -22,7 +21,7 @@
         <noscript><button type="submit">Apply</button></noscript>
     </form>
 
-    <table>
+    <table class="data-table">
         <thead>
             <tr>
                 <th>Species A (lower id)</th>
@@ -36,12 +35,12 @@
             {% for row in pair_rows %}
             <tr>
                 <td>
-                    <a href="/admin/jizz/species/{{ row.low_id }}/change/">{{ row.low_name }}</a>
-                    <span class="muted">{{ row.low_name_latin }}</span>
+                    {{ row.low_name }}
+                    <span class="latin">{{ row.low_name_latin }}</span>
                 </td>
                 <td>
-                    <a href="/admin/jizz/species/{{ row.high_id }}/change/">{{ row.high_name }}</a>
-                    <span class="muted">{{ row.high_name_latin }}</span>
+                    {{ row.high_name }}
+                    <span class="latin">{{ row.high_name_latin }}</span>
                 </td>
                 <td class="num">{{ row.total_wrong }}</td>
                 <td class="num">{{ row.when_low_was_target }}</td>

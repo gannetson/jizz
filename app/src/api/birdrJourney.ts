@@ -16,9 +16,19 @@ export type JourneyStep = {
   rarity: string;
   include_escapes?: boolean;
   media: string;
-  tax_order?: string | null;
   status: JourneyStepStatus;
+  resolved_family_name_latin?: string | null;
+  resolved_family_name?: string | null;
+  resolved_family_description?: string | null;
 };
+
+export function isFamilyJourneyStep(step: JourneyStep): boolean {
+  return (
+    step.step_type === 'family' ||
+    step.step_type === 'familiy' ||
+    !!step.resolved_family_name_latin
+  );
+}
 
 export type JourneyLevel = {
   sequence: number;

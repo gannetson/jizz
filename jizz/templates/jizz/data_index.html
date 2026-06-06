@@ -1,0 +1,27 @@
+{% extends "jizz/data_base.html" %}
+
+{% block title %}Birdr data overview{% endblock %}
+
+{% block content %}
+    <h1>Birdr data</h1>
+    <p class="muted">Public statistics from Birdr games and taxonomy. Filter by country where available.</p>
+
+    <div class="card-grid">
+        <a class="link-card" href="{% url 'data-quiz-mistake-species' %}">
+            <h2>Quiz mistakes by species</h2>
+            <p>Which species are hardest to identify? Error rates from answered quiz questions.</p>
+        </a>
+        <a class="link-card" href="{% url 'data-quiz-mistake-pairs' %}">
+            <h2>Confused species pairs</h2>
+            <p>Species often mistaken for each other in multiple-choice quizzes.</p>
+        </a>
+        <a class="link-card" href="{% url 'data-taxon-orders' %}">
+            <h2>Taxonomic orders</h2>
+            <p>Species counts per order, with optional country breakdown by status.</p>
+        </a>
+        <a class="link-card" href="{% url 'data-taxon-families' %}">
+            <h2>Taxonomic families</h2>
+            <p>Species counts per family, with optional country breakdown by status.</p>
+        </a>
+    </div>
+{% endblock %}

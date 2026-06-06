@@ -17,10 +17,12 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
     MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FirstAssertionReviewView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
+from jizz.data_views import data_index_view, data_taxon_families_view, data_taxon_orders_view
 from jizz.quiz_mistake_views import (
     quiz_mistake_pairs_view,
     quiz_mistake_species_view,
     quiz_mistake_stats_legacy_redirect,
+    staff_quiz_mistakes_redirect,
 )
 from jizz.birdr_journey_views import (
     BirdrJourneyView,
@@ -103,9 +105,17 @@ urlpatterns = [
     path('join/<str:token>/', join_game_redirect, name='join-game'),
 
     path('admin/', admin.site.urls),
-    path('staff/quiz-mistakes/', quiz_mistake_stats_legacy_redirect, name='quiz-mistake-stats'),
-    path('staff/quiz-mistakes/species/', quiz_mistake_species_view, name='quiz-mistake-species'),
-    path('staff/quiz-mistakes/pairs/', quiz_mistake_pairs_view, name='quiz-mistake-pairs'),
+
+    path('data/', data_index_view, name='data-index'),
+    path('data/quiz-mistakes/', quiz_mistake_stats_legacy_redirect, name='data-quiz-mistakes'),
+    path('data/quiz-mistakes/species/', quiz_mistake_species_view, name='data-quiz-mistake-species'),
+    path('data/quiz-mistakes/pairs/', quiz_mistake_pairs_view, name='data-quiz-mistake-pairs'),
+    path('data/taxons/orders/', data_taxon_orders_view, name='data-taxon-orders'),
+    path('data/taxons/families/', data_taxon_families_view, name='data-taxon-families'),
+
+    path('staff/quiz-mistakes/', staff_quiz_mistakes_redirect, name='quiz-mistake-stats'),
+    path('staff/quiz-mistakes/species/', staff_quiz_mistakes_redirect, {'subpath': 'species'}, name='quiz-mistake-species'),
+    path('staff/quiz-mistakes/pairs/', staff_quiz_mistakes_redirect, {'subpath': 'pairs'}, name='quiz-mistake-pairs'),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
     re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),
 

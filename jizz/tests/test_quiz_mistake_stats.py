@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -133,31 +132,30 @@ class QuizMistakeStatsTests(TestCase):
             sorted_rows[-1]["error_rate"] or 0,
         )
 
-    def test_staff_only(self):
-        url = reverse("quiz-mistake-stats")
+    def test_public_access(self):
         c = Client()
-        res = c.get(url)
-        self.assertIn(res.status_code, (302, 403))
-
-        staff = User.objects.create_user("staff", "staff@example.com", "x", is_staff=True)
-        c.force_login(staff)
-        res = c.get(url)
+        res = c.get(reverse("data-quiz-mistakes"))
         self.assertEqual(res.status_code, 302)
-        res = c.get(reverse("quiz-mistake-species"))
+        res = c.get(reverse("data-quiz-mistake-species"))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "Species mistake statistics")
+        res_pairs = c.get(reverse("data-quiz-mistake-pairs"))
+        self.assertEqual(res_pairs.status_code, 200)
 
-    def test_csv_download_staff(self):
-        staff = User.objects.create_user("staff2", "staff2@example.com", "y", is_staff=True)
+    def test_staff_urls_redirect_to_data(self):
         c = Client()
-        c.force_login(staff)
-        url = reverse("quiz-mistake-stats")
-        res = c.get(reverse("quiz-mistake-species"), {"format": "csv"})
+        res = c.get(reverse("quiz-mistake-species"))
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.url.endswith("/data/quiz-mistakes/species/"))
+
+    def test_csv_download_public(self):
+        c = Client()
+        res = c.get(reverse("data-quiz-mistake-species"), {"format": "csv"})
         self.assertEqual(res.status_code, 200)
         self.assertIn("text/csv", res["Content-Type"])
         self.assertIn("SPECIES MISTAKES", res.content.decode())
 
-        res_pairs = c.get(reverse("quiz-mistake-pairs"), {"format": "csv"})
+        res_pairs = c.get(reverse("data-quiz-mistake-pairs"), {"format": "csv"})
         self.assertEqual(res_pairs.status_code, 200)
         self.assertIn("CONFUSED PAIRS", res_pairs.content.decode())
 

@@ -938,7 +938,7 @@ class JourneyStepInline(admin.TabularInline):
     extra = 1
     fields = [
         'sequence', 'step_type', 'level', 'length', 'jokers', 'rarity',
-        'include_escapes', 'media', 'tax_order',
+        'include_escapes', 'media',
     ]
 
 

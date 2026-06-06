@@ -1313,6 +1313,9 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
 class JourneyStepSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
+    resolved_family_name_latin = serializers.SerializerMethodField()
+    resolved_family_name = serializers.SerializerMethodField()
+    resolved_family_description = serializers.SerializerMethodField()
 
     class Meta:
         model = JourneyStep
@@ -1326,13 +1329,57 @@ class JourneyStepSerializer(serializers.ModelSerializer):
             'rarity',
             'include_escapes',
             'media',
-            'tax_order',
             'status',
+            'resolved_family_name_latin',
+            'resolved_family_name',
+            'resolved_family_description',
         ]
 
     def get_status(self, obj):
         step_statuses = self.context.get('step_statuses') or {}
         return step_statuses.get(obj.id, 'locked')
+
+    def _resolved_family(self, obj):
+        from jizz.services.journey_family import (
+            family_by_latin,
+            family_display_fields,
+            is_family_step,
+            resolve_family_for_step,
+        )
+
+        if not is_family_step(obj):
+            return None
+
+        journey = self.context.get('journey')
+        if not journey:
+            return None
+
+        step_tax_families = self.context.get('step_tax_families') or {}
+        tax_family = step_tax_families.get(obj.id)
+        family = family_by_latin(tax_family) if tax_family else None
+        if not family:
+            family = resolve_family_for_step(
+                obj,
+                journey.country,
+                level_steps=self.context.get('level_steps'),
+            )
+        if not family:
+            return None
+
+        language = self.context.get('language', 'en')
+        return family_display_fields(family, language)
+
+    def get_resolved_family_name_latin(self, obj):
+        resolved = self._resolved_family(obj)
+        return resolved['name_latin'] if resolved else None
+
+    def get_resolved_family_name(self, obj):
+        resolved = self._resolved_family(obj)
+        return resolved['name'] if resolved else None
+
+    def get_resolved_family_description(self, obj):
+        resolved = self._resolved_family(obj)
+        return resolved['description'] if resolved else None
 
 
 class JourneyLevelSerializer(serializers.ModelSerializer):
@@ -1367,8 +1414,10 @@ class JourneyLevelSerializer(serializers.ModelSerializer):
     def get_steps(self, obj):
         if not self.context.get('include_steps', True):
             return []
-        steps = obj.steps.all()
-        return JourneyStepSerializer(steps, many=True, context=self.context).data
+        steps = list(obj.steps.order_by('sequence'))
+        ctx = dict(self.context)
+        ctx['level_steps'] = steps
+        return JourneyStepSerializer(steps, many=True, context=ctx).data
 
 
 class BirdrJourneyGameSerializer(serializers.ModelSerializer):
@@ -1422,11 +1471,35 @@ class BirdrJourneySerializer(serializers.ModelSerializer):
 
     def _serializer_context(self):
         journey = self.instance
-        from jizz.birdr_journey_views import compute_step_statuses
+        from jizz.birdr_journey_views import compute_step_statuses, get_journey_host, get_journey_level
 
         ctx = dict(self.context)
         ctx['step_statuses'] = compute_step_statuses(journey)
         ctx['include_steps'] = True
+        ctx['journey'] = journey
+
+        request = self.context.get('request')
+        language = request.query_params.get('language') if request else None
+        if not language:
+            host = get_journey_host(journey)
+            language = getattr(host, 'language', 'en') or 'en'
+        if journey.user_id:
+            try:
+                language = journey.user.profile.language or language
+            except Exception:
+                pass
+        ctx['language'] = language or 'en'
+
+        level = get_journey_level(journey.current_sequence)
+        if level:
+            ctx['level_steps'] = list(level.steps.order_by('sequence'))
+
+        step_tax_families = {}
+        for journey_game in journey.games.select_related('game', 'journey_step').all():
+            if journey_game.game.tax_family:
+                step_tax_families[journey_game.journey_step_id] = journey_game.game.tax_family
+        ctx['step_tax_families'] = step_tax_families
+
         return ctx
 
     def _level_for_sequence(self, sequence):
@@ -1449,12 +1522,15 @@ class BirdrJourneySerializer(serializers.ModelSerializer):
         return JourneyLevelSerializer(level, context=ctx).data
 
     def get_active_step(self, obj):
-        from jizz.birdr_journey_views import get_active_journey_step
+        from jizz.birdr_journey_views import get_active_journey_step, get_journey_level
 
         step = get_active_journey_step(obj)
         if not step:
             return None
         ctx = self._serializer_context()
+        level = get_journey_level(obj.current_sequence)
+        if level:
+            ctx['level_steps'] = list(level.steps.order_by('sequence'))
         return JourneyStepSerializer(step, context=ctx).data
 
     def get_is_champion(self, obj):
@@ -1479,17 +1555,18 @@ class BirdrJourneySerializer(serializers.ModelSerializer):
     def get_current_game(self, obj):
         from jizz.birdr_journey_views import get_current_journey_game, get_journey_game_by_token
 
+        ctx = self._serializer_context()
         request = self.context.get('request')
         game_token = (request.query_params.get('game_token') or '').strip() if request else ''
         if game_token:
             journey_game = get_journey_game_by_token(obj, game_token)
             if journey_game:
-                return BirdrJourneyGameSerializer(journey_game, context=self.context).data
+                return BirdrJourneyGameSerializer(journey_game, context=ctx).data
 
         journey_game = get_current_journey_game(obj)
         if not journey_game:
             return None
-        return BirdrJourneyGameSerializer(journey_game, context=self.context).data
+        return BirdrJourneyGameSerializer(journey_game, context=ctx).data
 
 
 # --- Friends & Daily Challenge ---

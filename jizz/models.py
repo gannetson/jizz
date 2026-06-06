@@ -1003,6 +1003,10 @@ class JourneyLevel(models.Model):
 class JourneyStep(models.Model):
     STEP_TYPE_CHOICES = [
         ('plain', 'Plain'),
+        ('sounds', 'Sounds'),
+        ('familiy', 'Familiy'),
+        ('family', 'Family'),
+        ('dificult', 'Dificult'),
     ]
 
     journey_level = models.ForeignKey(
@@ -1030,13 +1034,6 @@ class JourneyStep(models.Model):
     )
     include_escapes = models.BooleanField(default=False)
     media = models.CharField(max_length=10, default='images')
-    tax_order = models.CharField(
-        'Order',
-        max_length=200,
-        null=True,
-        blank=True,
-        help_text='Only show birds from this taxonomic order',
-    )
 
     class Meta:
         ordering = ['journey_level', 'sequence']

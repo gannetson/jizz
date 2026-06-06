@@ -14,6 +14,7 @@ import {
   getStoredBirdrJourneyPlayerToken,
   type BirdrJourney,
   type BirdrJourneyGame,
+  isFamilyJourneyStep,
 } from '../api/birdrJourney';
 import { setStoredChallengePlayerToken } from '../api/challenge';
 import { BirdrMoodHero } from '../components/BirdrMoodHero';
@@ -136,6 +137,14 @@ export function BirdrJourneyStepIntroScreen() {
 
       {status === 'new' ? (
         <>
+          {isFamilyJourneyStep(step) && step.resolved_family_name ? (
+            <View style={styles.familyBlock}>
+              <Text style={styles.familyTitle}>{step.resolved_family_name}</Text>
+              {step.resolved_family_description ? (
+                <Text style={styles.familyDescription}>{step.resolved_family_description}</Text>
+              ) : null}
+            </View>
+          ) : null}
           <Text style={styles.subtitle}>
             {t('birdr_journey_step_n', { n: String(step.sequence + 1) })}
           </Text>
@@ -234,6 +243,9 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.error[500] },
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 8, marginTop: 8, textAlign: 'center' },
   failedTitle: { color: colors.error[500] },
+  familyBlock: { marginBottom: 16 },
+  familyTitle: { fontSize: 24, fontWeight: '700', color: colors.primary[800], marginBottom: 8 },
+  familyDescription: { fontSize: 15, color: colors.primary[700], lineHeight: 22 },
   subtitle: { fontSize: 20, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
   description: { fontSize: 15, color: colors.primary[700], marginTop: 8, lineHeight: 22 },
   jokersLabel: { fontSize: 15, color: colors.primary[700], marginTop: 20, marginBottom: 8 },

@@ -9,6 +9,7 @@ import {
   startJourneyStep,
   type BirdrJourney,
   type BirdrJourneyGame,
+  isFamilyJourneyStep,
 } from '../../api/birdrJourney';
 import { BirdrMoodHero } from '../../components/birdr-mood-hero';
 import { Page } from '../../shared/components/layout';
@@ -112,6 +113,18 @@ export function BirdrJourneyStepIntroPage() {
 
         {status === 'new' && (
           <>
+            {isFamilyJourneyStep(step) && step.resolved_family_name ? (
+              <Box mb={4}>
+                <Text fontSize="2xl" fontWeight="700" color="primary.800" mb={2}>
+                  {step.resolved_family_name}
+                </Text>
+                {step.resolved_family_description ? (
+                  <Text fontSize="md" color="primary.700" lineHeight="tall" mb={2}>
+                    {step.resolved_family_description}
+                  </Text>
+                ) : null}
+              </Box>
+            ) : null}
             <Text fontSize="xl" fontWeight="700" color="primary.800" mb={3}>
               <FormattedMessage
                 id="birdr_journey_step_n"

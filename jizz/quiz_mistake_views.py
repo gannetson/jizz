@@ -1,4 +1,3 @@
-from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -15,14 +14,27 @@ from jizz.quiz_mistake_stats import (
 
 
 def quiz_mistake_stats_legacy_redirect(request):
-    """Old /staff/quiz-mistakes/ URL redirects to the species page."""
-    url = reverse("quiz-mistake-species")
+    """Old /data/quiz-mistakes/ URL redirects to the species page."""
+    url = reverse("data-quiz-mistake-species")
     if request.GET:
         url += "?" + request.GET.urlencode()
     return HttpResponseRedirect(url)
 
 
-@staff_member_required
+def staff_quiz_mistakes_redirect(request, subpath=""):
+    """Legacy /staff/quiz-mistakes/* URLs redirect to /data/quiz-mistakes/*."""
+    if subpath == "pairs":
+        name = "data-quiz-mistake-pairs"
+    elif subpath == "species":
+        name = "data-quiz-mistake-species"
+    else:
+        name = "data-quiz-mistakes"
+    url = reverse(name)
+    if request.GET:
+        url += "?" + request.GET.urlencode()
+    return HttpResponseRedirect(url)
+
+
 def quiz_mistake_species_view(request):
     if request.GET.get("format") == "csv":
         return quiz_mistakes_species_csv_response(request)
@@ -43,12 +55,12 @@ def quiz_mistake_species_view(request):
             "species_sort": species_sort,
             "countries": Country.objects.order_by("name"),
             "selected_country": country_code or "",
+            "active_section": "quiz-mistakes",
             "active_tab": "species",
         },
     )
 
 
-@staff_member_required
 def quiz_mistake_pairs_view(request):
     if request.GET.get("format") == "csv":
         return quiz_mistakes_pairs_csv_response(request)
@@ -63,6 +75,7 @@ def quiz_mistake_pairs_view(request):
             "pair_rows": pair_rows,
             "countries": Country.objects.order_by("name"),
             "selected_country": country_code or "",
+            "active_section": "quiz-mistakes",
             "active_tab": "pairs",
         },
     )

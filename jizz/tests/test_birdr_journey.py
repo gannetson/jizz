@@ -9,15 +9,21 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from jizz.birdr_journey_views import get_journey_level, get_level_steps_ordered
+from jizz.game_question_selection import create_question_for_game
 from jizz.models import (
     BirdrJourney,
     BirdrJourneyGame,
     Country,
+    CountrySpecies,
     Game,
     JourneyLevel,
     JourneyStep,
     Player,
+    TaxonomicFamily,
 )
+from jizz.services.journey_family import resolve_family_for_step
+from jizz.tests.taxonomy_helpers import make_species_with_taxonomy
+from media.models import Media
 
 User = get_user_model()
 
@@ -388,3 +394,190 @@ class BirdrJourneyApiTestCase(TestCase):
         response = self.client.delete(f'/api/birdr-journey/{journey.id}/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(BirdrJourney.objects.filter(id=journey.id).exists())
+
+
+def _make_family_level(country, steps_config):
+    icon = SimpleUploadedFile('family_level.png', PNG_1X1, content_type='image/png')
+    level = JourneyLevel.objects.create(
+        sequence=0,
+        title='Family level',
+        description='Family step tests',
+        icon=icon,
+    )
+    created_steps = []
+    for sequence, step_type in steps_config:
+        created_steps.append(
+            JourneyStep.objects.create(
+                journey_level=level,
+                sequence=sequence,
+                step_type=step_type,
+                level='beginner',
+                length=5,
+                jokers=2,
+                rarity='regular',
+                media='images',
+            )
+        )
+    return level, created_steps
+
+
+def _add_eligible_species(country, *, family_latin, order_latin, count, code_prefix):
+    species_list = []
+    for i in range(count):
+        species = make_species_with_taxonomy(
+            name=f'{family_latin} bird {i}',
+            name_latin=f'{family_latin} sp {i}',
+            code=f'{code_prefix}{i:02d}',
+            tax_order=order_latin,
+            tax_family=family_latin,
+        )
+        CountrySpecies.objects.create(country=country, species=species, status='native')
+        Media.objects.create(
+            species=species,
+            type='image',
+            url=f'https://example.com/{code_prefix}{i}.jpg',
+            source='test',
+        )
+        species_list.append(species)
+    return species_list
+
+
+class BirdrJourneyFamilyStepTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        JourneyLevel.objects.all().delete()
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        self.player = Player.objects.create(name='FamilyGuest', language='en')
+
+        _add_eligible_species(
+            self.country,
+            family_latin='Anatidae',
+            order_latin='Anseriformes',
+            count=4,
+            code_prefix='AN',
+        )
+        _add_eligible_species(
+            self.country,
+            family_latin='Passeridae',
+            order_latin='Passeriformes',
+            count=2,
+            code_prefix='PA',
+        )
+        _add_eligible_species(
+            self.country,
+            family_latin='Fringillidae',
+            order_latin='Passeriformes',
+            count=1,
+            code_prefix='FR',
+        )
+
+        TaxonomicFamily.objects.filter(name_latin='Anatidae').update(
+            name_en='Ducks and allies',
+            description_en='Waterfowl family.',
+            name_nl='Eenden en verwanten',
+            description_nl='Eendenfamilie.',
+        )
+        TaxonomicFamily.objects.filter(name_latin='Passeridae').update(
+            name_en='Old World sparrows',
+            description_en='Sparrow family.',
+        )
+
+        self.level, self.steps = _make_family_level(
+            self.country,
+            [(0, 'plain'), (1, 'family'), (2, 'family')],
+        )
+
+    def test_family_rank_uses_index_among_family_steps_only(self):
+        plain_step, family_step_1, family_step_2 = self.steps
+        level_steps = list(self.level.steps.order_by('sequence'))
+
+        first_family = resolve_family_for_step(family_step_1, self.country, level_steps=level_steps)
+        second_family = resolve_family_for_step(family_step_2, self.country, level_steps=level_steps)
+
+        self.assertEqual(first_family.name_latin, 'Anatidae')
+        self.assertEqual(second_family.name_latin, 'Passeridae')
+
+    def test_start_step_sets_tax_family_for_family_step(self):
+        journey = BirdrJourney.objects.create(
+            player=self.player,
+            country=self.country,
+            current_sequence=0,
+            current_step_sequence=1,
+            user=None,
+        )
+        _player_auth(self.client, self.player)
+        response = self.client.post(f'/api/birdr-journey/{journey.id}/start-step/', format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        game = Game.objects.get(token=response.data['journey_game']['game']['token'])
+        self.assertEqual(game.tax_family, 'Anatidae')
+
+    def test_serializer_exposes_resolved_family_fields(self):
+        journey = BirdrJourney.objects.create(
+            player=self.player,
+            country=self.country,
+            current_sequence=0,
+            current_step_sequence=1,
+            user=None,
+        )
+        _player_auth(self.client, self.player)
+        response = self.client.get('/api/birdr-journey/', {'country_code': 'NL'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        active = response.data['active_step']
+        self.assertEqual(active['resolved_family_name_latin'], 'Anatidae')
+        self.assertEqual(active['resolved_family_name'], 'Ducks and allies')
+        self.assertEqual(active['resolved_family_description'], 'Waterfowl family.')
+
+    def test_species_repeat_when_family_has_fewer_species_than_questions(self):
+        family_step = JourneyStep.objects.create(
+            journey_level=self.level,
+            sequence=3,
+            step_type='family',
+            level='beginner',
+            length=20,
+            jokers=2,
+            rarity='regular',
+            media='images',
+        )
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=20,
+            media='images',
+            rarity='regular',
+            tax_family='Fringillidae',
+            host=self.player,
+            language='en',
+        )
+        for _ in range(20):
+            create_question_for_game(game)
+        self.assertEqual(game.questions.count(), 20)
+
+    def test_start_step_fails_when_no_eligible_families(self):
+        empty_country = Country.objects.create(code='XX', name='Empty')
+        icon = SimpleUploadedFile('empty.png', PNG_1X1, content_type='image/png')
+        level = JourneyLevel.objects.create(
+            sequence=1,
+            title='Empty',
+            description='No species',
+            icon=icon,
+        )
+        JourneyStep.objects.create(
+            journey_level=level,
+            sequence=0,
+            step_type='family',
+            level='beginner',
+            length=5,
+            jokers=2,
+            rarity='regular',
+            media='images',
+        )
+        journey = BirdrJourney.objects.create(
+            player=self.player,
+            country=empty_country,
+            current_sequence=1,
+            current_step_sequence=0,
+            user=None,
+        )
+        _player_auth(self.client, self.player)
+        response = self.client.post(f'/api/birdr-journey/{journey.id}/start-step/', format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

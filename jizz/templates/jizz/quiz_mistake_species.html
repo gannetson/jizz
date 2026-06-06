@@ -3,17 +3,15 @@
 {% block title %}Species — quiz mistakes{% endblock %}
 
 {% block nav_extra %}
-        <span> · </span>
         <a href="?{% if species_sort == 'error_rate' %}species_sort=times_shown{% else %}species_sort=error_rate{% endif %}{% if selected_country %}&amp;country={{ selected_country }}{% endif %}">Toggle sort</a>
-        <span> · </span>
         <a href="?format=csv&amp;species_sort={{ species_sort }}{% if selected_country %}&amp;country={{ selected_country }}{% endif %}">Download CSV</a>
 {% endblock %}
 
-{% block content %}
+{% block quiz_content %}
     <h1>Species mistake statistics</h1>
-    <p class="muted">Staff-only report: aggregates over answers; optionally scoped to one country (game country). With a country selected, species marked <strong>introduced</strong>, <strong>uncertain</strong>, or <strong>unknown</strong> for that country are excluded (via CountrySpecies).</p>
+    <p class="muted">Aggregates over quiz answers; optionally scoped to one country (game country). With a country selected, species marked <strong>introduced</strong>, <strong>uncertain</strong>, or <strong>unknown</strong> for that country are excluded.</p>
 
-    <form method="get" action="{% url 'quiz-mistake-species' %}" style="margin-bottom: 1rem;">
+    <form method="get" action="{% url 'data-quiz-mistake-species' %}" class="toolbar">
         <label for="country">Country:</label>
         <select name="country" id="country" onchange="this.form.submit()">
             <option value="">All countries</option>
@@ -36,7 +34,7 @@
         <a href="?species_sort=times_shown{% if selected_country %}&amp;country={{ selected_country }}{% endif %}" {% if species_sort == 'times_shown' %}class="sort-active"{% endif %}>times shown</a>
     </p>
 
-    <table>
+    <table class="data-table">
         <thead>
             <tr>
                 <th>Species</th>
@@ -50,8 +48,8 @@
             {% for row in species_rows %}
             <tr>
                 <td>
-                    <a href="/admin/jizz/species/{{ row.species_id }}/change/">{{ row.name }}</a>
-                    <span class="muted">{{ row.name_latin }}</span>
+                    {{ row.name }}
+                    <span class="latin">{{ row.name_latin }}</span>
                 </td>
                 <td class="num">{{ row.times_shown }}</td>
                 <td class="num">{{ row.correctly_answered }}</td>

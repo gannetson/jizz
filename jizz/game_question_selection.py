@@ -61,9 +61,9 @@ def candidate_species_ids(game: Game) -> list[int]:
         )
     )
     if game.tax_family:
-        species_qs = species_qs.filter(tax_family=game.tax_family)
+        species_qs = species_qs.filter(taxonomic_family__name_latin=game.tax_family)
     elif game.tax_order:
-        species_qs = species_qs.filter(tax_order=game.tax_order)
+        species_qs = species_qs.filter(taxonomic_order__name_latin=game.tax_order)
 
     return list(species_qs.values_list('id', flat=True))
 

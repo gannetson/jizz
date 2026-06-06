@@ -3,9 +3,10 @@ import uuid
 from datetime import timedelta
 from random import randint, shuffle, random
 
-from django.db import models, transaction
+from django.db import models, transaction, connection
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db.models import Sum, Q
+from django.db.models import Count, Sum, Q
+from django.db.utils import OperationalError, ProgrammingError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.functional import lazy
@@ -76,14 +77,80 @@ class QuestionOption(models.Model):
         ordering = ['order']
 
 
+class TaxonomicOrder(models.Model):
+    name_latin = models.CharField(max_length=200, unique=True)
+    name_en = models.CharField(max_length=200)
+    name_nl = models.CharField(max_length=200)
+    description_en = models.TextField(blank=True, default='')
+    description_nl = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['name_latin']
+        verbose_name = 'taxonomic order'
+        verbose_name_plural = 'taxonomic orders'
+
+    def __str__(self):
+        return self.name_latin
+
+
+class TaxonomicFamily(models.Model):
+    taxonomic_order = models.ForeignKey(
+        TaxonomicOrder,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='families',
+    )
+    name_latin = models.CharField(max_length=200, unique=True)
+    name_en = models.CharField(max_length=200)
+    name_nl = models.CharField(max_length=200)
+    description_en = models.TextField(blank=True, default='')
+    description_nl = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['name_latin']
+        verbose_name = 'taxonomic family'
+        verbose_name_plural = 'taxonomic families'
+
+    def __str__(self):
+        return self.name_latin
+
+
 class Species(models.Model):
     name = models.CharField(max_length=200)
     name_latin = models.CharField(max_length=200)
     name_nl = models.CharField(max_length=200, null=True, blank=True)
-    tax_family_en = models.CharField('Family english', max_length=200, null=True, blank=True)
-    tax_family = models.CharField('Family', max_length=200, null=True, blank=True)
-    tax_order = models.CharField('Order', max_length=200, null=True, blank=True)
+    tax_family_en = models.CharField('Family english (old)', max_length=200, null=True, blank=True)
+    tax_family = models.CharField('Family (old)', max_length=200, null=True, blank=True)
+    tax_order = models.CharField('Order (old)', max_length=200, null=True, blank=True)
+
+    taxonomic_order = models.ForeignKey(
+        TaxonomicOrder,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='species',
+    )
+    taxonomic_family = models.ForeignKey(
+        TaxonomicFamily,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='species',
+    )
     code = models.CharField(max_length=10)
+
+    @property
+    def tax_order(self):
+        return self.taxonomic_order.name_latin if self.taxonomic_order_id else None
+
+    @property
+    def tax_family(self):
+        return self.taxonomic_family.name_latin if self.taxonomic_family_id else None
+
+    @property
+    def tax_family_en(self):
+        return self.taxonomic_family.name_en if self.taxonomic_family_id else None
 
     @property
     def filtered_media(self):
@@ -193,47 +260,54 @@ class SpeciesName(models.Model):
     name = models.CharField(max_length=200)
 
 
-def get_tax_order_choices(country=None):
-    qs = Species.objects.all()
-
-    if country is not None:
-        qs = qs.filter(countryspecies__country=country)
-
-    tax_orders = (
-        qs.values('tax_order')
-        .annotate(
-            count=Count('id'),
-            first=Min('id')
+def _taxonomy_tables_ready():
+    try:
+        return (
+            'jizz_taxonomicorder' in connection.introspection.table_names()
+            and 'jizz_taxonomicfamily' in connection.introspection.table_names()
         )
-        .order_by('first')
-    )
+    except OperationalError:
+        return False
 
-    return [
-        (o['tax_order'], f"{o['tax_order']} ({o['count']})")
-        for o in tax_orders
-    ]
 
-from django.db.models import Count, Min
+def get_tax_order_choices(country=None):
+    if not _taxonomy_tables_ready():
+        return []
+    try:
+        qs = TaxonomicOrder.objects.all()
+        if country is not None:
+            qs = qs.filter(species__countryspecies__country=country)
+        tax_orders = (
+            qs.annotate(count=Count('species', distinct=True))
+            .filter(count__gt=0)
+            .order_by('name_latin')
+        )
+        return [
+            (o.name_latin, f"{o.name_latin} ({o.count})")
+            for o in tax_orders
+        ]
+    except (ProgrammingError, OperationalError):
+        return []
 
 
 def get_tax_family_choices(country=None):
-    qs = Species.objects.all()
-
-    if country is not None:
-        qs = qs.filter(countryspecies__country=country)
-
-    families = (
-        qs.values('tax_family', 'tax_family_en')
-        .annotate(
-            count=Count('id'),
-            first=Min('id')
+    if not _taxonomy_tables_ready():
+        return []
+    try:
+        qs = TaxonomicFamily.objects.all()
+        if country is not None:
+            qs = qs.filter(species__countryspecies__country=country)
+        families = (
+            qs.annotate(count=Count('species', distinct=True))
+            .filter(count__gt=0)
+            .order_by('name_latin')
         )
-        .order_by('first')
-    )
-
-    return [
-        (f['tax_family'], f"{f['tax_family']} - {f['tax_family_en']} ({f['count']})") for f in families
-    ]
+        return [
+            (f.name_latin, f"{f.name_latin} - {f.name_en} ({f.count})")
+            for f in families
+        ]
+    except (ProgrammingError, OperationalError):
+        return []
 
 
 class Game(models.Model):

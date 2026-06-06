@@ -330,13 +330,15 @@ def _translated_names(species_ids: list[int], language: str) -> dict[int, str]:
 def _tax_order_filters(country: Country) -> list[dict[str, Any]]:
     rows = (
         _country_species_qs(country)
-        .exclude(species__tax_order__isnull=True)
-        .exclude(species__tax_order='')
-        .values('species__tax_order')
+        .exclude(species__taxonomic_order__isnull=True)
+        .values('species__taxonomic_order__name_latin')
         .annotate(count=Count('id'))
-        .order_by('species__tax_order')
+        .order_by('species__taxonomic_order__name_latin')
     )
-    return [{'tax_order': r['species__tax_order'], 'count': r['count']} for r in rows]
+    return [
+        {'tax_order': r['species__taxonomic_order__name_latin'], 'count': r['count']}
+        for r in rows
+    ]
 
 
 def build_checklist(user, params: ChecklistParams, request=None) -> dict[str, Any]:
@@ -354,7 +356,7 @@ def build_checklist(user, params: ChecklistParams, request=None) -> dict[str, An
 
     cs_qs = _country_species_qs(country).select_related('species')
     if params.tax_order:
-        cs_qs = cs_qs.filter(species__tax_order=params.tax_order)
+        cs_qs = cs_qs.filter(species__taxonomic_order__name_latin=params.tax_order)
     if params.search:
         q = params.search.strip()
         if q:

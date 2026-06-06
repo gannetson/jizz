@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
     Feedback, Update, Reaction, Language, Page, SpeciesName, UserProfile, BirdrJourney, BirdrJourneyGame, \
-    JourneyLevel, JourneyStep, \
+    JourneyLevel, JourneyStep, TaxonomicOrder, TaxonomicFamily, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
 
@@ -86,6 +86,9 @@ class MediaSerializer(serializers.ModelSerializer):
 class SpeciesListSerializer(serializers.ModelSerializer):
 
     name_translated = serializers.SerializerMethodField()
+    tax_order = serializers.CharField(read_only=True)
+    tax_family = serializers.CharField(read_only=True)
+    tax_family_en = serializers.CharField(read_only=True)
 
     def get_name_translated(self, obj):
         try:
@@ -200,18 +203,21 @@ class SpeciesWithMediaReviewSerializer(serializers.Serializer):
 
 
 class FamilyListSerializer(serializers.ModelSerializer):
+    tax_family = serializers.CharField(source='name_latin', read_only=True)
+    tax_family_en = serializers.CharField(source='name_en', read_only=True)
     count = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Species
+        model = TaxonomicFamily
         fields = ('tax_family', 'tax_family_en', 'count')
 
 
 class OrderListSerializer(serializers.ModelSerializer):
+    tax_order = serializers.CharField(source='name_latin', read_only=True)
     count = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Species
+        model = TaxonomicOrder
         fields = ('tax_order', 'count')
 
 

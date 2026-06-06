@@ -18,6 +18,7 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          JourneyStep, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesIllustration, SpeciesImage, SpeciesSound, SpeciesVideo,
+                         TaxonomicOrder, TaxonomicFamily,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice)
@@ -271,13 +272,26 @@ class SpeciesIllustrationAdmin(admin.ModelAdmin):
     raw_id_fields = ['species']
 
 
+@register(TaxonomicOrder)
+class TaxonomicOrderAdmin(admin.ModelAdmin):
+    list_display = ['name_latin', 'name_en', 'name_nl']
+    search_fields = ['name_latin', 'name_en', 'name_nl']
+
+
+@register(TaxonomicFamily)
+class TaxonomicFamilyAdmin(admin.ModelAdmin):
+    list_display = ['name_latin', 'name_en', 'name_nl', 'taxonomic_order']
+    search_fields = ['name_latin', 'name_en', 'name_nl']
+    list_filter = ['taxonomic_order']
+
+
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesIllustrationInline, MediaInline]
     search_fields = ['name', 'name_nl', 'name_latin']
     readonly_fields = ['sync_media', 'pic_count', 'infer_machine_predictions']
     list_display = ['name', 'name_nl', 'pic_count']
-    list_filter = ['tax_order']
+    list_filter = ['taxonomic_order']
     actions = ['scrape_traits', 'generate_comparison']
 
     def pic_count(self, obj):
@@ -827,11 +841,13 @@ class PlayerScoreAdmin(admin.ModelAdmin):
     fields = ['player', 'game', 'score', 'playtime', 'order_score']
 
     def order_score(self, obj):
-        results = obj.answers.values('question__species__tax_order', 'correct').annotate(correct_count=Count('correct'))
+        results = obj.answers.values(
+            'question__species__taxonomic_order__name_latin', 'correct',
+        ).annotate(correct_count=Count('correct'))
         order_counts = defaultdict(lambda: {'True': 0, 'False': 0})
 
         for entry in results:
-            tax_order = entry['question__species__tax_order']
+            tax_order = entry['question__species__taxonomic_order__name_latin']
             correct = str(entry['correct'])
             count = entry['correct_count']
             order_counts[tax_order][correct] = count

@@ -5,7 +5,7 @@ import requests
 from django.conf import settings
 
 from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesSound, SpeciesVideo, Language, \
-    SpeciesName
+    SpeciesName, TaxonomicOrder, TaxonomicFamily
 
 SERVER_NAME = 'api.ebird.org'
 API_VERSION = 'v2'
@@ -132,14 +132,25 @@ def sync_species():
     for row in results:
         print(row)
         if row['category'] == 'species':
+            order, _ = TaxonomicOrder.objects.update_or_create(
+                name_latin=row['order'],
+                defaults={'name_en': row['order'], 'name_nl': row['order']},
+            )
+            family, _ = TaxonomicFamily.objects.update_or_create(
+                name_latin=row['familySciName'],
+                defaults={
+                    'name_en': row['familyComName'],
+                    'name_nl': row['familyComName'],
+                    'taxonomic_order': order,
+                },
+            )
             Species.objects.update_or_create(
                 code= row['speciesCode'],
                 defaults={
                     'name': row['comName'],
                     'name_latin': row['sciName'],
-                    'tax_order': row['order'],
-                    'tax_family_en': row['familyComName'],
-                    'tax_family': row['familySciName']
+                    'taxonomic_order': order,
+                    'taxonomic_family': family,
                 }
             )
 

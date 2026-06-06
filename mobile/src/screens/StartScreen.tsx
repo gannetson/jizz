@@ -47,7 +47,7 @@ const LENGTHS = ['10', '20', '50', '100'];
 const MEDIA = [
   { value: 'images', labelKey: 'pictures' },
   { value: 'audio', labelKey: 'sounds' },
-  { value: 'video', labelKey: 'videos' },
+  // { value: 'video', labelKey: 'videos' },
 ];
 
 export function StartScreen() {

@@ -24,6 +24,7 @@ from jizz.models import (
     FlagQuestion,
 )
 from media.models import Media, MediaReview, FlagMedia
+from jizz.tests.taxonomy_helpers import make_species_with_taxonomy
 
 User = get_user_model()
 
@@ -138,7 +139,7 @@ class ApiFamiliesOrdersTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
-        self.species = Species.objects.create(
+        self.species = make_species_with_taxonomy(
             name='S', name_latin='S', code='S01',
             tax_family='Family1', tax_family_en='Family1', tax_order='Order1',
         )

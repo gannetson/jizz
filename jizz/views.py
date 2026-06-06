@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Case, When, Value, Prefetch, F, Q
-from django.db.models.aggregates import Count, Min
+from django.db.models.aggregates import Count
 from django.db.models.functions import RowNumber
 from django.db.models.expressions import Window
 from django.http import Http404, HttpResponse
@@ -58,6 +58,8 @@ from jizz.models import (
     PlayerScore,
     Question,
     Species,
+    TaxonomicOrder,
+    TaxonomicFamily,
     Update,
     Reaction,
     UserProfile,
@@ -223,20 +225,19 @@ class FamilyListView(ListAPIView):
 
     def get_queryset(self):
         country_id = self.request.query_params.get("country", None)
-        queryset = Species.objects.all()
+        queryset = TaxonomicFamily.objects.all()
 
         if country_id:
             queryset = queryset.filter(
-                countryspecies__country_id=country_id,
-                countryspecies__status__in=["native", "endemic", "rare"]
+                species__countryspecies__country_id=country_id,
+                species__countryspecies__status__in=["native", "endemic", "rare"],
             )
 
-        queryset = (
-            queryset.values("tax_family", "tax_family_en")
-            .annotate(count=Count("id"), first=Min("id"))
-            .order_by("first")
+        return (
+            queryset.annotate(count=Count('species', distinct=True))
+            .filter(count__gt=0)
+            .order_by('name_latin')
         )
-        return queryset
 
 class OrderListView(ListAPIView):
     serializer_class = OrderListSerializer
@@ -244,18 +245,17 @@ class OrderListView(ListAPIView):
 
     def get_queryset(self):
         country_id = self.request.query_params.get("country", None)
-        queryset = Species.objects.all()
+        queryset = TaxonomicOrder.objects.all()
         if country_id:
             queryset = queryset.filter(
-                countryspecies__country_id=country_id,
-                countryspecies__status__in=["native", "endemic", "rare"]
+                species__countryspecies__country_id=country_id,
+                species__countryspecies__status__in=["native", "endemic", "rare"],
             )
-        queryset = (
-            queryset.values("tax_order")
-            .annotate(count=Count("id"), first=Min("id"))
-            .order_by("first")
+        return (
+            queryset.annotate(count=Count('species', distinct=True))
+            .filter(count__gt=0)
+            .order_by('name_latin')
         )
-        return queryset
 
 
 class PlayerCreateView(CreateAPIView):

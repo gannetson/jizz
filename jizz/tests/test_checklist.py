@@ -15,6 +15,7 @@ from jizz.models import (
     Species,
     UserProfile,
 )
+from jizz.tests.taxonomy_helpers import make_species_with_taxonomy
 from media.models import Media
 
 User = get_user_model()
@@ -255,3 +256,27 @@ class ChecklistApiTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         row = next(s for s in response.data['species'] if s['id'] == self.sp_unseen.id)
         self.assertEqual(row['illustration_url'], f'https://example.com/{self.sp_unseen.code}.jpg')
+
+    def test_tax_order_filter_and_tax_orders_list(self):
+        order_sp = make_species_with_taxonomy(
+            name='Order Bird',
+            name_latin='Orderus birdus',
+            code='ordbir1',
+            tax_order='Passeriformes',
+        )
+        CountrySpecies.objects.create(country=self.country, species=order_sp, status='native')
+        Media.objects.create(
+            species=order_sp, type='image',
+            url='https://example.com/ordbir1.jpg', source='test',
+        )
+
+        response = self.client.get('/api/checklist/', {'tax_order': 'Passeriformes'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {s['id'] for s in response.data['species']}
+        self.assertIn(order_sp.id, ids)
+        self.assertNotIn(self.sp_unseen.id, ids)
+
+        response = self.client.get('/api/checklist/')
+        tax_orders = {row['tax_order']: row['count'] for row in response.data['tax_orders']}
+        self.assertIn('Passeriformes', tax_orders)
+        self.assertEqual(tax_orders['Passeriformes'], 1)

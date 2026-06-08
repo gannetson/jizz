@@ -33,13 +33,13 @@ def country_statuses_for_game(game: Game) -> list[str]:
 
 
 def game_has_candidate_species(game: Game) -> bool:
-    """True when at least one species matches this game's country and filters."""
-    return bool(candidate_species_ids(game))
+    """True when at least one species can be used as a question target."""
+    return bool(question_target_species_ids(game))
 
 
 def candidate_species_ids(game: Game) -> list[int]:
     """
-    Species IDs eligible for this game: country list + rarity + tax filter + has media of game type.
+    Species IDs eligible for answer options: country list + rarity + tax filter + media.
     """
     media_type = media_type_for_game(game)
     statuses = country_statuses_for_game(game)
@@ -66,6 +66,33 @@ def candidate_species_ids(game: Game) -> list[int]:
         species_qs = species_qs.filter(taxonomic_order__name_latin=game.tax_order)
 
     return list(species_qs.values_list('id', flat=True))
+
+
+def question_target_species_ids(game: Game) -> list[int]:
+    """
+    Species IDs eligible as question targets (the bird shown to identify).
+
+    When dificult_species is set, limits to top mistake targets that also pass
+    the normal country/rarity/tax/media filters. Answer options still use the
+    full candidate_species_ids pool.
+    """
+    ids = candidate_species_ids(game)
+    if not game.dificult_species or not game.country_id:
+        return ids
+
+    from jizz.quiz_mistake_stats import get_top_mistake_target_species_ids
+
+    top_difficult = set(get_top_mistake_target_species_ids(game.country_id, limit=100))
+    if not top_difficult:
+        top_difficult = set(
+            get_top_mistake_target_species_ids(game.country_id, limit=100, min_wrong=1)
+        )
+    if top_difficult:
+        filtered = [sid for sid in ids if sid in top_difficult]
+        if filtered:
+            return filtered
+
+    return ids
 
 
 def count_eligible_media(species_id: int, media_type: str) -> int:
@@ -185,19 +212,22 @@ def beginner_option_species(
 
 def create_question_for_game(game: Game) -> Question:
     """Build next question + options; caller holds game lock."""
-    candidate_ids = candidate_species_ids(game)
-    if not candidate_ids:
+    option_ids = candidate_species_ids(game)
+    target_ids = question_target_species_ids(game)
+    if not option_ids:
         raise ValueError(f"No candidate species for game {game.id} ({game.country_id})")
+    if not target_ids:
+        raise ValueError(f"No question target species for game {game.id} ({game.country_id})")
 
     used_ids = list(game.questions.values_list('species_id', flat=True))
-    prefer_unused = [i for i in candidate_ids if i not in used_ids]
-    pool = prefer_unused if prefer_unused else list(candidate_ids)
+    prefer_unused = [i for i in target_ids if i not in used_ids]
+    pool = prefer_unused if prefer_unused else list(target_ids)
 
     species, number = pick_species_with_eligible_media(game, pool, used_ids)
     sequence = game.questions.count() + 1
 
     if game.level == 'advanced':
-        options = advanced_option_species(candidate_ids, species)
+        options = advanced_option_species(option_ids, species)
         random.shuffle(options)
         question = game.questions.create(
             species=species, number=number, sequence=sequence
@@ -211,7 +241,7 @@ def create_question_for_game(game: Game) -> Question:
         return question
 
     if game.level == 'beginner':
-        options = beginner_option_species(candidate_ids, species)
+        options = beginner_option_species(option_ids, species)
         random.shuffle(options)
         question = game.questions.create(
             species=species, number=number, sequence=sequence

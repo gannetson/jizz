@@ -295,7 +295,7 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             length=step.length,
             media=step.media,
             rarity=step.rarity,
-            include_escapes=step.include_escapes,
+            dificult_species=step.step_type in ('difficult', 'dificult'),
             tax_family=tax_family,
             host=host,
             language=language,

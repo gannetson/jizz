@@ -358,6 +358,7 @@
   "birdr_journey_level_n": "Level {n}",
   "birdr_journey_step_n": "Step {n}",
   "birdr_journey_step_intro": "Identify {length} birds from {media}.",
+  "birdr_journey_difficult_step_intro": "You'll see some birds other birders struggle with. Take your time and trust what you know.",
   "birdr_journey_start_step": "Start step",
   "birdr_journey_step_passed": "Step complete!",
   "birdr_journey_step_failed": "Step failed",

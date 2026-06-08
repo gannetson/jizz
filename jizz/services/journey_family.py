@@ -30,10 +30,7 @@ def family_step_index(step: JourneyStep, level_steps) -> int:
 
 
 def _country_statuses_for_step(step: JourneyStep) -> list[str]:
-    statuses = ['native', 'endemic', 'rare']
-    if step.include_escapes:
-        statuses.extend(['introduced', 'uncertain', 'unknown'])
-    return statuses
+    return ['native', 'endemic', 'rare']
 
 
 def eligible_species_ids_for_step(country: Country, step: JourneyStep) -> list[int]:

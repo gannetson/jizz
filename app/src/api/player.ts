@@ -12,7 +12,7 @@ function collectStoredPlayerTokens(): string[] {
       /* ignore */
     }
   }
-  return [...tokens];
+  return Array.from(tokens);
 }
 
 /** Link stored guest player token to the logged-in account (same as mobile). */

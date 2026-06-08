@@ -951,6 +951,7 @@ class GameSerializer(serializers.ModelSerializer):
             'tax_family',
             'rarity',
             'include_escapes',
+            'dificult_species',
             'scores'
         )
 
@@ -1011,6 +1012,7 @@ class UserGameSerializer(serializers.ModelSerializer):
             'tax_family',
             'rarity',
             'include_escapes',
+            'dificult_species',
             'user_score',
             'correct_count',
             'total_questions'
@@ -1237,6 +1239,7 @@ class GameDetailWithAnswersSerializer(serializers.ModelSerializer):
             'tax_family',
             'rarity',
             'include_escapes',
+            'dificult_species',
             'questions',
             'total_score'
         )
@@ -1327,7 +1330,6 @@ class JourneyStepSerializer(serializers.ModelSerializer):
             'length',
             'jokers',
             'rarity',
-            'include_escapes',
             'media',
             'status',
             'resolved_family_name_latin',

@@ -9,7 +9,7 @@
 
 {% block quiz_content %}
     <h1>Species mistake statistics</h1>
-    <p class="muted">Aggregates over quiz answers; optionally scoped to one country (game country). With a country selected, species marked <strong>introduced</strong>, <strong>uncertain</strong>, or <strong>unknown</strong> for that country are excluded.</p>
+    <p class="muted">Aggregates over quiz answers worldwide. With a country selected, only species on that country's checklist are shown (excluding <strong>introduced</strong>, <strong>uncertain</strong>, and <strong>unknown</strong>); answer counts include games from all countries.</p>
 
     <form method="get" action="{% url 'data-quiz-mistake-species' %}" class="toolbar">
         <label for="country">Country:</label>
@@ -24,8 +24,9 @@
     </form>
 
     <p class="muted">
-        Only species with at least <strong>10</strong> picks (<strong>times shown</strong>).
+        Only species with at least <strong>{{ min_times_shown }}</strong> picks (<strong>times shown</strong>).
         <strong>Error rate</strong> = wrongly answered / (wrongly + correctly answered) when this species was chosen.
+        {% if selected_country %}When a country is selected, the minimum pick count is lower than for all countries.{% endif %}
     </p>
     <p class="muted">
         Sort by:

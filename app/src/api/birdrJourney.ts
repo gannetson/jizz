@@ -14,7 +14,6 @@ export type JourneyStep = {
   length: number;
   jokers: number;
   rarity: string;
-  include_escapes?: boolean;
   media: string;
   status: JourneyStepStatus;
   resolved_family_name_latin?: string | null;
@@ -28,6 +27,10 @@ export function isFamilyJourneyStep(step: JourneyStep): boolean {
     step.step_type === 'familiy' ||
     !!step.resolved_family_name_latin
   );
+}
+
+export function isDifficultJourneyStep(step: JourneyStep): boolean {
+  return step.step_type === 'difficult' || step.step_type === 'dificult';
 }
 
 export type JourneyLevel = {

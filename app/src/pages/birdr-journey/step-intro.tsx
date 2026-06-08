@@ -10,6 +10,7 @@ import {
   type BirdrJourney,
   type BirdrJourneyGame,
   isFamilyJourneyStep,
+  isDifficultJourneyStep,
 } from '../../api/birdrJourney';
 import { BirdrMoodHero } from '../../components/birdr-mood-hero';
 import { Page } from '../../shared/components/layout';
@@ -132,6 +133,14 @@ export function BirdrJourneyStepIntroPage() {
                 values={{ n: step.sequence + 1 }}
               />
             </Text>
+            {isDifficultJourneyStep(step) ? (
+              <Text fontSize="md" color="primary.700" lineHeight="tall" mb={3}>
+                <FormattedMessage
+                  id="birdr_journey_difficult_step_intro"
+                  defaultMessage="You'll see some birds other birders struggle with. Take your time and trust what you know."
+                />
+              </Text>
+            ) : null}
             <Text fontSize="md" color="primary.700" lineHeight="tall" mb={4}>
               <FormattedMessage
                 id="birdr_journey_step_intro"

@@ -786,7 +786,7 @@ class GameAdmin(admin.ModelAdmin):
     fields = [
         'country', 'language', 'host', 'created', 'token',
         'length', 'multiplayer', 'media', 'repeat', 'rarity', 'include_escapes',
-        'tax_order', 'tax_family'
+        'dificult_species', 'tax_order', 'tax_family'
     ]
     list_display = ['country', 'created', 'level', 'length', 'player_count', 'top_score']
 
@@ -937,8 +937,7 @@ class JourneyStepInline(admin.TabularInline):
     model = JourneyStep
     extra = 1
     fields = [
-        'sequence', 'step_type', 'level', 'length', 'jokers', 'rarity',
-        'include_escapes', 'media',
+        'sequence', 'step_type', 'level', 'length', 'jokers', 'rarity', 'media',
     ]
 
 

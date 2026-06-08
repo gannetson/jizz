@@ -6,6 +6,7 @@ from jizz.models import Country
 from jizz.quiz_mistake_stats import (
     get_confusion_pair_rows,
     get_species_mistake_rows,
+    min_times_shown_for_filter,
     normalize_country_filter,
     quiz_mistakes_pairs_csv_response,
     quiz_mistakes_species_csv_response,
@@ -55,6 +56,7 @@ def quiz_mistake_species_view(request):
             "species_sort": species_sort,
             "countries": Country.objects.order_by("name"),
             "selected_country": country_code or "",
+            "min_times_shown": min_times_shown_for_filter(country_code),
             "active_section": "quiz-mistakes",
             "active_tab": "species",
         },

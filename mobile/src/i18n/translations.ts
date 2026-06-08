@@ -360,6 +360,8 @@ export const translations: Record<string, Record<string, string>> = {
     birdr_journey_streak: 'Current streak: {days} days',
     birdr_journey_step_n: 'Step {n}',
     birdr_journey_step_intro: 'Identify {length} birds from {media}.',
+    birdr_journey_difficult_step_intro:
+      "You'll see some birds other birders struggle with. Take your time and trust what you know.",
     birdr_journey_start_step: 'Start step',
     birdr_journey_step_passed: 'Step complete!',
     birdr_journey_step_failed: 'Step failed',
@@ -776,6 +778,8 @@ export const translations: Record<string, Record<string, string>> = {
     birdr_journey_streak: 'Huidige reeks: {days} dagen',
     birdr_journey_step_n: 'Stap {n}',
     birdr_journey_step_intro: 'Herken {length} vogels via {media}.',
+    birdr_journey_difficult_step_intro:
+      'Je krijgt vogels te zien waar andere vogelaars moeite mee hebben. Neem de tijd en vertrouw op wat je weet.',
     birdr_journey_start_step: 'Start stap',
     birdr_journey_step_passed: 'Stap voltooid!',
     birdr_journey_step_failed: 'Stap mislukt',

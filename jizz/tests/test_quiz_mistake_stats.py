@@ -13,8 +13,12 @@ from jizz.models import (
     Species,
 )
 from jizz.quiz_mistake_stats import (
+    MIN_TIMES_SHOWN_COUNTRY,
     get_confusion_pair_rows,
     get_species_mistake_rows,
+    get_top_mistake_species_ids,
+    get_top_mistake_target_species_ids,
+    min_times_shown_for_filter,
     normalize_country_filter,
     sort_species_rows,
 )
@@ -159,20 +163,69 @@ class QuizMistakeStatsTests(TestCase):
         self.assertEqual(res_pairs.status_code, 200)
         self.assertIn("CONFUSED PAIRS", res_pairs.content.decode())
 
-    def test_country_filter_scopes_stats(self):
+    def test_country_filter_scopes_species_list_not_answers(self):
         Country.objects.create(code="OT", name="Empty land")
-        rows_all = get_species_mistake_rows()
-        rows_qm = get_species_mistake_rows("QM")
-        rows_ot = get_species_mistake_rows("OT")
-        self.assertEqual(rows_qm, rows_all)
-        self.assertEqual(rows_ot, [])
+        rows_all = {r["species_id"]: r for r in get_species_mistake_rows()}
+        rows_qm = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
+        self.assertEqual(set(rows_qm), set(rows_all))
+        self.assertEqual(get_species_mistake_rows("OT"), [])
         self.assertEqual(len(get_confusion_pair_rows("OT")), 0)
         self.assertGreater(len(get_confusion_pair_rows("QM")), 0)
+
+    def test_country_filter_uses_global_answers_for_checklist_species(self):
+        """A country with no local games still gets stats from answers elsewhere."""
+        neighbour = Country.objects.create(code="NB", name="Neighbour land")
+        for sp in (self.sp_a, self.sp_b, self.sp_c):
+            CountrySpecies.objects.create(country=neighbour, species=sp, status="native")
+
+        rows_nb = {r["species_id"]: r for r in get_species_mistake_rows("NB")}
+        rows_qm = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
+
+        self.assertEqual(rows_nb[self.sp_b.id]["times_shown"], rows_qm[self.sp_b.id]["times_shown"])
+        self.assertEqual(
+            rows_nb[self.sp_a.id]["wrongly_answered"],
+            rows_qm[self.sp_a.id]["wrongly_answered"],
+        )
+        pair_nb = get_confusion_pair_rows("NB")
+        pair_qm = get_confusion_pair_rows("QM")
+        self.assertEqual(len(pair_nb), len(pair_qm))
+        self.assertEqual(pair_nb[0]["total_wrong"], pair_qm[0]["total_wrong"])
 
     def test_normalize_country_filter(self):
         self.assertIsNone(normalize_country_filter(""))
         self.assertIsNone(normalize_country_filter("nosuch"))
         self.assertEqual(normalize_country_filter("qm"), "QM")
+
+    def test_country_filter_uses_lower_min_times_shown(self):
+        """Country-scoped stats include species below the global 10-pick threshold."""
+        self.assertEqual(min_times_shown_for_filter("QM"), MIN_TIMES_SHOWN_COUNTRY)
+        self.assertEqual(min_times_shown_for_filter(None), 10)
+
+        game = Game.objects.create(
+            country=self.country,
+            level="beginner",
+            length=5,
+            media="images",
+            multiplayer=False,
+        )
+        ps = PlayerScore.objects.create(player=self.player, game=game)
+        q = Question.objects.create(game=game, species=self.sp_c, number=1, sequence=1)
+        for order, sp in enumerate([self.sp_c, self.sp_a, self.sp_b], start=1):
+            QuestionOption.objects.create(question=q, species=sp, order=order)
+        for _i in range(MIN_TIMES_SHOWN_COUNTRY):
+            Answer.objects.create(
+                player_score=ps,
+                question=q,
+                answer=self.sp_c,
+                correct=False,
+            )
+
+        rows_global = {r["species_id"]: r for r in get_species_mistake_rows()}
+        self.assertNotIn(self.sp_c.id, rows_global)
+
+        rows_qm = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
+        self.assertIn(self.sp_c.id, rows_qm)
+        self.assertGreater(len(get_confusion_pair_rows("QM")), 0)
 
     def test_country_filter_excludes_introduced_uncertain_unknown_status(self):
         """Country-filtered stats ignore CountrySpecies with introduced / uncertain / unknown."""
@@ -203,3 +256,15 @@ class QuizMistakeStatsTests(TestCase):
 
         rows_qm = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
         self.assertNotIn(sp_intro.id, rows_qm)
+
+    def test_get_top_mistake_species_ids(self):
+        top = get_top_mistake_species_ids("QM", limit=1)
+        self.assertEqual(len(top), 1)
+        rows = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
+        self.assertEqual(top[0], max(rows, key=lambda sid: rows[sid]["wrongly_answered"]))
+
+    def test_get_top_mistake_target_species_ids(self):
+        top = get_top_mistake_target_species_ids("QM", limit=2)
+        self.assertGreaterEqual(len(top), 1)
+        self.assertIn(self.sp_a.id, top)
+        self.assertIn(self.sp_b.id, top)

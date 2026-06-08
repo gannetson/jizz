@@ -15,6 +15,7 @@ import {
   type BirdrJourney,
   type BirdrJourneyGame,
   isFamilyJourneyStep,
+  isDifficultJourneyStep,
 } from '../api/birdrJourney';
 import { setStoredChallengePlayerToken } from '../api/challenge';
 import { BirdrMoodHero } from '../components/BirdrMoodHero';
@@ -148,6 +149,9 @@ export function BirdrJourneyStepIntroScreen() {
           <Text style={styles.subtitle}>
             {t('birdr_journey_step_n', { n: String(step.sequence + 1) })}
           </Text>
+          {isDifficultJourneyStep(step) ? (
+            <Text style={styles.description}>{t('birdr_journey_difficult_step_intro')}</Text>
+          ) : null}
           <Text style={styles.description}>
             {t('birdr_journey_step_intro', {
               length: String(step.length),

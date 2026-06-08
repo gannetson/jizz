@@ -358,6 +358,7 @@
   "birdr_journey_level_n": "Niveau {n}",
   "birdr_journey_step_n": "Stap {n}",
   "birdr_journey_step_intro": "Herken {length} vogels uit {media}.",
+  "birdr_journey_difficult_step_intro": "Je krijgt vogels te zien waar andere vogelaars moeite mee hebben. Neem de tijd en vertrouw op wat je weet.",
   "birdr_journey_start_step": "Start stap",
   "birdr_journey_step_passed": "Stap voltooid!",
   "birdr_journey_step_failed": "Stap mislukt",

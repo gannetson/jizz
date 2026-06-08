@@ -14,8 +14,10 @@ from django.http import HttpRequest, HttpResponse
 
 from jizz.models import Answer, Country, CountrySpecies, QuestionOption, Species
 
-# Include a species only when it was available as an option at least this many answer opportunities.
+# Include a species only when it was picked at least this many times (all countries).
 MIN_TIMES_SHOWN = 10
+# Country-filtered views use a lower bar — per-country sample sizes are smaller.
+MIN_TIMES_SHOWN_COUNTRY = 3
 
 # When filtering by country, exclude CountrySpecies rows with these statuses for that country.
 EXCLUDED_COUNTRY_SPECIES_STATUSES = frozenset(("introduced", "uncertain", "unknown"))
@@ -40,6 +42,10 @@ def normalize_country_filter(country_code: str | None) -> str | None:
     return None
 
 
+def min_times_shown_for_filter(country_code: str | None = None) -> int:
+    return MIN_TIMES_SHOWN_COUNTRY if normalize_country_filter(country_code) else MIN_TIMES_SHOWN
+
+
 def _error_rate_pct(wrong: int, correct: int) -> float | None:
     """% wrong among attempts where this species was chosen: wrong / (wrong + correct)."""
     denom = wrong + correct
@@ -56,18 +62,19 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
     - correctly_answered / wrongly_answered: answers where the player picked this species.
     - error_rate: % wrong among picks of this species = wrong / (wrong + correct).
 
-    If country_code is set, only answers from games in that country; CountrySpecies excludes
-    introduced / uncertain / unknown for answers (target and pick) and for option rows.
+    If country_code is set, only species on that country's checklist are included
+    (CountrySpecies excludes introduced / uncertain / unknown). Answer counts come from
+    all games worldwide, not only games played in that country. Uses a lower minimum
+    pick count than the global view (see min_times_shown_for_filter).
     """
     cc = normalize_country_filter(country_code)
+    min_picks = min_times_shown_for_filter(country_code)
     answers = Answer.objects.all()
     if cc:
-        answers = answers.filter(question__game__country_id=cc)
         allowed = _allowed_species_ids_for_country(cc)
-        answers = answers.filter(
-            question__species_id__in=allowed,
-            answer_id__in=allowed,
-        )
+        if not allowed:
+            return []
+        answers = answers.filter(answer_id__in=allowed)
 
     times_shown = {
         row["answer_id"]: row["c"]
@@ -96,7 +103,7 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
         if sp is None:
             continue
         ts = times_shown.get(sid, 0)
-        if ts < MIN_TIMES_SHOWN:
+        if ts < min_picks:
             continue
         cor = picked_correct.get(sid, 0)
         wr = picked_wrong.get(sid, 0)
@@ -130,21 +137,67 @@ def sort_species_rows(
     return sorted(rows, key=sort_value, reverse=descending)
 
 
+def get_top_mistake_species_ids(country_code: str | None, *, limit: int = 100) -> list[int]:
+    """
+    Species IDs most often picked wrong (answer_id), for the data/quiz-mistakes page.
+    """
+    rows = get_species_mistake_rows(country_code)
+    rows.sort(
+        key=lambda row: (row["wrongly_answered"], row["error_rate"] or 0.0),
+        reverse=True,
+    )
+    return [row["species_id"] for row in rows[:limit]]
+
+
+def get_top_mistake_target_species_ids(
+    country_code: str | None,
+    *,
+    limit: int = 100,
+    min_wrong: int | None = None,
+) -> list[int]:
+    """
+    Species most often answered wrong when they were the question target.
+
+    Uses the same country checklist filter and global answers as get_species_mistake_rows,
+    but counts misses (correct=False, question.species) rather than wrong picks (answer_id).
+    Used for Game.dificult_species question selection.
+    """
+    cc = normalize_country_filter(country_code)
+    threshold = min_wrong if min_wrong is not None else min_times_shown_for_filter(country_code)
+
+    wrong_answers = Answer.objects.filter(correct=False)
+    if cc:
+        allowed = _allowed_species_ids_for_country(cc)
+        if not allowed:
+            return []
+        wrong_answers = wrong_answers.filter(question__species_id__in=allowed)
+
+    rows = list(
+        wrong_answers.values("question__species_id")
+        .annotate(wrongly_answered=Count("id"))
+        .filter(wrongly_answered__gte=threshold)
+        .order_by("-wrongly_answered")
+    )
+    return [row["question__species_id"] for row in rows[:limit]]
+
+
 def get_confusion_pair_rows(country_code: str | None = None) -> list[dict[str, Any]]:
     """
     Undirected species pairs from incorrect answers, ordered by total wrong answers (desc).
 
     Directed columns: when the lower-ID species was the target vs when the higher-ID species was the target.
 
-    If country_code is set, only incorrect answers from games in that country are included, and only
-    where both target and picked species have allowed CountrySpecies status for that country.
+    If country_code is set, only pairs where both species are on that country's checklist
+    (CountrySpecies excludes introduced / uncertain / unknown). Wrong answers are counted
+    from all games worldwide, not only games in that country.
     """
     cc = normalize_country_filter(country_code)
     pairs = Answer.objects.filter(correct=False).exclude(question__species_id=F("answer_id"))
     if cc:
         allowed = _allowed_species_ids_for_country(cc)
+        if not allowed:
+            return []
         pairs = pairs.filter(
-            question__game__country_id=cc,
             question__species_id__in=allowed,
             answer_id__in=allowed,
         )

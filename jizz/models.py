@@ -394,6 +394,11 @@ class Game(models.Model):
         help_text='Filter CountrySpecies by frequency tier for question selection.',
     )
     include_escapes = models.BooleanField(default=False)
+    dificult_species = models.BooleanField(
+        default=False,
+        help_text='Pick question species randomly from the top 100 most often answered wrong '
+        'for this country (global mistake stats).',
+    )
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
     force_ended = models.BooleanField(
         default=False,
@@ -1004,9 +1009,8 @@ class JourneyStep(models.Model):
     STEP_TYPE_CHOICES = [
         ('plain', 'Plain'),
         ('sounds', 'Sounds'),
-        ('familiy', 'Familiy'),
         ('family', 'Family'),
-        ('dificult', 'Dificult'),
+        ('difficult', 'Difficult'),
     ]
 
     journey_level = models.ForeignKey(
@@ -1032,7 +1036,6 @@ class JourneyStep(models.Model):
         default=Game.RARIT_REGULAR,
         choices=Game.RARIT_CHOICES,
     )
-    include_escapes = models.BooleanField(default=False)
     media = models.CharField(max_length=10, default='images')
 
     class Meta:

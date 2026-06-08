@@ -8,7 +8,7 @@
 
 {% block quiz_content %}
     <h1>Confused pairs</h1>
-    <p class="muted">Incorrect answers between two species (undirected). Columns show whether the lower-ID or higher-ID species was the question target. Same country and CountrySpecies filters as the species page.</p>
+    <p class="muted">Incorrect answers between two species (undirected), counted from games in all countries. With a country selected, only pairs where both species are on that country's checklist are shown.</p>
 
     <form method="get" action="{% url 'data-quiz-mistake-pairs' %}" class="toolbar">
         <label for="country">Country:</label>

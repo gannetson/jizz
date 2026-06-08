@@ -1,9 +1,9 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
-import { FaCheck, FaFeatherAlt, FaBookOpen } from 'react-icons/fa';
+import { FaCheck, FaFeatherAlt, FaBookOpen, FaBinoculars } from 'react-icons/fa';
 import { FormattedMessage } from 'react-intl';
 import type { JourneyLevel, JourneyStep } from '../api/birdrJourney';
-import { isFamilyJourneyStep } from '../api/birdrJourney';
+import { isDifficultJourneyStep, isFamilyJourneyStep } from '../api/birdrJourney';
 import { BirdrLevelImage } from './birdr-level-image';
 
 type Props = {
@@ -64,6 +64,10 @@ function StepIcon({
       ) : isFamilyJourneyStep(step) ? (
         <Box color={iconColor}>
           <FaBookOpen size={iconSize - 2} />
+        </Box>
+      ) : isDifficultJourneyStep(step) ? (
+        <Box color={iconColor}>
+          <FaBinoculars size={iconSize - 2} />
         </Box>
       ) : (
         <Box color={iconColor}>

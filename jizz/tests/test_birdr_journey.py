@@ -581,3 +581,34 @@ class BirdrJourneyFamilyStepTestCase(TestCase):
         _player_auth(self.client, self.player)
         response = self.client.post(f'/api/birdr-journey/{journey.id}/start-step/', format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_dificult_step_sets_dificult_species_on_game(self):
+        icon = SimpleUploadedFile('dificult.png', PNG_1X1, content_type='image/png')
+        level = JourneyLevel.objects.create(
+            sequence=1,
+            title='Difficult step',
+            description='Hard birds',
+            icon=icon,
+        )
+        JourneyStep.objects.create(
+            journey_level=level,
+            sequence=0,
+            step_type='difficult',
+            level='beginner',
+            length=5,
+            jokers=2,
+            rarity='regular',
+            media='images',
+        )
+        journey = BirdrJourney.objects.create(
+            player=self.player,
+            country=self.country,
+            current_sequence=1,
+            current_step_sequence=0,
+            user=None,
+        )
+        _player_auth(self.client, self.player)
+        response = self.client.post(f'/api/birdr-journey/{journey.id}/start-step/', format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        game = Game.objects.get(token=response.data['journey_game']['game']['token'])
+        self.assertTrue(game.dificult_species)

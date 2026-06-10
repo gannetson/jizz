@@ -17,7 +17,13 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
     MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FirstAssertionReviewView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
-from jizz.data_views import data_index_view, data_taxon_families_view, data_taxon_orders_view
+from jizz.data_views import (
+    data_games_played_api_view,
+    data_games_played_view,
+    data_index_view,
+    data_taxon_families_view,
+    data_taxon_orders_view,
+)
 from jizz.quiz_mistake_views import (
     quiz_mistake_pairs_view,
     quiz_mistake_species_view,
@@ -112,6 +118,8 @@ urlpatterns = [
     path('data/quiz-mistakes/pairs/', quiz_mistake_pairs_view, name='data-quiz-mistake-pairs'),
     path('data/taxons/orders/', data_taxon_orders_view, name='data-taxon-orders'),
     path('data/taxons/families/', data_taxon_families_view, name='data-taxon-families'),
+    path('data/games-played/', data_games_played_view, name='data-games-played'),
+    path('data/games-played/api/', data_games_played_api_view, name='data-games-played-api'),
 
     path('staff/quiz-mistakes/', staff_quiz_mistakes_redirect, name='quiz-mistake-stats'),
     path('staff/quiz-mistakes/species/', staff_quiz_mistakes_redirect, {'subpath': 'species'}, name='quiz-mistake-species'),

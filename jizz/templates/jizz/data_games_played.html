@@ -1,0 +1,301 @@
+{% extends "jizz/data_base.html" %}
+
+{% block title %}Games played · Birdr data{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .chart-wrap {
+            position: relative;
+            height: 420px;
+            margin: 1rem 0 1.5rem;
+        }
+
+        .granularity-group {
+            display: inline-flex;
+            border: 1px solid var(--birdr-200);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .granularity-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.75rem;
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            background: #fff;
+            border-right: 1px solid var(--birdr-100);
+        }
+
+        .granularity-group label:last-child { border-right: none; }
+
+        .granularity-group input { accent-color: var(--birdr-500); }
+
+        .granularity-group input:checked + span {
+            color: var(--birdr-800);
+        }
+
+        input[type="date"] {
+            padding: 0.45rem 0.65rem;
+            border: 1px solid var(--birdr-200);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--birdr-800);
+        }
+
+        button.btn {
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--birdr-500);
+            background: var(--birdr-500);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button.btn-secondary {
+            background: #fff;
+            color: var(--birdr-800);
+            border-color: var(--birdr-200);
+        }
+
+        .legend-note {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem 1.5rem;
+            font-size: 0.88rem;
+            color: #6d5c48;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-dot {
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 999px;
+            margin-right: 0.35rem;
+            vertical-align: middle;
+        }
+
+        .legend-dot.games { background: #8b6419; }
+        .legend-dot.players { background: #2a6b8b; }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h1>Games played</h1>
+    <p class="muted">
+        Distinct games and players per period, based on player scores.
+        Scroll or pinch to zoom the chart; drag to pan. Use day or week view for finer detail.
+    </p>
+
+    <form class="toolbar" id="games-played-form" method="get" action="{% url 'data-games-played' %}">
+        <label>
+            Start
+            <input type="date" name="start" id="start-date" value="{{ start }}">
+        </label>
+        <label>
+            End
+            <input type="date" name="end" id="end-date" value="{{ end }}">
+        </label>
+        <div>
+            <span class="muted" style="display:block;margin-bottom:0.25rem;">Granularity</span>
+            <div class="granularity-group">
+                <label>
+                    <input type="radio" name="granularity" value="month" {% if granularity == "month" %}checked{% endif %}>
+                    <span>Month</span>
+                </label>
+                <label>
+                    <input type="radio" name="granularity" value="week" {% if granularity == "week" %}checked{% endif %}>
+                    <span>Week</span>
+                </label>
+                <label>
+                    <input type="radio" name="granularity" value="day" {% if granularity == "day" %}checked{% endif %}>
+                    <span>Day</span>
+                </label>
+            </div>
+        </div>
+        <button type="submit" class="btn">Update</button>
+        <button type="button" class="btn btn-secondary" id="reset-zoom">Reset zoom</button>
+    </form>
+
+    <div class="legend-note">
+        <span><span class="legend-dot games"></span>Games (distinct game sessions with scores)</span>
+        <span><span class="legend-dot players"></span>Players (distinct players with scores)</span>
+    </div>
+
+    <div class="chart-wrap">
+        <canvas id="games-played-chart"></canvas>
+    </div>
+
+    {{ chart_json|json_script:"games-played-data" }}
+{% endblock %}
+
+{% block extra_body %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+    <script>
+        (function () {
+            const apiUrl = "{% url 'data-games-played-api' %}";
+            const pageUrl = "{% url 'data-games-played' %}";
+            const initial = JSON.parse(document.getElementById("games-played-data").textContent);
+            const form = document.getElementById("games-played-form");
+            const canvas = document.getElementById("games-played-chart");
+            let chart = null;
+
+            function formatLabel(row, granularity) {
+                const start = new Date(row.period + "T00:00:00");
+                if (granularity === "month") {
+                    return start.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+                }
+                if (granularity === "week") {
+                    const end = new Date(row.period_end + "T00:00:00");
+                    const fmt = { month: "short", day: "numeric" };
+                    return start.toLocaleDateString(undefined, fmt) + " – " + end.toLocaleDateString(undefined, fmt);
+                }
+                return start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+            }
+
+            function buildChart(payload) {
+                const labels = payload.series.map((row) => formatLabel(row, payload.granularity));
+                const games = payload.series.map((row) => row.games);
+                const players = payload.series.map((row) => row.players);
+
+                if (chart) {
+                    chart.destroy();
+                }
+
+                chart = new Chart(canvas, {
+                    type: "bar",
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: "Games",
+                                data: games,
+                                backgroundColor: "rgba(139, 100, 25, 0.75)",
+                                borderColor: "#8b6419",
+                                borderWidth: 1,
+                                yAxisID: "y",
+                                order: 2,
+                            },
+                            {
+                                label: "Players",
+                                data: players,
+                                type: "line",
+                                borderColor: "#2a6b8b",
+                                backgroundColor: "rgba(42, 107, 139, 0.15)",
+                                borderWidth: 2,
+                                tension: 0.25,
+                                pointRadius: payload.granularity === "day" ? 0 : 3,
+                                yAxisID: "y1",
+                                order: 1,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: "index", intersect: false },
+                        plugins: {
+                            legend: { position: "top" },
+                            tooltip: {
+                                callbacks: {
+                                    title: (items) => {
+                                        const idx = items[0].dataIndex;
+                                        const row = payload.series[idx];
+                                        if (payload.granularity === "week") {
+                                            return formatLabel(row, payload.granularity);
+                                        }
+                                        return items[0].label;
+                                    },
+                                },
+                            },
+                            zoom: {
+                                pan: {
+                                    enabled: true,
+                                    mode: "x",
+                                    modifierKey: "shift",
+                                },
+                                zoom: {
+                                    wheel: { enabled: true },
+                                    pinch: { enabled: true },
+                                    mode: "x",
+                                },
+                                limits: {
+                                    x: { min: "original", max: "original" },
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 0,
+                                    autoSkip: true,
+                                    maxTicksLimit: payload.granularity === "day" ? 20 : 14,
+                                },
+                            },
+                            y: {
+                                type: "linear",
+                                position: "left",
+                                title: { display: true, text: "Games" },
+                                beginAtZero: true,
+                            },
+                            y1: {
+                                type: "linear",
+                                position: "right",
+                                title: { display: true, text: "Players" },
+                                beginAtZero: true,
+                                grid: { drawOnChartArea: false },
+                            },
+                        },
+                    },
+                });
+            }
+
+            function readFormParams() {
+                const data = new FormData(form);
+                return {
+                    start: data.get("start"),
+                    end: data.get("end"),
+                    granularity: data.get("granularity") || "month",
+                };
+            }
+
+            async function loadChart(updateUrl) {
+                const params = readFormParams();
+                const query = new URLSearchParams(params);
+                const response = await fetch(apiUrl + "?" + query.toString(), {
+                    headers: { Accept: "application/json" },
+                });
+                if (!response.ok) {
+                    return;
+                }
+                const payload = await response.json();
+                buildChart(payload);
+                if (updateUrl) {
+                    const next = pageUrl + "?" + query.toString();
+                    window.history.replaceState(null, "", next);
+                }
+            }
+
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                loadChart(true);
+            });
+
+            document.getElementById("reset-zoom").addEventListener("click", () => {
+                if (chart) {
+                    chart.resetZoom();
+                }
+            });
+
+            buildChart(initial);
+        })();
+    </script>
+{% endblock %}

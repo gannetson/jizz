@@ -110,3 +110,21 @@ class DataViewsTests(TestCase):
         anat_pos = content.index("Anatidae")
         passer_pos = content.index("Passeridae")
         self.assertLess(anat_pos, passer_pos)
+
+
+class GamesPlayedViewsTests(TestCase):
+    def test_games_played_page_public(self):
+        res = Client().get(reverse("data-games-played"))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Games played")
+        self.assertContains(res, "games-played-chart")
+
+    def test_games_played_api(self):
+        res = Client().get(
+            reverse("data-games-played-api"),
+            {"start": "2026-01-01", "end": "2026-01-31", "granularity": "month"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["granularity"], "month")
+        self.assertIn("series", data)

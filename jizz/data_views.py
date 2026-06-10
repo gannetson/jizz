@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import render
 
+from jizz.games_played_stats import (
+    default_date_range,
+    games_played_payload,
+    parse_date_param,
+    parse_granularity,
+)
 from jizz.models import Country, TaxonomicFamily, TaxonomicOrder
 from jizz.quiz_mistake_stats import normalize_country_filter
 from jizz.services.checklist import CHECKLIST_COUNTRY_SPECIES_STATUSES
@@ -159,3 +166,32 @@ def data_taxon_families_view(request):
         }
     )
     return render(request, "jizz/data_taxon_families.html", ctx)
+
+
+def _games_played_query_params(request):
+    default_start, default_end = default_date_range()
+    start = parse_date_param(request.GET.get("start"), default_start)
+    end = parse_date_param(request.GET.get("end"), default_end)
+    granularity = parse_granularity(request.GET.get("granularity"))
+    return start, end, granularity
+
+
+def data_games_played_view(request):
+    start, end, granularity = _games_played_query_params(request)
+    payload = games_played_payload(start, end, granularity=granularity)
+    return render(
+        request,
+        "jizz/data_games_played.html",
+        {
+            "active_section": "games-played",
+            "start": payload["start"],
+            "end": payload["end"],
+            "granularity": payload["granularity"],
+            "chart_json": payload,
+        },
+    )
+
+
+def data_games_played_api_view(request):
+    start, end, granularity = _games_played_query_params(request)
+    return JsonResponse(games_played_payload(start, end, granularity=granularity))

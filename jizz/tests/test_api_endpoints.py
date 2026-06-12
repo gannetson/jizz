@@ -262,6 +262,21 @@ class ApiQuestionAnswerTestCase(TestCase):
         )
         self.assertIn(response.status_code, (status.HTTP_201_CREATED, status.HTTP_200_OK))
 
+    def test_answer_create_with_player_bearer_not_401(self):
+        """Guest journey sends Authorization: Bearer <player.token>; must not fail JWT auth first."""
+        q2 = self.game.add_question()
+        response = self.client.post(
+            '/api/answer/',
+            {
+                'player_token': self.player.token,
+                'question_id': q2.id,
+                'answer_id': q2.species_id,
+            },
+            format='json',
+            HTTP_AUTHORIZATION=f'Bearer {self.player.token}',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
     def test_answer_detail_returns_200(self):
         # URL has no trailing slash per urlpattern
         response = self.client.get(

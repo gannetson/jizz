@@ -692,8 +692,9 @@ class AnswerView(CreateAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
     permission_classes = [AllowAny]
-    # JWT before player token so logged-in users are recognized for checklist_added.
-    authentication_classes = [JWTAuthentication, PlayerTokenAuthentication]
+    # Player token before JWT: guests send Bearer <player.token>; JWT would reject that UUID as invalid.
+    # Logged-in clients send a JWT; PlayerToken misses, then JWT authenticates for checklist_added.
+    authentication_classes = [PlayerTokenAuthentication, JWTAuthentication]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

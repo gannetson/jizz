@@ -14,6 +14,7 @@ import {
   Image,
   Alert,
   Platform,
+  Switch,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -42,6 +43,7 @@ export function ProfileScreen() {
   const [language, setLanguage] = useState('');
   const [timezone, setTimezone] = useState('Europe/Amsterdam');
   const [countryCode, setCountryCode] = useState<string | null>(null);
+  const [receiveUpdates, setReceiveUpdates] = useState(true);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
@@ -68,6 +70,7 @@ export function ProfileScreen() {
       }
       setTimezone(p.timezone || 'Europe/Amsterdam');
       setCountryCode(p.country_code ?? null);
+      setReceiveUpdates(p.receive_updates ?? true);
       if (p.avatar_url) setAvatarPreviewUri(null);
     } catch (e: any) {
       setError(e?.message ?? t('failed_load_profile'));
@@ -191,6 +194,7 @@ export function ProfileScreen() {
         language: language || undefined,
         timezone: timezone?.trim() || undefined,
         country_code: countryCode ?? undefined,
+        receive_updates: receiveUpdates,
       });
       const speciesCode = (language || 'en').trim();
       const updated = await getProfile();
@@ -322,6 +326,18 @@ export function ProfileScreen() {
       <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)}>
         <Text style={styles.selectButtonText}>{countryLabel}</Text>
       </TouchableOpacity>
+      <View style={styles.switchRow}>
+        <View style={styles.switchCopy}>
+          <Text style={styles.label}>{t('receive_updates')}</Text>
+          <Text style={styles.switchHint}>{t('receive_updates_hint')}</Text>
+        </View>
+        <Switch
+          value={receiveUpdates}
+          onValueChange={setReceiveUpdates}
+          trackColor={{ false: colors.primary[200], true: colors.primary[400] }}
+          thumbColor={receiveUpdates ? colors.primary[700] : '#fff'}
+        />
+      </View>
       <TouchableOpacity
         style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         onPress={handleSave}
@@ -522,6 +538,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   selectButtonText: { fontSize: 16, color: colors.primary[800] },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 12,
+  },
+  switchCopy: { flex: 1 },
+  switchHint: { fontSize: 13, color: colors.primary[600], marginTop: 4 },
   radioRow: {
     flexDirection: 'row',
     gap: 12,

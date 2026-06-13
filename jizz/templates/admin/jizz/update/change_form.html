@@ -1,0 +1,17 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if original and send_test_email_url %}
+        <li>
+            <a href="{{ send_test_email_url }}" class="historylink">Send test email to me</a>
+        </li>
+    {% endif %}
+    {% if original and send_broadcast_url %}
+        <li>
+            <a href="{{ send_broadcast_url }}" class="historylink" onclick="return confirm('Email all users with receive updates enabled?');">
+                Send to subscribers
+            </a>
+        </li>
+    {% endif %}
+{% endblock %}

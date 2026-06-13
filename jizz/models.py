@@ -593,7 +593,7 @@ class Player(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
-    receive_updates = models.BooleanField(default=False, help_text='Receive updates about Birdr app')
+    receive_updates = models.BooleanField(default=True, help_text='Receive Birdr news and update emails')
     language = models.CharField(max_length=10, default='en', blank=True, help_text='Preferred language')
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True, blank=True, help_text='Preferred country')
     timezone = models.CharField(
@@ -953,13 +953,136 @@ class Feedback(models.Model):
 
 
 class Update(models.Model):
-    title = models.CharField(max_length=200)
+    title_en = models.CharField(max_length=200)
+    title_nl = models.CharField(max_length=200, blank=True, default='')
+    body_en = QuillField()
+    body_nl = QuillField(blank=True)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    message = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+    published = models.BooleanField(default=True, help_text='Show in app and allow email sends')
+
+    class Meta:
+        ordering = ['-created']
+
+    def __str__(self):
+        return self.title_en
+
+    def title_for_language(self, language: str) -> str:
+        if language.startswith('nl') and self.title_nl:
+            return self.title_nl
+        return self.title_en
+
+    def body_for_language(self, language: str):
+        if language.startswith('nl') and self.body_nl:
+            return self.body_nl
+        return self.body_en
+
+
+class UpdateThumbsUp(models.Model):
+    update = models.ForeignKey(Update, related_name='thumbs_ups', on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        'auth.User',
+        related_name='update_thumbs_ups',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
+    player = models.ForeignKey(
+        Player,
+        related_name='update_thumbs_ups',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['update', 'user'],
+                condition=models.Q(user__isnull=False),
+                name='unique_update_thumbs_up_user',
+            ),
+            models.UniqueConstraint(
+                fields=['update', 'player'],
+                condition=models.Q(player__isnull=False),
+                name='unique_update_thumbs_up_player',
+            ),
+        ]
+
+
+class MailSettings(models.Model):
+    """Singleton email branding (logo, footer)."""
+
+    logo = models.ImageField(upload_to='mail/', null=True, blank=True)
+    footer_html_en = QuillField(blank=True)
+    footer_html_nl = QuillField(blank=True)
+
+    class Meta:
+        verbose_name = 'Mail settings'
+        verbose_name_plural = 'Mail settings'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'Mail settings'
+
+
+class UpdateEmailDelivery(models.Model):
+    update = models.ForeignKey(Update, related_name='email_deliveries', on_delete=models.CASCADE)
+    sent_by = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='update_email_deliveries',
+    )
+    is_test = models.BooleanField(default=False)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    recipient_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-sent_at']
+        verbose_name_plural = 'Update email deliveries'
+
+    def __str__(self):
+        kind = 'test' if self.is_test else 'broadcast'
+        return f'{kind} for update {self.update_id} ({self.recipient_count} recipients)'
+
+
+class UpdateEmailRecipient(models.Model):
+    delivery = models.ForeignKey(
+        UpdateEmailDelivery,
+        related_name='recipients',
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='update_emails_received',
+    )
+    email = models.EmailField()
+    tracking_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    opened_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+        unique_together = ('delivery', 'user')
+
+    def __str__(self):
+        return f'{self.email} ({self.delivery_id})'
 
 
 class Reaction(models.Model):

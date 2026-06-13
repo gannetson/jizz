@@ -654,7 +654,11 @@ class ApiUpdatesReactionsTestCase(TestCase):
         self.client = APIClient()
         self.player = Player.objects.create(name='P', language='en')
         self.update_user = User.objects.create_user(username='admin', email='a@b.com', password='x')
-        self.update = Update.objects.create(title='News', message='Hello', user=self.update_user)
+        self.update = Update.objects.create(
+            title_en='News',
+            body_en='{"delta":"","html":"<p>Hello</p>"}',
+            user=self.update_user,
+        )
 
     def test_updates_list_returns_200(self):
         response = self.client.get('/api/updates/')

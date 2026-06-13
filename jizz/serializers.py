@@ -829,13 +829,104 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 
 class UpdateSerializer(serializers.ModelSerializer):
+    """Legacy serializer kept for admin compatibility."""
 
     reactions = ReactionSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
+    title = serializers.CharField(source='title_en', read_only=True)
+    message = serializers.SerializerMethodField()
 
     class Meta:
         model = Update
         fields = ('id', 'created', 'user', 'title', 'message', 'reactions', 'user')
+
+    def get_message(self, obj):
+        from jizz.update_emails import quill_value_to_html
+
+        return quill_value_to_html(obj.body_en)
+
+
+def _resolve_request_language(request) -> str:
+    from jizz.update_emails import resolve_language
+
+    return resolve_language(
+        request.user if request.user.is_authenticated else None,
+        request.META.get('HTTP_ACCEPT_LANGUAGE', ''),
+    )
+
+
+class UpdateListSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+    message = serializers.SerializerMethodField()
+    excerpt = serializers.SerializerMethodField()
+    user = UserSerializer(read_only=True)
+    reactions = ReactionSerializer(many=True, read_only=True)
+    thumbs_up_count = serializers.IntegerField(read_only=True)
+    user_has_thumbs_up = serializers.BooleanField(read_only=True, default=False)
+
+    class Meta:
+        model = Update
+        fields = (
+            'id',
+            'created',
+            'title',
+            'message',
+            'excerpt',
+            'user',
+            'reactions',
+            'thumbs_up_count',
+            'user_has_thumbs_up',
+        )
+
+    def _language(self):
+        return self.context.get('language') or _resolve_request_language(self.context.get('request'))
+
+    def get_title(self, obj):
+        return obj.title_for_language(self._language())
+
+    def get_message(self, obj):
+        from jizz.update_emails import plain_text_from_quill
+
+        return plain_text_from_quill(obj.body_for_language(self._language()))
+
+    def get_excerpt(self, obj):
+        from jizz.update_emails import excerpt_from_html, quill_value_to_html
+
+        html = quill_value_to_html(obj.body_for_language(self._language()))
+        return excerpt_from_html(html)
+
+
+class UpdateDetailSerializer(UpdateListSerializer):
+    body = serializers.SerializerMethodField()
+    body_en = serializers.SerializerMethodField()
+    body_nl = serializers.SerializerMethodField()
+    title_en = serializers.CharField(read_only=True)
+    title_nl = serializers.CharField(read_only=True)
+
+    class Meta(UpdateListSerializer.Meta):
+        fields = UpdateListSerializer.Meta.fields + (
+            'body',
+            'body_en',
+            'body_nl',
+            'title_en',
+            'title_nl',
+        )
+
+    def get_body(self, obj):
+        from jizz.update_emails import quill_value_to_json_string
+
+        language = self.context.get('language') or _resolve_request_language(self.context.get('request'))
+        return quill_value_to_json_string(obj.body_for_language(language))
+
+    def get_body_en(self, obj):
+        from jizz.update_emails import quill_value_to_json_string
+
+        return quill_value_to_json_string(obj.body_en)
+
+    def get_body_nl(self, obj):
+        from jizz.update_emails import quill_value_to_json_string
+
+        return quill_value_to_json_string(obj.body_nl)
 
 
 class PlayerSerializer(serializers.ModelSerializer):

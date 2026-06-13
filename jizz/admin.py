@@ -9,6 +9,7 @@ from django.db.models import Count, Sum
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
+from django.shortcuts import redirect
 from django.urls import path, re_path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -21,7 +22,8 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          TaxonomicOrder, TaxonomicFamily,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
-                         DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent)
+                         DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent,
+                         MailSettings, UpdateEmailDelivery, UpdateEmailRecipient, UpdateThumbsUp)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
@@ -928,9 +930,151 @@ class ReactionAdminInline(admin.StackedInline):
 
 @register(Update)
 class UpdateAdmin(admin.ModelAdmin):
-    readonly_fields = ['created']
-    list_display = ['created', 'user', 'message']
+    list_display = [
+        'created',
+        'title_en',
+        'published',
+        'user',
+        'thumbs_up_total',
+        'email_recipient_total',
+    ]
+    list_filter = ['published', 'created']
+    readonly_fields = ['created', 'user', 'email_delivery_summary']
+    fields = [
+        'title_en',
+        'title_nl',
+        'body_en',
+        'body_nl',
+        'published',
+        'user',
+        'created',
+        'email_delivery_summary',
+    ]
     inlines = [ReactionAdminInline]
+
+    def thumbs_up_total(self, obj):
+        return obj.thumbs_ups.count()
+
+    thumbs_up_total.short_description = 'Thumbs up'
+
+    def email_recipient_total(self, obj):
+        return UpdateEmailRecipient.objects.filter(delivery__update=obj).count()
+
+    email_recipient_total.short_description = 'Emails sent'
+
+    def email_delivery_summary(self, obj):
+        if not obj.pk:
+            return 'Save the update first, then send email.'
+        deliveries = obj.email_deliveries.all()[:10]
+        if not deliveries:
+            return 'No emails sent yet.'
+        lines = []
+        for delivery in deliveries:
+            opened = delivery.recipients.filter(opened_at__isnull=False).count()
+            kind = 'Test' if delivery.is_test else 'Broadcast'
+            lines.append(
+                f'{kind} — {delivery.sent_at:%Y-%m-%d %H:%M} — '
+                f'{delivery.recipient_count} sent, {opened} opened'
+            )
+        return format_html('<br>'.join(lines))
+
+    email_delivery_summary.short_description = 'Email history'
+
+    def save_model(self, request, obj, form, change):
+        if not change and not obj.user_id:
+            obj.user = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                '<path:object_id>/send-test-email/',
+                self.admin_site.admin_view(self.send_test_email_view),
+                name='jizz_update_send_test_email',
+            ),
+            path(
+                '<path:object_id>/send-broadcast/',
+                self.admin_site.admin_view(self.send_broadcast_view),
+                name='jizz_update_send_broadcast',
+            ),
+        ]
+        return custom + urls
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['send_test_email_url'] = reverse('admin:jizz_update_send_test_email', args=[object_id])
+        extra_context['send_broadcast_url'] = reverse('admin:jizz_update_send_broadcast', args=[object_id])
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def send_test_email_view(self, request, object_id):
+        from jizz.update_emails import send_test_update_email
+
+        update = self.get_object(request, object_id)
+        if not update:
+            self.message_user(request, 'Update not found.', level=messages.ERROR)
+            return redirect('admin:jizz_update_changelist')
+        if not request.user.email:
+            self.message_user(request, 'Your account has no email address.', level=messages.ERROR)
+        elif send_test_update_email(update, request.user):
+            self.message_user(request, f'Test email sent to {request.user.email}.')
+        else:
+            self.message_user(request, 'Failed to send test email.', level=messages.ERROR)
+        return redirect('admin:jizz_update_change', object_id)
+
+    def send_broadcast_view(self, request, object_id):
+        from jizz.update_emails import send_update_email_broadcast
+
+        update = self.get_object(request, object_id)
+        if not update:
+            self.message_user(request, 'Update not found.', level=messages.ERROR)
+            return redirect('admin:jizz_update_changelist')
+        delivery = send_update_email_broadcast(update, request.user)
+        self.message_user(
+            request,
+            f'Update emailed to {delivery.recipient_count} subscribers with receive_updates enabled.',
+        )
+        return redirect('admin:jizz_update_change', object_id)
+
+
+@admin.register(MailSettings)
+class MailSettingsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'logo_preview']
+    fields = ['logo', 'footer_html_en', 'footer_html_nl']
+
+    def logo_preview(self, obj):
+        if obj.logo:
+            return format_html('<img src="{}" style="max-height:48px;" />', obj.logo.url)
+        return '-'
+
+    logo_preview.short_description = 'Logo'
+
+    def has_add_permission(self, request):
+        return not MailSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(UpdateEmailDelivery)
+class UpdateEmailDeliveryAdmin(admin.ModelAdmin):
+    list_display = ['update', 'is_test', 'sent_by', 'sent_at', 'recipient_count', 'opened_count']
+    list_filter = ['is_test', 'sent_at']
+    readonly_fields = ['update', 'sent_by', 'is_test', 'sent_at', 'recipient_count']
+    search_fields = ['update__title_en', 'sent_by__username']
+
+    def opened_count(self, obj):
+        return obj.recipients.filter(opened_at__isnull=False).count()
+
+    opened_count.short_description = 'Opened'
+
+
+@admin.register(UpdateEmailRecipient)
+class UpdateEmailRecipientAdmin(admin.ModelAdmin):
+    list_display = ['email', 'delivery', 'sent_at', 'opened_at']
+    list_filter = ['sent_at', 'opened_at']
+    readonly_fields = ['delivery', 'user', 'email', 'tracking_token', 'sent_at', 'opened_at']
+    search_fields = ['email', 'user__username']
 
 
 class JourneyStepInline(admin.TabularInline):

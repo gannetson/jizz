@@ -39,6 +39,7 @@ import { BirdrJourneyPlayPage } from "./pages/birdr-journey/play"
 import { GameDetailPage } from "./pages/game-detail"
 import { MediaReviewPage } from "./pages/media-review"
 import { HelpOverviewPage, HelpPageDetail } from "./pages/help"
+import UpdateDetailPage from "./pages/update-detail"
 import { AnalyticsTracker } from "./components/analytics-tracker"
 export const MainContent = () => {
   useEffect(() => {
@@ -94,6 +95,7 @@ export const MainContent = () => {
 
             <Route path='/scores/' element={<Hiscores />}/>
             <Route path='/updates/' element={<Updates />}/>
+            <Route path='/updates/:id' element={<UpdateDetailPage />}/>
             <Route path='/help' element={<HelpOverviewPage />}/>
             <Route path='/help/:slug' element={<HelpPageDetail />}/>
             <Route path='/media-review/' element={<MediaReviewPage />}/>

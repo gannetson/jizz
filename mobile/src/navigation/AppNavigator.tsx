@@ -32,6 +32,7 @@ import { BirdrJourneyStepIntroScreen } from '../screens/BirdrJourneyStepIntroScr
 import { BirdrJourneyStepResultsScreen } from '../screens/BirdrJourneyStepResultsScreen';
 import { BirdrJourneyLevelCelebrationScreen } from '../screens/BirdrJourneyLevelCelebrationScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
+import { UpdateDetailScreen } from '../screens/UpdateDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -51,6 +52,7 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'DailyChallengeCreate', titleKey: 'new_daily_challenge', component: DailyChallengeCreateScreen },
   { name: 'ChallengePlay', titleKey: 'country_challenge', component: ChallengePlayScreen },
   { name: 'Updates', titleKey: 'updates', component: UpdatesScreen },
+  { name: 'UpdateDetail', titleKey: 'updates', component: UpdateDetailScreen },
   { name: 'Help', titleKey: 'help', component: HelpOverviewScreen },
   { name: 'HelpDetail', titleKey: 'help', component: HelpDetailScreenWrapper },
   { name: 'MyGames', titleKey: 'my_games', component: MyGamesScreen },

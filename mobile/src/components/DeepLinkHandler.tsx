@@ -10,6 +10,7 @@ import { API_BASE_URL } from '../api/config';
  * - OAuth redirects: birdr://auth/google, birdr://auth/apple
  * - Game join: https://birdr.pro/join/{token} or birdr://join/{token}
  * - Daily challenge invite: birdr://join/challenge/{invite_token} or https://birdr.pro/join/challenge/{invite_token}
+ * - Update: birdr://updates/{id} or https://birdr.pro/open/update/{id}/
  */
 export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
   const { handleOAuthRedirect, isAuthenticated } = useAuth();
@@ -52,6 +53,13 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const updateId = parseUpdateUrl(url);
+      if (updateId !== null) {
+        handled.current = url;
+        navigation.navigate('UpdateDetail', { updateId });
+        return;
+      }
+
       const token = parseGameJoinUrl(url);
       if (token) {
         handled.current = url;
@@ -75,6 +83,25 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
   }, [handleOAuthRedirect, loadGame, setGame, navigation, isAuthenticated]);
 
   return <>{children}</>;
+}
+
+function parseUpdateUrl(url: string): number | null {
+  const schemeMatch = url.match(/^birdr:\/\/updates\/(\d+)$/);
+  if (schemeMatch) return parseInt(schemeMatch[1], 10);
+
+  const base = API_BASE_URL.replace(/\/$/, '');
+  if (url.startsWith(base + '/open/update/')) {
+    const match = url.slice(base.length).match(/^\/open\/update\/(\d+)\/?/);
+    if (match) return parseInt(match[1], 10);
+  }
+
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/^\/open\/update\/(\d+)\/?$/);
+    if (match) return parseInt(match[1], 10);
+  } catch {}
+
+  return null;
 }
 
 function parseGameJoinUrl(url: string): string | null {

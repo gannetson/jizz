@@ -14,7 +14,8 @@ import {
   AlertIndicator,
   Spinner,
   Link,
-  Checkbox,
+  Switch,
+  Flex,
 } from "@chakra-ui/react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -61,7 +62,7 @@ export const ProfilePage = () => {
         setFirstName(profileData.first_name || "");
         setLastName(profileData.last_name || "");
         setAvatarPreview(getAvatarUrl(profileData));
-        setReceiveUpdates(profileData.receive_updates || false);
+        setReceiveUpdates(profileData.receive_updates ?? true);
         setLanguage(profileData.language || "en");
         setTimezone(profileData.timezone || "Europe/Amsterdam");
         setCountryCode(profileData.country_code || null);
@@ -120,7 +121,7 @@ export const ProfilePage = () => {
         updateData.avatar = null;
       }
 
-      if (receiveUpdates !== (profile?.receive_updates || false)) {
+      if (receiveUpdates !== (profile?.receive_updates ?? true)) {
         updateData.receive_updates = receiveUpdates;
       }
 
@@ -149,7 +150,7 @@ export const ProfilePage = () => {
       setLastName(updatedProfile.last_name || "");
       setAvatarPreview(getAvatarUrl(updatedProfile));
       setAvatarFile(null);
-      setReceiveUpdates(updatedProfile.receive_updates || false);
+      setReceiveUpdates(updatedProfile.receive_updates ?? true);
       setLanguage(updatedProfile.language || "en");
       setTimezone(updatedProfile.timezone ?? "Europe/Amsterdam");
       setCountryCode(updatedProfile.country_code || null);
@@ -306,25 +307,31 @@ export const ProfilePage = () => {
               </Text>
             </Field.Root>
 
-            {/* Receive Updates Checkbox */}
             <Field.Root>
-              <Checkbox.Root
-                checked={receiveUpdates}
-                onCheckedChange={(e: { checked: boolean }) => {
-                  setReceiveUpdates(e.checked === true);
-                }}
-              >
-                <Checkbox.HiddenInput />
-                <Checkbox.Control cursor="pointer">
-                  <Checkbox.Indicator />
-                </Checkbox.Control>
-                <Checkbox.Label>
-                  <FormattedMessage 
-                    id="receive_updates" 
-                    defaultMessage="Receive updates about Birdr app" 
-                  />
-                </Checkbox.Label>
-              </Checkbox.Root>
+              <Flex justify="space-between" align="center">
+                <Box>
+                  <Field.Label mb={0}>
+                    <FormattedMessage
+                      id="receive_updates"
+                      defaultMessage="Receive Birdr updates by email"
+                    />
+                  </Field.Label>
+                  <Text fontSize="sm" color="gray.500">
+                    <FormattedMessage
+                      id="receive_updates_hint"
+                      defaultMessage="News and product updates from Birdr."
+                    />
+                  </Text>
+                </Box>
+                <Switch.Root
+                  checked={receiveUpdates}
+                  onCheckedChange={(e: { checked: boolean }) => setReceiveUpdates(e.checked === true)}
+                  colorPalette="primary"
+                >
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                </Switch.Root>
+              </Flex>
             </Field.Root>
 
             {/* Language Preference */}

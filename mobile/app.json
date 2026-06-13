@@ -48,6 +48,11 @@
               "scheme": "https",
               "host": "birdr.pro",
               "pathPrefix": "/join/challenge/"
+            },
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/open/update/"
             }
           ],
           "category": [

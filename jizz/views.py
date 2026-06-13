@@ -842,13 +842,6 @@ class UpdatePagination(PageNumberPagination):
     page_size = 10
 
 
-class UpdateView(ListAPIView):
-    pagination_class = UpdatePagination
-    serializer_class = UpdateSerializer
-    queryset = Update.objects.all()
-    ordering = ["-created"]
-
-
 class CustomConvertTokenView(ConvertTokenView):
 
     def post(self, request, *args, **kwargs):

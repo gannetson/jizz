@@ -1,4 +1,5 @@
 import { apiUrl } from './config';
+import { getAuthHeaders } from './auth';
 
 export type User = {
   username: string;
@@ -6,58 +7,66 @@ export type User = {
   last_name: string;
 };
 
-export type Update = {
-  id: string;
+export type UpdateListItem = {
+  id: number;
   created: string;
-  message: string;
   title: string;
+  excerpt: string;
   user: User;
-  reactions?: Reaction[];
+  thumbs_up_count: number;
+  user_has_thumbs_up: boolean;
 };
 
-export type Reaction = {
-  created?: string;
-  message: string;
-  name?: string;
-  update_id?: string;
-  player_token?: string;
+export type UpdateDetail = UpdateListItem & {
+  body: string;
+  body_en: string;
+  body_nl: string;
+  title_en: string;
+  title_nl: string;
 };
 
 type UpdatesResponse = {
-  results: Update[];
+  results: UpdateListItem[];
 };
 
-export async function loadUpdates(): Promise<Update[]> {
-  const response = await fetch(apiUrl('/api/updates/'), {
+export async function loadUpdates(playerToken?: string): Promise<UpdateListItem[]> {
+  const query = playerToken ? `?player_token=${encodeURIComponent(playerToken)}` : '';
+  const headers = await getAuthHeaders();
+  const response = await fetch(apiUrl(`/api/updates/${query}`), {
     method: 'GET',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { ...(headers as Record<string, string>), Accept: 'application/json' },
   });
-  if (response.ok) {
-    const data: UpdatesResponse = await response.json();
-    return data.results ?? [];
-  }
-  return [];
+  if (!response.ok) return [];
+  const data: UpdatesResponse = await response.json();
+  return data.results ?? [];
 }
 
-export async function postReaction(
-  updateId: string,
-  playerToken: string,
-  message: string
-): Promise<Reaction | null> {
-  const response = await fetch(apiUrl('/api/updates/reactions/'), {
-    method: 'POST',
+export async function loadUpdateDetail(id: number, playerToken?: string): Promise<UpdateDetail | null> {
+  const query = playerToken ? `?player_token=${encodeURIComponent(playerToken)}` : '';
+  const headers = await getAuthHeaders();
+  const response = await fetch(apiUrl(`/api/updates/${id}/${query}`), {
+    method: 'GET',
+    headers: { ...(headers as Record<string, string>), Accept: 'application/json' },
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export async function toggleUpdateThumbsUp(
+  id: number,
+  active: boolean,
+  playerToken?: string,
+): Promise<{ thumbs_up_count: number; user_has_thumbs_up: boolean } | null> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(apiUrl(`/api/updates/${id}/thumbs-up/`), {
+    method: active ? 'POST' : 'DELETE',
     headers: {
+      ...(headers as Record<string, string>),
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      update_id: updateId,
-      player_token: playerToken,
-      message: message.trim(),
-    }),
+    body: JSON.stringify(playerToken ? { player_token: playerToken } : {}),
   });
-  if (response.status === 201) {
-    return response.json();
-  }
-  return null;
+  if (!response.ok) return null;
+  return response.json();
 }

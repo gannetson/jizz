@@ -11,7 +11,7 @@ from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesCoverView, GameListView, \
     GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, QuestionNextMediaView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
     PlayerScoreListView, \
-    PlayerStatsView, FeedbackListView, UpdateView, QuestionView, \
+    PlayerStatsView, FeedbackListView, QuestionView, \
     ReactionView, \
     FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
@@ -23,6 +23,12 @@ from jizz.data_views import (
     data_index_view,
     data_taxon_families_view,
     data_taxon_orders_view,
+)
+from jizz.update_views import (
+    UpdateDetailView,
+    UpdateEmailOpenTrackingView,
+    UpdateListView,
+    UpdateThumbsUpView,
 )
 from jizz.analytics_views import (
     UsageEventCreateView,
@@ -108,12 +114,27 @@ def join_game_redirect(request, token):
     })
 
 
+def open_update_redirect(request, pk):
+    """Open update in the app on mobile; go straight to the website on desktop."""
+    from jizz.usage_analytics import parse_device_type
+
+    fallback_url = request.build_absolute_uri(f'/updates/{pk}')
+    device = parse_device_type(request.META.get('HTTP_USER_AGENT', ''))
+    if device == 'desktop':
+        return HttpResponseRedirect(fallback_url)
+    return render(request, 'jizz/join_redirect.html', {
+        'deep_link': f'birdr://updates/{pk}',
+        'fallback_url': fallback_url,
+    })
+
+
 urlpatterns = [
     path('.well-known/apple-app-site-association', apple_app_site_association),
     path('.well-known/assetlinks.json', android_asset_links),
 
     path('join/challenge/<str:token>/', join_challenge_redirect, name='join-challenge'),
     path('join/<str:token>/', join_game_redirect, name='join-game'),
+    path('open/update/<int:pk>/', open_update_redirect, name='open-update'),
 
     path('admin/', admin.site.urls),
 
@@ -197,7 +218,10 @@ urlpatterns = [
 
     re_path(r"^api/feedback/$", FeedbackListView.as_view(), name="feedback"),
     path('api/app-version/', AppVersionView.as_view(), name='app-version'),
-    re_path(r"^api/updates/$", UpdateView.as_view(), name="updates"),
+    re_path(r"^api/updates/$", UpdateListView.as_view(), name="updates"),
+    re_path(r"^api/updates/(?P<pk>\d+)/$", UpdateDetailView.as_view(), name="update-detail"),
+    re_path(r"^api/updates/(?P<pk>\d+)/thumbs-up/$", UpdateThumbsUpView.as_view(), name="update-thumbs-up"),
+    path('api/updates/email-open/<uuid:token>/', UpdateEmailOpenTrackingView.as_view(), name='update-email-open'),
     re_path(r"^api/updates/reactions/$", ReactionView.as_view(), name="reactions"),
 
     path('api/birdr-journey/', BirdrJourneyView.as_view(), name='birdr-journey'),

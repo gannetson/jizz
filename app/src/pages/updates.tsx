@@ -1,23 +1,23 @@
-import {Heading} from "@chakra-ui/react";
+import { Heading, VStack } from "@chakra-ui/react";
 import { Page } from "../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
-import AppContext, {Update} from "../core/app-context"
+import AppContext from "../core/app-context"
 import {Loading} from "../components/loading"
-import {UpdateLine} from "../components/updates/update-line"
-import {loadUpdates} from "../core/updates"
+import {UpdateListItemCard} from "../components/updates/update-list-item"
+import {loadUpdates, type UpdateListItem} from "../core/updates"
 
 const UpdatesPage = () => {
-  const {loading, setLoading} = useContext(AppContext)
-  const [updates, setUpdates] = useState<Update[]>([])
+  const {loading, setLoading, player} = useContext(AppContext)
+  const [updates, setUpdates] = useState<UpdateListItem[]>([])
 
   useEffect(() => {
     setLoading(true)
-    loadUpdates().then(updates => {
-      setUpdates(updates)
+    loadUpdates(player?.token).then((items) => {
+      setUpdates(items)
       setLoading(false)
     })
-  }, []);
+  }, [player?.token, setLoading]);
 
   return (
     <Page>
@@ -31,7 +31,11 @@ const UpdatesPage = () => {
           {loading ? (
             <Loading/>
           ) : (
-            updates && updates.map((update, index) => <UpdateLine key={index} update={update}/>)
+            <VStack align="stretch" gap={4}>
+              {updates.map((update) => (
+                <UpdateListItemCard key={update.id} update={update} />
+              ))}
+            </VStack>
           )}
         </>
       </Page.Body>

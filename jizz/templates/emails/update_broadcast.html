@@ -1,0 +1,36 @@
+{% extends "emails/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<p>
+    {% if language == "nl" %}Hoi{% else %}Hi{% endif %} {{ user_name }},
+</p>
+<h2>{{ title }}</h2>
+<div class="update-body">
+    {{ body_html|safe }}
+</div>
+<div class="button-container">
+    <a href="{{ update_url }}" class="button">
+        {% if language == "nl" %}Open Birdr-app{% else %}Open Birdr App{% endif %}
+    </a>
+</div>
+{% if tracking_pixel_url %}
+<img src="{{ tracking_pixel_url }}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{{ footer_html|safe }}
+<p class="text-muted">
+    {% if language == "nl" %}
+    Deze e-mail is verstuurd naar {{ user_email|default:"jou" }} omdat je updates van Birdr ontvangt.
+    {% else %}
+    This email was sent to {{ user_email|default:"you" }} because you receive Birdr updates.
+    {% endif %}
+</p>
+<p class="text-muted">
+    <a href="{{ site_url }}/profile">{% if language == "nl" %}Profiel{% else %}Profile{% endif %}</a> |
+    <a href="{{ site_url }}/privacy/">{% if language == "nl" %}Privacy{% else %}Privacy{% endif %}</a>
+</p>
+{% endblock %}

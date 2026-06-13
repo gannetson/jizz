@@ -15,10 +15,10 @@ import { profileService, type UserProfile } from '../api/services/profile.servic
 import { BirdrLevelImage } from '../components/birdr-level-image';
 import { ProgressRing } from '../components/progress-ring';
 import { Feedback } from '../components/feedback';
-import { UpdateLine } from '../components/updates/update-line';
+import { UpdateListItemCard } from '../components/updates/update-list-item';
 import { Loading } from '../components/loading';
-import AppContext, { Update } from '../core/app-context';
-import { loadUpdates } from '../core/updates';
+import AppContext from '../core/app-context';
+import { loadUpdates, type UpdateListItem } from '../core/updates';
 import { getCountryDisplayName } from '../data/country-names-nl';
 import { Page } from '../shared/components/layout';
 
@@ -37,7 +37,7 @@ const HomePage = () => {
   const { player, loading, language } = useContext(AppContext);
   const locale = language === 'nl' ? 'nl' : 'en';
   const navigate = useNavigate();
-  const [updates, setUpdates] = useState<Update[]>([]);
+  const [updates, setUpdates] = useState<UpdateListItem[]>([]);
   const [activeJourney, setActiveJourney] = useState<BirdrJourney | null>(null);
   const [journeyLoading, setJourneyLoading] = useState(true);
   const [checklistSummary, setChecklistSummary] = useState<ChecklistSummary | null>(null);
@@ -348,7 +348,7 @@ const HomePage = () => {
             </Flex>
 
             <Feedback />
-            {updates && updates.length > 0 && <UpdateLine update={updates[0]} />}
+            {updates && updates.length > 0 && <UpdateListItemCard update={updates[0]} />}
             <Button variant="ghost" colorPalette="primary" onClick={() => navigate('/updates')}>
               <FormattedMessage id="more updates" defaultMessage="More updates" />
             </Button>

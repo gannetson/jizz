@@ -31,6 +31,7 @@ import {LoginModal} from "../../../components/auth/login-modal";
 import {authService} from "../../../api/services/auth.service";
 import {profileService, UserProfile} from "../../../api/services/profile.service";
 import {MenuProvider} from "./menu-context";
+import {OpenInAppOnLoad} from "../../../components/open-in-app-on-load";
 
 const Layout = () => {
   const {open: isOpen, onOpen, onClose} = useDisclosure()
@@ -92,6 +93,7 @@ const Layout = () => {
 
   return (
     <MenuProvider onOpenMenu={onOpen} onOpenUserMenu={handleUserIconClick}>
+      <OpenInAppOnLoad />
       <Outlet/>
       
       {/* Left drawer - Main menu */}

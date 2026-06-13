@@ -128,6 +128,29 @@ def open_update_redirect(request, pk):
     })
 
 
+def open_app_redirect(request):
+    """Open Birdr home (or a mapped path) in the app on mobile; stay on web on desktop."""
+    import re
+
+    from jizz.usage_analytics import parse_device_type
+
+    path = (request.GET.get('path') or '/').split('?')[0]
+    if not path.startswith('/'):
+        path = f'/{path}'
+
+    fallback_url = request.build_absolute_uri(path)
+    device = parse_device_type(request.META.get('HTTP_USER_AGENT', ''))
+    if device == 'desktop':
+        return HttpResponseRedirect(fallback_url)
+
+    update_match = re.match(r'^/updates/(\d+)/?$', path)
+    deep_link = f'birdr://updates/{update_match.group(1)}' if update_match else 'birdr://home'
+    return render(request, 'jizz/join_redirect.html', {
+        'deep_link': deep_link,
+        'fallback_url': fallback_url,
+    })
+
+
 urlpatterns = [
     path('.well-known/apple-app-site-association', apple_app_site_association),
     path('.well-known/assetlinks.json', android_asset_links),
@@ -135,6 +158,7 @@ urlpatterns = [
     path('join/challenge/<str:token>/', join_challenge_redirect, name='join-challenge'),
     path('join/<str:token>/', join_game_redirect, name='join-game'),
     path('open/update/<int:pk>/', open_update_redirect, name='open-update'),
+    path('open/app/', open_app_redirect, name='open-app'),
 
     path('admin/', admin.site.urls),
 

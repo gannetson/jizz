@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../api/config';
  * - Game join: https://birdr.pro/join/{token} or birdr://join/{token}
  * - Daily challenge invite: birdr://join/challenge/{invite_token} or https://birdr.pro/join/challenge/{invite_token}
  * - Update: birdr://updates/{id} or https://birdr.pro/open/update/{id}/
+ * - App home: birdr://home or https://birdr.pro/open/app/
  */
 export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
   const { handleOAuthRedirect, isAuthenticated } = useAuth();
@@ -33,6 +34,12 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
       if (resetParams) {
         handled.current = url;
         navigation.navigate('ResetPassword', { uid: resetParams.uid, token: resetParams.token });
+        return;
+      }
+
+      if (parseAppHomeUrl(url)) {
+        handled.current = url;
+        navigation.navigate('Home');
         return;
       }
 
@@ -83,6 +90,20 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
   }, [handleOAuthRedirect, loadGame, setGame, navigation, isAuthenticated]);
 
   return <>{children}</>;
+}
+
+function parseAppHomeUrl(url: string): boolean {
+  if (/^birdr:\/\/home\/?$/i.test(url) || url === 'birdr://') return true;
+
+  const base = API_BASE_URL.replace(/\/$/, '');
+  if (url.startsWith(base + '/open/app')) return true;
+
+  try {
+    const parsed = new URL(url);
+    if (/^\/open\/app\/?$/i.test(parsed.pathname)) return true;
+  } catch {}
+
+  return false;
 }
 
 function parseUpdateUrl(url: string): number | null {

@@ -160,6 +160,22 @@ class JoinRedirectTestCase(TestCase):
         self.assertIn(b'birdr://updates/42', response.content)
         self.assertIn(b'/updates/42', response.content)
 
+    def test_open_app_redirect_desktop_goes_to_home(self):
+        response = self.client.get(
+            '/open/app/',
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+        )
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertTrue(response['Location'].endswith('/'))
+
+    def test_open_app_redirect_mobile_tries_app_home(self):
+        response = self.client.get(
+            '/open/app/',
+            HTTP_USER_AGENT='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(b'birdr://home', response.content)
+
 
 class WellKnownTestCase(TestCase):
     """GET .well-known/apple-app-site-association and assetlinks.json."""

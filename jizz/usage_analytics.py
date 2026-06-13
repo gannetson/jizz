@@ -239,6 +239,30 @@ def _filtered_queryset(
     return qs
 
 
+def usage_by_ip_country(qs, *, limit: int = 50) -> list[dict[str, Any]]:
+    """Aggregate events by GeoIP country code (matches Top IP address locations)."""
+    from collections import Counter
+
+    from jizz.ip_geo import lookup_ip_location
+
+    counter: Counter[str] = Counter()
+    ip_rows = (
+        qs.exclude(ip_address__isnull=True)
+        .values('ip_address')
+        .annotate(events=Count('id'))
+    )
+    for row in ip_rows:
+        location = lookup_ip_location(str(row['ip_address']))
+        code = (location.get('country_code') or '').upper()
+        if code:
+            counter[code] += row['events']
+
+    return [
+        {'country_code': code, 'events': count}
+        for code, count in counter.most_common(limit)
+    ]
+
+
 def usage_stats_payload(
     start: date,
     end: date,
@@ -292,12 +316,7 @@ def usage_stats_payload(
         .annotate(events=Count('id'))
         .order_by('-events', 'event_type')
     )
-    by_country = list(
-        qs.exclude(country_code='')
-        .values('country_code')
-        .annotate(events=Count('id'))
-        .order_by('-events', 'country_code')
-    )
+    by_country = usage_by_ip_country(qs)
 
     session_qs = qs.exclude(session_key='').values('session_key').distinct()
     unique_sessions = session_qs.count()

@@ -44,25 +44,55 @@ class UsageAnalyticsAggregationTests(TestCase):
         self.day_one = timezone.make_aware(datetime(2026, 5, 1, 12, 0))
         self.day_two = timezone.make_aware(datetime(2026, 5, 2, 12, 0))
 
-    def _event(self, *, path, platform='web', device_type='desktop', country_code='NL', when=None, session_key='s1'):
+    def _event(self, *, path, platform='web', device_type='desktop', country_code='NL', when=None, session_key='s1', ip_address='127.0.0.1'):
         event = UsageEvent.objects.create(
             path=path,
             platform=platform,
             device_type=device_type,
             country_code=country_code,
             session_key=session_key,
-            ip_address='127.0.0.1',
+            ip_address=ip_address,
         )
         if when:
             UsageEvent.objects.filter(pk=event.pk).update(created_at=when)
         return event
 
     def test_usage_stats_payload_groups_paths_platforms_and_countries(self):
-        self._event(path='/start', platform='web', device_type='desktop', country_code='NL', when=self.day_one)
-        self._event(path='/start', platform='web', device_type='mobile', country_code='NL', when=self.day_one, session_key='s2')
-        self._event(path='/journey', platform='ios', device_type='mobile', country_code='US', when=self.day_two, session_key='s3')
+        self._event(
+            path='/start',
+            platform='web',
+            device_type='desktop',
+            country_code='NL',
+            when=self.day_one,
+            ip_address='84.85.68.210',
+        )
+        self._event(
+            path='/start',
+            platform='web',
+            device_type='mobile',
+            country_code='NL',
+            when=self.day_one,
+            session_key='s2',
+            ip_address='84.85.68.210',
+        )
+        self._event(
+            path='/journey',
+            platform='ios',
+            device_type='mobile',
+            country_code='US',
+            when=self.day_two,
+            session_key='s3',
+            ip_address='139.178.131.76',
+        )
 
-        payload = usage_stats_payload(date(2026, 5, 1), date(2026, 5, 2))
+        with patch(
+            'jizz.ip_geo.lookup_ip_location',
+            side_effect=lambda ip: {
+                '84.85.68.210': {'country_code': 'NL', 'country_name': 'Netherlands', 'city': ''},
+                '139.178.131.76': {'country_code': 'US', 'country_name': 'United States', 'city': ''},
+            }.get(ip, {}),
+        ):
+            payload = usage_stats_payload(date(2026, 5, 1), date(2026, 5, 2))
 
         self.assertEqual(payload['total_events'], 3)
         self.assertEqual(payload['unique_sessions'], 3)

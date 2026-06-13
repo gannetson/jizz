@@ -116,7 +116,7 @@ class UpdateEmailTests(TestCase):
         send_test_update_email(self.update, self.admin)
         self.assertEqual(len(mail.outbox), 1)
         html = mail.outbox[0].alternatives[0][0]
-        self.assertIn(f'/open/update/{self.update.id}/', html)
+        self.assertIn('href="https://birdr.pro/"', html)
         self.assertIn('Open Birdr App', html)
 
 

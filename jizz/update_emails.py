@@ -93,14 +93,6 @@ def _site_url() -> str:
     return getattr(settings, 'SITE_URL', 'https://birdr.pro').rstrip('/')
 
 
-def _update_web_url(update_id: int) -> str:
-    return f'{_site_url()}/updates/{update_id}'
-
-
-def _update_open_url(update_id: int) -> str:
-    return f'{_site_url()}/open/update/{update_id}/'
-
-
 def _tracking_pixel_url(token) -> str:
     return f'{_site_url()}/api/updates/email-open/{token}/'
 
@@ -129,7 +121,6 @@ def _render_update_email(update: Update, *, user, language: str, tracking_token=
         'user_name': user_display_name(user),
         'user_email': user.email,
         'site_url': _site_url(),
-        'update_url': _update_open_url(update.pk),
         'logo_url': logo_url,
         'footer_html': footer,
         'tracking_pixel_url': _tracking_pixel_url(tracking_token) if tracking_token else None,

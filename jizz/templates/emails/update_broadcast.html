@@ -2,16 +2,41 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block email_styles %}
+        .email-container {
+            margin: 0;
+            max-width: none;
+            width: 100%;
+        }
+        .email-header {
+            text-align: left;
+        }
+        .email-footer {
+            text-align: left;
+        }
+        .button-container {
+            text-align: left;
+        }
+        .logo {
+            margin: 0;
+        }
+{% endblock %}
+
 {% block content %}
 <p>
     {% if language == "nl" %}Hoi{% else %}Hi{% endif %} {{ user_name }},
 </p>
 <h2>{{ title }}</h2>
+<div class="button-container">
+    <a href="{{ site_url }}/" class="button">
+        {% if language == "nl" %}Open Birdr-app{% else %}Open Birdr App{% endif %}
+    </a>
+</div>
 <div class="update-body">
     {{ body_html|safe }}
 </div>
 <div class="button-container">
-    <a href="{{ update_url }}" class="button">
+    <a href="{{ site_url }}/" class="button">
         {% if language == "nl" %}Open Birdr-app{% else %}Open Birdr App{% endif %}
     </a>
 </div>

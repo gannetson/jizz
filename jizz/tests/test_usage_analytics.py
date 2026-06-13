@@ -6,10 +6,12 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from jizz.api_event_labels import resolve_api_event_label, resolve_websocket_event_label
 from jizz.models import Country, UsageEvent, UserProfile
 from jizz.usage_analytics import (
     parse_device_type,
     record_usage_event,
+    record_websocket_usage_event,
     resolve_country_code,
     usage_stats_payload,
 )
@@ -110,3 +112,62 @@ class UsageAnalyticsApiTests(TestCase):
         self.assertEqual(event.path, '/data/')
         self.assertEqual(event.device_type, 'mobile')
         self.assertEqual(event.ip_address, '10.0.0.1')
+
+
+class ApiEventLabelTests(TestCase):
+    def test_resolve_api_event_label_known_endpoints(self):
+        self.assertEqual(resolve_api_event_label('answer-create', 'POST'), 'Question answered')
+        self.assertEqual(resolve_api_event_label('game-list', 'POST'), 'Game created')
+        self.assertIsNone(resolve_api_event_label('analytics-event', 'POST'))
+        self.assertIsNone(resolve_api_event_label('app-version', 'GET'))
+        self.assertIsNone(resolve_api_event_label('species-list', 'GET'))
+
+    def test_resolve_api_event_label_fallback(self):
+        self.assertEqual(
+            resolve_api_event_label('birdr-journey-detail', 'DELETE'),
+            'API · Birdr Journey Detail',
+        )
+
+    def test_resolve_websocket_event_label(self):
+        self.assertEqual(resolve_websocket_event_label('start_game'), 'Game started')
+        self.assertEqual(resolve_websocket_event_label('submit_answer'), 'Question answered')
+        self.assertIsNone(resolve_websocket_event_label('unknown_action'))
+
+
+class ApiUsageMiddlewareTests(TestCase):
+    def test_successful_api_call_is_logged(self):
+        client = APIClient()
+        before = UsageEvent.objects.count()
+        response = client.get('/api/updates/', REMOTE_ADDR='198.51.100.4')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(UsageEvent.objects.count(), before + 1)
+        event = UsageEvent.objects.latest('created_at')
+        self.assertEqual(event.event_type, 'api')
+        self.assertEqual(event.path, 'Updates viewed')
+        self.assertEqual(event.ip_address, '198.51.100.4')
+
+    def test_skipped_api_call_is_not_logged(self):
+        client = APIClient()
+        before = UsageEvent.objects.filter(event_type='api').count()
+        response = client.post(
+            reverse('analytics-event'),
+            {'path': '/x', 'platform': 'web'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(UsageEvent.objects.filter(event_type='api').count(), before)
+
+
+class WebSocketUsageTests(TestCase):
+    def test_record_websocket_usage_event(self):
+        scope = {
+            'client': ('203.0.113.5', 12345),
+            'headers': [(b'user-agent', b'Birdr/1.0 Android')],
+        }
+        event = record_websocket_usage_event(scope, action='start_game')
+        self.assertIsNotNone(event)
+        self.assertEqual(event.event_type, 'websocket')
+        self.assertEqual(event.path, 'Game started')
+        self.assertEqual(event.platform, 'android')
+        self.assertEqual(event.ip_address, '203.0.113.5')
+

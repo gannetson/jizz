@@ -1363,6 +1363,8 @@ class UsageEvent(models.Model):
     EVENT_TYPE_CHOICES = [
         ('page_view', 'Page view'),
         ('feature', 'Feature'),
+        ('api', 'API call'),
+        ('websocket', 'WebSocket'),
     ]
     PLATFORM_CHOICES = [
         ('web', 'Web'),

@@ -9,6 +9,7 @@ callback and use our HTTPS completion URL as the redirect_uri sent to Apple.
 
 from django.utils.deprecation import MiddlewareMixin
 
+from jizz.api_event_labels import resolve_api_event_label
 from jizz.usage_analytics import record_usage_event
 
 _SERVER_RENDERED_PREFIXES = ('/data/', '/country/', '/staff/')
@@ -74,6 +75,40 @@ class UsageAnalyticsMiddleware(MiddlewareMixin):
                 path=path,
                 event_type='page_view',
                 platform='web',
+            )
+        except Exception:
+            pass
+
+        return response
+
+
+class ApiUsageAnalyticsMiddleware(MiddlewareMixin):
+    """Log successful REST API calls with human-readable labels."""
+
+    def process_response(self, request, response):
+        if request.method == 'OPTIONS':
+            return response
+        if not request.path.startswith('/api/'):
+            return response
+        if response.status_code >= 400:
+            return response
+
+        match = getattr(request, 'resolver_match', None)
+        url_name = match.url_name if match else None
+        label = resolve_api_event_label(url_name, request.method, request.path)
+        if not label:
+            return response
+
+        try:
+            record_usage_event(
+                request,
+                path=label,
+                event_type='api',
+                metadata={
+                    'url_name': url_name,
+                    'method': request.method,
+                    'path': request.path,
+                },
             )
         except Exception:
             pass

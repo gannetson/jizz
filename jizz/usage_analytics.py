@@ -8,11 +8,12 @@ from django.db.models import Count
 from django.db.models.functions import TruncDay
 from django.utils import timezone
 
+from jizz.api_event_labels import resolve_websocket_event_label
 from jizz.models import UsageEvent, UserProfile
 
 _PLATFORM_CHOICES = {'web', 'ios', 'android'}
 _DEVICE_CHOICES = {'desktop', 'mobile', 'tablet', 'unknown'}
-_EVENT_TYPE_CHOICES = {'page_view', 'feature'}
+_EVENT_TYPE_CHOICES = {'page_view', 'feature', 'api', 'websocket'}
 _COUNTRY_RE = re.compile(r'^[A-Za-z]{2}$')
 
 
@@ -59,6 +60,23 @@ def parse_device_type(user_agent: str) -> str:
     return 'desktop'
 
 
+def infer_platform_from_user_agent(user_agent: str) -> str:
+    ua = (user_agent or '').lower()
+    if any(token in ua for token in ('iphone', 'ipad', 'ios', 'cfnetwork')):
+        return 'ios'
+    if any(token in ua for token in ('android', 'okhttp', 'dalvik')):
+        return 'android'
+    return 'web'
+
+
+def infer_platform_from_request(request) -> str:
+    custom = (request.META.get('HTTP_X_BIRDR_PLATFORM') or '').strip().lower()
+    if custom in _PLATFORM_CHOICES:
+        return custom
+    user_agent = request.META.get('HTTP_USER_AGENT') or ''
+    return infer_platform_from_user_agent(user_agent)
+
+
 def normalize_platform(value: str | None) -> str:
     platform = (value or 'web').strip().lower()
     return platform if platform in _PLATFORM_CHOICES else 'web'
@@ -92,8 +110,8 @@ def record_usage_event(
 
     return UsageEvent.objects.create(
         event_type=normalize_event_type(event_type),
-        path=normalize_path(path),
-        platform=normalize_platform(platform),
+        path=normalize_path(path) if event_type in ('page_view', 'feature') else path[:500],
+        platform=normalize_platform(platform or infer_platform_from_request(request)),
         device_type=device_type,
         country_code=resolve_country_code(request, country_code),
         ip_address=get_client_ip(request),
@@ -101,6 +119,53 @@ def record_usage_event(
         session_key=(session_key or '')[:64],
         user_agent=user_agent,
         metadata=metadata or {},
+    )
+
+
+def _scope_header(scope, name: str) -> str:
+    wanted = name.lower().encode('latin1')
+    for key, value in scope.get('headers') or []:
+        if key.lower() == wanted:
+            return value.decode('latin1', errors='replace')
+    return ''
+
+
+def _scope_client_ip(scope) -> str | None:
+    client = scope.get('client')
+    if client:
+        return client[0]
+    forwarded = _scope_header(scope, 'x-forwarded-for')
+    if forwarded:
+        return forwarded.split(',')[0].strip() or None
+    return None
+
+
+def record_websocket_usage_event(
+    scope,
+    *,
+    action: str,
+    metadata: dict | None = None,
+) -> UsageEvent | None:
+    label = resolve_websocket_event_label(action)
+    if not label:
+        return None
+
+    user_agent = _scope_header(scope, 'user-agent')[:2000]
+    country = (_scope_header(scope, 'cf-ipcountry') or '').strip().upper()[:2]
+    if country == 'XX':
+        country = ''
+
+    return UsageEvent.objects.create(
+        event_type='websocket',
+        path=label[:500],
+        platform=normalize_platform(infer_platform_from_user_agent(user_agent)),
+        device_type=parse_device_type(user_agent),
+        country_code=country if _COUNTRY_RE.match(country or '') else '',
+        ip_address=_scope_client_ip(scope),
+        user=None,
+        session_key='',
+        user_agent=user_agent,
+        metadata={'action': action, **(metadata or {})},
     )
 
 
@@ -196,6 +261,11 @@ def usage_stats_payload(
         .annotate(events=Count('id'))
         .order_by('-events', 'device_type')
     )
+    by_event_type = list(
+        qs.values('event_type')
+        .annotate(events=Count('id'))
+        .order_by('-events', 'event_type')
+    )
     by_country = list(
         qs.exclude(country_code='')
         .values('country_code')
@@ -221,6 +291,7 @@ def usage_stats_payload(
         'top_paths': top_paths,
         'by_platform': by_platform,
         'by_device': by_device,
+        'by_event_type': by_event_type,
         'by_country': by_country,
         'country_map': country_map,
     }

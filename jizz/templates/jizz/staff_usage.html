@@ -90,8 +90,8 @@
 {% block content %}
     <h1>Usage metrics <span class="staff-badge">Staff</span></h1>
     <p class="muted">
-        First-party analytics stored in our database. IP addresses are recorded for staff review only and are not shown on this dashboard.
-        Country comes from Cloudflare, profile, or client when available.
+        First-party analytics stored in our database: page views, API calls (REST/WSGI), and WebSocket game actions (Channels/ASGI).
+        IP addresses are recorded for staff review only and are not shown on this dashboard.
     </p>
 
     <form class="toolbar" id="usage-form" method="get" action="{% url 'staff-usage' %}">
@@ -131,6 +131,8 @@
                 <option value="">All</option>
                 <option value="page_view" {% if event_type == "page_view" %}selected{% endif %}>Page views</option>
                 <option value="feature" {% if event_type == "feature" %}selected{% endif %}>Features</option>
+                <option value="api" {% if event_type == "api" %}selected{% endif %}>API calls</option>
+                <option value="websocket" {% if event_type == "websocket" %}selected{% endif %}>WebSocket</option>
             </select>
         </label>
         <button type="submit" class="btn">Update</button>
@@ -158,9 +160,15 @@
 
     <div class="chart-grid">
         <div>
-            <h2>Top paths / screens</h2>
+            <h2>Top paths &amp; events</h2>
             <div class="chart-wrap">
                 <canvas id="usage-paths-chart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>By event type</h2>
+            <div class="chart-wrap">
+                <canvas id="usage-event-type-chart"></canvas>
             </div>
         </div>
         <div>
@@ -211,11 +219,19 @@
             let pathsChart = null;
             let platformChart = null;
             let deviceChart = null;
+            let eventTypeChart = null;
             let worldMap = null;
 
+            const EVENT_TYPE_LABELS = {
+                page_view: "Page views",
+                feature: "Features",
+                api: "API calls",
+                websocket: "WebSocket",
+            };
+
             function destroyCharts() {
-                [timelineChart, pathsChart, platformChart, deviceChart].forEach((c) => c && c.destroy());
-                timelineChart = pathsChart = platformChart = deviceChart = null;
+                [timelineChart, pathsChart, platformChart, deviceChart, eventTypeChart].forEach((c) => c && c.destroy());
+                timelineChart = pathsChart = platformChart = deviceChart = eventTypeChart = null;
             }
 
             function updateSummary(payload) {
@@ -301,6 +317,23 @@
                 });
             }
 
+            function buildEventTypeChart(payload) {
+                const labels = payload.by_event_type.map((row) => EVENT_TYPE_LABELS[row.event_type] || row.event_type);
+                const data = payload.by_event_type.map((row) => row.events);
+                if (eventTypeChart) eventTypeChart.destroy();
+                eventTypeChart = new Chart(document.getElementById("usage-event-type-chart"), {
+                    type: "doughnut",
+                    data: {
+                        labels,
+                        datasets: [{
+                            data,
+                            backgroundColor: ["#8b6419", "#2a6b8b", "#6d4e14", "#990000"],
+                        }],
+                    },
+                    options: { responsive: true, maintainAspectRatio: false },
+                });
+            }
+
             function buildWorldMap(payload) {
                 const values = payload.country_map || {};
                 const container = document.getElementById("usage-world-map");
@@ -345,6 +378,7 @@
                     deviceChart
                 );
                 buildPlatformChart(payload);
+                buildEventTypeChart(payload);
                 buildWorldMap(payload);
             }
 

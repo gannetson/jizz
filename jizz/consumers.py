@@ -17,6 +17,8 @@ from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from jizz.usage_analytics import record_websocket_usage_event
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,6 +88,16 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 )
             )
 
+    async def _log_websocket_action(self, action: str):
+        try:
+            await database_sync_to_async(record_websocket_usage_event)(
+                self.scope,
+                action=action,
+                metadata={'game_token': self.game_token},
+            )
+        except Exception:
+            logger.exception("Failed to record websocket usage for %s", action)
+
     # --- Handlers ---
 
     async def _handle_end_game(self, data):
@@ -140,6 +152,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
             self.game_group_name,
             {"type": "mpg_game_ended", "game": game_data},
         )
+        await self._log_websocket_action("end_game")
 
     async def _handle_join_game(self, data):
         from jizz.models import PlayerScore, Game, Player
@@ -166,6 +179,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self._send_game_update_to_self()
         await self._send_current_question_to_self()
         await self._send_current_answer_to_self()
+        await self._log_websocket_action("join_game")
 
     async def _handle_start_game(self, data):
         from .models import Game
@@ -192,6 +206,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
             {"type": "game_started"},
         )
         await self._run_next_question()
+        await self._log_websocket_action("start_game")
 
     async def _handle_next_question(self, data):
         from .models import Game
@@ -207,6 +222,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             return
         await self._run_next_question()
+        await self._log_websocket_action("next_question")
 
     async def _handle_submit_answer(self, data):
         from jizz.models import PlayerScore, Player, Question, Answer, Game
@@ -291,6 +307,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
         )
 
         await self._broadcast_players_update()
+        await self._log_websocket_action("submit_answer")
 
     async def _handle_rematch(self, data):
         player_token = (data.get("player_token") or "").strip()
@@ -323,6 +340,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                     }
                 )
             )
+            await self._log_websocket_action("rematch")
         except Exception as e:
             logger.exception("rematch failed")
             await self.send(

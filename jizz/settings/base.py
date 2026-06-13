@@ -111,6 +111,7 @@ MIDDLEWARE = [
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'jizz.middleware.AppVersionNoCacheMiddleware',
     'jizz.middleware.UsageAnalyticsMiddleware',
+    'jizz.middleware.ApiUsageAnalyticsMiddleware',
 ]
 
 ROOT_URLCONF = 'jizz.urls'

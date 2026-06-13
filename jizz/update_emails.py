@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
+import uuid
+from datetime import timedelta
 from html import unescape
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import connection
+from django.db.models import QuerySet
 from django.template.loader import render_to_string
 from django.utils import timezone
 import html2text
@@ -97,6 +102,62 @@ def _tracking_pixel_url(token) -> str:
     return f'{_site_url()}/api/updates/email-open/{token}/'
 
 
+def get_update_subscribers() -> QuerySet[UserProfile]:
+    return (
+        UserProfile.objects.filter(receive_updates=True, user__email__isnull=False)
+        .exclude(user__email='')
+        .select_related('user')
+    )
+
+
+def get_users_already_emailed(update: Update) -> set[int]:
+    return set(
+        UpdateEmailRecipient.objects.filter(
+            delivery__update=update,
+            delivery__is_test=False,
+        ).values_list('user_id', flat=True)
+    )
+
+
+def get_pending_subscribers(update: Update) -> QuerySet[UserProfile]:
+    already_sent = get_users_already_emailed(update)
+    pending = get_update_subscribers()
+    if already_sent:
+        pending = pending.exclude(user_id__in=already_sent)
+    return pending
+
+
+def get_update_email_stats(update: Update) -> dict[str, int]:
+    already_sent = get_users_already_emailed(update)
+    subscribers_total = get_update_subscribers().count()
+    sent = len(already_sent)
+    return {
+        'subscribers_total': subscribers_total,
+        'sent': sent,
+        'pending': max(subscribers_total - sent, 0),
+    }
+
+
+def is_broadcast_in_progress(update: Update) -> bool:
+    clear_stale_broadcasts(update)
+    return UpdateEmailDelivery.objects.filter(
+        update=update,
+        is_test=False,
+        status=UpdateEmailDelivery.STATUS_SENDING,
+    ).exists()
+
+
+def clear_stale_broadcasts(update: Update, *, max_age_minutes: int = 60) -> int:
+    """Mark abandoned in-progress deliveries as failed so broadcasts can be resumed."""
+    cutoff = timezone.now() - timedelta(minutes=max_age_minutes)
+    return UpdateEmailDelivery.objects.filter(
+        update=update,
+        is_test=False,
+        status=UpdateEmailDelivery.STATUS_SENDING,
+        sent_at__lt=cutoff,
+    ).update(status=UpdateEmailDelivery.STATUS_FAILED)
+
+
 def _render_update_email(update: Update, *, user, language: str, tracking_token=None) -> tuple[str, str, str]:
     mail_settings = MailSettings.load()
     title = update.title_for_language(language)
@@ -143,17 +204,20 @@ def send_update_email_to_user(
 ) -> UpdateEmailRecipient | None:
     if not user.email:
         return None
-    language = resolve_language(user)
-    recipient = UpdateEmailRecipient.objects.create(
-        delivery=delivery,
+    if UpdateEmailRecipient.objects.filter(
+        delivery__update=update,
+        delivery__is_test=False,
         user=user,
-        email=user.email,
-    )
+    ).exists():
+        return None
+
+    language = resolve_language(user)
+    tracking_token = uuid.uuid4()
     subject, text_content, html_content = _render_update_email(
         update,
         user=user,
         language=language,
-        tracking_token=recipient.tracking_token,
+        tracking_token=tracking_token,
     )
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'info@birdr.pro')
     msg = EmailMultiAlternatives(
@@ -164,7 +228,12 @@ def send_update_email_to_user(
     )
     msg.attach_alternative(html_content, 'text/html')
     msg.send()
-    return recipient
+    return UpdateEmailRecipient.objects.create(
+        delivery=delivery,
+        user=user,
+        email=user.email,
+        tracking_token=tracking_token,
+    )
 
 
 def send_test_update_email(update: Update, user) -> bool:
@@ -175,6 +244,7 @@ def send_test_update_email(update: Update, user) -> bool:
         sent_by=user,
         is_test=True,
         recipient_count=1,
+        status=UpdateEmailDelivery.STATUS_COMPLETED,
     )
     try:
         send_update_email_to_user(update, user, delivery=delivery)
@@ -185,28 +255,70 @@ def send_test_update_email(update: Update, user) -> bool:
         return False
 
 
-def send_update_email_broadcast(update: Update, sent_by) -> UpdateEmailDelivery:
-    users = (
-        UserProfile.objects.filter(receive_updates=True, user__email__isnull=False)
-        .exclude(user__email='')
-        .select_related('user')
-    )
+def send_update_email_broadcast(update: Update, sent_by, *, delivery: UpdateEmailDelivery | None = None) -> UpdateEmailDelivery | None:
+    """Send to subscribers who have not received this update yet. Safe to call again to resume."""
+    pending = get_pending_subscribers(update)
+    pending_count = pending.count()
+    if pending_count == 0:
+        return None
+
+    if delivery is None:
+        delivery = UpdateEmailDelivery.objects.create(
+            update=update,
+            sent_by=sent_by,
+            is_test=False,
+            recipient_count=0,
+            status=UpdateEmailDelivery.STATUS_SENDING,
+        )
+
+    sent = 0
+    try:
+        for profile in pending.iterator():
+            try:
+                if send_update_email_to_user(update, profile.user, delivery=delivery):
+                    sent += 1
+            except Exception:
+                logger.exception('Update email failed for user %s', profile.user_id)
+        delivery.recipient_count = sent
+        delivery.status = UpdateEmailDelivery.STATUS_COMPLETED
+        delivery.save(update_fields=['recipient_count', 'status'])
+    except Exception:
+        logger.exception('Update email broadcast failed for update %s', update.pk)
+        delivery.recipient_count = sent
+        delivery.status = UpdateEmailDelivery.STATUS_FAILED
+        delivery.save(update_fields=['recipient_count', 'status'])
+        raise
+
+    return delivery
+
+
+def start_update_email_broadcast_async(update: Update, sent_by) -> bool:
+    """Start a background thread so admin HTTP requests do not time out."""
+    if is_broadcast_in_progress(update):
+        return False
+
+    pending_count = get_pending_subscribers(update).count()
+    if pending_count == 0:
+        return False
+
     delivery = UpdateEmailDelivery.objects.create(
         update=update,
         sent_by=sent_by,
         is_test=False,
         recipient_count=0,
+        status=UpdateEmailDelivery.STATUS_SENDING,
     )
-    sent = 0
-    for profile in users.iterator():
+
+    def _run():
         try:
-            send_update_email_to_user(update, profile.user, delivery=delivery)
-            sent += 1
+            send_update_email_broadcast(update, sent_by, delivery=delivery)
         except Exception:
-            logger.exception('Update email failed for user %s', profile.user_id)
-    delivery.recipient_count = sent
-    delivery.save(update_fields=['recipient_count'])
-    return delivery
+            logger.exception('Background update email broadcast failed for update %s', update.pk)
+        finally:
+            connection.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return True
 
 
 def mark_email_opened(tracking_token) -> bool:

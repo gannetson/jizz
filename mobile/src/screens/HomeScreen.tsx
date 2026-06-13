@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
-import { loadUpdates, Update } from '../api/updates';
+import { loadUpdates, UpdateListItem } from '../api/updates';
+import { UpdateListItemCard } from '../components/UpdateListItemCard';
 import {
   findInProgressBirdrJourney,
   getStoredBirdrJourneyCountryCode,
@@ -57,25 +58,17 @@ type RootStackParamList = {
   BirdrJourneyIntro: undefined;
   BirdrJourneyProgress: { countryCode: string };
   Updates: undefined;
+  UpdateDetail: { updateId: number };
   Help: undefined;
   Login: undefined;
 };
-
-function formatDate(s: string) {
-  try {
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? s : d.toLocaleDateString(undefined, { dateStyle: 'medium' });
-  } catch {
-    return s;
-  }
-}
 
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { profile, ready: profileReady } = useProfile();
-  const [updates, setUpdates] = useState<Update[]>([]);
+  const [updates, setUpdates] = useState<UpdateListItem[]>([]);
   const [activeJourney, setActiveJourney] = useState<BirdrJourney | null>(null);
   const [journeyLoading, setJourneyLoading] = useState(true);
   const [checklistSummary, setChecklistSummary] = useState<ChecklistSummary | null>(null);
@@ -284,16 +277,12 @@ export function HomeScreen() {
       )}
       <FeedbackForm />
       {updates.length > 0 && (
-        <View style={styles.updateCard}>
-          <View style={styles.updateCardHeader}>
-            <Text style={styles.updateCardTitle}>{updates[0].title}</Text>
-          </View>
-          <Text style={styles.updateCardMessage} numberOfLines={3}>{updates[0].message}</Text>
-          <View style={styles.updateCardFooter}>
-            <Text style={styles.updateCardMeta}>{updates[0].user?.first_name ?? t('app_name')}</Text>
-            <Text style={styles.updateCardDate}>{formatDate(updates[0].created)}</Text>
-          </View>
-        </View>
+        <UpdateListItemCard
+          update={updates[0]}
+          readMoreLabel={t('read_more')}
+          style={styles.homeUpdateCard}
+          onPress={() => navigation.navigate('UpdateDetail', { updateId: updates[0].id })}
+        />
       )}
       <TouchableOpacity
         style={styles.ghostButton}
@@ -452,27 +441,8 @@ const styles = StyleSheet.create({
     color: colors.primary[500],
     fontSize: 16,
   },
-  updateCard: {
-    borderWidth: 1,
-    borderColor: colors.primary[200],
-    borderRadius: 8,
+  homeUpdateCard: {
     marginVertical: 12,
-    overflow: 'hidden',
+    marginBottom: 4,
   },
-  updateCardHeader: {
-    backgroundColor: colors.primary[200],
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  updateCardTitle: { fontSize: 16, fontWeight: '700', color: colors.primary[800] },
-  updateCardMessage: { fontSize: 15, color: colors.primary[800], padding: 14, lineHeight: 22 },
-  updateCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingBottom: 12,
-  },
-  updateCardMeta: { fontSize: 14, color: colors.primary[600] },
-  updateCardDate: { fontSize: 14, fontStyle: 'italic', color: colors.primary[600] },
-  updateCardReactions: { paddingHorizontal: 14, paddingBottom: 12 },
 });

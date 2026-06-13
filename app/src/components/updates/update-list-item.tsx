@@ -15,10 +15,13 @@ export function UpdateListItemCard({ update }: { update: UpdateListItem }) {
         overflow="hidden"
         _hover={{ borderColor: 'primary.300', boxShadow: 'sm' }}
       >
-        <Box bg="primary.100" px={4} py={3}>
-          <Heading size="sm" color="primary.800">
+        <Box bg="primary.100" px={4} py={3} display="flex" flexDirection="row" alignItems="center" gap={2}>
+          <Heading size="sm" color="primary.800" flex="1">
             {update.title}
           </Heading>
+          <Text color="primary.700" fontSize="lg" lineHeight="1" aria-hidden>
+            ›
+          </Text>
         </Box>
         <Box px={4} py={3}>
           <Text color="primary.700" fontSize="sm" lineClamp={3}>
@@ -33,6 +36,11 @@ export function UpdateListItemCard({ update }: { update: UpdateListItem }) {
               👍 {update.thumbs_up_count}
             </Text>
           )}
+          <Flex justify="flex-end" mt={3} pt={3} borderTopWidth="1px" borderTopColor="primary.100">
+            <Text fontSize="sm" fontWeight="semibold" color="primary.700">
+              <FormattedMessage id="read_more" defaultMessage="Read more" /> →
+            </Text>
+          </Flex>
         </Box>
       </Box>
     </RouterLink>

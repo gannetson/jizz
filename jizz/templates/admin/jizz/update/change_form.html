@@ -7,11 +7,20 @@
             <a href="{{ send_test_email_url }}" class="historylink">Send test email to me</a>
         </li>
     {% endif %}
-    {% if original and send_broadcast_url %}
+    {% if original and send_broadcast_url and email_stats.pending %}
         <li>
-            <a href="{{ send_broadcast_url }}" class="historylink" onclick="return confirm('Email all users with receive updates enabled?');">
-                Send to subscribers
+            <a href="{{ send_broadcast_url }}" class="historylink"
+               onclick="return confirm('{% if email_stats.sent %}Resume sending to {{ email_stats.pending }} remaining subscribers? ({{ email_stats.sent }} already received this update.){% else %}Email {{ email_stats.pending }} subscribers with receive updates enabled?{% endif %}');">
+                {% if email_stats.sent %}Resume send ({{ email_stats.pending }} remaining){% else %}Send to subscribers{% endif %}
             </a>
+        </li>
+    {% elif original and email_stats and email_stats.pending == 0 and email_stats.sent %}
+        <li>
+            <span class="historylink" style="opacity:0.6;cursor:default;">All subscribers emailed</span>
+        </li>
+    {% elif original and broadcast_in_progress %}
+        <li>
+            <span class="historylink" style="opacity:0.6;cursor:default;">Sending in progress…</span>
         </li>
     {% endif %}
 {% endblock %}

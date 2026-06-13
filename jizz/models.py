@@ -1040,6 +1040,15 @@ class MailSettings(models.Model):
 
 
 class UpdateEmailDelivery(models.Model):
+    STATUS_SENDING = 'sending'
+    STATUS_COMPLETED = 'completed'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_SENDING, 'Sending'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
     update = models.ForeignKey(Update, related_name='email_deliveries', on_delete=models.CASCADE)
     sent_by = models.ForeignKey(
         'auth.User',
@@ -1049,6 +1058,7 @@ class UpdateEmailDelivery(models.Model):
         related_name='update_email_deliveries',
     )
     is_test = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_COMPLETED)
     sent_at = models.DateTimeField(auto_now_add=True)
     recipient_count = models.PositiveIntegerField(default=0)
 

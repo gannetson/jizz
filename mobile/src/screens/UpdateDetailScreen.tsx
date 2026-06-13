@@ -51,6 +51,7 @@ export function UpdateDetailScreen() {
   const [thumbsUpCount, setThumbsUpCount] = useState(0);
   const [hasThumbsUp, setHasThumbsUp] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [webViewHeight, setWebViewHeight] = useState(1);
 
   const load = useCallback(async () => {
     if (!updateId) return;
@@ -66,6 +67,7 @@ export function UpdateDetailScreen() {
       setAuthor(update.user?.first_name ?? update.user?.username ?? t('app_name'));
       setCreated(formatDate(update.created));
       setHtmlContent(bodyToHtml(update.body));
+      setWebViewHeight(1);
       setThumbsUpCount(update.thumbs_up_count);
       setHasThumbsUp(update.user_has_thumbs_up);
     } catch (e: any) {
@@ -91,7 +93,28 @@ export function UpdateDetailScreen() {
     setToggling(false);
   };
 
-  const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:system-ui;font-size:16px;color:#31220a;margin:0;padding:8px;line-height:1.6;} img{max-width:100%;height:auto;border-radius:8px;}</style></head><body>${htmlContent}</body></html>`;
+  const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:system-ui;font-size:16px;color:#31220a;margin:0;padding:0;line-height:1.6;} img{max-width:100%;height:auto;border-radius:8px;}</style></head><body>${htmlContent}</body></html>`;
+
+  const webViewHeightScript = `
+    (function () {
+      function postHeight() {
+        var height = Math.max(
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight
+        );
+        window.ReactNativeWebView.postMessage(String(height));
+      }
+      postHeight();
+      window.addEventListener('load', postHeight);
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(postHeight).observe(document.body);
+      }
+      Array.from(document.images || []).forEach(function (img) {
+        img.addEventListener('load', postHeight);
+      });
+    })();
+    true;
+  `;
 
   if (loading) {
     return (
@@ -119,9 +142,6 @@ export function UpdateDetailScreen() {
         <Text style={styles.meta}>{author}</Text>
         <Text style={styles.meta}>{created}</Text>
       </View>
-      <View style={styles.webWrap}>
-        <WebView originWhitelist={['*']} source={{ html }} style={styles.webview} scrollEnabled={false} />
-      </View>
       <TouchableOpacity
         style={[styles.thumbsButton, hasThumbsUp && styles.thumbsButtonActive]}
         onPress={onToggleThumbsUp}
@@ -134,6 +154,19 @@ export function UpdateDetailScreen() {
       {!player?.token && (
         <Text style={styles.hint}>{t('login_to_thumbs_up')}</Text>
       )}
+      <WebView
+        originWhitelist={['*']}
+        source={{ html }}
+        style={[styles.webview, { height: webViewHeight }]}
+        scrollEnabled={false}
+        injectedJavaScript={webViewHeightScript}
+        onMessage={(event) => {
+          const nextHeight = Number(event.nativeEvent.data);
+          if (nextHeight > 0 && nextHeight !== webViewHeight) {
+            setWebViewHeight(nextHeight);
+          }
+        }}
+      />
     </ScrollView>
   );
 }
@@ -143,11 +176,10 @@ const styles = StyleSheet.create({
   content: { padding: 24, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   backLink: { color: colors.primary[600], marginBottom: 12, fontSize: 14 },
-  title: { fontSize: 24, fontWeight: '700', color: colors.primary[800], marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   meta: { color: colors.primary[600], fontSize: 14 },
-  webWrap: { minHeight: 200, marginBottom: 16 },
-  webview: { flex: 1, backgroundColor: 'transparent' },
+  webview: { backgroundColor: 'transparent', marginBottom: 24 },
   thumbsButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
@@ -155,6 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    marginBottom: 8,
   },
   thumbsButtonActive: {
     backgroundColor: colors.primary[500],

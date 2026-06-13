@@ -6,8 +6,13 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from jizz.models import Player, Update, UpdateEmailRecipient, UpdateThumbsUp, UserProfile
-from jizz.update_emails import mark_email_opened, send_test_update_email
+from jizz.models import Player, Update, UpdateEmailDelivery, UpdateEmailRecipient, UpdateThumbsUp, UserProfile
+from jizz.update_emails import (
+    get_update_email_stats,
+    mark_email_opened,
+    send_test_update_email,
+    send_update_email_broadcast,
+)
 
 
 class UpdateBlogApiTests(TestCase):
@@ -118,6 +123,40 @@ class UpdateEmailTests(TestCase):
         html = mail.outbox[0].alternatives[0][0]
         self.assertIn('href="https://birdr.pro/"', html)
         self.assertIn('Open Birdr App', html)
+
+    def test_broadcast_skips_users_already_emailed(self):
+        user_one = User.objects.create_user('one', password='x', email='one@example.com')
+        user_two = User.objects.create_user('two', password='x', email='two@example.com')
+        UserProfile.objects.create(user=user_one, receive_updates=True)
+        UserProfile.objects.create(user=user_two, receive_updates=True)
+
+        delivery = send_update_email_broadcast(self.update, self.admin)
+        self.assertEqual(delivery.recipient_count, 3)
+        self.assertEqual(
+            UpdateEmailRecipient.objects.filter(delivery__update=self.update, delivery__is_test=False).count(),
+            3,
+        )
+
+        stats = get_update_email_stats(self.update)
+        self.assertEqual(stats['sent'], 3)
+        self.assertEqual(stats['pending'], 0)
+
+        second_delivery = send_update_email_broadcast(self.update, self.admin)
+        self.assertIsNone(second_delivery)
+
+    def test_failed_send_does_not_record_recipient(self):
+        user = User.objects.create_user('fail', password='x', email='fail@example.com')
+        UserProfile.objects.create(user=user, receive_updates=True)
+
+        from unittest.mock import patch
+
+        with patch('jizz.update_emails.EmailMultiAlternatives.send', side_effect=OSError('smtp down')):
+            delivery = send_update_email_broadcast(self.update, self.admin)
+
+        self.assertEqual(delivery.recipient_count, 1)
+        self.assertFalse(UpdateEmailRecipient.objects.filter(user=user).exists())
+        stats = get_update_email_stats(self.update)
+        self.assertEqual(stats['pending'], 1)
 
 
 class ReceiveUpdatesMigrationTests(TestCase):

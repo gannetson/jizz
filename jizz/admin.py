@@ -965,17 +965,27 @@ class UpdateAdmin(admin.ModelAdmin):
     def email_delivery_summary(self, obj):
         if not obj.pk:
             return 'Save the update first, then send email.'
-        deliveries = obj.email_deliveries.all()[:10]
-        if not deliveries:
-            return 'No emails sent yet.'
-        lines = []
+        from jizz.update_emails import get_update_email_stats, is_broadcast_in_progress
+
+        stats = get_update_email_stats(obj)
+        lines = [
+            f'Subscribers: {stats["subscribers_total"]} — '
+            f'sent: {stats["sent"]}, pending: {stats["pending"]}',
+        ]
+        if is_broadcast_in_progress(obj):
+            lines.append('Status: sending in progress…')
+        deliveries = obj.email_deliveries.filter(is_test=False)[:10]
+        if not deliveries and stats['sent'] == 0:
+            lines.append('No broadcast emails sent yet.')
         for delivery in deliveries:
             opened = delivery.recipients.filter(opened_at__isnull=False).count()
-            kind = 'Test' if delivery.is_test else 'Broadcast'
             lines.append(
-                f'{kind} — {delivery.sent_at:%Y-%m-%d %H:%M} — '
-                f'{delivery.recipient_count} sent, {opened} opened'
+                f'Broadcast — {delivery.sent_at:%Y-%m-%d %H:%M} — '
+                f'{delivery.status} — {delivery.recipient_count} sent in batch, {opened} opened'
             )
+        test_deliveries = obj.email_deliveries.filter(is_test=True)[:3]
+        for delivery in test_deliveries:
+            lines.append(f'Test — {delivery.sent_at:%Y-%m-%d %H:%M}')
         return format_html('<br>'.join(lines))
 
     email_delivery_summary.short_description = 'Email history'
@@ -1002,9 +1012,16 @@ class UpdateAdmin(admin.ModelAdmin):
         return custom + urls
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
+        from jizz.update_emails import get_update_email_stats, is_broadcast_in_progress
+
         extra_context = extra_context or {}
         extra_context['send_test_email_url'] = reverse('admin:jizz_update_send_test_email', args=[object_id])
         extra_context['send_broadcast_url'] = reverse('admin:jizz_update_send_broadcast', args=[object_id])
+        update = self.get_object(request, object_id)
+        if update:
+            stats = get_update_email_stats(update)
+            extra_context['email_stats'] = stats
+            extra_context['broadcast_in_progress'] = is_broadcast_in_progress(update)
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def send_test_email_view(self, request, object_id):
@@ -1023,17 +1040,48 @@ class UpdateAdmin(admin.ModelAdmin):
         return redirect('admin:jizz_update_change', object_id)
 
     def send_broadcast_view(self, request, object_id):
-        from jizz.update_emails import send_update_email_broadcast
+        from jizz.update_emails import (
+            get_update_email_stats,
+            is_broadcast_in_progress,
+            start_update_email_broadcast_async,
+        )
 
         update = self.get_object(request, object_id)
         if not update:
             self.message_user(request, 'Update not found.', level=messages.ERROR)
             return redirect('admin:jizz_update_changelist')
-        delivery = send_update_email_broadcast(update, request.user)
-        self.message_user(
-            request,
-            f'Update emailed to {delivery.recipient_count} subscribers with receive_updates enabled.',
-        )
+
+        stats = get_update_email_stats(update)
+        if stats['pending'] == 0:
+            self.message_user(
+                request,
+                f'All {stats["sent"]} subscribers have already received this update.',
+                level=messages.WARNING,
+            )
+            return redirect('admin:jizz_update_change', object_id)
+
+        if is_broadcast_in_progress(update):
+            self.message_user(
+                request,
+                'A broadcast is already in progress. Refresh this page to see progress.',
+                level=messages.WARNING,
+            )
+            return redirect('admin:jizz_update_change', object_id)
+
+        if start_update_email_broadcast_async(update, request.user):
+            if stats['sent']:
+                self.message_user(
+                    request,
+                    f'Sending to {stats["pending"]} remaining subscribers in the background '
+                    f'({stats["sent"]} already received this update).',
+                )
+            else:
+                self.message_user(
+                    request,
+                    f'Sending to {stats["pending"]} subscribers in the background.',
+                )
+        else:
+            self.message_user(request, 'Could not start broadcast.', level=messages.ERROR)
         return redirect('admin:jizz_update_change', object_id)
 
 
@@ -1058,9 +1106,9 @@ class MailSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(UpdateEmailDelivery)
 class UpdateEmailDeliveryAdmin(admin.ModelAdmin):
-    list_display = ['update', 'is_test', 'sent_by', 'sent_at', 'recipient_count', 'opened_count']
-    list_filter = ['is_test', 'sent_at']
-    readonly_fields = ['update', 'sent_by', 'is_test', 'sent_at', 'recipient_count']
+    list_display = ['update', 'is_test', 'status', 'sent_by', 'sent_at', 'recipient_count', 'opened_count']
+    list_filter = ['is_test', 'status', 'sent_at']
+    readonly_fields = ['update', 'sent_by', 'is_test', 'status', 'sent_at', 'recipient_count']
     search_fields = ['update__title_en', 'sent_by__username']
 
     def opened_count(self, obj):

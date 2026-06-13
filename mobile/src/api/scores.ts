@@ -1,5 +1,7 @@
 import { apiUrl } from './config';
 import { settingsFromPlayLevel, type PlayLevel } from '../game/playLevel';
+import { ensureFreshAccessToken } from './auth';
+import { PLAYER_TOKEN_STORAGE_KEY } from './player';
 
 export type Score = {
   name: string;
@@ -11,7 +13,25 @@ export type Score = {
   media: string;
   length: number;
   rarity?: string;
+  is_mine?: boolean;
 };
+
+async function scoresAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const jwt = await ensureFreshAccessToken();
+  if (jwt) {
+    headers.Authorization = `Bearer ${jwt}`;
+    return headers;
+  }
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  const playerToken =
+    (await AsyncStorage.getItem(PLAYER_TOKEN_STORAGE_KEY)) ??
+    (await AsyncStorage.getItem('challenge_player_token'));
+  if (playerToken?.trim()) {
+    headers.Authorization = `Bearer ${playerToken.trim()}`;
+  }
+  return headers;
+}
 
 type ScoresResponse = { results: Score[] };
 
@@ -36,7 +56,7 @@ export async function loadScores(params: {
   const url = apiUrl(`/api/scores/?${q.toString()}`);
   const response = await fetch(url, {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers: await scoresAuthHeaders(),
     cache: 'no-store',
   });
   if (!response.ok) return [];

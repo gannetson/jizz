@@ -1,8 +1,8 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { Animated, LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { colors } from '../theme';
 
-/** Ochre / amber palette aligned with Birdr primary + MEGA styling. */
+/** Ochre / amber palette aligned with Birdr primary + celebration gold. */
 export const MEGA_CONFETTI_COLORS = [
   colors.primary[100],
   colors.primary[200],
@@ -16,9 +16,9 @@ export const MEGA_CONFETTI_COLORS = [
   '#eab308',
   '#d97706',
   '#b45309',
+  '#fde68a',
+  '#ffffff',
 ] as const;
-
-const COUNT = 48;
 
 type Particle = {
   x: number;
@@ -29,20 +29,27 @@ type Particle = {
   duration: number;
   rotDegrees: number;
   driftEnd: number;
+  width: number;
+  height: number;
+  borderRadius: number;
 };
 
-function createParticles(width: number, height: number): Particle[] {
-  return Array.from({ length: COUNT }, () => {
-    const startY = Math.random() * height * 0.4 - height * 0.06;
+function createParticles(width: number, height: number, count: number): Particle[] {
+  return Array.from({ length: count }, () => {
+    const startY = Math.random() * height * 0.35 - height * 0.08;
+    const wide = Math.random() > 0.65;
     return {
-      x: Math.random() * Math.max(width - 10, 1),
+      x: Math.random() * Math.max(width - 12, 1),
       color: MEGA_CONFETTI_COLORS[Math.floor(Math.random() * MEGA_CONFETTI_COLORS.length)],
       y: new Animated.Value(startY),
       rotate: new Animated.Value(0),
       drift: new Animated.Value(0),
-      duration: 700 + Math.random() * 700,
-      rotDegrees: (Math.random() > 0.5 ? 1 : -1) * (160 + Math.random() * 320),
-      driftEnd: (Math.random() - 0.5) * 80,
+      duration: 900 + Math.random() * 1100,
+      rotDegrees: (Math.random() > 0.5 ? 1 : -1) * (180 + Math.random() * 540),
+      driftEnd: (Math.random() - 0.5) * 120,
+      width: wide ? 10 + Math.random() * 8 : 5 + Math.random() * 5,
+      height: wide ? 5 + Math.random() * 4 : 8 + Math.random() * 10,
+      borderRadius: Math.random() > 0.7 ? 999 : 2,
     };
   });
 }
@@ -52,7 +59,7 @@ function runFallAnimations(particles: Particle[], height: number) {
     particles.map((p) =>
       Animated.parallel([
         Animated.timing(p.y, {
-          toValue: height + 24,
+          toValue: height + 40,
           duration: p.duration,
           useNativeDriver: true,
         }),
@@ -71,7 +78,13 @@ function runFallAnimations(particles: Particle[], height: number) {
   ).start();
 }
 
-export function MegaConfetti({ active }: { active: boolean }) {
+type Props = {
+  active: boolean;
+  /** Longer multi-burst celebration for #1 high score on results screens. */
+  celebration?: boolean;
+};
+
+export function MegaConfetti({ active, celebration = false }: Props) {
   const [layout, setLayout] = useState({ width: 0, height: 0 });
   const [particles, setParticles] = useState<Particle[]>([]);
 
@@ -82,15 +95,40 @@ export function MegaConfetti({ active }: { active: boolean }) {
     }
   };
 
+  const spawnBurst = (width: number, height: number, count: number) => {
+    const burst = createParticles(width, height, count);
+    setParticles((prev) => [...prev, ...burst]);
+    runFallAnimations(burst, height);
+  };
+
   useLayoutEffect(() => {
     if (!active || layout.width <= 0 || layout.height <= 0) {
       setParticles([]);
       return;
     }
-    const burst = createParticles(layout.width, layout.height);
-    setParticles(burst);
-    runFallAnimations(burst, layout.height);
-  }, [active, layout.width, layout.height]);
+
+    const count = celebration ? 90 : 56;
+    setParticles([]);
+    spawnBurst(layout.width, layout.height, count);
+
+    if (!celebration) return;
+
+    const timers = [
+      setTimeout(() => spawnBurst(layout.width, layout.height, 70), 450),
+      setTimeout(() => spawnBurst(layout.width, layout.height, 55), 950),
+      setTimeout(() => spawnBurst(layout.width, layout.height, 40), 1500),
+    ];
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [active, celebration, layout.width, layout.height]);
+
+  useEffect(() => {
+    if (!active || !celebration) return;
+    const clear = setTimeout(() => setParticles([]), 4200);
+    return () => clearTimeout(clear);
+  }, [active, celebration]);
 
   if (!active) return null;
 
@@ -98,10 +136,16 @@ export function MegaConfetti({ active }: { active: boolean }) {
     <View style={styles.overlay} pointerEvents="none" onLayout={onLayout}>
       {particles.map((p, i) => (
         <Animated.View
-          key={i}
+          key={`${i}-${p.x}-${p.color}`}
           style={[
             styles.piece,
-            { left: p.x, backgroundColor: p.color },
+            {
+              left: p.x,
+              backgroundColor: p.color,
+              width: p.width,
+              height: p.height,
+              borderRadius: p.borderRadius,
+            },
             {
               transform: [
                 { translateY: p.y },
@@ -124,14 +168,11 @@ export function MegaConfetti({ active }: { active: boolean }) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
+    zIndex: 20,
     overflow: 'hidden',
   },
   piece: {
     position: 'absolute',
     top: 0,
-    width: 7,
-    height: 11,
-    borderRadius: 2,
   },
 });

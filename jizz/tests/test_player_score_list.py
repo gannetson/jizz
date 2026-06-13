@@ -67,7 +67,7 @@ class PlayerScoreListViewTestCase(TestCase):
         results = response.data['results']
         self.assertGreater(len(results), 0)
         item = results[0]
-        for field in ('id', 'name', 'country', 'media', 'level', 'length', 'score', 'ranking'):
+        for field in ('id', 'name', 'country', 'media', 'level', 'length', 'score', 'ranking', 'is_mine'):
             self.assertIn(field, item, f'Missing field: {field}')
         self.assertIn('code', item['country'])
         self.assertIn('name', item['country'])
@@ -123,3 +123,15 @@ class PlayerScoreListViewTestCase(TestCase):
         response = self.client.get('/api/scores/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertLessEqual(len(response.data['results']), 100)
+
+    def test_is_mine_with_player_token(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.player1.token}')
+        response = self.client.get(
+            '/api/scores/?game__level=advanced&game__length=10&game__media=images&game__country=NL'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for row in response.data['results']:
+            if row['name'] == 'Alice':
+                self.assertTrue(row['is_mine'])
+            else:
+                self.assertFalse(row['is_mine'])

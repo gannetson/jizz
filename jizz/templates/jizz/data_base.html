@@ -283,6 +283,9 @@
             <a href="{% url 'data-quiz-mistake-species' %}" {% if active_section == 'quiz-mistakes' %}class="nav-active"{% endif %}>Quiz mistakes</a>
             <a href="{% url 'data-games-played' %}" {% if active_section == 'games-played' %}class="nav-active"{% endif %}>Games played</a>
             <a href="{% url 'data-taxon-orders' %}" {% if active_section == 'taxons' %}class="nav-active"{% endif %}>Taxonomy</a>
+            {% if user.is_staff %}
+            <a href="{% url 'staff-usage' %}" {% if active_section == 'usage' %}class="nav-active"{% endif %}>Usage metrics</a>
+            {% endif %}
             <a href="/">Back to app</a>
         </nav>
     </header>

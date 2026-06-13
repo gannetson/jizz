@@ -110,6 +110,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'jizz.middleware.AppVersionNoCacheMiddleware',
+    'jizz.middleware.UsageAnalyticsMiddleware',
 ]
 
 ROOT_URLCONF = 'jizz.urls'

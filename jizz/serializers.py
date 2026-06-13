@@ -894,6 +894,19 @@ class PlayerScoreListSerializer(serializers.ModelSerializer):
     length = serializers.IntegerField(source='game.length', read_only=True)
     rarity = serializers.CharField(source='game.rarity', read_only=True)
     ranking = serializers.IntegerField(source='score_rank', read_only=True)
+    is_mine = serializers.SerializerMethodField()
+
+    def get_is_mine(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return False
+        user = getattr(request, 'user', None)
+        if user is not None and getattr(user, 'is_authenticated', False):
+            return obj.player.user_id == user.id
+        token = getattr(request, 'auth', None)
+        if token:
+            return str(obj.player.token) == str(token)
+        return False
 
     def get_country(self, obj):
         if obj.game and obj.game.country_id:
@@ -902,7 +915,7 @@ class PlayerScoreListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlayerScore
-        fields = ('id', 'name', 'country', 'media', 'level', 'length', 'rarity', 'score', 'ranking')
+        fields = ('id', 'name', 'country', 'media', 'level', 'length', 'rarity', 'score', 'ranking', 'is_mine')
 
 
 class GameSerializer(serializers.ModelSerializer):

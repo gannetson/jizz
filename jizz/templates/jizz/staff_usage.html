@@ -1,0 +1,388 @@
+{% extends "jizz/data_base.html" %}
+
+{% block title %}Usage metrics · Birdr staff{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap/dist/css/jsvectormap.min.css">
+    <style>
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--birdr-50);
+            border: 1px solid var(--birdr-100);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .summary-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--birdr-800);
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            color: #6d5c48;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 320px;
+        }
+
+        .chart-wrap.tall {
+            height: 420px;
+        }
+
+        .map-wrap {
+            height: 420px;
+            margin-top: 1rem;
+        }
+
+        input[type="date"] {
+            padding: 0.45rem 0.65rem;
+            border: 1px solid var(--birdr-200);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--birdr-800);
+        }
+
+        button.btn {
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--birdr-500);
+            background: var(--birdr-500);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .staff-badge {
+            display: inline-block;
+            margin-left: 0.5rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background: #ffe5e5;
+            color: #990000;
+            font-size: 0.75rem;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 900px) {
+            .chart-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h1>Usage metrics <span class="staff-badge">Staff</span></h1>
+    <p class="muted">
+        First-party analytics stored in our database. IP addresses are recorded for staff review only and are not shown on this dashboard.
+        Country comes from Cloudflare, profile, or client when available.
+    </p>
+
+    <form class="toolbar" id="usage-form" method="get" action="{% url 'staff-usage' %}">
+        <label>
+            Start
+            <input type="date" name="start" id="start-date" value="{{ start }}">
+        </label>
+        <label>
+            End
+            <input type="date" name="end" id="end-date" value="{{ end }}">
+        </label>
+        <label>
+            Platform
+            <select name="platform" id="platform-filter">
+                <option value="">All</option>
+                <option value="web" {% if platform == "web" %}selected{% endif %}>Web</option>
+                <option value="ios" {% if platform == "ios" %}selected{% endif %}>iOS</option>
+                <option value="android" {% if platform == "android" %}selected{% endif %}>Android</option>
+            </select>
+        </label>
+        <label>
+            Device
+            <select name="device_type" id="device-filter">
+                <option value="">All</option>
+                <option value="desktop" {% if device_type == "desktop" %}selected{% endif %}>Desktop</option>
+                <option value="mobile" {% if device_type == "mobile" %}selected{% endif %}>Mobile</option>
+                <option value="tablet" {% if device_type == "tablet" %}selected{% endif %}>Tablet</option>
+            </select>
+        </label>
+        <label>
+            Country
+            <input type="text" name="country" id="country-filter" value="{{ country_code }}" maxlength="2" placeholder="e.g. NL" style="width:4rem;text-transform:uppercase;">
+        </label>
+        <label>
+            Event
+            <select name="event_type" id="event-filter">
+                <option value="">All</option>
+                <option value="page_view" {% if event_type == "page_view" %}selected{% endif %}>Page views</option>
+                <option value="feature" {% if event_type == "feature" %}selected{% endif %}>Features</option>
+            </select>
+        </label>
+        <button type="submit" class="btn">Update</button>
+    </form>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="value" id="total-events">{{ chart_json.total_events }}</div>
+            <div class="label">Total events</div>
+        </div>
+        <div class="summary-card">
+            <div class="value" id="unique-sessions">{{ chart_json.unique_sessions }}</div>
+            <div class="label">Unique sessions</div>
+        </div>
+        <div class="summary-card">
+            <div class="value" id="top-country">—</div>
+            <div class="label">Top country</div>
+        </div>
+    </div>
+
+    <h2>Events over time</h2>
+    <div class="chart-wrap tall">
+        <canvas id="usage-timeline-chart"></canvas>
+    </div>
+
+    <div class="chart-grid">
+        <div>
+            <h2>Top paths / screens</h2>
+            <div class="chart-wrap">
+                <canvas id="usage-paths-chart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>By platform</h2>
+            <div class="chart-wrap">
+                <canvas id="usage-platform-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-grid">
+        <div>
+            <h2>By device type</h2>
+            <div class="chart-wrap">
+                <canvas id="usage-device-chart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>Top countries</h2>
+            <table class="data-table" id="country-table">
+                <thead>
+                    <tr>
+                        <th>Country</th>
+                        <th class="num">Events</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2>World map</h2>
+    <div id="usage-world-map" class="map-wrap"></div>
+
+    {{ chart_json|json_script:"usage-data" }}
+{% endblock %}
+
+{% block extra_body %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
+    <script>
+        (function () {
+            const apiUrl = "{% url 'staff-usage-api' %}";
+            const pageUrl = "{% url 'staff-usage' %}";
+            const form = document.getElementById("usage-form");
+            let timelineChart = null;
+            let pathsChart = null;
+            let platformChart = null;
+            let deviceChart = null;
+            let worldMap = null;
+
+            function destroyCharts() {
+                [timelineChart, pathsChart, platformChart, deviceChart].forEach((c) => c && c.destroy());
+                timelineChart = pathsChart = platformChart = deviceChart = null;
+            }
+
+            function updateSummary(payload) {
+                document.getElementById("total-events").textContent = payload.total_events;
+                document.getElementById("unique-sessions").textContent = payload.unique_sessions;
+                const top = payload.by_country[0];
+                document.getElementById("top-country").textContent = top ? `${top.country_code} (${top.events})` : "—";
+            }
+
+            function updateCountryTable(payload) {
+                const tbody = document.querySelector("#country-table tbody");
+                tbody.innerHTML = "";
+                payload.by_country.slice(0, 15).forEach((row) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `<td>${row.country_code}</td><td class="num">${row.events}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            function buildTimeline(payload) {
+                const labels = payload.series.map((row) => row.period);
+                const data = payload.series.map((row) => row.events);
+                if (timelineChart) timelineChart.destroy();
+                timelineChart = new Chart(document.getElementById("usage-timeline-chart"), {
+                    type: "line",
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: "Events",
+                            data,
+                            borderColor: "#8b6419",
+                            backgroundColor: "rgba(139, 100, 25, 0.15)",
+                            fill: true,
+                            tension: 0.25,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                    },
+                });
+            }
+
+            function buildBarChart(canvasId, labels, data, label, existingChart) {
+                if (existingChart) existingChart.destroy();
+                return new Chart(document.getElementById(canvasId), {
+                    type: "bar",
+                    data: {
+                        labels,
+                        datasets: [{
+                            label,
+                            data,
+                            backgroundColor: "rgba(139, 100, 25, 0.75)",
+                            borderColor: "#8b6419",
+                            borderWidth: 1,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: canvasId === "usage-paths-chart" ? "y" : "x",
+                        scales: { x: { beginAtZero: true }, y: { beginAtZero: true } },
+                        plugins: { legend: { display: false } },
+                    },
+                });
+            }
+
+            function buildPlatformChart(payload) {
+                const labels = payload.by_platform.map((row) => row.platform);
+                const data = payload.by_platform.map((row) => row.events);
+                if (platformChart) platformChart.destroy();
+                platformChart = new Chart(document.getElementById("usage-platform-chart"), {
+                    type: "doughnut",
+                    data: {
+                        labels,
+                        datasets: [{
+                            data,
+                            backgroundColor: ["#8b6419", "#2a6b8b", "#6d4e14"],
+                        }],
+                    },
+                    options: { responsive: true, maintainAspectRatio: false },
+                });
+            }
+
+            function buildWorldMap(payload) {
+                const values = payload.country_map || {};
+                const container = document.getElementById("usage-world-map");
+                container.innerHTML = "";
+                worldMap = new jsVectorMap({
+                    selector: "#usage-world-map",
+                    map: "world",
+                    regionStyle: {
+                        initial: { fill: "#e8d4b8" },
+                        hover: { fill: "#8b6419" },
+                    },
+                    series: {
+                        regions: [{
+                            attribute: "fill",
+                            scale: ["#f5ede0", "#8b6419"],
+                            values,
+                        }],
+                    },
+                    onRegionTooltipShow(event, tooltip, code) {
+                        const count = values[code] || 0;
+                        tooltip.text(`${code}: ${count} events`, true);
+                    },
+                });
+            }
+
+            function render(payload) {
+                updateSummary(payload);
+                updateCountryTable(payload);
+                buildTimeline(payload);
+                pathsChart = buildBarChart(
+                    "usage-paths-chart",
+                    payload.top_paths.map((row) => row.path),
+                    payload.top_paths.map((row) => row.events),
+                    "Events",
+                    pathsChart
+                );
+                deviceChart = buildBarChart(
+                    "usage-device-chart",
+                    payload.by_device.map((row) => row.device_type),
+                    payload.by_device.map((row) => row.events),
+                    "Events",
+                    deviceChart
+                );
+                buildPlatformChart(payload);
+                buildWorldMap(payload);
+            }
+
+            function readFormParams() {
+                const data = new FormData(form);
+                return {
+                    start: data.get("start"),
+                    end: data.get("end"),
+                    platform: data.get("platform"),
+                    device_type: data.get("device_type"),
+                    country: data.get("country"),
+                    event_type: data.get("event_type"),
+                };
+            }
+
+            async function loadDashboard(updateUrl) {
+                const params = readFormParams();
+                const query = new URLSearchParams();
+                Object.entries(params).forEach(([key, value]) => {
+                    if (value) query.set(key, String(value));
+                });
+                const response = await fetch(apiUrl + "?" + query.toString(), {
+                    headers: { Accept: "application/json" },
+                });
+                if (!response.ok) return;
+                const payload = await response.json();
+                render(payload);
+                if (updateUrl) {
+                    window.history.replaceState(null, "", pageUrl + "?" + query.toString());
+                }
+            }
+
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                loadDashboard(true);
+            });
+
+            render(JSON.parse(document.getElementById("usage-data").textContent));
+        })();
+    </script>
+{% endblock %}

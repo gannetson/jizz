@@ -24,6 +24,11 @@ from jizz.data_views import (
     data_taxon_families_view,
     data_taxon_orders_view,
 )
+from jizz.analytics_views import (
+    UsageEventCreateView,
+    staff_usage_api_view,
+    staff_usage_view,
+)
 from jizz.quiz_mistake_views import (
     quiz_mistake_pairs_view,
     quiz_mistake_species_view,
@@ -124,6 +129,8 @@ urlpatterns = [
     path('staff/quiz-mistakes/', staff_quiz_mistakes_redirect, name='quiz-mistake-stats'),
     path('staff/quiz-mistakes/species/', staff_quiz_mistakes_redirect, {'subpath': 'species'}, name='quiz-mistake-species'),
     path('staff/quiz-mistakes/pairs/', staff_quiz_mistakes_redirect, {'subpath': 'pairs'}, name='quiz-mistake-pairs'),
+    path('staff/usage/', staff_usage_view, name='staff-usage'),
+    path('staff/usage/api/', staff_usage_api_view, name='staff-usage-api'),
     re_path(r"^country/(?P<pk>\w+)/$", CountryDetailView.as_view(), name="country-detail"),
     re_path(r"^country/(?P<pk>\w+)/species$", CountryDetailView.as_view(), name="country-detail"),
 
@@ -136,6 +143,7 @@ urlpatterns = [
 
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/profile/', ProfileView.as_view(), name='profile'),
+    path('api/analytics/event/', UsageEventCreateView.as_view(), name='analytics-event'),
     path('api/checklist/', ChecklistView.as_view(), name='checklist'),
     path('api/my-games/', UserGamesView.as_view(), name='user-games'),
     re_path(r'^api/my-games/(?P<token>[\w-]+)/$', UserGameDetailView.as_view(), name='user-game-detail'),

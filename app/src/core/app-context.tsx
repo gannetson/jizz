@@ -144,6 +144,7 @@ export type Score = {
   media: string
   length: number
   rarity?: string
+  is_mine?: boolean
 }
 
 

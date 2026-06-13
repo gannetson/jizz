@@ -27,5 +27,11 @@
             <h2>Taxonomic families</h2>
             <p>Species counts per family, with optional country breakdown by status.</p>
         </a>
+        {% if is_staff %}
+        <a class="link-card" href="{% url 'staff-usage' %}">
+            <h2>Usage metrics</h2>
+            <p>Staff dashboard: page views, platforms, devices, and countries.</p>
+        </a>
+        {% endif %}
     </div>
 {% endblock %}

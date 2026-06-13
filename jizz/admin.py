@@ -21,7 +21,7 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          TaxonomicOrder, TaxonomicFamily,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
-                         DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice)
+                         DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
                         get_sounds, get_videos, sync_country, sync_species, get_media)
@@ -1063,4 +1063,14 @@ class PushDeviceAdmin(admin.ModelAdmin):
     list_display = ['user', 'platform', 'enabled', 'updated_at']
     list_filter = ['platform', 'enabled']
     search_fields = ['user__username', 'expo_push_token']
+    raw_id_fields = ['user']
+
+
+@admin.register(UsageEvent)
+class UsageEventAdmin(admin.ModelAdmin):
+    list_display = ['created_at', 'event_type', 'path', 'platform', 'device_type', 'country_code', 'ip_address', 'user']
+    list_filter = ['event_type', 'platform', 'device_type', 'country_code', 'created_at']
+    search_fields = ['path', 'session_key', 'ip_address', 'user__username']
+    readonly_fields = ['created_at']
+    date_hierarchy = 'created_at'
     raw_id_fields = ['user']

@@ -351,10 +351,9 @@ export const ProfilePage = () => {
               />
             </Box>
 
-            {/* Timezone (for daily challenge) */}
             <Field.Root>
               <Field.Label>
-                <FormattedMessage id="timezone_daily_challenge" defaultMessage="Timezone (daily challenge)" />
+                <FormattedMessage id="timezone" defaultMessage="Timezone" />
               </Field.Label>
               <Input
                 type="text"

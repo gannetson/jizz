@@ -2,24 +2,35 @@ import { Flex, Heading, TableRoot, Box, TableBody, TableColumnHeader, TableHeade
 import { Page } from "../shared/components/layout";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useContext, useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import AppContext, { Country, Score } from "../core/app-context";
 import { Loading } from "../components/loading";
 import { ScoreLine } from "../components/score-line";
 import { UseCountries } from "../user/use-countries";
 import CountryCombobox from "../components/country-combobox";
 import { apiUrl } from "../api/baseUrl";
+import { fetchHiscores } from "../api/hiscores";
 import { PLAY_LEVEL_ORDER, settingsFromPlayLevel, type PlayLevel } from "../core/play-level";
+import { parseHiscoresSearchParams } from "../core/hiscores-link";
 
 const HomePage = () => {
   const intl = useIntl();
+  const [searchParams] = useSearchParams();
+  const urlFilters = useMemo(() => parseHiscoresSearchParams(searchParams), [searchParams]);
   const { countries } = UseCountries();
   const { loading, setLoading } = useContext(AppContext);
   const [scores, setScores] = useState<Score[]>([]);
-  const [playLevel, setPlayLevel] = useState<PlayLevel | ''>('advanced');
-  const [length, setLength] = useState<string | undefined>("10");
-  const [media, setMedia] = useState<string | undefined>("");
+  const [playLevel, setPlayLevel] = useState<PlayLevel | ''>(urlFilters.playLevel ?? 'advanced');
+  const [length, setLength] = useState<string | undefined>(urlFilters.length ?? "10");
+  const [media, setMedia] = useState<string | undefined>(urlFilters.media ?? "");
   const [country, setCountry] = useState<Country | undefined>({ code: "", name: "All countries" });
   const countriesList = Array.isArray(countries) ? countries : [];
+
+  useEffect(() => {
+    if (!urlFilters.country || countriesList.length === 0) return;
+    const match = countriesList.find((c) => c.code === urlFilters.country);
+    if (match) setCountry(match);
+  }, [urlFilters.country, countriesList]);
 
   const loadScores = async () => {
     setLoading(true)
@@ -32,15 +43,8 @@ const HomePage = () => {
     if (length) params.set('game__length', length)
     if (media) params.set('game__media', media)
     if (country?.code) params.set('game__country', country.code)
-    const url = apiUrl(`/api/scores/?${params.toString()}`)
-    const response = await fetch(url, {
-      cache: 'no-cache',
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    })
+    const url = `/api/scores/?${params.toString()}`
+    const response = await fetchHiscores(url)
     if (response.status === 200) {
       const data = await response.json()
       setScores(data.results)

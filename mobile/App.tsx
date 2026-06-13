@@ -17,6 +17,7 @@ import { DeepLinkHandler } from './src/components/DeepLinkHandler';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AppVersionGate } from './src/components/AppVersionGate';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from './src/api/config';
+import { trackScreenView } from './src/api/analytics';
 
 export default function App() {
   useEffect(() => {
@@ -37,7 +38,15 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer
+        ref={navigationRef}
+        onStateChange={() => {
+          const route = navigationRef.getCurrentRoute();
+          if (route?.name) {
+            trackScreenView(`/mobile/${route.name}`);
+          }
+        }}
+      >
         <AutocompleteDropdownContextProvider>
         <AuthProvider>
           <ProfileProvider>

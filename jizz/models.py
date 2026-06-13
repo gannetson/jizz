@@ -1356,3 +1356,52 @@ class PushDevice(models.Model):
     def __str__(self):
         return f'{self.user_id} {self.platform} ({self.expo_push_token[:24]}…)'
 
+
+class UsageEvent(models.Model):
+    """First-party product analytics (page views and feature usage)."""
+
+    EVENT_TYPE_CHOICES = [
+        ('page_view', 'Page view'),
+        ('feature', 'Feature'),
+    ]
+    PLATFORM_CHOICES = [
+        ('web', 'Web'),
+        ('ios', 'iOS'),
+        ('android', 'Android'),
+    ]
+    DEVICE_TYPE_CHOICES = [
+        ('desktop', 'Desktop'),
+        ('mobile', 'Mobile'),
+        ('tablet', 'Tablet'),
+        ('unknown', 'Unknown'),
+    ]
+
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES, default='page_view')
+    path = models.CharField(max_length=500)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, default='web')
+    device_type = models.CharField(max_length=20, choices=DEVICE_TYPE_CHOICES, default='unknown')
+    country_code = models.CharField(max_length=2, blank=True, default='')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='usage_events',
+    )
+    session_key = models.CharField(max_length=64, blank=True, default='')
+    user_agent = models.TextField(blank=True, default='')
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['path', 'created_at']),
+            models.Index(fields=['platform', 'created_at']),
+            models.Index(fields=['country_code', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.platform} {self.path} @ {self.created_at:%Y-%m-%d %H:%M}'
+

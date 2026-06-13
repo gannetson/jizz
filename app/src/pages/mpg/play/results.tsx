@@ -4,10 +4,12 @@ import React, {useContext, useState, useEffect, useMemo} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {type Game, type MultiPlayer, type Player} from "../../../core/app-context"
 import {PlayerItem} from "./player-item"
-import {useNavigate, useLocation} from "react-router-dom"
+import {useNavigate} from "react-router-dom"
 import {GameRow} from "../../../components/game-row"
 import { apiUrl } from '../../../api/baseUrl'
 import { authService } from "../../../api/services/auth.service"
+import { buildHiscoresPath } from "../../../core/hiscores-link"
+import { ResultsTopScoreConfetti } from "../../../components/results-top-score-confetti"
 
 /** Merge MPG results data so GameRow can show points + correct/total like My games. */
 function enrichGameForResults(
@@ -36,8 +38,6 @@ export const ResultsComponent = () => {
   const {players, socket, clearQuestion} = useContext(WebsocketContext)
   const {game, player, createRematchGame, setGame} = useContext(AppContext)
   const navigate = useNavigate()
-  const location = useLocation()
-  const fromDailyChallengeId = (location.state as { fromDailyChallengeId?: string } | null)?.fromDailyChallengeId
   const [rematchInvitation, setRematchInvitation] = useState<{new_game_token: string, host_name: string} | null>(null)
   const [isRematchLoading, setIsRematchLoading] = useState(false)
 
@@ -56,6 +56,15 @@ export const ResultsComponent = () => {
     () => (game ? enrichGameForResults(game, player, players) : undefined),
     [game, player, players]
   )
+
+  const hiscoresPath = game ? buildHiscoresPath(game) : undefined
+
+  const currentPlayerResult = useMemo(
+    () => players?.find((p) => p.id === player?.id || p.name === player?.name),
+    [players, player]
+  )
+
+  const showTopScoreCelebration = currentPlayerResult?.ranking === 1
 
   const createGame = () => {
     navigate('/start')
@@ -202,28 +211,31 @@ export const ResultsComponent = () => {
 
   return (
     <>
+      <ResultsTopScoreConfetti active={!!showTopScoreCelebration} />
       <Box position={'relative'}>
         <Flex direction={'column'} gap={8}>
           <Heading>
             <FormattedMessage defaultMessage={'Final results'} id={'final results'}/>
           </Heading>
           <ListRoot gap={4}>
-            {players && players.map((player, index) => (
+            {players && players.map((resultPlayer, index) => {
+              const isCurrentPlayer =
+                resultPlayer.id === player?.id || resultPlayer.name === player?.name
+              const isTopScore = isCurrentPlayer && resultPlayer.ranking === 1
+              return (
               <ListItem key={index}>
-                <PlayerItem showAnswer={false} player={player}/>
+                <PlayerItem
+                  showAnswer={false}
+                  player={resultPlayer}
+                  hiscoresPath={hiscoresPath}
+                  linkToHiscores={isCurrentPlayer}
+                  isTopScore={isTopScore}
+                />
               </ListItem>
-            ))}
+              )
+            })}
           </ListRoot>
           <Flex direction={'column'} gap={4}>
-            {fromDailyChallengeId && (
-              <Button
-                onClick={() => navigate(`/daily-challenge/${fromDailyChallengeId}`)}
-                colorPalette="primary"
-                variant="outline"
-              >
-                <FormattedMessage id="back_to_daily_challenge" defaultMessage="Back to daily challenge" />
-              </Button>
-            )}
             {rematchInvitation && (
               <Button onClick={handleJoinRematch} colorPalette="primary">
                 <FormattedMessage id={'join rematch'} defaultMessage={'Join rematch'}/>

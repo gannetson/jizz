@@ -11,7 +11,7 @@ import {
   FlatList,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { loadScores, Score } from '../api/scores';
 import { loadCountries } from '../api/countries';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -19,6 +19,15 @@ import { getCountryDisplayName } from '../i18n/countryNames';
 import type { Country } from '../api/countries';
 import { colors } from '../theme';
 import { PLAY_LEVEL_ORDER, playLevelFromSettings, type PlayLevel } from '../game/playLevel';
+
+type ScoresRouteParams = {
+  Scores: {
+    countryCode?: string;
+    playLevel?: PlayLevel;
+    length?: string;
+    media?: string;
+  };
+};
 
 function countryCodeToFlag(code: string): string {
   if (!code || code.length !== 2) return '';
@@ -106,16 +115,20 @@ function FilterSelect<T extends string>({ label, value, displayLabel, onSelect, 
 }
 
 function ScoreCard({ score, mediaLabels, locale, playLevelLabel }: { score: Score; mediaLabels: Record<string, string>; locale: string; playLevelLabel: string }) {
+  const { t } = useTranslation();
   const flag = countryCodeToFlag(score.country?.code ?? '');
   const mediaIcon = MEDIA_ICON[score.media] ?? '?';
   const mediaLabel = mediaLabels[score.media] ?? score.media;
   const countryName = score.country ? getCountryDisplayName(score.country, locale) : '';
+  const isMine = !!score.is_mine;
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, isMine && styles.cardMine]}>
       <View style={styles.cardMain}>
-        <Text style={styles.cardRank}>#{score.ranking}</Text>
+        <Text style={[styles.cardRank, isMine && styles.cardRankMine]}>#{score.ranking}</Text>
         <View style={styles.cardCenter}>
-          <Text style={styles.cardName} numberOfLines={1}>{score.name}</Text>
+          <Text style={[styles.cardName, isMine && styles.cardNameMine]} numberOfLines={1}>
+            {score.name}{isMine ? ` (${t('your_score')})` : ''}
+          </Text>
           <View style={styles.cardMeta}>
             <Text style={styles.cardMetaText}>{flag} {countryName}</Text>
             <Text style={styles.cardMetaDot}> · </Text>
@@ -126,7 +139,7 @@ function ScoreCard({ score, mediaLabels, locale, playLevelLabel }: { score: Scor
             </Text>
           </View>
         </View>
-        <Text style={styles.cardScore}>{score.score}</Text>
+        <Text style={[styles.cardScore, isMine && styles.cardScoreMine]}>{score.score}</Text>
       </View>
     </View>
   );
@@ -134,18 +147,26 @@ function ScoreCard({ score, mediaLabels, locale, playLevelLabel }: { score: Scor
 
 export function ScoresScreen() {
   const { t, locale } = useTranslation();
+  const route = useRoute<RouteProp<ScoresRouteParams, 'Scores'>>();
+  const initial = route.params;
   const [scores, setScores] = useState<Score[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [country, setCountry] = useState<Country | null>(null);
-  const [playLevel, setPlayLevel] = useState<PlayLevel | ''>('advanced');
-  const [length, setLength] = useState('10');
-  const [media, setMedia] = useState('');
+  const [playLevel, setPlayLevel] = useState<PlayLevel | ''>(initial?.playLevel ?? 'advanced');
+  const [length, setLength] = useState(initial?.length ?? '10');
+  const [media, setMedia] = useState(initial?.media ?? '');
 
   useEffect(() => {
-    loadCountries().then((list) => setCountries(list));
-  }, []);
+    loadCountries().then((list) => {
+      setCountries(list);
+      if (initial?.countryCode) {
+        const match = list.find((c) => c.code === initial.countryCode);
+        if (match) setCountry(match);
+      }
+    });
+  }, [initial?.countryCode]);
 
   const fetchScores = useCallback((opts?: { cacheBust?: boolean }) => {
     setLoading(true);
@@ -331,12 +352,20 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
+  cardMine: {
+    backgroundColor: colors.primary[100],
+    borderColor: colors.primary[500],
+    borderWidth: 2,
+  },
   cardMain: { flexDirection: 'row', alignItems: 'center' },
   cardRank: { fontSize: 16, fontWeight: '700', color: colors.primary[600], width: 36 },
+  cardRankMine: { color: colors.primary[800] },
   cardCenter: { flex: 1, minWidth: 0, marginHorizontal: 10 },
   cardName: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
+  cardNameMine: { fontWeight: '800', color: colors.primary[900] },
   cardMeta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 4 },
   cardMetaText: { fontSize: 13, color: colors.primary[600] },
   cardMetaDot: { fontSize: 13, color: colors.primary[400] },
   cardScore: { fontSize: 18, fontWeight: '700', color: colors.primary[700] },
+  cardScoreMine: { color: colors.primary[900] },
 });

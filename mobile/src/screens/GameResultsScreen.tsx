@@ -9,6 +9,8 @@ import { colors } from '../theme';
 import type { Game } from '../api/games';
 import type { MultiPlayer } from '../types/game';
 import type { Player } from '../api/player';
+import { hiscoresParamsFromGame } from '../game/hiscoresLink';
+import { MegaConfetti } from '../components/MegaConfetti';
 
 const REMATCH_TIMEOUT_MS = 20000;
 
@@ -182,41 +184,79 @@ export function GameResultsScreen() {
 
   const sortedPlayers = [...(players || [])].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
+  const currentPlayerResult = useMemo(
+    () => sortedPlayers.find((p) => p.id === player?.id || p.name === player?.name),
+    [sortedPlayers, player]
+  );
+
+  const showTopScoreCelebration = currentPlayerResult?.ranking === 1;
+
+  const handleOpenHiscores = () => {
+    if (!game) return;
+    (navigation as any).navigate('Scores', hiscoresParamsFromGame(game));
+  };
+
   const resultsStats = useMemo(() => {
     if (!game) return null;
     return getMpgResultsStats(game, player, players || []);
   }, [game, player, players]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gameResults.screen" accessibilityLabel="Game results">
+    <View style={styles.wrapper}>
+      <MegaConfetti active={!!showTopScoreCelebration} celebration />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gameResults.screen" accessibilityLabel="Game results">
       <Text style={styles.title} accessibilityLabel="Final results">{t('final_results')}</Text>
       <View style={styles.list}>
         {sortedPlayers.length === 0 ? (
           <Text style={styles.muted}>{t('no_scores_yet')}</Text>
         ) : (
-          sortedPlayers.map((p, i) => (
-            <View key={i} style={styles.playerCard}>
+          sortedPlayers.map((p, i) => {
+            const isCurrentPlayer = p.id === player?.id || p.name === player?.name;
+            const isTopScore = isCurrentPlayer && p.ranking === 1;
+            const scoreRow = (
+              <View style={[styles.playerScores, isTopScore && styles.playerScoresTop]}>
+                {p.ranking != null && (
+                  <View style={[styles.scoreTag, isTopScore && styles.scoreTagTop]}>
+                    <Text style={[styles.scoreTagText, isTopScore && styles.scoreTagTextTop]}>
+                      {isTopScore ? '🏆 ' : ''}#{p.ranking} {isTopScore ? t('top_high_score') : t('high_score')}
+                    </Text>
+                  </View>
+                )}
+                <View style={[styles.scoreTotal, isTopScore && styles.scoreTotalTop]}>
+                  <Text style={[styles.scoreTotalText, isTopScore && styles.scoreTotalTextTop]}>{p.score ?? 0}</Text>
+                </View>
+              </View>
+            );
+
+            return (
+            <View key={i} style={[styles.playerCard, isTopScore && styles.playerCardTop]}>
               <View style={styles.playerLeft}>
-                <View style={styles.playerAvatar}>
+                <View style={[styles.playerAvatar, isTopScore && styles.playerAvatarTop]}>
                   <Text style={styles.playerAvatarText}>
                     {(p.name || '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>
-                <Text style={styles.playerName}>{p.name}</Text>
+                <Text style={[styles.playerName, isTopScore && styles.playerNameTop]}>{p.name}</Text>
                 {p.is_host ? <Text style={styles.crown}>👑</Text> : null}
+                {isTopScore ? <Text style={styles.trophy}>🏆</Text> : null}
               </View>
-              <View style={styles.playerScores}>
-                {p.ranking != null && (
-                  <View style={styles.scoreTag}>
-                    <Text style={styles.scoreTagText}>#{p.ranking} {t('high_score')}</Text>
-                  </View>
-                )}
-                <View style={styles.scoreTotal}>
-                  <Text style={styles.scoreTotalText}>{p.score ?? 0}</Text>
-                </View>
-              </View>
+              {isCurrentPlayer && game ? (
+                <TouchableOpacity
+                  onPress={handleOpenHiscores}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('view_hiscores')}
+                  testID="gameResults.openHiscores"
+                >
+                  {scoreRow}
+                  <Text style={styles.hiscoresHint}>{t('view_hiscores')}</Text>
+                </TouchableOpacity>
+              ) : (
+                scoreRow
+              )}
             </View>
-          ))
+            );
+          })
         )}
       </View>
       {(rematchError || rematchTimeoutMessage) ? (
@@ -298,11 +338,13 @@ export function GameResultsScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  wrapper: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   content: { padding: 24, paddingBottom: 48 },
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 20 },
   errorText: { fontSize: 14, color: colors.error[500], marginBottom: 12 },
@@ -346,6 +388,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary[200],
   },
+  playerCardTop: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#eab308',
+    borderWidth: 2,
+    shadowColor: '#eab308',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   playerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   playerAvatar: {
     width: 32,
@@ -356,18 +408,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playerAvatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  playerAvatarTop: { backgroundColor: '#ca8a04' },
   playerName: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
+  playerNameTop: { fontSize: 17, fontWeight: '800', color: '#92400e' },
   crown: { fontSize: 14 },
+  trophy: { fontSize: 16 },
   playerScores: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  playerScoresTop: { alignItems: 'flex-end' },
   scoreTag: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     backgroundColor: colors.primary[200],
   },
+  scoreTagTop: {
+    backgroundColor: '#fde68a',
+    borderWidth: 1,
+    borderColor: '#eab308',
+  },
   scoreTagText: { fontSize: 12, color: colors.primary[800] },
+  scoreTagTextTop: { fontSize: 13, fontWeight: '800', color: '#92400e' },
   scoreTotal: { minWidth: 36, alignItems: 'flex-end' },
+  scoreTotalTop: { minWidth: 44 },
   scoreTotalText: { fontSize: 18, fontWeight: '700', color: colors.primary[700] },
+  scoreTotalTextTop: { fontSize: 24, fontWeight: '800', color: '#b45309' },
+  hiscoresHint: { fontSize: 11, color: colors.primary[600], marginTop: 4, textAlign: 'right' },
   muted: { fontSize: 14, color: colors.primary[500], fontStyle: 'italic' },
   buttons: { gap: 12 },
   primaryButton: {

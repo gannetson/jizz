@@ -7,6 +7,12 @@ When the app sends a non-HTTPS redirect_uri for apple-id, we store it as the app
 callback and use our HTTPS completion URL as the redirect_uri sent to Apple.
 """
 
+from django.utils.deprecation import MiddlewareMixin
+
+from jizz.usage_analytics import record_usage_event
+
+_SERVER_RENDERED_PREFIXES = ('/data/', '/country/', '/staff/')
+
 
 class SocialAuthRedirectUriMiddleware:
     def __init__(self, get_response):
@@ -37,4 +43,39 @@ class AppVersionNoCacheMiddleware:
             response['Pragma'] = 'no-cache'
             if 'Expires' in response:
                 del response['Expires']
+        return response
+
+
+class UsageAnalyticsMiddleware(MiddlewareMixin):
+    """Log server-rendered Django page views (SPA routes are tracked client-side)."""
+
+    SKIP_PREFIXES = (
+        '/static/',
+        '/admin/',
+        '/api/',
+        '/token/',
+        '/media/',
+        '/.well-known/',
+    )
+
+    def process_response(self, request, response):
+        if request.method != 'GET' or response.status_code != 200:
+            return response
+
+        path = request.path
+        if any(path.startswith(prefix) for prefix in self.SKIP_PREFIXES):
+            return response
+        if not any(path.startswith(prefix) for prefix in _SERVER_RENDERED_PREFIXES):
+            return response
+
+        try:
+            record_usage_event(
+                request,
+                path=path,
+                event_type='page_view',
+                platform='web',
+            )
+        except Exception:
+            pass
+
         return response

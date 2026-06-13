@@ -1,4 +1,5 @@
 import {Flex, Heading, TableRoot, Box, TableBody, TableCell, TableColumnHeader, TableHeader, TableRow} from "@chakra-ui/react";
+import { fetchHiscores } from "../../api/hiscores"
 import { Page } from "../../shared/components/layout";
 import {FormattedMessage} from "react-intl";
 import {useContext, useEffect, useState} from "react"
@@ -8,7 +9,6 @@ import {ScoreLine} from "../../components/score-line"
 import {UseCountries} from "../../user/use-countries"
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 import {ScoreLineShort} from "../../components/score-line-short"
-import { apiUrl } from "../../api/baseUrl"
 
 const TexelHiscorePage = () => {
   const {countries} = UseCountries()
@@ -21,15 +21,7 @@ const TexelHiscorePage = () => {
 
   const loadScores = async () => {
     setLoading(true)
-    const url = apiUrl('/api/scores/?game__level=advanced&game__length=35&game__media=images&game__country=NL-NH')
-    const response = await fetch(url, {
-      cache: 'no-cache',
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    })
+    const response = await fetchHiscores('/api/scores/?game__level=advanced&game__length=35&game__media=images&game__country=NL-NH')
     if (response.status === 200) {
       const data = await response.json()
       setScores(data.results)

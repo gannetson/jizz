@@ -128,6 +128,7 @@ def data_index_view(request):
         "jizz/data_index.html",
         {
             "active_section": "home",
+            "is_staff": request.user.is_authenticated and request.user.is_staff,
         },
     )
 

@@ -81,6 +81,11 @@
             vertical-align: middle;
         }
 
+        table.data-table td.mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.82rem;
+        }
+
         @media (max-width: 900px) {
             .chart-grid { grid-template-columns: 1fr; }
         }
@@ -91,7 +96,11 @@
     <h1>Usage metrics <span class="staff-badge">Staff</span></h1>
     <p class="muted">
         First-party analytics stored in our database: page views, API calls (REST/WSGI), and WebSocket game actions (Channels/ASGI).
-        IP addresses are recorded for staff review only and are not shown on this dashboard.
+        <strong>Country</strong> is not geo-IP: it comes from the client’s chosen country, Cloudflare <code>CF-IPCountry</code>, or the logged-in user’s profile — so many events show NL even when visitors are elsewhere.
+        <strong>IP address</strong> is the first value in <code>X-Forwarded-For</code> (if nginx sends it) otherwise <code>REMOTE_ADDR</code> (often the proxy). New events also store proxy headers in metadata for debugging.
+    </p>
+    <p class="muted">
+        <a href="{% url 'admin:jizz_usageevent_changelist' %}">Open full raw log in Django admin</a>
     </p>
 
     <form class="toolbar" id="usage-form" method="get" action="{% url 'staff-usage' %}">
@@ -124,6 +133,10 @@
         <label>
             Country
             <input type="text" name="country" id="country-filter" value="{{ country_code }}" maxlength="2" placeholder="e.g. NL" style="width:4rem;text-transform:uppercase;">
+        </label>
+        <label>
+            IP
+            <input type="text" name="ip" id="ip-filter" value="{{ ip_address }}" placeholder="exact match" style="width:9rem;font-family:monospace;">
         </label>
         <label>
             Event
@@ -202,6 +215,27 @@
 
     <h2>World map</h2>
     <div id="usage-world-map" class="map-wrap"></div>
+
+    <h2>Top IP addresses</h2>
+    <p class="muted">Distinct client IPs in the filtered range (stored value — see note above about nginx).</p>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>IP address</th>
+                <th class="num">Events</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in top_ips %}
+            <tr>
+                <td class="mono"><a href="?start={{ start }}&amp;end={{ end }}&amp;platform={{ platform }}&amp;device_type={{ device_type }}&amp;country={{ country_code }}&amp;event_type={{ event_type }}&amp;ip={{ row.ip_address }}">{{ row.ip_address }}</a></td>
+                <td class="num">{{ row.events }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2">No IP addresses recorded for this filter.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
     {{ chart_json|json_script:"usage-data" }}
 {% endblock %}
@@ -390,6 +424,7 @@
                     platform: data.get("platform"),
                     device_type: data.get("device_type"),
                     country: data.get("country"),
+                    ip: data.get("ip"),
                     event_type: data.get("event_type"),
                 };
             }

@@ -112,6 +112,33 @@ class UsageAnalyticsApiTests(TestCase):
         self.assertEqual(event.path, '/data/')
         self.assertEqual(event.device_type, 'mobile')
         self.assertEqual(event.ip_address, '10.0.0.1')
+        self.assertEqual(event.metadata['proxy']['remote_addr'], '10.0.0.1')
+
+    def test_client_ip_uses_x_forwarded_for(self):
+        request = self.client.get(
+            '/',
+            REMOTE_ADDR='127.0.0.1',
+            HTTP_X_FORWARDED_FOR='203.0.113.50, 10.0.0.1',
+        )
+        event = record_usage_event(request, path='/start')
+        self.assertEqual(event.ip_address, '203.0.113.50')
+        self.assertEqual(event.metadata['proxy']['x_forwarded_for'], '203.0.113.50, 10.0.0.1')
+        self.assertEqual(event.proxy_headers['x_forwarded_for'], '203.0.113.50, 10.0.0.1')
+
+    def test_staff_dashboard_shows_top_ips(self):
+        user = User.objects.create_user('staffer2', password='x', is_staff=True)
+        UsageEvent.objects.create(
+            path='/home',
+            ip_address='203.0.113.99',
+            metadata={'proxy': {'remote_addr': '127.0.0.1', 'x_forwarded_for': '203.0.113.99'}},
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.get(reverse('staff-usage'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Top IP addresses')
+        self.assertContains(response, '203.0.113.99')
+        self.assertNotContains(response, 'Raw event log')
 
 
 class ApiEventLabelTests(TestCase):

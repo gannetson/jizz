@@ -1260,9 +1260,38 @@ class PushDeviceAdmin(admin.ModelAdmin):
 
 @admin.register(UsageEvent)
 class UsageEventAdmin(admin.ModelAdmin):
-    list_display = ['created_at', 'event_type', 'path', 'platform', 'device_type', 'country_code', 'ip_address', 'user']
+    list_display = [
+        'created_at',
+        'event_type',
+        'path',
+        'platform',
+        'device_type',
+        'country_code',
+        'ip_address',
+        'user',
+    ]
     list_filter = ['event_type', 'platform', 'device_type', 'country_code', 'created_at']
-    search_fields = ['path', 'session_key', 'ip_address', 'user__username']
-    readonly_fields = ['created_at']
+    search_fields = ['path', 'session_key', 'ip_address', 'user__username', 'user_agent']
+    readonly_fields = [
+        'created_at',
+        'event_type',
+        'path',
+        'platform',
+        'device_type',
+        'country_code',
+        'ip_address',
+        'user',
+        'session_key',
+        'user_agent',
+        'metadata',
+    ]
     date_hierarchy = 'created_at'
     raw_id_fields = ['user']
+    list_per_page = 100
+    ordering = ['-created_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

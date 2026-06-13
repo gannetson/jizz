@@ -9,10 +9,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from jizz.usage_analytics import (
+    _filtered_queryset,
     default_date_range,
     parse_date_param,
     record_usage_event,
     usage_stats_payload,
+    usage_top_ips,
 )
 
 
@@ -52,12 +54,26 @@ def _usage_query_params(request):
     device_type = (request.GET.get('device_type') or '').strip().lower() or None
     country_code = (request.GET.get('country') or '').strip().upper() or None
     event_type = (request.GET.get('event_type') or '').strip().lower() or None
-    return start, end, platform, device_type, country_code, event_type
+    ip_address = (request.GET.get('ip') or '').strip() or None
+    return start, end, platform, device_type, country_code, event_type, ip_address
+
+
+def _usage_filtered_qs(request):
+    start, end, platform, device_type, country_code, event_type, ip_address = _usage_query_params(request)
+    return start, end, platform, device_type, country_code, event_type, ip_address, _filtered_queryset(
+        start,
+        end,
+        platform=platform,
+        device_type=device_type,
+        country_code=country_code,
+        event_type=event_type,
+        ip_address=ip_address,
+    )
 
 
 @staff_member_required
 def staff_usage_view(request):
-    start, end, platform, device_type, country_code, event_type = _usage_query_params(request)
+    start, end, platform, device_type, country_code, event_type, ip_address, qs = _usage_filtered_qs(request)
     payload = usage_stats_payload(
         start,
         end,
@@ -65,7 +81,9 @@ def staff_usage_view(request):
         device_type=device_type,
         country_code=country_code,
         event_type=event_type,
+        ip_address=ip_address,
     )
+    top_ips = usage_top_ips(qs)
     return render(
         request,
         'jizz/staff_usage.html',
@@ -77,14 +95,16 @@ def staff_usage_view(request):
             'device_type': payload['device_type'],
             'country_code': payload['country_code'],
             'event_type': payload['event_type'],
+            'ip_address': ip_address or '',
             'chart_json': payload,
+            'top_ips': top_ips,
         },
     )
 
 
 @staff_member_required
 def staff_usage_api_view(request):
-    start, end, platform, device_type, country_code, event_type = _usage_query_params(request)
+    start, end, platform, device_type, country_code, event_type, ip_address = _usage_query_params(request)
     return JsonResponse(
         usage_stats_payload(
             start,
@@ -93,5 +113,6 @@ def staff_usage_api_view(request):
             device_type=device_type,
             country_code=country_code,
             event_type=event_type,
+            ip_address=ip_address,
         )
     )

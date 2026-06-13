@@ -26,6 +26,15 @@ def get_client_ip(request) -> str | None:
     return ip or None
 
 
+def request_debug_meta(request) -> dict[str, str]:
+    """Stored on events so staff can see proxy headers (nginx, Cloudflare)."""
+    return {
+        'remote_addr': (request.META.get('REMOTE_ADDR') or '')[:45],
+        'x_forwarded_for': (request.META.get('HTTP_X_FORWARDED_FOR') or '')[:500],
+        'cf_ipcountry': (request.META.get('HTTP_CF_IPCOUNTRY') or '')[:10],
+    }
+
+
 def resolve_country_code(request, client_country: str | None = None) -> str:
     if client_country:
         code = client_country.strip().upper()[:2]
@@ -107,6 +116,8 @@ def record_usage_event(
     user_agent = (request.META.get('HTTP_USER_AGENT') or '')[:2000]
     device_type = parse_device_type(user_agent)
     user = request.user if getattr(request, 'user', None) and request.user.is_authenticated else None
+    merged_metadata = dict(metadata or {})
+    merged_metadata['proxy'] = request_debug_meta(request)
 
     return UsageEvent.objects.create(
         event_type=normalize_event_type(event_type),
@@ -118,7 +129,7 @@ def record_usage_event(
         user=user,
         session_key=(session_key or '')[:64],
         user_agent=user_agent,
-        metadata=metadata or {},
+        metadata=merged_metadata,
     )
 
 
@@ -140,6 +151,14 @@ def _scope_client_ip(scope) -> str | None:
     return None
 
 
+def scope_debug_meta(scope) -> dict[str, str]:
+    return {
+        'remote_addr': (_scope_client_ip(scope) or '')[:45],
+        'x_forwarded_for': (_scope_header(scope, 'x-forwarded-for') or '')[:500],
+        'cf_ipcountry': (_scope_header(scope, 'cf-ipcountry') or '')[:10],
+    }
+
+
 def record_websocket_usage_event(
     scope,
     *,
@@ -155,6 +174,8 @@ def record_websocket_usage_event(
     if country == 'XX':
         country = ''
 
+    ws_metadata = {'action': action, **(metadata or {}), 'proxy': scope_debug_meta(scope)}
+
     return UsageEvent.objects.create(
         event_type='websocket',
         path=label[:500],
@@ -165,7 +186,7 @@ def record_websocket_usage_event(
         user=None,
         session_key='',
         user_agent=user_agent,
-        metadata={'action': action, **(metadata or {})},
+        metadata=ws_metadata,
     )
 
 
@@ -199,6 +220,7 @@ def _filtered_queryset(
     device_type: str | None = None,
     country_code: str | None = None,
     event_type: str | None = None,
+    ip_address: str | None = None,
 ):
     start_dt = timezone.make_aware(datetime.combine(start, datetime.min.time()))
     end_dt = timezone.make_aware(datetime.combine(end, datetime.max.time()))
@@ -212,6 +234,8 @@ def _filtered_queryset(
         qs = qs.filter(country_code=country_code.upper())
     if event_type in _EVENT_TYPE_CHOICES:
         qs = qs.filter(event_type=event_type)
+    if ip_address:
+        qs = qs.filter(ip_address=ip_address.strip())
     return qs
 
 
@@ -223,6 +247,7 @@ def usage_stats_payload(
     device_type: str | None = None,
     country_code: str | None = None,
     event_type: str | None = None,
+    ip_address: str | None = None,
 ) -> dict[str, Any]:
     start, end = normalize_range(start, end)
     qs = _filtered_queryset(
@@ -232,6 +257,7 @@ def usage_stats_payload(
         device_type=device_type,
         country_code=country_code,
         event_type=event_type,
+        ip_address=ip_address,
     )
 
     daily = (
@@ -295,3 +321,12 @@ def usage_stats_payload(
         'by_country': by_country,
         'country_map': country_map,
     }
+
+
+def usage_top_ips(qs, *, limit: int = 15) -> list[dict[str, Any]]:
+    return list(
+        qs.exclude(ip_address__isnull=True)
+        .values('ip_address')
+        .annotate(events=Count('id'))
+        .order_by('-events', 'ip_address')[:limit]
+    )

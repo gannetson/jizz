@@ -1540,3 +1540,8 @@ class UsageEvent(models.Model):
     def __str__(self):
         return f'{self.platform} {self.path} @ {self.created_at:%Y-%m-%d %H:%M}'
 
+    @property
+    def proxy_headers(self) -> dict:
+        meta = self.metadata or {}
+        return meta.get('proxy') or meta.get('_request') or {}
+

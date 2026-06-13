@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
@@ -134,10 +135,15 @@ class UsageAnalyticsApiTests(TestCase):
         )
         client = Client()
         client.force_login(user)
-        response = client.get(reverse('staff-usage'))
+        with patch(
+            'jizz.ip_geo.lookup_ip_location',
+            return_value={'country_code': 'NL', 'country_name': 'Netherlands', 'city': 'Amsterdam'},
+        ):
+            response = client.get(reverse('staff-usage'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Top IP addresses')
         self.assertContains(response, '203.0.113.99')
+        self.assertContains(response, 'Amsterdam, Netherlands')
         self.assertNotContains(response, 'Raw event log')
 
 

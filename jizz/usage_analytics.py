@@ -324,9 +324,12 @@ def usage_stats_payload(
 
 
 def usage_top_ips(qs, *, limit: int = 15) -> list[dict[str, Any]]:
-    return list(
+    from jizz.ip_geo import enrich_ip_rows
+
+    rows = list(
         qs.exclude(ip_address__isnull=True)
         .values('ip_address')
         .annotate(events=Count('id'))
         .order_by('-events', 'ip_address')[:limit]
     )
+    return enrich_ip_rows(rows)

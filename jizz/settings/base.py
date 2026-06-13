@@ -362,3 +362,7 @@ PLAY_STORE_URL = os.environ.get(
     'PLAY_STORE_URL',
     'https://play.google.com/store/apps/details?id=pro.birdr.app',
 )
+
+# Optional MaxMind GeoLite2-Country.mmdb for offline IP geolocation (staff usage dashboard).
+# When unset, staff IP lookup falls back to ip-api.com for public addresses.
+GEOIP_COUNTRY_DB = os.environ.get('GEOIP_COUNTRY_DB', '')

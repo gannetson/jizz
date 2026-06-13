@@ -217,11 +217,12 @@
     <div id="usage-world-map" class="map-wrap"></div>
 
     <h2>Top IP addresses</h2>
-    <p class="muted">Distinct client IPs in the filtered range (stored value — see note above about nginx).</p>
+    <p class="muted">Distinct client IPs in the filtered range. Location is resolved from the IP address (GeoIP), not from the stored country field above.</p>
     <table class="data-table">
         <thead>
             <tr>
                 <th>IP address</th>
+                <th>Location</th>
                 <th class="num">Events</th>
             </tr>
         </thead>
@@ -229,10 +230,11 @@
             {% for row in top_ips %}
             <tr>
                 <td class="mono"><a href="?start={{ start }}&amp;end={{ end }}&amp;platform={{ platform }}&amp;device_type={{ device_type }}&amp;country={{ country_code }}&amp;event_type={{ event_type }}&amp;ip={{ row.ip_address }}">{{ row.ip_address }}</a></td>
+                <td>{% if row.geo_country_code %}<strong>{{ row.geo_country_code }}</strong> · {% endif %}{{ row.geo_label }}</td>
                 <td class="num">{{ row.events }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="2">No IP addresses recorded for this filter.</td></tr>
+            <tr><td colspan="3">No IP addresses recorded for this filter.</td></tr>
             {% endfor %}
         </tbody>
     </table>

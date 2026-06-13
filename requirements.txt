@@ -18,7 +18,6 @@ decorator==5.1.1
 django-cors-headers==4.4.0
 django-filter==23.2
 django-oauth-toolkit==3.0.1
-django-oauth-toolkit==3.0.1
 django-rest-framework-social-oauth2==1.2.0
 djangorestframework-simplejwt==5.3.1
 djangorestframework==3.14.0
@@ -32,11 +31,11 @@ ipython==8.12.2
 jedi==0.18.2
 markdown==3.5.2
 matplotlib-inline==0.1.6
-numpy==1.24.4
-scikit-learn==1.3.2
-joblib==1.3.2
+numpy==1.26.4
+scikit-learn==1.4.2
+joblib==1.4.2
 opencv-python-headless==4.10.0.84
-onnxruntime==1.17.3
+onnxruntime==1.19.2
 oauthlib==3.2.2
 openai==2.2.0
 parso==0.8.3

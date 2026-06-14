@@ -4,6 +4,7 @@ from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render
 
+from jizz.country_challenge_leaderboard import country_challenge_leaderboard
 from jizz.games_played_stats import (
     default_date_range,
     games_played_payload,
@@ -196,3 +197,21 @@ def data_games_played_view(request):
 def data_games_played_api_view(request):
     start, end, granularity = _games_played_query_params(request)
     return JsonResponse(games_played_payload(start, end, granularity=granularity))
+
+
+def data_country_challenge_leaderboard_view(request):
+    leaderboard = country_challenge_leaderboard(limit=100, request=request)
+    return render(
+        request,
+        "jizz/data_country_challenge_leaderboard.html",
+        {
+            "active_section": "country-challenge-leaderboard",
+            "leaderboard": leaderboard,
+        },
+    )
+
+
+def data_country_challenge_leaderboard_api_view(request):
+    return JsonResponse(
+        {"leaderboard": country_challenge_leaderboard(limit=100, request=request)}
+    )

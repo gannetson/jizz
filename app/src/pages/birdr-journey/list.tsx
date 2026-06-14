@@ -172,8 +172,15 @@ export function BirdrJourneyListPage() {
             </Alert.Root>
           )}
 
-          <Button colorPalette="primary" size="lg" mb={6} onClick={() => navigate('/journey/country')}>
+          <Button colorPalette="primary" size="lg" mb={3} onClick={() => navigate('/journey/country')}>
             <FormattedMessage id="new_country_challenge" defaultMessage="New country challenge" />
+          </Button>
+
+          <Button variant="outline" size="lg" mb={6} onClick={() => navigate('/journey/leaderboard')}>
+            <FormattedMessage
+              id="country_challenge_leaderboard"
+              defaultMessage="Country Challenge leaderboard"
+            />
           </Button>
 
           <Heading size="md" mb={3}>

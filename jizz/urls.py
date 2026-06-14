@@ -18,6 +18,8 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FirstAssertionReviewView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
 from jizz.data_views import (
+    data_country_challenge_leaderboard_api_view,
+    data_country_challenge_leaderboard_view,
     data_games_played_api_view,
     data_games_played_view,
     data_index_view,
@@ -47,6 +49,7 @@ from jizz.birdr_journey_views import (
     BirdrJourneyStartStepView,
     BirdrJourneyCompleteStepView,
     BirdrJourneyAdvanceLevelView,
+    CountryChallengeLeaderboardView,
 )
 from jizz.checklist_views import ChecklistView
 from jizz.app_version_views import AppVersionView
@@ -170,6 +173,16 @@ urlpatterns = [
     path('data/taxons/families/', data_taxon_families_view, name='data-taxon-families'),
     path('data/games-played/', data_games_played_view, name='data-games-played'),
     path('data/games-played/api/', data_games_played_api_view, name='data-games-played-api'),
+    path(
+        'data/country-challenge-leaderboard/',
+        data_country_challenge_leaderboard_view,
+        name='data-country-challenge-leaderboard',
+    ),
+    path(
+        'data/country-challenge-leaderboard/api/',
+        data_country_challenge_leaderboard_api_view,
+        name='data-country-challenge-leaderboard-api',
+    ),
 
     path('staff/quiz-mistakes/', staff_quiz_mistakes_redirect, name='quiz-mistake-stats'),
     path('staff/quiz-mistakes/species/', staff_quiz_mistakes_redirect, {'subpath': 'species'}, name='quiz-mistake-species'),
@@ -249,6 +262,11 @@ urlpatterns = [
     re_path(r"^api/updates/reactions/$", ReactionView.as_view(), name="reactions"),
 
     path('api/birdr-journey/', BirdrJourneyView.as_view(), name='birdr-journey'),
+    path(
+        'api/birdr-journey/leaderboard/',
+        CountryChallengeLeaderboardView.as_view(),
+        name='birdr-journey-leaderboard',
+    ),
     path(
         'api/birdr-journey/<int:journey_id>/',
         BirdrJourneyDetailView.as_view(),

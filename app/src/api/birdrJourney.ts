@@ -92,6 +92,21 @@ export type CompleteStepResponse = {
   status: string;
 };
 
+export type CountryChallengeLeaderboardRow = {
+  player_name: string;
+  country_code: string;
+  country_name: string;
+  level_index: number;
+  level_title: string;
+  level_title_nl?: string;
+  level_icon_url: string;
+  step_number: number;
+  step_total: number;
+  step_label: string;
+  is_champion: boolean;
+  updated: string;
+};
+
 const BIRDR_JOURNEY_COUNTRY_KEY = 'birdr_journey_country_code';
 
 function parseError(data: Record<string, unknown>, fallback: string): string {
@@ -268,6 +283,24 @@ export async function deleteBirdrJourney(journeyId: number): Promise<void> {
 /** Menu link: country challenges overview. */
 export function getCountryChallengesPath(): string {
   return '/journey';
+}
+
+/** Country Challenge progress leaderboard. */
+export function getCountryChallengeLeaderboardPath(): string {
+  return '/journey/leaderboard';
+}
+
+export async function fetchCountryChallengeLeaderboard(
+  limit = 100
+): Promise<CountryChallengeLeaderboardRow[]> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}`), {
+    headers: { Accept: 'application/json' },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data as Record<string, unknown>, 'Failed to load leaderboard'));
+  }
+  return (data as { leaderboard?: CountryChallengeLeaderboardRow[] }).leaderboard ?? [];
 }
 
 export async function resolveBirdrJourneyPlayerToken(): Promise<string | null> {

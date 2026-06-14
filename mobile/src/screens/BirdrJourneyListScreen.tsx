@@ -182,6 +182,14 @@ export function BirdrJourneyListScreen() {
         <Text style={styles.primaryButtonText}>{t('new_country_challenge')}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() => (navigation as any).navigate('CountryChallengeLeaderboard')}
+        testID="journey.leaderboard"
+      >
+        <Text style={styles.secondaryButtonText}>{t('country_challenge_leaderboard')}</Text>
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>{t('my_country_challenges')}</Text>
 
       {loading && journeys.length === 0 ? (
@@ -256,9 +264,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  secondaryButtonText: { color: colors.primary[700], fontSize: 16, fontWeight: '600' },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.primary[800], marginBottom: 12 },
   loader: { marginVertical: 24 },
   muted: { fontSize: 14, color: colors.primary[600] },

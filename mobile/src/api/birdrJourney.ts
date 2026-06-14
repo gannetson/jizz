@@ -98,6 +98,21 @@ export type CompleteStepResponse = {
   status: string;
 };
 
+export type CountryChallengeLeaderboardRow = {
+  player_name: string;
+  country_code: string;
+  country_name: string;
+  level_index: number;
+  level_title: string;
+  level_title_nl?: string;
+  level_icon_url: string;
+  step_number: number;
+  step_total: number;
+  step_label: string;
+  is_champion: boolean;
+  updated: string;
+};
+
 const BIRDR_JOURNEY_PLAYER_KEY = 'birdr_journey_player_token';
 const BIRDR_JOURNEY_COUNTRY_KEY = 'birdr_journey_country_code';
 
@@ -437,4 +452,18 @@ export async function advanceJourneyLevel(journeyId: number): Promise<BirdrJourn
   const journey = data as BirdrJourney;
   await syncBirdrJourneyPlayerToken(journey);
   return journey;
+}
+
+/** Public Country Challenge progress leaderboard. */
+export async function fetchCountryChallengeLeaderboard(
+  limit = 100
+): Promise<CountryChallengeLeaderboardRow[]> {
+  const response = await fetch(apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}`), {
+    headers: { Accept: 'application/json' },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to load leaderboard'));
+  }
+  return (data as { leaderboard?: CountryChallengeLeaderboardRow[] }).leaderboard ?? [];
 }

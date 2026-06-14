@@ -29,6 +29,7 @@ import TexelHiscorePage from "./pages/texel/hiscores"
 import { MyGamesPage } from "./pages/my-games"
 import ChecklistPage from "./pages/checklist"
 import { BirdrJourneyListPage } from "./pages/birdr-journey/list"
+import { CountryChallengeLeaderboardPage } from "./pages/birdr-journey/leaderboard"
 import { BirdrJourneyIntroPage } from "./pages/birdr-journey/intro"
 import { BirdrJourneyCountryPage } from "./pages/birdr-journey/country"
 import { BirdrJourneyProgressPage } from "./pages/birdr-journey/progress"
@@ -72,6 +73,7 @@ export const MainContent = () => {
             <Route path="/my-games" element={<MyGamesPage />} />
             <Route path="/checklist" element={<ChecklistPage />} />
             <Route path="/journey" element={<BirdrJourneyListPage />} />
+            <Route path="/journey/leaderboard" element={<CountryChallengeLeaderboardPage />} />
             <Route path="/journey/intro" element={<BirdrJourneyIntroPage />} />
             <Route path="/journey/country" element={<BirdrJourneyCountryPage />} />
             <Route path="/journey/play" element={<BirdrJourneyPlayPage />} />

@@ -268,6 +268,10 @@ export const translations: Record<string, Record<string, string>> = {
     country_challenge_champion: 'Champion',
     country_challenge_in_progress: 'In progress',
     country_challenge_active: 'Active on home',
+    country_challenge_leaderboard: 'Country Challenge leaderboard',
+    country_challenge_leaderboard_hint:
+      'Highest level reached per player and quiz country. A player can appear multiple times for different countries.',
+    country_challenge_leaderboard_empty: 'No Country Challenge progress yet.',
     remove: 'Remove',
     your_name: 'Your name',
     select_language: 'Select language',
@@ -698,6 +702,10 @@ export const translations: Record<string, Record<string, string>> = {
     country_challenge_champion: 'Kampioen',
     country_challenge_in_progress: 'Bezig',
     country_challenge_active: 'Actief op home',
+    country_challenge_leaderboard: 'Landenuitdaging leaderboard',
+    country_challenge_leaderboard_hint:
+      'Hoogste bereikte level per speler en quizland. Een speler kan meerdere keren voorkomen voor verschillende landen.',
+    country_challenge_leaderboard_empty: 'Nog geen voortgang in landenuitdagingen.',
     remove: 'Verwijderen',
     your_name: 'Je naam',
     select_language: 'Kies taal',

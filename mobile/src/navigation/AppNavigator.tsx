@@ -31,6 +31,7 @@ import { BirdrJourneyProgressScreen } from '../screens/BirdrJourneyProgressScree
 import { BirdrJourneyStepIntroScreen } from '../screens/BirdrJourneyStepIntroScreen';
 import { BirdrJourneyStepResultsScreen } from '../screens/BirdrJourneyStepResultsScreen';
 import { BirdrJourneyLevelCelebrationScreen } from '../screens/BirdrJourneyLevelCelebrationScreen';
+import { CountryChallengeLeaderboardScreen } from '../screens/CountryChallengeLeaderboardScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
 import { UpdateDetailScreen } from '../screens/UpdateDetailScreen';
 
@@ -41,6 +42,7 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'Start', titleKey: 'new_game', component: StartScreen },
   { name: 'Scores', titleKey: 'high_scores', component: ScoresScreen },
   { name: 'BirdrJourneyList', titleKey: 'country_challenge', component: BirdrJourneyListScreen },
+  { name: 'CountryChallengeLeaderboard', titleKey: 'country_challenge_leaderboard', component: CountryChallengeLeaderboardScreen },
   { name: 'BirdrJourneyIntro', titleKey: 'country_challenge', component: BirdrJourneyIntroScreen },
   { name: 'BirdrJourneyCountry', titleKey: 'birdr_journey_select_country', component: BirdrJourneyCountryScreen },
   { name: 'BirdrJourneyProgress', titleKey: 'country_challenge', component: BirdrJourneyProgressScreen },

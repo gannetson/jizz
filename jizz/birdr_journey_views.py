@@ -372,3 +372,22 @@ class BirdrJourneyAdvanceLevelView(BirdrJourneyMixin, APIView):
         journey.current_step_sequence = 0
         journey.save(update_fields=['current_sequence', 'current_step_sequence', 'updated'])
         return self._no_cache_response(self._serialize_journey(journey, request))
+
+
+class CountryChallengeLeaderboardView(APIView):
+    """GET — public Country Challenge progress leaderboard."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        from jizz.country_challenge_leaderboard import country_challenge_leaderboard
+
+        try:
+            limit = int(request.query_params.get('limit', 100))
+        except (TypeError, ValueError):
+            limit = 100
+        limit = max(1, min(limit, 200))
+        payload = country_challenge_leaderboard(limit=limit, request=request)
+        response = Response({'leaderboard': payload})
+        response['Cache-Control'] = 'public, max-age=300'
+        return response

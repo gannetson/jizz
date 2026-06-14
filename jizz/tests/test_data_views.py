@@ -118,6 +118,7 @@ class GamesPlayedViewsTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "games-played-chart")
         self.assertContains(res, "games-world-map")
+        self.assertNotContains(res, "challenge-leaderboard")
 
     def test_games_played_api(self):
         res = Client().get(
@@ -130,3 +131,25 @@ class GamesPlayedViewsTests(TestCase):
         self.assertIn("series", data)
         self.assertIn("by_country", data)
         self.assertIn("country_map", data)
+        self.assertNotIn("leaderboard", data)
+
+
+class CountryChallengeLeaderboardViewsTests(TestCase):
+    def test_leaderboard_page_public(self):
+        res = Client().get(reverse("data-country-challenge-leaderboard"))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Country Challenge leaderboard")
+        self.assertContains(res, "challenge-leaderboard")
+
+    def test_leaderboard_api(self):
+        res = Client().get(reverse("data-country-challenge-leaderboard-api"))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("leaderboard", data)
+        self.assertIsInstance(data["leaderboard"], list)
+
+    def test_leaderboard_api_endpoint(self):
+        res = Client().get(reverse("birdr-journey-leaderboard"))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("leaderboard", data)

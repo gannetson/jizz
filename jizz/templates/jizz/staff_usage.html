@@ -374,7 +374,15 @@
             function buildWorldMap(payload) {
                 const values = payload.country_map || {};
                 const container = document.getElementById("usage-world-map");
+                if (worldMap && typeof worldMap.destroy === "function") {
+                    worldMap.destroy();
+                    worldMap = null;
+                }
                 container.innerHTML = "";
+                if (!Object.keys(values).length) {
+                    container.innerHTML = "<p class=\"muted\">No country data for this filter.</p>";
+                    return;
+                }
                 worldMap = new jsVectorMap({
                     selector: "#usage-world-map",
                     map: "world",
@@ -387,6 +395,7 @@
                             attribute: "fill",
                             scale: ["#f5ede0", "#8b6419"],
                             values,
+                            normalizeFunction: "linear",
                         }],
                     },
                     onRegionTooltipShow(event, tooltip, code) {

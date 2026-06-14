@@ -239,20 +239,25 @@ def _filtered_queryset(
     return qs
 
 
-def usage_by_ip_country(qs, *, limit: int = 50) -> list[dict[str, Any]]:
-    """Aggregate events by GeoIP country code (matches Top IP address locations)."""
+def usage_by_ip_country(qs, *, limit: int = 50, max_api_lookups: int = 60) -> list[dict[str, Any]]:
+    """Aggregate events by GeoIP country code (same lookup path as Top IP addresses)."""
     from collections import Counter
 
-    from jizz.ip_geo import lookup_ip_country_mmdb
+    from jizz.ip_geo import lookup_ip_location, mmdb_available
 
     counter: Counter[str] = Counter()
-    ip_rows = (
+    ip_rows = list(
         qs.exclude(ip_address__isnull=True)
         .values('ip_address')
         .annotate(events=Count('id'))
+        .order_by('-events')
     )
+    if not mmdb_available():
+        ip_rows = ip_rows[:max_api_lookups]
+
     for row in ip_rows:
-        location = lookup_ip_country_mmdb(str(row['ip_address']))
+        ip = str(row['ip_address']).strip()
+        location = lookup_ip_location(ip)
         code = (location.get('country_code') or '').upper()
         if code:
             counter[code] += row['events']

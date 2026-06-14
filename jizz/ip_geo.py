@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import os
 from functools import lru_cache
 from typing import Any
 
@@ -22,25 +23,34 @@ def _is_public_ip(ip: str) -> bool:
 
 def _get_geo_reader():
     global _geo_reader, _geo_reader_failed
-    if _geo_reader_failed:
-        return None
     if _geo_reader is not None:
         return _geo_reader
 
     db_path = getattr(settings, 'GEOIP_COUNTRY_DB', None) or ''
     if not db_path:
-        _geo_reader_failed = True
         return None
+
+    if _geo_reader_failed:
+        if not (os.path.isfile(db_path) and os.access(db_path, os.R_OK)):
+            return None
+        _geo_reader_failed = False
 
     try:
         import geoip2.database
 
         _geo_reader = geoip2.database.Reader(str(db_path))
+        lookup_ip_country_mmdb.cache_clear()
+        logger.info('GeoIP country database loaded from %s', db_path)
         return _geo_reader
     except Exception as exc:
         logger.warning('GeoIP country database unavailable at %s: %s', db_path, exc)
         _geo_reader_failed = True
         return None
+
+
+def mmdb_available() -> bool:
+    """True when the local MaxMind country database is loaded."""
+    return _get_geo_reader() is not None
 
 
 def _lookup_via_mmdb(ip: str) -> dict[str, str]:
@@ -89,7 +99,7 @@ def lookup_ip_country_mmdb(ip: str) -> dict[str, str]:
     return _lookup_via_mmdb(ip)
 
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=4096)
 def lookup_ip_location(ip: str) -> dict[str, str]:
     """Resolve a public IP to country (and city when available). Results are cached."""
     ip = (ip or '').strip()

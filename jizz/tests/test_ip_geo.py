@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
-from jizz.ip_geo import enrich_ip_rows, format_ip_location, lookup_ip_country_mmdb, lookup_ip_location
+from jizz.ip_geo import enrich_ip_rows, format_ip_location, lookup_ip_country_mmdb, lookup_ip_location, mmdb_available
 
 
 class IpGeoTests(SimpleTestCase):
@@ -53,3 +53,11 @@ class IpGeoTests(SimpleTestCase):
         with patch('jizz.ip_geo._lookup_via_ip_api', return_value={}):
             location = lookup_ip_location('8.8.8.8')
         self.assertEqual(location, {})
+
+    @override_settings(GEOIP_COUNTRY_DB='/nonexistent/path.mmdb')
+    def test_mmdb_available_false_when_db_missing(self):
+        import jizz.ip_geo as ip_geo_module
+
+        ip_geo_module._geo_reader = None
+        ip_geo_module._geo_reader_failed = False
+        self.assertFalse(mmdb_available())

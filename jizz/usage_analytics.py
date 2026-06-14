@@ -243,7 +243,7 @@ def usage_by_ip_country(qs, *, limit: int = 50, max_api_lookups: int = 60) -> li
     """Aggregate events by GeoIP country code (same lookup path as Top IP addresses)."""
     from collections import Counter
 
-    from jizz.ip_geo import lookup_ip_location, mmdb_available
+    from jizz.ip_geo import lookup_ip_locations, mmdb_available
 
     counter: Counter[str] = Counter()
     ip_rows = list(
@@ -252,12 +252,15 @@ def usage_by_ip_country(qs, *, limit: int = 50, max_api_lookups: int = 60) -> li
         .annotate(events=Count('id'))
         .order_by('-events')
     )
-    if not mmdb_available():
-        ip_rows = ip_rows[:max_api_lookups]
+    live_cap = None if mmdb_available() else max_api_lookups
+    locations = lookup_ip_locations(
+        [str(row['ip_address']).strip() for row in ip_rows],
+        max_live_lookups=live_cap,
+    )
 
     for row in ip_rows:
         ip = str(row['ip_address']).strip()
-        location = lookup_ip_location(ip)
+        location = locations.get(ip, {})
         code = (location.get('country_code') or '').upper()
         if code:
             counter[code] += row['events']

@@ -1545,3 +1545,37 @@ class UsageEvent(models.Model):
         meta = self.metadata or {}
         return meta.get('proxy') or meta.get('_request') or {}
 
+
+class IpGeoCache(models.Model):
+    """Persistent cache for IP → location lookups (staff analytics)."""
+
+    ip_address = models.GenericIPAddressField(unique=True)
+    country_code = models.CharField(max_length=2, blank=True, default='')
+    country_name = models.CharField(max_length=100, blank=True, default='')
+    city = models.CharField(max_length=100, blank=True, default='')
+    is_private = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'IP geolocation cache'
+        verbose_name_plural = 'IP geolocation cache'
+
+    def __str__(self):
+        if self.is_private:
+            return f'{self.ip_address} (private/local)'
+        label = self.country_code or self.country_name or 'unknown'
+        return f'{self.ip_address} → {label}'
+
+    def to_location_dict(self):
+        if self.is_private:
+            return {
+                'country_code': '',
+                'country_name': 'Private/local',
+                'city': '',
+            }
+        return {
+            'country_code': self.country_code,
+            'country_name': self.country_name,
+            'city': self.city,
+        }
+

@@ -86,11 +86,11 @@ class UsageAnalyticsAggregationTests(TestCase):
         )
 
         with patch(
-            'jizz.ip_geo.lookup_ip_location',
-            side_effect=lambda ip: {
+            'jizz.ip_geo.lookup_ip_locations',
+            return_value={
                 '84.85.68.210': {'country_code': 'NL', 'country_name': 'Netherlands', 'city': ''},
                 '139.178.131.76': {'country_code': 'US', 'country_name': 'United States', 'city': ''},
-            }.get(ip, {}),
+            },
         ):
             payload = usage_stats_payload(date(2026, 5, 1), date(2026, 5, 2))
 
@@ -102,15 +102,15 @@ class UsageAnalyticsAggregationTests(TestCase):
         self.assertEqual(payload['country_map']['US'], 1)
         self.assertEqual(len(payload['series']), 2)
 
-    @patch('jizz.ip_geo.lookup_ip_location')
+    @patch('jizz.ip_geo.lookup_ip_locations')
     @patch('jizz.ip_geo.mmdb_available', return_value=False)
-    def test_usage_by_ip_country_falls_back_to_api_without_mmdb(self, mock_api):
+    def test_usage_by_ip_country_falls_back_to_api_without_mmdb(self, mock_locations):
         from jizz.usage_analytics import usage_by_ip_country
 
-        mock_api.side_effect = lambda ip: {
+        mock_locations.return_value = {
             '84.85.68.210': {'country_code': 'NL', 'country_name': 'Netherlands', 'city': ''},
             '139.178.131.76': {'country_code': 'US', 'country_name': 'United States', 'city': ''},
-        }.get(ip, {})
+        }
 
         self._event(path='/a', ip_address='84.85.68.210', when=self.day_one)
         self._event(path='/b', ip_address='84.85.68.210', when=self.day_one, session_key='s2')

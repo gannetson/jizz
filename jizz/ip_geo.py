@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import os
+from collections.abc import Iterable
 from functools import lru_cache
 from typing import Any
 
@@ -90,22 +91,8 @@ def _lookup_via_ip_api(ip: str) -> dict[str, str]:
         return {}
 
 
-@lru_cache(maxsize=4096)
-def lookup_ip_country_mmdb(ip: str) -> dict[str, str]:
-    """Resolve country from the local MaxMind DB only (safe for bulk map aggregation)."""
-    ip = (ip or '').strip()
-    if not ip or not _is_public_ip(ip):
-        return {}
-    return _lookup_via_mmdb(ip)
-
-
-@lru_cache(maxsize=4096)
-def lookup_ip_location(ip: str) -> dict[str, str]:
-    """Resolve a public IP to country (and city when available). Results are cached."""
-    ip = (ip or '').strip()
-    if not ip:
-        return {}
-
+def _resolve_ip_location_live(ip: str) -> dict[str, str]:
+    """Resolve an IP via MaxMind and ip-api (no DB cache)."""
     if not _is_public_ip(ip):
         return {
             'country_code': '',
@@ -117,6 +104,68 @@ def lookup_ip_location(ip: str) -> dict[str, str]:
     if not location.get('country_code') and not location.get('country_name'):
         location = _lookup_via_ip_api(ip)
     return location
+
+
+def _save_ip_geo_cache(ip: str, location: dict[str, str]) -> None:
+    from jizz.models import IpGeoCache
+
+    is_private = location.get('country_name') == 'Private/local'
+    IpGeoCache.objects.update_or_create(
+        ip_address=ip,
+        defaults={
+            'country_code': (location.get('country_code') or '')[:2],
+            'country_name': (location.get('country_name') or '')[:100],
+            'city': (location.get('city') or '')[:100],
+            'is_private': is_private,
+        },
+    )
+
+
+def lookup_ip_locations(
+    ips: Iterable[str],
+    *,
+    max_live_lookups: int | None = None,
+) -> dict[str, dict[str, str]]:
+    """Resolve many IPs, using the DB cache and only hitting GeoIP services on cache miss."""
+    from jizz.models import IpGeoCache
+
+    unique_ips = list(dict.fromkeys(ip.strip() for ip in ips if ip and ip.strip()))
+    if not unique_ips:
+        return {}
+
+    cached_rows = IpGeoCache.objects.filter(ip_address__in=unique_ips)
+    locations = {str(row.ip_address): row.to_location_dict() for row in cached_rows}
+
+    live_lookups = 0
+    for ip in unique_ips:
+        if ip in locations:
+            continue
+        if max_live_lookups is not None and live_lookups >= max_live_lookups:
+            locations[ip] = {}
+            continue
+        location = _resolve_ip_location_live(ip)
+        _save_ip_geo_cache(ip, location)
+        locations[ip] = location
+        live_lookups += 1
+
+    return locations
+
+
+def lookup_ip_location(ip: str) -> dict[str, str]:
+    """Resolve a single IP to country (and city when available)."""
+    ip = (ip or '').strip()
+    if not ip:
+        return {}
+    return lookup_ip_locations([ip]).get(ip, {})
+
+
+@lru_cache(maxsize=4096)
+def lookup_ip_country_mmdb(ip: str) -> dict[str, str]:
+    """Resolve country from the local MaxMind DB only (safe for bulk map aggregation)."""
+    ip = (ip or '').strip()
+    if not ip or not _is_public_ip(ip):
+        return {}
+    return _lookup_via_mmdb(ip)
 
 
 def format_ip_location(location: dict[str, str] | None) -> str:
@@ -134,10 +183,12 @@ def format_ip_location(location: dict[str, str] | None) -> str:
 
 
 def enrich_ip_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ips = [str(row.get('ip_address') or '') for row in rows]
+    locations = lookup_ip_locations(ips)
     enriched = []
     for row in rows:
         ip = str(row.get('ip_address') or '')
-        location = lookup_ip_location(ip)
+        location = locations.get(ip.strip(), {})
         enriched.append({
             **row,
             'geo_country_code': location.get('country_code', ''),

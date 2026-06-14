@@ -1,0 +1,17 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if original and resolve_again_url %}
+        <li>
+            <form method="post" action="{{ resolve_again_url }}" style="display:inline;margin:0;padding:0;">
+                {% csrf_token %}
+                <button type="submit" class="historylink"
+                        style="background:none;border:none;cursor:pointer;font:inherit;color:var(--link-fg,#447e9b);text-decoration:underline;padding:0;"
+                        onclick="return confirm('Look up {{ original.ip_address }} again via GeoIP? This overwrites the cached location.');">
+                    Resolve again
+                </button>
+            </form>
+        </li>
+    {% endif %}
+{% endblock %}

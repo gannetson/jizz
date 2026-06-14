@@ -121,6 +121,16 @@ def _save_ip_geo_cache(ip: str, location: dict[str, str]) -> None:
     )
 
 
+def refresh_ip_geo_cache(ip: str) -> dict[str, str]:
+    """Force a fresh GeoIP lookup and update the DB cache."""
+    ip = (ip or '').strip()
+    if not ip:
+        return {}
+    location = _resolve_ip_location_live(ip)
+    _save_ip_geo_cache(ip, location)
+    return location
+
+
 def lookup_ip_locations(
     ips: Iterable[str],
     *,

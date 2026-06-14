@@ -9,7 +9,7 @@ from django.db.models import Count, Sum
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.urls import path, re_path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -1300,6 +1300,7 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 @admin.register(IpGeoCache)
 class IpGeoCacheAdmin(admin.ModelAdmin):
+    change_form_template = 'admin/jizz/ipgeocache/change_form.html'
     list_display = [
         'ip_address',
         'location_label',
@@ -1323,13 +1324,81 @@ class IpGeoCacheAdmin(admin.ModelAdmin):
     ]
     ordering = ['-updated_at']
     list_per_page = 100
-    actions = ['delete_selected_for_reresolve']
+    actions = ['resolve_again', 'delete_selected_for_reresolve']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<path:object_id>/resolve/',
+                self.admin_site.admin_view(self.resolve_view),
+                name='jizz_ipgeocache_resolve',
+            ),
+        ]
+        return custom_urls + urls
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        if object_id:
+            extra_context['resolve_again_url'] = reverse(
+                'admin:jizz_ipgeocache_resolve',
+                args=[object_id],
+            )
+        return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def resolve_view(self, request, object_id):
+        obj = get_object_or_404(IpGeoCache, pk=object_id)
+        if request.method != 'POST':
+            return HttpResponseRedirect(reverse('admin:jizz_ipgeocache_change', args=[object_id]))
+
+        from jizz.ip_geo import format_ip_location, refresh_ip_geo_cache
+
+        location = refresh_ip_geo_cache(str(obj.ip_address))
+        label = format_ip_location(location)
+        if location.get('country_code') or location.get('country_name') == 'Private/local':
+            self.message_user(
+                request,
+                f'{obj.ip_address} resolved to: {label}',
+                messages.SUCCESS,
+            )
+        else:
+            self.message_user(
+                request,
+                f'{obj.ip_address}: no location found (GeoIP services returned nothing).',
+                messages.WARNING,
+            )
+        return HttpResponseRedirect(reverse('admin:jizz_ipgeocache_change', args=[object_id]))
 
     @admin.display(description='Location')
     def location_label(self, obj):
         from jizz.ip_geo import format_ip_location
 
         return format_ip_location(obj.to_location_dict())
+
+    @admin.action(description='Resolve again (fresh GeoIP lookup)')
+    def resolve_again(self, request, queryset):
+        from jizz.ip_geo import refresh_ip_geo_cache
+
+        resolved = 0
+        not_found = 0
+        for obj in queryset:
+            location = refresh_ip_geo_cache(str(obj.ip_address))
+            if location.get('country_code') or location.get('country_name') == 'Private/local':
+                resolved += 1
+            else:
+                not_found += 1
+        if resolved:
+            self.message_user(
+                request,
+                f'Resolved {resolved} IP(s). Refresh the page to see updated values.',
+                messages.SUCCESS,
+            )
+        if not_found:
+            self.message_user(
+                request,
+                f'{not_found} IP(s) could not be resolved.',
+                messages.WARNING,
+            )
 
     @admin.action(description='Delete cache entries (re-resolve on next analytics view)')
     def delete_selected_for_reresolve(self, request, queryset):

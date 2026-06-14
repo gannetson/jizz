@@ -9,6 +9,7 @@ from jizz.ip_geo import (
     lookup_ip_location,
     lookup_ip_locations,
     mmdb_available,
+    refresh_ip_geo_cache,
 )
 from jizz.models import IpGeoCache
 
@@ -74,6 +75,27 @@ class IpGeoTests(TestCase):
         self.assertEqual(location['country_code'], 'NL')
         self.assertEqual(location['city'], 'Buren')
         mock_live.assert_not_called()
+
+    @patch('jizz.ip_geo._lookup_via_ip_api')
+    @patch('jizz.ip_geo._lookup_via_mmdb')
+    def test_refresh_ip_geo_cache_overwrites_stale_entry(self, mock_mmdb, mock_api):
+        IpGeoCache.objects.create(
+            ip_address='84.85.68.210',
+            country_code='XX',
+            country_name='Wrong',
+            city='Nowhere',
+        )
+        mock_mmdb.return_value = {}
+        mock_api.return_value = {
+            'country_code': 'NL',
+            'country_name': 'Netherlands',
+            'city': 'Buren',
+        }
+        location = refresh_ip_geo_cache('84.85.68.210')
+        self.assertEqual(location['country_code'], 'NL')
+        row = IpGeoCache.objects.get(ip_address='84.85.68.210')
+        self.assertEqual(row.country_code, 'NL')
+        self.assertEqual(row.city, 'Buren')
 
     def test_lookup_ip_locations_bulk_loads_cache(self):
         IpGeoCache.objects.create(

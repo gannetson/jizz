@@ -243,7 +243,7 @@ def usage_by_ip_country(qs, *, limit: int = 50) -> list[dict[str, Any]]:
     """Aggregate events by GeoIP country code (matches Top IP address locations)."""
     from collections import Counter
 
-    from jizz.ip_geo import lookup_ip_location
+    from jizz.ip_geo import lookup_ip_country_mmdb
 
     counter: Counter[str] = Counter()
     ip_rows = (
@@ -252,7 +252,7 @@ def usage_by_ip_country(qs, *, limit: int = 50) -> list[dict[str, Any]]:
         .annotate(events=Count('id'))
     )
     for row in ip_rows:
-        location = lookup_ip_location(str(row['ip_address']))
+        location = lookup_ip_country_mmdb(str(row['ip_address']))
         code = (location.get('country_code') or '').upper()
         if code:
             counter[code] += row['events']

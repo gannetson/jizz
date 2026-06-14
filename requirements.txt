@@ -45,6 +45,7 @@ psycopg2-binary==2.9.9
 ptyprocess==0.7.0
 pure-eval==0.2.2
 pytz==2023.3
+geoip2==4.8.1
 requests-oauthlib==2.0.0
 requests==2.31.0
 shortuuid==1.0.13

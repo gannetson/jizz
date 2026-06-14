@@ -86,7 +86,7 @@ class UsageAnalyticsAggregationTests(TestCase):
         )
 
         with patch(
-            'jizz.ip_geo.lookup_ip_location',
+            'jizz.ip_geo.lookup_ip_country_mmdb',
             side_effect=lambda ip: {
                 '84.85.68.210': {'country_code': 'NL', 'country_name': 'Netherlands', 'city': ''},
                 '139.178.131.76': {'country_code': 'US', 'country_name': 'United States', 'city': ''},

@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
-from jizz.ip_geo import enrich_ip_rows, format_ip_location, lookup_ip_location
+from jizz.ip_geo import enrich_ip_rows, format_ip_location, lookup_ip_country_mmdb, lookup_ip_location
 
 
 class IpGeoTests(SimpleTestCase):
@@ -10,6 +10,15 @@ class IpGeoTests(SimpleTestCase):
         location = lookup_ip_location('127.0.0.1')
         self.assertEqual(location['country_name'], 'Private/local')
         self.assertEqual(format_ip_location(location), 'Private/local')
+
+    @patch('jizz.ip_geo._lookup_via_mmdb')
+    def test_lookup_ip_country_mmdb_never_calls_api(self, mock_mmdb):
+        mock_mmdb.return_value = {'country_code': 'NL', 'country_name': 'Netherlands', 'city': ''}
+        lookup_ip_country_mmdb.cache_clear()
+        with patch('jizz.ip_geo._lookup_via_ip_api') as mock_api:
+            location = lookup_ip_country_mmdb('84.85.68.210')
+        self.assertEqual(location['country_code'], 'NL')
+        mock_api.assert_not_called()
 
     @patch('jizz.ip_geo._lookup_via_ip_api')
     @patch('jizz.ip_geo._lookup_via_mmdb')
@@ -21,11 +30,11 @@ class IpGeoTests(SimpleTestCase):
             'city': 'Ashburn',
         }
         lookup_ip_location.cache_clear()
-        location = lookup_ip_location('203.0.113.10')
+        location = lookup_ip_location('8.8.8.8')
         self.assertEqual(location['country_code'], 'US')
         self.assertEqual(format_ip_location(location), 'Ashburn, United States')
-        mock_mmdb.assert_called_once_with('203.0.113.10')
-        mock_api.assert_called_once_with('203.0.113.10')
+        mock_mmdb.assert_called_once_with('8.8.8.8')
+        mock_api.assert_called_once_with('8.8.8.8')
 
     @patch('jizz.ip_geo.lookup_ip_location')
     def test_enrich_ip_rows(self, mock_lookup):

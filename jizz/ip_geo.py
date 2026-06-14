@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import ipaddress
+import logging
 from functools import lru_cache
 from typing import Any
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 _geo_reader = None
 _geo_reader_failed = False
@@ -34,7 +37,8 @@ def _get_geo_reader():
 
         _geo_reader = geoip2.database.Reader(str(db_path))
         return _geo_reader
-    except Exception:
+    except Exception as exc:
+        logger.warning('GeoIP country database unavailable at %s: %s', db_path, exc)
         _geo_reader_failed = True
         return None
 
@@ -61,7 +65,7 @@ def _lookup_via_ip_api(ip: str) -> dict[str, str]:
         response = requests.get(
             f'http://ip-api.com/json/{ip}',
             params={'fields': 'status,country,countryCode,city'},
-            timeout=2,
+            timeout=1,
         )
         response.raise_for_status()
         data = response.json()
@@ -74,6 +78,15 @@ def _lookup_via_ip_api(ip: str) -> dict[str, str]:
         }
     except Exception:
         return {}
+
+
+@lru_cache(maxsize=4096)
+def lookup_ip_country_mmdb(ip: str) -> dict[str, str]:
+    """Resolve country from the local MaxMind DB only (safe for bulk map aggregation)."""
+    ip = (ip or '').strip()
+    if not ip or not _is_public_ip(ip):
+        return {}
+    return _lookup_via_mmdb(ip)
 
 
 @lru_cache(maxsize=512)

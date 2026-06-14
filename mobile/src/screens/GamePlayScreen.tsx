@@ -85,7 +85,7 @@ export function GamePlayScreen() {
   const handleRefreshQuestion = useCallback(async () => {
     setRefreshingQuestion(true);
     try {
-      await refreshGameState({ resyncWs: true });
+      await refreshGameState({ resyncWs: true, force: true });
     } finally {
       setRefreshingQuestion(false);
     }
@@ -289,6 +289,8 @@ export function GamePlayScreen() {
       );
     })();
 
+  const waitingForHost = !isHost && !done && resultsReadyForCurrentQuestion;
+
   const handleEndGame = () => {
     if (!resultsReadyForCurrentQuestion) return;
     endGameSession();
@@ -478,6 +480,24 @@ export function GamePlayScreen() {
           <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
             <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
           </TouchableOpacity>
+        ) : waitingForHost ? (
+          <View style={styles.waitForHostRow}>
+            <Text style={styles.waitForHostText}>{t('waiting_for_host')}</Text>
+            <TouchableOpacity
+              style={styles.waitForHostRefreshButton}
+              onPress={() => void handleRefreshQuestion()}
+              disabled={refreshingQuestion}
+              testID="gamePlay.waitForHostRefresh"
+              accessibilityRole="button"
+              accessibilityLabel={t('refresh')}
+            >
+              {refreshingQuestion ? (
+                <ActivityIndicator size="small" color={colors.primary[700]} />
+              ) : (
+                <FontAwesome5 name="sync" size={16} color={colors.primary[700]} />
+              )}
+            </TouchableOpacity>
+          </View>
         ) : null}
       </View>
 
@@ -674,6 +694,27 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.error[500], marginTop: 12, textAlign: 'center' },
   link: { fontSize: 16, color: colors.primary[500], marginTop: 8 },
   nextSection: { marginBottom: 20 },
+  waitForHostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  waitForHostText: {
+    fontSize: 15,
+    color: colors.primary[600],
+    fontWeight: '500',
+  },
+  waitForHostRefreshButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    backgroundColor: colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   primaryButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 14,

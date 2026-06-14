@@ -313,9 +313,21 @@ export function GameResultsScreen() {
           </TouchableOpacity>
         )}
         {rematchInvitation != null && (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleJoinRematch}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleJoinRematch} testID="gameResults.joinRematch">
             <Text style={styles.primaryButtonText}>{t('join_rematch')}</Text>
           </TouchableOpacity>
+        )}
+        {!isHost && rematchInvitation == null && dailyChallengeId == null && (
+          <View
+            style={[styles.primaryButton, styles.buttonDisabled]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
+            accessibilityLabel={t('join_rematch')}
+            testID="gameResults.joinRematchWaiting"
+          >
+            <Text style={styles.primaryButtonText}>{t('join_rematch')}</Text>
+            <Text style={styles.waitForHostSubtext}>{t('waiting_for_host')}</Text>
+          </View>
         )}
         {isHost && (
           <TouchableOpacity
@@ -456,4 +468,10 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.7 },
   buttonSpinner: { marginRight: 8 },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
+  waitForHostSubtext: {
+    color: colors.primary[100],
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+  },
 });

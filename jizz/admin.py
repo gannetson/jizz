@@ -23,6 +23,7 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent,
+                         IpGeoCache,
                          MailSettings, UpdateEmailDelivery, UpdateEmailRecipient, UpdateThumbsUp)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
@@ -1295,3 +1296,51 @@ class UsageEventAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(IpGeoCache)
+class IpGeoCacheAdmin(admin.ModelAdmin):
+    list_display = [
+        'ip_address',
+        'location_label',
+        'country_code',
+        'country_name',
+        'city',
+        'is_private',
+        'updated_at',
+    ]
+    list_filter = ['is_private', 'country_code']
+    search_fields = ['ip_address', 'country_code', 'country_name', 'city']
+    readonly_fields = ['updated_at', 'location_label']
+    fields = [
+        'ip_address',
+        'country_code',
+        'country_name',
+        'city',
+        'is_private',
+        'location_label',
+        'updated_at',
+    ]
+    ordering = ['-updated_at']
+    list_per_page = 100
+    actions = ['delete_selected_for_reresolve']
+
+    @admin.display(description='Location')
+    def location_label(self, obj):
+        from jizz.ip_geo import format_ip_location
+
+        return format_ip_location(obj.to_location_dict())
+
+    @admin.action(description='Delete cache entries (re-resolve on next analytics view)')
+    def delete_selected_for_reresolve(self, request, queryset):
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(
+            request,
+            f'Deleted {count} cached IP location(s). They will be looked up again when needed.',
+        )
+
+    def save_model(self, request, obj, form, change):
+        if obj.country_code or obj.country_name or obj.city:
+            obj.is_private = False
+        super().save_model(request, obj, form, change)

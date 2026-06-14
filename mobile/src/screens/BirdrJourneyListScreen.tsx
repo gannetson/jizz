@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
   listBirdrJourneys,
+  findInProgressBirdrJourney,
   deleteBirdrJourney,
   getStoredBirdrJourneyCountryCode,
   setStoredBirdrJourneyCountryCode,
@@ -24,6 +25,7 @@ import {
 } from '../api/birdrJourney';
 import { BirdrLevelImage } from '../components/BirdrLevelImage';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
@@ -43,12 +45,45 @@ function levelTitle(level: JourneyLevel | null | undefined, locale: string): str
   return level.title;
 }
 
+function normalizeCountryCode(code: string | null | undefined): string {
+  return code?.trim()?.toUpperCase() ?? '';
+}
+
+/** Active on home first, then profile country (e.g. NL), then the rest alphabetically. */
+function sortCountryChallenges(
+  journeys: BirdrJourney[],
+  homeActiveCode: string | null,
+  profileCountryCode: string | null,
+  locale: string
+): BirdrJourney[] {
+  const active = normalizeCountryCode(homeActiveCode);
+  const profile = normalizeCountryCode(profileCountryCode);
+
+  const priority = (journey: BirdrJourney): number => {
+    const code = normalizeCountryCode(journey.country.code);
+    if (active && code === active) return 0;
+    if (profile && code === profile) return 1;
+    return 2;
+  };
+
+  return [...journeys].sort((a, b) => {
+    const diff = priority(a) - priority(b);
+    if (diff !== 0) return diff;
+    return getCountryDisplayName(a.country, locale).localeCompare(
+      getCountryDisplayName(b.country, locale),
+      undefined,
+      { sensitivity: 'base' }
+    );
+  });
+}
+
 export function BirdrJourneyListScreen() {
   const navigation = useNavigation();
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { profile, ready: profileReady } = useProfile();
   const [journeys, setJourneys] = useState<BirdrJourney[]>([]);
-  const [activeCountryCode, setActiveCountryCode] = useState<string | null>(null);
+  const [homeActiveCountryCode, setHomeActiveCountryCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
@@ -78,8 +113,12 @@ export function BirdrJourneyListScreen() {
     try {
       const list = await listBirdrJourneys();
       const storedCountry = await getStoredBirdrJourneyCountryCode();
+      const homeJourney = await findInProgressBirdrJourney([
+        storedCountry,
+        isAuthenticated && profileReady && profile?.country_code ? profile.country_code : null,
+      ]);
       setJourneys(list);
-      setActiveCountryCode(storedCountry?.trim()?.toUpperCase() ?? null);
+      setHomeActiveCountryCode(homeJourney?.country?.code?.trim()?.toUpperCase() ?? null);
     } catch (e: unknown) {
       await clearStoredBirdrJourneyCountryCode();
       await clearStoredBirdrJourneyPlayerToken();
@@ -89,8 +128,12 @@ export function BirdrJourneyListScreen() {
         }
         const list = await listBirdrJourneys();
         const storedCountry = await getStoredBirdrJourneyCountryCode();
+        const homeJourney = await findInProgressBirdrJourney([
+          storedCountry,
+          isAuthenticated && profileReady && profile?.country_code ? profile.country_code : null,
+        ]);
         setJourneys(list);
-        setActiveCountryCode(storedCountry?.trim()?.toUpperCase() ?? null);
+        setHomeActiveCountryCode(homeJourney?.country?.code?.trim()?.toUpperCase() ?? null);
       } catch (retryError: unknown) {
         setError(retryError instanceof Error ? retryError.message : t('failed_load'));
         setJourneys([]);
@@ -98,7 +141,18 @@ export function BirdrJourneyListScreen() {
     } finally {
       setLoading(false);
     }
-  }, [ensureAuth, isAuthenticated, locale, t]);
+  }, [ensureAuth, isAuthenticated, locale, profile?.country_code, profileReady, t]);
+
+  const sortedJourneys = useMemo(
+    () =>
+      sortCountryChallenges(
+        journeys,
+        homeActiveCountryCode,
+        profile?.country_code ?? null,
+        locale
+      ),
+    [journeys, homeActiveCountryCode, profile?.country_code, locale]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -111,7 +165,7 @@ export function BirdrJourneyListScreen() {
     setLoading(true);
     if (!isAuthenticated) {
       setJourneys([]);
-      setActiveCountryCode(null);
+      setHomeActiveCountryCode(null);
       setError(null);
     }
     load();
@@ -138,14 +192,18 @@ export function BirdrJourneyListScreen() {
             try {
               await deleteBirdrJourney(journey.id);
               setJourneys((prev) => prev.filter((j) => j.id !== journey.id));
-              if (activeCountryCode === journey.country.code) {
+              if (homeActiveCountryCode === normalizeCountryCode(journey.country.code)) {
                 await clearStoredBirdrJourneyCountryCode();
-                setActiveCountryCode(null);
+                setHomeActiveCountryCode(null);
               }
               const list = await listBirdrJourneys();
               const storedCountry = await getStoredBirdrJourneyCountryCode();
+              const homeJourney = await findInProgressBirdrJourney([
+                storedCountry,
+                isAuthenticated && profileReady && profile?.country_code ? profile.country_code : null,
+              ]);
               setJourneys(list);
-              setActiveCountryCode(storedCountry?.trim()?.toUpperCase() ?? null);
+              setHomeActiveCountryCode(homeJourney?.country?.code?.trim()?.toUpperCase() ?? null);
             } catch (e: unknown) {
               Alert.alert(
                 t('country_challenge'),
@@ -178,9 +236,11 @@ export function BirdrJourneyListScreen() {
         </View>
       ) : null}
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleStartNew} testID="journey.startNew">
-        <Text style={styles.primaryButtonText}>{t('new_country_challenge')}</Text>
-      </TouchableOpacity>
+      {loading && journeys.length === 0 && (
+        <TouchableOpacity style={styles.primaryButton} onPress={handleStartNew} testID="journey.startNew">
+          <Text style={styles.primaryButtonText}>{t('new_country_challenge')}</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={styles.secondaryButton}
@@ -197,12 +257,12 @@ export function BirdrJourneyListScreen() {
       ) : journeys.length === 0 ? (
         <Text style={styles.muted}>{t('no_country_challenges_yet')}</Text>
       ) : (
-        journeys.map((journey) => {
+        sortedJourneys.map((journey) => {
           const code = journey.country.code;
           const flag = countryCodeToFlag(code);
           const countryName = getCountryDisplayName(journey.country, locale);
           const level = levelTitle(journey.current_level, locale);
-          const isActive = activeCountryCode === code;
+          const isActive = homeActiveCountryCode === normalizeCountryCode(code);
           const statusLabel = journey.is_champion
             ? t('country_challenge_champion')
             : t('country_challenge_in_progress');
@@ -249,6 +309,12 @@ export function BirdrJourneyListScreen() {
           );
         })
       )}
+      {!loading && journeys.length > 0 && (
+        <TouchableOpacity style={styles.primaryButton} onPress={handleStartNew} testID="journey.startNew">
+          <Text style={styles.primaryButtonText}>{t('new_country_challenge')}</Text>
+        </TouchableOpacity>
+      )}
+
     </ScrollView>
   );
 }

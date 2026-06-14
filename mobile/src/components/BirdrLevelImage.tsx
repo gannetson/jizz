@@ -4,7 +4,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { colors } from '../theme';
 import { resolveMediaUrl } from '../api/config';
 
-export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed';
+export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed' | 'plain';
 
 type Props = {
   iconUrl?: string | null;
@@ -18,6 +18,7 @@ const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
   next: 110,
   locked: 72,
   completed: 88,
+  plain: 88,
 };
 
 export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {

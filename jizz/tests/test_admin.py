@@ -374,3 +374,22 @@ class AdminAddFormTestCase(TestCase):
     def test_feedback_add(self):
         response = self.client.get(reverse('admin:jizz_feedback_add'))
         self.assertEqual(response.status_code, 200)
+
+
+class AdminUserUsernameFormTestCase(TestCase):
+    def test_admin_user_change_form_allows_spaces(self):
+        from jizz.admin import AdminUserChangeForm, UsernameWithSpacesValidator
+
+        user = User.objects.create_user(username='plain', email='plain@test.com', password='pass12345')
+        form = AdminUserChangeForm(instance=user)
+        validators = form.fields['username'].validators
+        self.assertIn(UsernameWithSpacesValidator, validators)
+        UsernameWithSpacesValidator('Ada Lovelace')
+
+    def test_admin_user_creation_form_allows_spaces(self):
+        from jizz.admin import AdminUserCreationForm, UsernameWithSpacesValidator
+
+        form = AdminUserCreationForm()
+        validators = form.fields['username'].validators
+        self.assertIn(UsernameWithSpacesValidator, validators)
+        UsernameWithSpacesValidator('Ada Lovelace')

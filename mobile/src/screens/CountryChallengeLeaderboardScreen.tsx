@@ -38,6 +38,21 @@ function stepLabel(row: CountryChallengeLeaderboardRow): string {
   return row.step_label;
 }
 
+const PODIUM_RANK_EMOJI: Record<number, string> = {
+  1: '🥇',
+  2: '🥈',
+  3: '🥉',
+};
+
+function rankLabel(index: number): string {
+  const place = index + 1;
+  return PODIUM_RANK_EMOJI[place] ?? `#${place}`;
+}
+
+function isPodiumRank(index: number): boolean {
+  return index < 3;
+}
+
 export function CountryChallengeLeaderboardScreen() {
   const { t, locale } = useTranslation();
   const [rows, setRows] = useState<CountryChallengeLeaderboardRow[]>([]);
@@ -101,19 +116,21 @@ export function CountryChallengeLeaderboardScreen() {
         );
         return (
           <View key={`${row.player_name}-${code}-${index}`} style={styles.card}>
-            <View style={styles.rankRow}>
-              <Text style={styles.rank}>#{index + 1}</Text>
-              <Text style={styles.playerName}>{row.player_name}</Text>
-            </View>
-            <Text style={styles.countryLine}>
-              {countryCodeToFlag(code)} {code} · {countryLabel}
-            </Text>
-            <View style={styles.levelRow}>
-              <BirdrLevelImage iconUrl={row.level_icon_url} variant="completed" size={44} />
-              <View style={styles.levelText}>
-                <Text style={styles.levelTitle}>{leaderboardLevelTitle(row, locale)}</Text>
-                <Text style={styles.stepText}>{stepLabel(row)}</Text>
+            <View style={styles.cardBody}>
+              <View style={styles.rankRow}>
+                <Text style={isPodiumRank(index) ? styles.rankEmoji : styles.rank}>
+                  {rankLabel(index)}
+                </Text>
+                <Text style={styles.playerName}>{row.player_name}</Text>
               </View>
+              <Text style={styles.countryLine}>
+                {countryCodeToFlag(code)} {code} · {countryLabel}
+              </Text>
+              <Text style={styles.levelTitle}>{leaderboardLevelTitle(row, locale)}</Text>
+              <Text style={styles.stepText}>{stepLabel(row)}</Text>
+            </View>
+            <View style={styles.levelIconAside}>
+              <BirdrLevelImage iconUrl={row.level_icon_url} variant="plain" size={64} />
             </View>
           </View>
         );
@@ -131,19 +148,36 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 24 },
   muted: { fontSize: 14, color: colors.primary[600] },
   card: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
     backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 12,
-    padding: 14,
+    paddingVertical: 12,
+    paddingLeft: 14,
+    paddingRight: 8,
     borderWidth: 1,
     borderColor: colors.primary[200],
+    overflow: 'visible',
   },
-  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 10,
+    justifyContent: 'center',
+  },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   rank: { fontSize: 14, fontWeight: '700', color: colors.primary[600], minWidth: 28 },
+  rankEmoji: { fontSize: 22, minWidth: 28, textAlign: 'center' },
   playerName: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.primary[800] },
-  countryLine: { fontSize: 14, color: colors.primary[700], marginBottom: 12 },
-  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  levelText: { flex: 1, minWidth: 0 },
+  countryLine: { fontSize: 14, color: colors.primary[700], marginBottom: 4 },
+  levelIconAside: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginVertical: -10,
+    width: 68,
+  },
   levelTitle: { fontSize: 16, fontWeight: '600', color: colors.primary[800] },
   stepText: { fontSize: 14, color: colors.primary[600], marginTop: 2 },
 });

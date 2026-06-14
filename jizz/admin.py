@@ -1,10 +1,15 @@
 from collections import defaultdict
+import re
 
 from django.contrib import admin, messages
 from django.contrib.admin import register
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.contrib.auth.models import User
+from django.contrib.auth.validators import ASCIIUsernameValidator, UnicodeUsernameValidator
+from django.core.validators import RegexValidator
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Count, Sum
 from django.conf import settings
 from django.http import HttpResponseRedirect
@@ -54,8 +59,44 @@ class UserProfileInline(admin.StackedInline):
 admin.site.unregister(User)
 
 
+UsernameWithSpacesValidator = RegexValidator(
+    regex=r'^[\w.@+ -]+\Z',
+    message=_(
+        'Enter a valid username. This value may contain only letters, '
+        'numbers, spaces, and @/./+/-/_ characters.'
+    ),
+    flags=re.UNICODE,
+)
+
+
+def _allow_spaces_in_username_field(form):
+    field = form.fields['username']
+    field.validators = [
+        UsernameWithSpacesValidator,
+        *[
+            validator
+            for validator in field.validators
+            if not isinstance(validator, (UnicodeUsernameValidator, ASCIIUsernameValidator))
+        ],
+    ]
+
+
+class AdminUserChangeForm(UserChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _allow_spaces_in_username_field(self)
+
+
+class AdminUserCreationForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _allow_spaces_in_username_field(self)
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    form = AdminUserChangeForm
+    add_form = AdminUserCreationForm
     inlines = [UserProfileInline]
     list_display = ['username', 'email', 'first_name', 'last_name', 'avatar_preview', 'is_staff', 'date_joined']
     actions = ['resend_welcome_email']

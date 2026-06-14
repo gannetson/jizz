@@ -81,16 +81,25 @@ def _allow_spaces_in_username_field(form):
     ]
 
 
-class AdminUserChangeForm(UserChangeForm):
+class AdminUsernameFormMixin:
+    """Admin-only username rules: allow spaces and skip model full_clean() format check."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _allow_spaces_in_username_field(self)
 
+    def _get_validation_exclusions(self):
+        exclude = super()._get_validation_exclusions()
+        exclude.add('username')
+        return exclude
 
-class AdminUserCreationForm(UserCreationForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        _allow_spaces_in_username_field(self)
+
+class AdminUserChangeForm(AdminUsernameFormMixin, UserChangeForm):
+    pass
+
+
+class AdminUserCreationForm(AdminUsernameFormMixin, UserCreationForm):
+    pass
 
 
 @admin.register(User)

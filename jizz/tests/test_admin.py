@@ -377,19 +377,28 @@ class AdminAddFormTestCase(TestCase):
 
 
 class AdminUserUsernameFormTestCase(TestCase):
-    def test_admin_user_change_form_allows_spaces(self):
-        from jizz.admin import AdminUserChangeForm, UsernameWithSpacesValidator
+    def test_admin_user_change_form_accepts_spaces(self):
+        from jizz.admin import AdminUserChangeForm
 
         user = User.objects.create_user(username='plain', email='plain@test.com', password='pass12345')
-        form = AdminUserChangeForm(instance=user)
-        validators = form.fields['username'].validators
-        self.assertIn(UsernameWithSpacesValidator, validators)
-        UsernameWithSpacesValidator('Ada Lovelace')
+        blank = AdminUserChangeForm(instance=user)
+        data = {name: blank[name].value() for name in blank.fields}
+        data['username'] = 'Ada Lovelace'
+        form = AdminUserChangeForm(data=data, instance=user)
+        self.assertTrue(form.is_valid(), form.errors)
+        saved = form.save()
+        self.assertEqual(saved.username, 'Ada Lovelace')
 
-    def test_admin_user_creation_form_allows_spaces(self):
-        from jizz.admin import AdminUserCreationForm, UsernameWithSpacesValidator
+    def test_admin_user_creation_form_accepts_spaces(self):
+        from jizz.admin import AdminUserCreationForm
 
-        form = AdminUserCreationForm()
-        validators = form.fields['username'].validators
-        self.assertIn(UsernameWithSpacesValidator, validators)
-        UsernameWithSpacesValidator('Ada Lovelace')
+        form = AdminUserCreationForm(
+            data={
+                'username': 'Ada Lovelace',
+                'password1': 'securepass123',
+                'password2': 'securepass123',
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        self.assertEqual(user.username, 'Ada Lovelace')

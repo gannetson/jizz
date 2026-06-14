@@ -720,6 +720,9 @@ class UserProfileUpdateSerializer(serializers.Serializer):
 
     def validate_username(self, value):
         if value:
+            from jizz.user_names import sanitize_username
+
+            value = sanitize_username(value.strip())
             user = self.context['request'].user
             if User.objects.filter(username=value).exclude(pk=user.pk).exists():
                 raise serializers.ValidationError("A user with this username already exists.")
@@ -800,6 +803,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'password')
 
     def validate_username(self, value):
+        from jizz.user_names import sanitize_username
+
+        value = sanitize_username(value.strip())
+        if not value:
+            raise serializers.ValidationError("Username is required.")
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("A user with this username already exists.")
         return value
@@ -935,6 +943,11 @@ class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Player
         fields = ('id', 'name', 'token', 'language', 'score', 'last_answer')
+
+    def validate_name(self, value):
+        from jizz.user_names import sanitize_player_name
+
+        return sanitize_player_name(value.strip())
 
 
 class MultiPlayerSerializer(serializers.ModelSerializer):

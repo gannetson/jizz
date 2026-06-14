@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from jizz.models import BirdrJourney, BirdrJourneyGame, Country, Game, JourneyLevel, JourneyStep, Player
 from jizz.services.journey_family import is_family_step, resolve_family_for_step
 from jizz.serializers import BirdrJourneyGameSerializer, BirdrJourneySerializer
+from jizz.user_names import player_name_for_user
 from jizz.views import GetPlayerMixin
 
 
@@ -49,9 +50,7 @@ def get_journey_host(journey):
     player = Player.objects.filter(user=journey.user).first()
     if player:
         return player
-    name = getattr(journey.user, 'username', None) or getattr(journey.user, 'email', '') or 'Player'
-    if len(name) > 255:
-        name = name[:255]
+    name = player_name_for_user(journey.user)
     return Player.objects.create(user=journey.user, name=name, language='en')
 
 

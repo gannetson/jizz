@@ -9,20 +9,17 @@ from jizz.birdr_journey_views import (
 )
 from jizz.models import BirdrJourney, Player
 from jizz.services.species_cover import absolute_media_url
+from jizz.user_names import player_name_for_user, sanitize_player_name
 
 
 def journey_player_name(journey: BirdrJourney) -> str:
     if journey.player_id:
-        return journey.player.name
+        return sanitize_player_name(journey.player.name)
     if journey.user_id:
         linked = Player.objects.filter(user_id=journey.user_id).order_by('id').first()
         if linked and linked.name.strip():
-            return linked.name.strip()
-        user = journey.user
-        full = user.get_full_name().strip()
-        if full:
-            return full
-        return user.username or user.email or 'Player'
+            return sanitize_player_name(linked.name.strip())
+        return player_name_for_user(journey.user)
     return 'Player'
 
 

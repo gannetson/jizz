@@ -140,6 +140,7 @@ class RegisterAndLoginTestCase(TestCase):
         profile = self.client.get('/api/profile/')
         self.assertEqual(profile.status_code, status.HTTP_200_OK)
         self.assertEqual(profile.data['email'], 'mobile@example.com')
+        self.assertEqual(profile.data['username'], 'mobile')
 
     def test_login_with_username_then_profile_works(self):
         """Existing user can login with username and use token for profile."""

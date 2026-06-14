@@ -286,7 +286,9 @@ class DailyChallengeInviteView(APIView):
                     user=existing_user,
                     defaults={'invited_by': request.user, 'status': 'invited'},
                 )
-                inviter_name = getattr(request.user, 'username', None) or request.user.email or 'Someone'
+                from jizz.user_names import player_name_for_user
+
+                inviter_name = player_name_for_user(request.user, fallback='Someone')
                 send_push_to_user(
                     existing_user,
                     'Daily Challenge invite',
@@ -346,9 +348,9 @@ def _get_or_create_player_for_user(user):
     player = Player.objects.filter(user=user).first()
     if player:
         return player
-    name = getattr(user, 'username', None) or getattr(user, 'email', '') or 'Player'
-    if len(name) > 255:
-        name = name[:255]
+    from jizz.user_names import player_name_for_user
+
+    name = player_name_for_user(user)
     return Player.objects.create(user=user, name=name, language='en')
 
 

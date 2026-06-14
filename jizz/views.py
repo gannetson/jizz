@@ -924,30 +924,26 @@ class GoogleLoginView(APIView):
                 raise ValueError("No email in token")
 
             def _username_from_google(idinfo, email, exclude_user_id=None):
-                """Prefer full name from Google; else part before @; ensure unique with suffix."""
+                from jizz.user_names import username_from_oauth
+
                 full = (idinfo.get("name") or "").strip()
-                if not full:
-                    given = (idinfo.get("given_name") or "").strip()
-                    family = (idinfo.get("family_name") or "").strip()
-                    full = " ".join([given, family]).strip()
-                if full:
-                    base = full[:150].strip()
-                else:
-                    base = (email.split("@")[0] or "user")[:150]
-                base = base or "user"
-                username = base
-                counter = 1
-                qs = User.objects.filter(username=username)
-                if exclude_user_id is not None:
-                    qs = qs.exclude(pk=exclude_user_id)
-                while qs.exists():
-                    suffix = f"_{counter}"
-                    username = (base[: 150 - len(suffix)] + suffix).strip()
-                    counter += 1
-                    qs = User.objects.filter(username=username)
-                    if exclude_user_id is not None:
-                        qs = qs.exclude(pk=exclude_user_id)
-                return username
+                given = (idinfo.get("given_name") or "").strip()
+                family = (idinfo.get("family_name") or "").strip()
+                return username_from_oauth(
+                    first_name=given,
+                    last_name=family,
+                    full_name=full,
+                    email=email,
+                    exclude_user_id=exclude_user_id,
+                )
+
+            def _username_needs_oauth_fix(user, email):
+                username = (user.username or "").strip()
+                if not username:
+                    return True
+                if username.lower() == (email or "").lower():
+                    return True
+                return '@' in username
 
             users = User.objects.filter(email__iexact=email).order_by("id")
             if users.count() == 0:
@@ -962,7 +958,7 @@ class GoogleLoginView(APIView):
             elif users.count() == 1:
                 user = users.get()
                 created = False
-                if (user.username or "").lower() == email.lower():
+                if _username_needs_oauth_fix(user, email):
                     user.username = _username_from_google(idinfo, email, exclude_user_id=user.pk)
                     if idinfo.get("given_name"):
                         user.first_name = idinfo.get("given_name", "")[:150]
@@ -978,7 +974,7 @@ class GoogleLoginView(APIView):
                 )
                 user = users.first()
                 created = False
-                if (user.username or "").lower() == email.lower():
+                if _username_needs_oauth_fix(user, email):
                     user.username = _username_from_google(idinfo, email, exclude_user_id=user.pk)
                     if idinfo.get("given_name"):
                         user.first_name = idinfo.get("given_name", "")[:150]
@@ -1117,6 +1113,23 @@ class AppleLoginView(APIView):
                 last_name = ""
 
         from social_django.models import UserSocialAuth
+        from jizz.user_names import username_from_oauth
+
+        def _username_from_apple(exclude_user_id=None):
+            return username_from_oauth(
+                first_name=first_name,
+                last_name=last_name,
+                email=email or '',
+                exclude_user_id=exclude_user_id,
+            )
+
+        def _username_needs_oauth_fix(user, user_email):
+            username = (user.username or '').strip()
+            if not username:
+                return True
+            if user_email and username.lower() == user_email.lower():
+                return True
+            return '@' in username
 
         social = UserSocialAuth.objects.filter(provider="apple-id", uid=sub).first()
         if social:
@@ -1131,13 +1144,17 @@ class AppleLoginView(APIView):
             if email and not (user.email or "").strip():
                 user.email = email
                 user.save(update_fields=["email"])
+            if _username_needs_oauth_fix(user, email or user.email):
+                user.username = _username_from_apple(exclude_user_id=user.pk)
+                user.save(update_fields=["username"])
         else:
             # First-time Apple sign-in: create or link user
             if email:
+                username = _username_from_apple()
                 user, created = User.objects.get_or_create(
                     email=email,
                     defaults={
-                        "username": email,
+                        "username": username,
                         "first_name": first_name,
                         "last_name": last_name,
                     },
@@ -1148,6 +1165,9 @@ class AppleLoginView(APIView):
                     if last_name and not user.last_name:
                         user.last_name = last_name
                     user.save(update_fields=["first_name", "last_name"])
+                if not created and _username_needs_oauth_fix(user, email):
+                    user.username = _username_from_apple(exclude_user_id=user.pk)
+                    user.save(update_fields=["username"])
             else:
                 # Apple may hide email; use sub as unique username (never "null")
                 username = f"apple_{sub}"
@@ -1304,8 +1324,10 @@ class OAuthCompleteView(APIView):
                         full_name_parts = [full_name]
                 
                 if full_name_parts:
+                    from jizz.user_names import sanitize_username
+
                     # Build the expected full name username
-                    expected_username = ' '.join(full_name_parts)
+                    expected_username = sanitize_username(' '.join(full_name_parts))
                     
                     # Update username if it doesn't match the full name
                     # Check if username is email, email prefix, or doesn't match full name

@@ -34,6 +34,8 @@ type GameWebSocketContextType = {
   rematchError: string | null;
   clearRematchInvitation: () => void;
   clearRematchError: () => void;
+  /** Re-fetch current question; optionally re-send join_game on the open socket. */
+  refreshGameState: (options?: { resyncWs?: boolean; force?: boolean }) => Promise<void>;
 };
 
 type Species = { id: number; name?: string; name_nl?: string; name_latin?: string; name_translated?: string };
@@ -70,6 +72,9 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const currentSocketRef = useRef<WebSocket | null>(null);
   const languageCodeRef = useRef<string>('en');
   const socketRef = useRef<WebSocket | undefined>(undefined);
+  const currentQuestionIdRef = useRef<number | undefined>(undefined);
+  /** True after host starts (game_started / new_question); blocks lobby HTTP question fetch. */
+  const gameStartedRef = useRef(false);
   /** Actions sent before the socket is OPEN (e.g. start_game race right after connect). */
   const pendingActionsRef = useRef<Record<string, unknown>[]>([]);
 
@@ -155,7 +160,53 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const clearQuestion = useCallback(() => {
     setQuestion(undefined);
     setAnswer(undefined);
+    currentQuestionIdRef.current = undefined;
   }, []);
+
+  const applyQuestion = useCallback((next: Question | null | undefined, gameToken: string) => {
+    if (!next?.id || !questionBelongsToSocketGame(next, gameToken)) return;
+    if (next.id !== currentQuestionIdRef.current) {
+      setAnswer(undefined);
+    }
+    setQuestion(next);
+    currentQuestionIdRef.current = next.id;
+  }, []);
+
+  const fetchCurrentQuestion = useCallback(
+    async (gameToken: string, ws: WebSocket | undefined, connectionGameToken: string) => {
+      if (ws && currentSocketRef.current !== ws) return;
+      try {
+        const q = await getCurrentQuestion(gameToken);
+        applyQuestion(q, connectionGameToken);
+      } catch {
+        // ignore — UI keeps existing state
+      }
+    },
+    [applyQuestion]
+  );
+
+  const refreshGameState = useCallback(async (options?: { resyncWs?: boolean; force?: boolean }) => {
+    const gameToken = gameTokenRef.current;
+    const playerToken = playerTokenRef.current;
+    if (!gameToken || !playerToken) return;
+
+    const ws = socketRef.current;
+    if (options?.resyncWs && ws?.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          action: 'join_game',
+          player_token: playerToken,
+          language_code: languageCodeRef.current,
+        })
+      );
+    }
+
+    if (!options?.force && !gameStartedRef.current && !currentQuestionIdRef.current) {
+      return;
+    }
+
+    await fetchCurrentQuestion(gameToken, ws, gameToken);
+  }, [fetchCurrentQuestion]);
 
   const connectSocket = useCallback((game: Game, player: Player, setGame: (g: Game | null) => void) => {
     if (!game?.token || !player?.token) return;
@@ -198,34 +249,29 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             setPlayers(Array.isArray(message.players) ? message.players : []);
             break;
           case 'new_question':
-            setAnswer(undefined);
+            gameStartedRef.current = true;
             if (questionBelongsToSocketGame(message.question, socketGameToken)) {
-              setQuestion(message.question as Question);
+              applyQuestion(message.question as Question, socketGameToken);
             }
             break;
           case 'game_started':
-            // Fallback: fetch current question if new_question was missed (e.g. socket reconnect race).
-            // Retry with delays: server may still be running add_question after game_started is broadcast.
-            {
-              const apply = (q: Question | null) => {
-                if (currentSocketRef.current !== ws) return;
-                if (q && questionBelongsToSocketGame(q, connectionGameToken)) {
-                  setQuestion(q);
-                }
-              };
-              // Few retries: GET /question/ calls add_question when empty — many parallel
-              // requests caused duplicate rounds (sequence jumps). Server serializes; keep traffic low.
-              [400, 1500, 3500].forEach((delay) => {
-                setTimeout(() => {
-                  if (currentSocketRef.current !== ws) return;
-                  getCurrentQuestion(connectionGameToken).then(apply).catch(() => {});
-                }, delay);
-              });
-            }
+            gameStartedRef.current = true;
+            // Fallback when new_question was missed (connect race, background app, etc.).
+            void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+            [400, 1500, 3500].forEach((delay) => {
+              setTimeout(() => {
+                void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+              }, delay);
+            });
             break;
           case 'game_updated':
             if (tokensEqual(message.game?.token, connectionGameToken) && setGameRef.current) {
-              setGameRef.current(message.game as Game);
+              const updatedGame = message.game as Game;
+              setGameRef.current(updatedGame);
+              if ((updatedGame.progress ?? 0) > 0) {
+                gameStartedRef.current = true;
+                void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+              }
             }
             break;
           case 'game_ended':
@@ -233,6 +279,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
               setGameRef.current(message.game as Game);
               setQuestion(undefined);
               setAnswer(undefined);
+              currentQuestionIdRef.current = undefined;
             }
             break;
           case 'answer_checked':
@@ -274,7 +321,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     };
 
     setSocket(ws);
-  }, [flushPendingActions]);
+  }, [applyQuestion, fetchCurrentQuestion, flushPendingActions]);
 
   const joinGame = useCallback(
     (
@@ -314,6 +361,8 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
       setQuestion(undefined);
       setAnswer(undefined);
       setPlayers([]);
+      currentQuestionIdRef.current = undefined;
+      gameStartedRef.current = false;
       if (canJoin && game && player) {
         connectSocket(game, player, setGame);
       }
@@ -339,6 +388,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         rematchError,
         clearRematchInvitation,
         clearRematchError,
+        refreshGameState,
       }}
     >
       {children}

@@ -388,5 +388,6 @@ class CountryChallengeLeaderboardView(APIView):
         limit = max(1, min(limit, 200))
         payload = country_challenge_leaderboard(limit=limit, request=request)
         response = Response({'leaderboard': payload})
-        response['Cache-Control'] = 'public, max-age=300'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response['Pragma'] = 'no-cache'
         return response

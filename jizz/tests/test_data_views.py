@@ -153,3 +153,4 @@ class CountryChallengeLeaderboardViewsTests(TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertIn("leaderboard", data)
+        self.assertIn("no-store", res["Cache-Control"])

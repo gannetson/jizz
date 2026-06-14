@@ -402,3 +402,24 @@ class AdminUserUsernameFormTestCase(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         user = form.save()
         self.assertEqual(user.username, 'Ada Lovelace')
+
+    def test_admin_user_change_form_deduplicates_spaced_username(self):
+        from jizz.admin import AdminUserChangeForm
+
+        User.objects.create_user(
+            username='Loek van Gent',
+            email='loek1@test.com',
+            password='pass12345',
+        )
+        other = User.objects.create_user(
+            username='other',
+            email='loek2@test.com',
+            password='pass12345',
+        )
+        blank = AdminUserChangeForm(instance=other)
+        data = {name: blank[name].value() for name in blank.fields}
+        data['username'] = 'Loek van Gent'
+        form = AdminUserChangeForm(data=data, instance=other)
+        self.assertTrue(form.is_valid(), form.errors)
+        saved = form.save()
+        self.assertEqual(saved.username, 'Loek van Gent 1')

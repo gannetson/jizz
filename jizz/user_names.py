@@ -34,13 +34,14 @@ def make_unique_username(base: str, *, exclude_user_id=None) -> str:
     base = sanitize_username(base) or 'user'
     username = base[:150]
     counter = 1
+    use_space_suffix = ' ' in base
     while True:
         qs = User.objects.filter(username=username)
         if exclude_user_id is not None:
             qs = qs.exclude(pk=exclude_user_id)
         if not qs.exists():
             return username
-        suffix = f'_{counter}'
+        suffix = f' {counter}' if use_space_suffix else f'_{counter}'
         username = (base[: 150 - len(suffix)] + suffix).strip()
         counter += 1
 

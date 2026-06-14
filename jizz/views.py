@@ -652,6 +652,8 @@ class QuestionView(RetrieveAPIView):
         game.refresh_from_db()
         try:
             if not game.question:
+                if game.multiplayer and not game.questions.exists():
+                    raise NotFound("Game has not started")
                 game.add_question()
         except ValueError:
             raise NoSpeciesForGame(
@@ -1324,42 +1326,29 @@ class OAuthCompleteView(APIView):
                         full_name_parts = [full_name]
                 
                 if full_name_parts:
-                    from jizz.user_names import sanitize_username
+                    from jizz.user_names import make_unique_username, sanitize_username
 
-                    # Build the expected full name username
                     expected_username = sanitize_username(' '.join(full_name_parts))
-                    
-                    # Update username if it doesn't match the full name
-                    # Check if username is email, email prefix, or doesn't match full name
                     current_username = request.user.username
                     should_update = (
-                        current_username == request.user.email or 
+                        current_username == request.user.email or
                         '@' in current_username or
                         current_username != expected_username
                     )
-                    
+
                     if should_update:
-                        # Use full name with spaces as username
-                        username = expected_username
-                        # Ensure it's within Django's max length (150 chars)
-                        if len(username) > 150:
-                            username = username[:150]
-                        
-                        # Ensure username is unique
-                        base_username = username
-                        counter = 1
-                        while User.objects.filter(username=username).exclude(pk=request.user.pk).exists():
-                            # If we need to add a counter, truncate base to leave room
-                            counter_str = f" {counter}"
-                            max_base_length = 150 - len(counter_str)
-                            if max_base_length < 1:
-                                max_base_length = 1
-                            username = f"{base_username[:max_base_length]}{counter_str}"
-                            counter += 1
-                        
+                        username = make_unique_username(
+                            expected_username,
+                            exclude_user_id=request.user.pk,
+                        )
                         request.user.username = username
                         updated = True
-                        logger.info(f"Updated username from '{current_username}' to '{username}' (from full name: {expected_username})")
+                        logger.info(
+                            "Updated username from '%s' to '%s' (from full name: %s)",
+                            current_username,
+                            username,
+                            expected_username,
+                        )
                 
                 if updated:
                     request.user.save()

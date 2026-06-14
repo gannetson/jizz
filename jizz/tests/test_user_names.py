@@ -30,6 +30,10 @@ class UserNameHelperTests(TestCase):
         User.objects.create_user(username='mobile', email='first@example.com', password='pass12345')
         self.assertEqual(make_unique_username('mobile@other.com'), 'mobile_1')
 
+    def test_make_unique_username_uses_number_suffix_for_spaced_names(self):
+        User.objects.create_user(username='Loek van Gent', email='loek1@test.com', password='pass12345')
+        self.assertEqual(make_unique_username('Loek van Gent'), 'Loek van Gent 1')
+
     def test_username_from_oauth_prefers_full_name(self):
         username = username_from_oauth(first_name='Ada', last_name='Lovelace', email='ada@example.com')
         self.assertEqual(username, 'Ada Lovelace')

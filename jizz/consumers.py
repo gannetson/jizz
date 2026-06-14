@@ -200,12 +200,14 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             return
 
+        # Create the first question before game_started so joiners and HTTP catch-up
+        # see an active round (game_started handlers call _send_current_question_to_self).
+        await self._run_next_question()
         await self.send(text_data=json.dumps({"action": "game_started"}))
         await self.channel_layer.group_send(
             self.game_group_name,
             {"type": "game_started"},
         )
-        await self._run_next_question()
         await self._log_websocket_action("start_game")
 
     async def _handle_next_question(self, data):
@@ -496,6 +498,8 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
     async def game_started(self, event):
         await self.send(text_data=json.dumps({"action": "game_started"}))
+        # Direct follow-up: group new_question can race with connect/join on mobile clients.
+        await self._send_current_question_to_self()
 
     async def new_question(self, event):
         await self.send(

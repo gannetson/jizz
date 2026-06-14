@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Animated,
 } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { AutocompleteDropdown } from 'react-native-autocomplete-dropdown';
 import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
 import { useGame } from '../context/GameContext';
@@ -66,7 +66,7 @@ export function GamePlayScreen() {
   const gameTokenParam = (route.params as { gameToken?: string })?.gameToken;
   const playerTokenParam = (route.params as { playerToken?: string })?.playerToken;
   const { game, player, setGame, setPlayer, loadGame } = useGame();
-  const { question, answer, players, nextQuestion, submitAnswer, joinGame, startGame, connected, endGameSession } = useGameWebSocket();
+  const { question, answer, players, nextQuestion, submitAnswer, joinGame, startGame, connected, endGameSession, refreshGameState } = useGameWebSocket();
   const dailyChallengeStartSent = useRef(false);
   const [dailyChallengeLoadTimeout, setDailyChallengeLoadTimeout] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -80,6 +80,53 @@ export function GamePlayScreen() {
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const expertDropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
+  const [refreshingQuestion, setRefreshingQuestion] = useState(false);
+
+  const handleRefreshQuestion = useCallback(async () => {
+    setRefreshingQuestion(true);
+    try {
+      await refreshGameState({ resyncWs: true });
+    } finally {
+      setRefreshingQuestion(false);
+    }
+  }, [refreshGameState]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (game?.token && player?.token) {
+        joinGame(game, player, setGame);
+      }
+    }, [game?.token, player?.token, joinGame, setGame])
+  );
+
+  useEffect(() => {
+    if (!connected || !game?.token) return;
+    void refreshGameState();
+    const interval = setInterval(() => {
+      void refreshGameState();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [connected, game?.token, refreshGameState]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => void handleRefreshQuestion()}
+          disabled={refreshingQuestion}
+          style={styles.headerRefreshButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('refresh')}
+        >
+          {refreshingQuestion ? (
+            <ActivityIndicator size="small" color={colors.primary[600]} />
+          ) : (
+            <FontAwesome5 name="sync" size={18} color={colors.primary[600]} />
+          )}
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, handleRefreshQuestion, refreshingQuestion, t]);
 
   const mediaType = game?.media || 'images';
   const currentIndex = mediaIndex;
@@ -346,6 +393,20 @@ export function GamePlayScreen() {
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
         <Text style={styles.muted}>{t('loading_question')}</Text>
+        <TouchableOpacity
+          style={styles.refreshQuestionButton}
+          onPress={() => void handleRefreshQuestion()}
+          disabled={refreshingQuestion}
+          accessibilityRole="button"
+          accessibilityLabel={t('refresh')}
+        >
+          {refreshingQuestion ? (
+            <ActivityIndicator size="small" color={colors.primary[700]} />
+          ) : (
+            <FontAwesome5 name="sync" size={20} color={colors.primary[700]} />
+          )}
+        </TouchableOpacity>
+        <Text style={styles.refreshQuestionHint}>{t('lobby_refresh_hint')}</Text>
       </View>
     );
   }
@@ -589,6 +650,26 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 24, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  headerRefreshButton: { paddingHorizontal: 12, paddingVertical: 8 },
+  refreshQuestionButton: {
+    marginTop: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    backgroundColor: colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshQuestionHint: {
+    fontSize: 12,
+    color: colors.primary[500],
+    marginTop: 12,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    lineHeight: 18,
+  },
   muted: { fontSize: 14, color: colors.primary[500], marginTop: 8 },
   errorText: { fontSize: 14, color: colors.error[500], marginTop: 12, textAlign: 'center' },
   link: { fontSize: 16, color: colors.primary[500], marginTop: 8 },

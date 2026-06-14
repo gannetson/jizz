@@ -116,18 +116,33 @@ export function CountryChallengeLeaderboardScreen() {
         );
         return (
           <View key={`${row.player_name}-${code}-${index}`} style={styles.card}>
-            <View style={styles.cardBody}>
-              <View style={styles.rankRow}>
-                <Text style={isPodiumRank(index) ? styles.rankEmoji : styles.rank}>
+            <View style={styles.rankAside}>
+              <View
+                style={[
+                  styles.rankBadge,
+                  isPodiumRank(index) ? styles.rankBadgePodium : styles.rankBadgeNumeric,
+                ]}
+              >
+                <Text
+                  style={isPodiumRank(index) ? styles.rankEmoji : styles.rankNumber}
+                  numberOfLines={1}
+                >
                   {rankLabel(index)}
                 </Text>
-                <Text style={styles.playerName}>{row.player_name}</Text>
               </View>
-              <Text style={styles.countryLine}>
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={styles.playerName} numberOfLines={1}>
+                {row.player_name}
+              </Text>
+              <Text style={styles.countryLine} numberOfLines={1}>
                 {countryCodeToFlag(code)} {code} · {countryLabel}
               </Text>
-              <Text style={styles.levelTitle}>{leaderboardLevelTitle(row, locale)}</Text>
-              <Text style={styles.stepText}>{stepLabel(row)}</Text>
+              <Text style={styles.levelTitle}>
+                {leaderboardLevelTitle(row, locale)}
+                <Text style={styles.stepText}>{stepLabel(row)}</Text>
+              </Text>
+
             </View>
             <View style={styles.levelIconAside}>
               <BirdrLevelImage iconUrl={row.level_icon_url} variant="plain" size={64} />
@@ -154,23 +169,62 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     paddingVertical: 12,
-    paddingLeft: 14,
+    paddingLeft: 10,
     paddingRight: 8,
     borderWidth: 1,
     borderColor: colors.primary[200],
     overflow: 'visible',
   },
+  rankAside: {
+    justifyContent: 'flex-start',
+    paddingTop: 2,
+    marginRight: 10,
+  },
+  rankBadge: {
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  rankBadgePodium: {
+    backgroundColor: colors.primary[100],
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+  },
+  rankBadgeNumeric: {
+    backgroundColor: colors.primary[500],
+  },
+  rankEmoji: {
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  rankNumber: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.primary[50],
+    letterSpacing: -0.3,
+  },
   cardBody: {
     flex: 1,
     minWidth: 0,
-    paddingRight: 10,
+    paddingRight: 8,
     justifyContent: 'center',
   },
-  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  rank: { fontSize: 14, fontWeight: '700', color: colors.primary[600], minWidth: 28 },
-  rankEmoji: { fontSize: 22, minWidth: 28, textAlign: 'center' },
-  playerName: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.primary[800] },
-  countryLine: { fontSize: 14, color: colors.primary[700], marginBottom: 4 },
+  playerName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.primary[800],
+    marginBottom: 2,
+  },
+  countryLine: {
+    fontSize: 13,
+    color: colors.primary[700],
+    marginBottom: 6,
+    textAlign: 'left',
+    alignSelf: 'stretch',
+  },
   levelIconAside: {
     justifyContent: 'center',
     alignItems: 'center',

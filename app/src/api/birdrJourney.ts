@@ -293,8 +293,14 @@ export function getCountryChallengeLeaderboardPath(): string {
 export async function fetchCountryChallengeLeaderboard(
   limit = 100
 ): Promise<CountryChallengeLeaderboardRow[]> {
-  const response = await fetch(apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}`), {
-    headers: { Accept: 'application/json' },
+  const url = apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}&_=${Date.now()}`);
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

@@ -28,7 +28,7 @@ export function LobbyScreen() {
   const rematchToken = params.rematch_game_token;
   const rematchJoin = params.rematchJoin === true;
   const { game, player, setGame, loadGame: loadGameFromApi } = useGame();
-  const { players, question, startGame, joinGame, connected, clearQuestion } = useGameWebSocket();
+  const { players, question, startGame, joinGame, connected, clearQuestion, refreshGameState } = useGameWebSocket();
 
   const [starting, setStarting] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
@@ -94,18 +94,22 @@ export function LobbyScreen() {
         );
       }
       setGame(g);
+      if ((g.progress ?? 0) > 0) {
+        void refreshGameState({ force: true, resyncWs: true });
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [isFocused, game?.token, loadGameFromApi, setGame]);
+  }, [isFocused, game?.token, loadGameFromApi, setGame, refreshGameState]);
 
   // Poll game so host sees new joiners even if WebSocket update_players was missed
   useEffect(() => {
     if (!isFocused || !game?.token || !connected) return;
     const interval = setInterval(() => {
       loadGameFromApi(game.token).then((g) => {
-        if (g?.scores?.length) {
+        if (!g) return;
+        if (g.scores?.length) {
           setRefreshedGameScores(
             g.scores.map((s, i) => ({
               id: s.id ?? i,
@@ -115,10 +119,14 @@ export function LobbyScreen() {
             }))
           );
         }
+        // Host started while we were in lobby — fetch question if WS events were missed.
+        if ((g.progress ?? 0) > 0 && !question?.id) {
+          void refreshGameState({ force: true, resyncWs: true });
+        }
       });
     }, LOBBY_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isFocused, game?.token, connected, loadGameFromApi]);
+  }, [isFocused, game?.token, connected, loadGameFromApi, question?.id, refreshGameState]);
 
   useEffect(() => {
     if (!isFocused || !question?.id || !game?.token) return;
@@ -136,10 +144,11 @@ export function LobbyScreen() {
       const g = await loadGameFromApi(game.token);
       if (g) setGame(g);
       joinGame(g ?? game, player, setGame, { force: true });
+      await refreshGameState({ resyncWs: true });
     } finally {
       setReconnecting(false);
     }
-  }, [game, player, loadGameFromApi, setGame, joinGame]);
+  }, [game, player, loadGameFromApi, setGame, joinGame, refreshGameState]);
 
   useEffect(() => {
     if (!game) return;

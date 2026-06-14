@@ -720,12 +720,11 @@ class UserProfileUpdateSerializer(serializers.Serializer):
 
     def validate_username(self, value):
         if value:
-            from jizz.user_names import sanitize_username
+            from jizz.user_names import make_unique_username, sanitize_username
 
             value = sanitize_username(value.strip())
             user = self.context['request'].user
-            if User.objects.filter(username=value).exclude(pk=user.pk).exists():
-                raise serializers.ValidationError("A user with this username already exists.")
+            return make_unique_username(value, exclude_user_id=user.pk)
         return value
 
     def validate_country_code(self, value):
@@ -803,14 +802,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'password')
 
     def validate_username(self, value):
-        from jizz.user_names import sanitize_username
+        from jizz.user_names import make_unique_username, sanitize_username
 
         value = sanitize_username(value.strip())
         if not value:
             raise serializers.ValidationError("Username is required.")
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("A user with this username already exists.")
-        return value
+        return make_unique_username(value)
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():

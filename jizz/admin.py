@@ -93,6 +93,15 @@ class AdminUsernameFormMixin:
         exclude.add('username')
         return exclude
 
+    def clean_username(self):
+        from jizz.user_names import make_unique_username
+
+        username = self.cleaned_data.get('username')
+        if not username:
+            return username
+        exclude_user_id = self.instance.pk if getattr(self.instance, 'pk', None) else None
+        return make_unique_username(username.strip(), exclude_user_id=exclude_user_id)
+
 
 class AdminUserChangeForm(AdminUsernameFormMixin, UserChangeForm):
     pass

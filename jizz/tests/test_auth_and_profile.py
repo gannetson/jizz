@@ -58,7 +58,7 @@ class RegisterViewTestCase(TestCase):
         self.assertIn('error', response.data)
         self.assertFalse(User.objects.filter(username='newuser').exists())
 
-    def test_register_duplicate_username(self):
+    def test_register_duplicate_username_gets_incremented_suffix(self):
         User.objects.create_user(username='taken', email='taken@example.com', password='pass12345')
         response = self.client.post(
             '/api/register/',
@@ -69,8 +69,8 @@ class RegisterViewTestCase(TestCase):
             },
             format='json',
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username='taken_1').exists())
 
     def test_register_duplicate_email(self):
         User.objects.create_user(username='first', email='same@example.com', password='pass12345')

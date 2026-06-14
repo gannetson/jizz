@@ -28,6 +28,8 @@ export type Game = {
   ended?: boolean;
   current_highscore?: { name: string; score?: number };
   scores?: GameScore[];
+  /** Number of questions created so far (0 = still in lobby). */
+  progress?: number;
 };
 
 type CreateGameBody = {

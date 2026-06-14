@@ -458,9 +458,10 @@ export async function advanceJourneyLevel(journeyId: number): Promise<BirdrJourn
 export async function fetchCountryChallengeLeaderboard(
   limit = 100
 ): Promise<CountryChallengeLeaderboardRow[]> {
-  const response = await fetch(apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}`), {
-    headers: { Accept: 'application/json' },
-  });
+  const response = await journeyRequest(
+    apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}`),
+    { method: 'GET' }
+  );
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(parseError(data, 'Failed to load leaderboard'));

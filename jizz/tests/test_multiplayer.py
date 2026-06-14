@@ -574,10 +574,19 @@ class MultiplayerGameTestCase(TestCase):
         game_token = response.data['token']
         game_id = Game.objects.get(token=game_token).id
 
-        # Get first question
+        # Lobby: must not auto-create the first question before the host starts
+        response = client.get(f'/api/games/{game_token}/question')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Host starts (same as WebSocket start_game → add_question)
+        game = Game.objects.get(token=game_token)
+        question1 = game.add_question()
+
+        # Get first question after start
         response = client.get(f'/api/games/{game_token}/question')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         question1_id = response.data['id']
+        self.assertEqual(question1_id, question1.id)
         question1 = Question.objects.get(id=question1_id)
 
         # Player 1 answers

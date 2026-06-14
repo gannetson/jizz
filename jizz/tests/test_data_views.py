@@ -116,8 +116,8 @@ class GamesPlayedViewsTests(TestCase):
     def test_games_played_page_public(self):
         res = Client().get(reverse("data-games-played"))
         self.assertEqual(res.status_code, 200)
-        self.assertContains(res, "Games played")
         self.assertContains(res, "games-played-chart")
+        self.assertContains(res, "games-world-map")
 
     def test_games_played_api(self):
         res = Client().get(
@@ -128,3 +128,5 @@ class GamesPlayedViewsTests(TestCase):
         data = res.json()
         self.assertEqual(data["granularity"], "month")
         self.assertIn("series", data)
+        self.assertIn("by_country", data)
+        self.assertIn("country_map", data)

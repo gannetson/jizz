@@ -3,7 +3,7 @@ from datetime import date, datetime
 from django.test import TestCase
 from django.utils import timezone
 
-from jizz.games_played_stats import default_date_range, games_played_rows
+from jizz.games_played_stats import default_date_range, games_played_by_country, games_played_rows
 from jizz.models import Country, Game, Player, PlayerScore
 
 
@@ -58,3 +58,26 @@ class GamesPlayedStatsTests(TestCase):
         start, end = default_date_range()
         self.assertLessEqual(start, end)
         self.assertGreaterEqual((end.year - start.year) * 12 + (end.month - start.month), 11)
+
+    def test_by_country_counts_distinct_games(self):
+        nl = Country.objects.create(code="NL", name="Netherlands")
+        de = Country.objects.create(code="DE", name="Germany")
+        for idx, country in enumerate((nl, de, nl)):
+            game = Game.objects.create(
+                country=country,
+                level="beginner",
+                length=5,
+                media="images",
+                host=self.players[0],
+            )
+            aware = timezone.make_aware(datetime.combine(date(2026, 4, 1 + idx), datetime.min.time()))
+            Game.objects.filter(pk=game.pk).update(created=aware)
+            PlayerScore.objects.create(player=self.players[idx % 3], game=game, score=1)
+
+        stats = games_played_by_country(date(2026, 4, 1), date(2026, 4, 30), granularity="month")
+        by_code = {row["country_code"]: row for row in stats["by_country"]}
+
+        self.assertEqual(by_code["NL"]["games"], 2)
+        self.assertEqual(by_code["DE"]["games"], 1)
+        self.assertEqual(stats["country_map"]["NL"], 2)
+        self.assertEqual(stats["country_map"]["DE"], 1)

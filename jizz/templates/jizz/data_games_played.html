@@ -3,11 +3,30 @@
 {% block title %}Games played · Birdr data{% endblock %}
 
 {% block extra_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap/dist/css/jsvectormap.min.css">
     <style>
         .chart-wrap {
             position: relative;
             height: 420px;
             margin: 1rem 0 1.5rem;
+        }
+
+        .map-wrap {
+            height: 420px;
+            margin: 1rem 0 1.5rem;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .granularity-group {
@@ -130,6 +149,24 @@
         <canvas id="games-played-chart"></canvas>
     </div>
 
+    <h2>Countries played</h2>
+    <p class="muted">Distinct games with scores per quiz country in the selected date range.</p>
+
+    <h2>World map</h2>
+    <div id="games-world-map" class="map-wrap"></div>
+
+    <h2>Top countries</h2>
+    <table class="data-table" id="countries-table">
+        <thead>
+            <tr>
+                <th>Country</th>
+                <th class="num">Games</th>
+                <th class="num">Players</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
     {{ chart_json|json_script:"games-played-data" }}
 {% endblock %}
 
@@ -137,6 +174,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
     <script>
         (function () {
             const apiUrl = "{% url 'data-games-played-api' %}";
@@ -145,6 +184,7 @@
             const form = document.getElementById("games-played-form");
             const canvas = document.getElementById("games-played-chart");
             let chart = null;
+            let worldMap = null;
 
             function formatLabel(row, granularity) {
                 const start = new Date(row.period + "T00:00:00");
@@ -257,6 +297,59 @@
                 });
             }
 
+            function updateCountryTable(payload) {
+                const tbody = document.querySelector("#countries-table tbody");
+                tbody.innerHTML = "";
+                (payload.by_country || []).forEach((row) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `<td><strong>${row.country_code}</strong> · ${row.country_name}</td><td class="num">${row.games}</td><td class="num">${row.players}</td>`;
+                    tbody.appendChild(tr);
+                });
+                if (!payload.by_country || !payload.by_country.length) {
+                    tbody.innerHTML = "<tr><td colspan=\"3\">No games in this period.</td></tr>";
+                }
+            }
+
+            function buildWorldMap(payload) {
+                const values = payload.country_map || {};
+                const container = document.getElementById("games-world-map");
+                if (worldMap && typeof worldMap.destroy === "function") {
+                    worldMap.destroy();
+                    worldMap = null;
+                }
+                container.innerHTML = "";
+                if (!Object.keys(values).length) {
+                    container.innerHTML = "<p class=\"muted\">No country data for this period.</p>";
+                    return;
+                }
+                worldMap = new jsVectorMap({
+                    selector: "#games-world-map",
+                    map: "world",
+                    regionStyle: {
+                        initial: { fill: "#e8d4b8" },
+                        hover: { fill: "#8b6419" },
+                    },
+                    series: {
+                        regions: [{
+                            attribute: "fill",
+                            scale: ["#f5ede0", "#8b6419"],
+                            values,
+                            normalizeFunction: "linear",
+                        }],
+                    },
+                    onRegionTooltipShow(event, tooltip, code) {
+                        const count = values[code] || 0;
+                        tooltip.text(`${code}: ${count} games`, true);
+                    },
+                });
+            }
+
+            function renderPayload(payload) {
+                buildChart(payload);
+                updateCountryTable(payload);
+                buildWorldMap(payload);
+            }
+
             function readFormParams() {
                 const data = new FormData(form);
                 return {
@@ -276,7 +369,7 @@
                     return;
                 }
                 const payload = await response.json();
-                buildChart(payload);
+                renderPayload(payload);
                 if (updateUrl) {
                     const next = pageUrl + "?" + query.toString();
                     window.history.replaceState(null, "", next);
@@ -294,7 +387,7 @@
                 }
             });
 
-            buildChart(initial);
+            renderPayload(initial);
         })();
     </script>
 {% endblock %}

@@ -152,6 +152,55 @@ def games_played_rows(
     return rows
 
 
+def games_played_by_country(
+    start: date,
+    end: date,
+    *,
+    granularity: Granularity = 'month',
+    limit: int = 25,
+) -> dict:
+    """Distinct games and players per quiz country in the date range."""
+    start, end = normalize_range(start, end, granularity=granularity)
+    start_dt = timezone.make_aware(datetime.combine(start, datetime.min.time()))
+    end_dt = timezone.make_aware(datetime.combine(end, datetime.max.time()))
+
+    rows = list(
+        PlayerScore.objects.filter(
+            game__isnull=False,
+            game__country__isnull=False,
+            game__created__gte=start_dt,
+            game__created__lte=end_dt,
+        )
+        .values('game__country_id', 'game__country__name')
+        .annotate(
+            games=Count('game_id', distinct=True),
+            players=Count('player_id', distinct=True),
+        )
+        .order_by('-games', 'game__country__name')
+    )
+
+    by_country = [
+        {
+            'country_code': row['game__country_id'],
+            'country_name': row['game__country__name'] or row['game__country_id'],
+            'games': row['games'],
+            'players': row['players'],
+        }
+        for row in rows[:limit]
+    ]
+
+    country_map: dict[str, int] = {}
+    for row in rows:
+        code = (row['game__country_id'] or '').strip().upper()
+        if len(code) == 2 and code.isalpha():
+            country_map[code] = row['games']
+
+    return {
+        'by_country': by_country,
+        'country_map': country_map,
+    }
+
+
 def games_played_payload(
     start: date | None = None,
     end: date | None = None,
@@ -163,9 +212,12 @@ def games_played_payload(
     end = end or default_end
     granularity = granularity or 'month'
     start, end = normalize_range(start, end, granularity=granularity)
+    country_stats = games_played_by_country(start, end, granularity=granularity)
     return {
         'start': start.isoformat(),
         'end': end.isoformat(),
         'granularity': granularity,
         'series': games_played_rows(start, end, granularity=granularity),
+        'by_country': country_stats['by_country'],
+        'country_map': country_stats['country_map'],
     }

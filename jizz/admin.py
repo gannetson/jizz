@@ -777,6 +777,7 @@ class SpeciesAdmin(admin.ModelAdmin):
 @register(Language)
 class LanguageAdmin(admin.ModelAdmin):
     fields = ['code', 'name']
+    search_fields = ['code', 'name']
 
 
 @register(Page)
@@ -789,7 +790,7 @@ class PageAdmin(admin.ModelAdmin):
 
 @register(SpeciesName)
 class SpeciesNameAdmin(admin.ModelAdmin):
-    readonly_fields = ['language', 'species']
+    raw_id_fields = ['species', 'language']
     fields = ['language', 'species', 'name']
     list_display = ['name', 'language', 'species']
     list_filter = ['language']

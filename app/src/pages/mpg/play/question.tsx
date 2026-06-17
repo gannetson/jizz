@@ -30,6 +30,7 @@ import { ComparisonButton } from "../../../components/comparison-button"
 import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
 import { postQuestionNextMedia } from "../../../api/question-next-media"
+import { answersEnabledForMedia, normalizeGameMedia } from "../../../core/media-answer-gate"
 import {
   currentPlayMediaItem,
   mediaArrayLengthForQuestion,
@@ -53,6 +54,7 @@ export const QuestionComponent = () => {
   const [showFeedback, setShowFeedback] = useState(false)
   const [mediaIndex, setMediaIndex] = useState<number | null>(null)
   const [mediaReady, setMediaReady] = useState(false)
+  const [audioPlaying, setAudioPlaying] = useState(true)
   const [advancingQuestion, setAdvancingQuestion] = useState(false)
   const mediaPostedKey = useRef<string | null>(null)
 
@@ -82,7 +84,7 @@ export const QuestionComponent = () => {
     }
   }, [answer])
 
-  const gameMedia = game?.media ?? 'images'
+  const gameMedia = normalizeGameMedia(game?.media ?? 'images')
   const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0
   const currentMediaIndex =
     mediaIndex ??
@@ -94,6 +96,7 @@ export const QuestionComponent = () => {
   useEffect(() => {
     mediaPostedKey.current = null
     setMediaReady(false)
+    setAudioPlaying(true)
   }, [question?.id, currentMediaIndex])
 
   const notifyMediaReady = useCallback(() => {
@@ -104,6 +107,13 @@ export const QuestionComponent = () => {
     mediaPostedKey.current = key
     postQuestionMediaReady(question.id, player.token).catch(() => {})
   }, [question?.id, player?.token, currentMediaIndex])
+
+  useEffect(() => {
+    if (gameMedia !== 'audio' || !currentSound || !question?.id) return
+    notifyMediaReady()
+  }, [gameMedia, currentSound?.url, question?.id, currentMediaIndex, notifyMediaReady])
+
+  const answersEnabled = answersEnabledForMedia(gameMedia, mediaReady)
 
   const selectAnswer = async (species?: Species) => {
     setShowFeedback(false)
@@ -151,7 +161,7 @@ export const QuestionComponent = () => {
       index: number
     } | null = null
 
-    if (game.media === 'images' && currentImage) {
+    if (gameMedia === 'images' && currentImage) {
       const item = currentImage
       if (item) {
         mediaData = {
@@ -163,7 +173,7 @@ export const QuestionComponent = () => {
           index: currentIndex,
         }
       }
-    } else if (game.media === 'video' && currentVideo) {
+    } else if (gameMedia === 'video' && currentVideo) {
       const item = currentVideo
       if (item) {
         mediaData = {
@@ -175,7 +185,7 @@ export const QuestionComponent = () => {
           index: currentIndex,
         }
       }
-    } else if (game.media === 'audio' && currentSound) {
+    } else if (gameMedia === 'audio' && currentSound) {
       const item = currentSound
       if (item) {
         mediaData = {
@@ -283,7 +293,7 @@ export const QuestionComponent = () => {
       />
       {nextButton}
       <Box position={'relative'}>
-        {game.media === 'video' && currentVideo && (
+        {gameMedia === 'video' && currentVideo && (
           <>
             <Box position="relative" minH="220px">
               <ReactPlayer
@@ -310,7 +320,7 @@ export const QuestionComponent = () => {
             </Flex>
           </>
         )}
-        {game.media === 'images' && currentImage && (
+        {gameMedia === 'images' && currentImage && (
           <>
             <Box position="relative" minH="280px">
               <ZoomablePlayImage
@@ -342,16 +352,20 @@ export const QuestionComponent = () => {
           </>
 
         )}
-        {game.media === 'audio' && currentSound && (
+        {gameMedia === 'audio' && currentSound && (
           <Box py={8}>
             <>
               <Box position="relative" minH="80px">
                 <ReactPlayer
+                  key={`${question.id}-audio-${currentMediaIndex}`}
                   width={'100%'}
                   height={'50px'}
                   url={currentSound.url}
                   controls={true}
-                  playing={true}
+                  playing={audioPlaying}
+                  onPlay={() => setAudioPlaying(true)}
+                  onPause={() => setAudioPlaying(false)}
+                  onEnded={() => setAudioPlaying(false)}
                   onReady={notifyMediaReady}
                 />
                 {showFeedback && answer != null && (
@@ -395,7 +409,7 @@ export const QuestionComponent = () => {
                 )
               } else {
                 return (
-                  <Button colorPalette={'primary'} key={key} onClick={() => selectAnswer(option)} disabled={!mediaReady}>
+                  <Button colorPalette={'primary'} key={key} onClick={() => selectAnswer(option)} disabled={!answersEnabled}>
                     <SpeciesName species={option}/>
                   </Button>
                 )
@@ -429,7 +443,7 @@ export const QuestionComponent = () => {
             species={species || []}
             playerLanguage={speciesLanguage ?? player?.language}
             onSelect={(selected) => selectAnswer(selected)}
-            isDisabled={!mediaReady}
+            isDisabled={!answersEnabled}
             autoFocus={true}
             placeholder={<FormattedMessage id={"type species"} defaultMessage={"Start typing your answer..."}/>}
           />

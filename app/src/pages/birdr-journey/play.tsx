@@ -41,6 +41,7 @@ import { Page } from '../../shared/components/layout';
 import { SpeciesName } from '../../components/species-name';
 import { postQuestionMediaReady } from '../../api/question-media-ready';
 import { postQuestionNextMedia } from '../../api/question-next-media';
+import { answersEnabledForMedia, normalizeGameMedia } from '../../core/media-answer-gate';
 
 type ResultType = 'open' | 'correct' | 'joker' | 'incorrect';
 
@@ -57,7 +58,7 @@ export function BirdrJourneyPlayPage() {
   const journeyId = Number(searchParams.get('journeyId') ?? 0);
   const countryCode = searchParams.get('countryCode') ?? '';
   const gameToken = searchParams.get('gameToken') ?? '';
-  const gameMedia = searchParams.get('gameMedia') ?? 'images';
+  const gameMedia = normalizeGameMedia(searchParams.get('gameMedia') ?? 'images');
   const gameLevel = searchParams.get('gameLevel') ?? 'advanced';
 
   const { species, language } = useContext(AppContext);
@@ -68,6 +69,7 @@ export function BirdrJourneyPlayPage() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [response, setResponse] = useState<Answer | null>(null);
   const [mediaReady, setMediaReady] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(true);
   const [mediaIndex, setMediaIndex] = useState<number | null>(null);
   const [journeyGame, setJourneyGame] = useState<BirdrJourneyGame | null>(null);
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
@@ -121,7 +123,18 @@ export function BirdrJourneyPlayPage() {
   useEffect(() => {
     mediaPostedForQuestionId.current = null;
     setMediaReady(false);
+    setAudioPlaying(true);
   }, [question?.id, mediaIndex]);
+
+  useEffect(() => {
+    if (gameMedia !== 'audio' || !question?.id) return;
+    setMediaReady(true);
+    const token = playerTokenRef.current;
+    if (token && mediaPostedForQuestionId.current !== question.id) {
+      mediaPostedForQuestionId.current = question.id;
+      postQuestionMediaReady(question.id, token).catch(() => {});
+    }
+  }, [gameMedia, question?.id]);
 
   useEffect(() => {
     if (!loading && !question && gameToken) {
@@ -168,6 +181,8 @@ export function BirdrJourneyPlayPage() {
     mediaPostedForQuestionId.current = question.id;
     postQuestionMediaReady(question.id, token).catch(() => {});
   };
+
+  const answersEnabled = answersEnabledForMedia(gameMedia, mediaReady);
 
   const handleFlagSuccess = async () => {
     if (!question?.id || !playerTokenRef.current) return;
@@ -359,7 +374,10 @@ export function BirdrJourneyPlayPage() {
                 height="50px"
                 url={currentSound.url}
                 controls
-                playing
+                playing={audioPlaying}
+                onPlay={() => setAudioPlaying(true)}
+                onPause={() => setAudioPlaying(false)}
+                onEnded={() => setAudioPlaying(false)}
                 onReady={notifyMediaReady}
               />
               {showFeedback && (
@@ -392,7 +410,7 @@ export function BirdrJourneyPlayPage() {
               <Button
                 key={key}
                 onClick={() => giveAnswer(option)}
-                disabled={submitting || !mediaReady || showFeedback}
+                disabled={submitting || !answersEnabled || showFeedback}
                 colorPalette={
                   response?.species?.id === option.id
                     ? 'green'
@@ -411,7 +429,7 @@ export function BirdrJourneyPlayPage() {
             playerLanguage={language}
             onSelect={giveAnswer}
             loading={submitting}
-            isDisabled={!mediaReady || showFeedback}
+            isDisabled={!answersEnabled || showFeedback}
             autoFocus
             placeholder={
               <FormattedMessage id="type species" defaultMessage="Start typing your answer..." />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import {
   getChallengeQuestion,
@@ -25,11 +24,14 @@ import { apiUrl } from '../api/config';
 import type { Species } from '../types/game';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
+import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
+import { answersEnabledForMedia, normalizeGameMedia } from '../game/mediaAnswerGate';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
+import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
 import { useTranslation } from '../i18n/TranslationContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
@@ -55,19 +57,15 @@ function speciesDisplayName(s: QuestionOption | Species, lang?: string): string 
 /** Provides audio playback hooks only when mounted (past early returns). Avoids "fewer hooks" when restarting. */
 function ChallengePlayAudio({
   soundUri,
+  questionId,
   children,
 }: {
   soundUri: string | null;
+  questionId?: number;
   children: (args: { playSound: () => void; soundPlaying: boolean; pulsatingStyle: ReturnType<typeof usePulsatingAnimation> }) => React.ReactNode;
 }) {
-  const audioPlayer = useAudioPlayer(soundUri ?? null);
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
-  const soundPlaying = audioStatus.playing;
-  const pulsatingStyle = usePulsatingAnimation(soundPlaying);
-  const playSound = useCallback(() => {
-    if (soundUri) audioPlayer.play();
-  }, [soundUri, audioPlayer]);
-  return <>{children({ playSound, soundPlaying, pulsatingStyle })}</>;
+  const { toggleSound, soundPlaying, pulsatingStyle } = useQuestionSoundPlayback(soundUri, questionId);
+  return <>{children({ playSound: toggleSound, soundPlaying, pulsatingStyle })}</>;
 }
 
 export function ChallengePlayScreen() {
@@ -100,6 +98,8 @@ export function ChallengePlayScreen() {
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
   const [expertQuery, setExpertQuery] = useState('');
   const [mediaReady, setMediaReady] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
   /** After flagging, advance to next media item (same as MPG GamePlayScreen). */
   const [mediaIndex, setMediaIndex] = useState<number | null>(null);
   const [questionLoadError, setQuestionLoadError] = useState<string | null>(null);
@@ -170,13 +170,18 @@ export function ChallengePlayScreen() {
     }
   }, [gameToken, countryCode]);
 
+  const fetchingNextRef = useRef(false);
+
   /** Fetch next question when user taps "Next question". */
   const fetchNextQuestion = useCallback(async () => {
-    if (!gameToken) return;
+    if (!gameToken || fetchingNextRef.current) return;
+    fetchingNextRef.current = true;
+    setLoadingNextQuestion(true);
     try {
       const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
       if (!q) {
+        setLoadingNextQuestion(false);
         navigateJourneyResults();
         return;
       }
@@ -188,6 +193,9 @@ export function ChallengePlayScreen() {
       await loadJourneyGame();
     } catch (e) {
       setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
+      setLoadingNextQuestion(false);
+    } finally {
+      fetchingNextRef.current = false;
     }
   }, [gameToken, getPlayPlayerToken, loadJourneyGame, navigateJourneyResults, t]);
 
@@ -198,12 +206,17 @@ export function ChallengePlayScreen() {
   useEffect(() => {
     if (question) {
       setMediaIndex(question.number ?? 0);
+      setLoadingNextQuestion(false);
     }
     setJourneyStepFailed(false);
   }, [question?.id]);
 
   useEffect(() => {
     setMediaReady(false);
+  }, [question?.id, mediaIndex]);
+
+  useEffect(() => {
+    setImageError(null);
   }, [question?.id, mediaIndex]);
 
   useEffect(() => {
@@ -234,10 +247,21 @@ export function ChallengePlayScreen() {
   }, [question?.id]);
 
   const lang = paramLanguage || 'en';
-  const mediaType = gameMedia || (question?.game ? (question as any).game?.media : undefined) || 'images';
+  const mediaType = normalizeGameMedia(gameMedia || (question?.game ? (question as any).game?.media : undefined));
   const isExpert = gameLevel === 'expert' || (question as any)?.game?.level === 'expert';
   const options = question?.options ?? [];
   const hasOptions = options.length > 0;
+  const answersEnabled = answersEnabledForMedia(mediaType, mediaReady);
+
+  useEffect(() => {
+    if (mediaType !== 'audio' || !question?.id) return;
+    setMediaReady(true);
+    const run = async () => {
+      const token = challengePlayerToken ?? (await getPlayPlayerToken());
+      if (token) postQuestionMediaReady(question.id, token).catch(() => {});
+    };
+    void run();
+  }, [mediaType, question?.id, challengePlayerToken, getPlayPlayerToken]);
 
   const currentMediaIdx = question != null ? (mediaIndex ?? question.number ?? 0) : 0;
   const image = question?.images?.[currentMediaIdx];
@@ -247,10 +271,10 @@ export function ChallengePlayScreen() {
   const imageUri = image?.url ? (image.url.startsWith('http') ? image.url : apiUrl(image.url)).replace('/1800', '/900') : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
 
-  const onFlagSuccess = useCallback(() => {
+  const advanceToNextMedia = useCallback(() => {
     if (!question) return;
-    setFlagModalVisible(false);
-    setFlagMediaInfo(null);
+    setImageError(null);
+    setMediaReady(false);
     let maxIndex = 0;
     if (mediaType === 'images' && question.images?.length) maxIndex = question.images.length - 1;
     else if (mediaType === 'video' && question.videos?.length) maxIndex = question.videos.length - 1;
@@ -258,6 +282,13 @@ export function ChallengePlayScreen() {
     const idx = mediaIndex ?? question.number ?? 0;
     setMediaIndex(idx >= maxIndex ? 0 : idx + 1);
   }, [question, mediaType, mediaIndex]);
+
+  const onFlagSuccess = useCallback(() => {
+    if (!question) return;
+    setFlagModalVisible(false);
+    setFlagMediaInfo(null);
+    advanceToNextMedia();
+  }, [question, advanceToNextMedia]);
 
   const openFlagModal = useCallback(() => {
     if (!question) return;
@@ -470,7 +501,7 @@ export function ChallengePlayScreen() {
   const showStepContinue = levelEnded || (answerResult !== null && isLastQuestion);
 
   return (
-    <ChallengePlayAudio soundUri={soundUri}>
+    <ChallengePlayAudio soundUri={soundUri} questionId={question?.id}>
       {({ playSound, soundPlaying, pulsatingStyle }) => (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="challengePlay.screen">
       <View style={styles.row}>
@@ -496,6 +527,12 @@ export function ChallengePlayScreen() {
         </Text>
       ) : null}
       <View style={styles.mediaWrap}>
+        {loadingNextQuestion ? (
+          <QuestionLoadingFeather
+            style={styles.challengeMediaWrap}
+            testID="challengePlay.advancingLoader"
+          />
+        ) : (
         <QuestionMediaView
           feedbackOverlay={
             showFeedback && feedback !== null ? (
@@ -510,6 +547,17 @@ export function ChallengePlayScreen() {
           }
           mediaType={mediaType}
           imageUri={imageUri}
+          imageError={imageError}
+          onImageError={setImageError}
+          onImageRetry={() => {
+            setImageError(null);
+            setMediaReady(false);
+          }}
+          onImageAdvance={advanceToNextMedia}
+          imageFailedLabel={t('image_failed_to_load')}
+          reloadImageLabel={t('retry')}
+          nextImageLabel={t('next_image')}
+          showNextImageButton={(question?.images?.length ?? 0) > 1}
           imageMedia={image}
           videoUri={videoUri}
           videoMedia={video}
@@ -520,7 +568,7 @@ export function ChallengePlayScreen() {
           pulsatingStyle={pulsatingStyle}
           onFlagPress={openFlagModal}
           flagLabel={t('this_seems_wrong')}
-          playSoundLabel={`🔊 ${t('play_sound')}`}
+          playSoundLabel={soundPlaying ? `⏸ ${t('stop_sound')}` : `🔊 ${t('play_sound')}`}
           expandImageLabel={t('expand_image_fullscreen_label')}
           expandImageHint={t('expand_image_fullscreen_hint')}
           closeFullScreenLabel={t('close')}
@@ -537,6 +585,7 @@ export function ChallengePlayScreen() {
             void run();
           }}
         />
+        )}
       </View>
 
       {answerResult !== null ? (
@@ -555,6 +604,7 @@ export function ChallengePlayScreen() {
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => fetchNextQuestion()}
+              disabled={loadingNextQuestion}
               testID="challengePlay.nextQuestion"
               accessibilityLabel="Next question"
             >
@@ -588,9 +638,9 @@ export function ChallengePlayScreen() {
             options.map((opt, idx) => (
               <TouchableOpacity
                 key={opt.id}
-                style={[styles.optionButton, (submitting || !mediaReady) && styles.optionButtonDisabled]}
+                style={[styles.optionButton, (submitting || !answersEnabled) && styles.optionButtonDisabled]}
                 onPress={() => giveAnswer(opt)}
-                disabled={submitting || !mediaReady}
+                disabled={submitting || !answersEnabled}
                 testID={idx === 0 ? 'challengePlay.firstOption' : `challengePlay.option.${opt.id}`}
                 accessibilityLabel={idx === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
@@ -637,7 +687,7 @@ export function ChallengePlayScreen() {
                   placeholderTextColor={colors.primary[500]}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!submitting && mediaReady}
+                  editable={!submitting && answersEnabled}
                   testID="challengePlay.expertInput"
                   accessibilityLabel="Species name"
                 />
@@ -656,9 +706,9 @@ export function ChallengePlayScreen() {
                     filteredSpecies.map((item) => (
                       <TouchableOpacity
                         key={item.id}
-                        style={[styles.optionButton, styles.speciesListItem, (submitting || !mediaReady) && styles.optionButtonDisabled]}
+                        style={[styles.optionButton, styles.speciesListItem, (submitting || !answersEnabled) && styles.optionButtonDisabled]}
                         onPress={() => giveAnswer(item)}
-                        disabled={submitting || !mediaReady}
+                        disabled={submitting || !answersEnabled}
                         testID={`challengePlay.expertOption.${item.id}`}
                         accessibilityLabel={speciesDisplayName(item, lang)}
                       >

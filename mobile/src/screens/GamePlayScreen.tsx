@@ -11,7 +11,6 @@ import {
   useWindowDimensions,
   Animated,
 } from 'react-native';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { AutocompleteDropdown } from 'react-native-autocomplete-dropdown';
 import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
@@ -22,6 +21,7 @@ import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, nor
 import { MediaCredits } from '../components/MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
+import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { apiUrl } from '../api/config';
@@ -29,6 +29,8 @@ import { getSpeciesForCountry } from '../api/species';
 import { postQuestionMediaReady } from '../api/games';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
+import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
+import { answersEnabledForMedia, normalizeGameMedia } from '../game/mediaAnswerGate';
 import type { Species } from '../types/game';
 import * as playerApi from '../api/player';
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
@@ -43,19 +45,15 @@ function speciesDisplayName(s: Species, lang?: string): string {
 /** Provides audio playback hooks only when mounted (past early returns). Avoids "fewer hooks" when restarting. */
 function GamePlayAudio({
   soundUri,
+  questionId,
   children,
 }: {
   soundUri: string | null;
+  questionId?: number;
   children: (args: { playSound: () => void; soundPlaying: boolean; pulsatingStyle: ReturnType<typeof usePulsatingAnimation> }) => React.ReactNode;
 }) {
-  const audioPlayer = useAudioPlayer(soundUri ?? null);
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
-  const soundPlaying = audioStatus.playing;
-  const pulsatingStyle = usePulsatingAnimation(soundPlaying);
-  const playSound = useCallback(() => {
-    if (soundUri) audioPlayer.play();
-  }, [soundUri, audioPlayer]);
-  return <>{children({ playSound, soundPlaying, pulsatingStyle })}</>;
+  const { toggleSound, soundPlaying, pulsatingStyle } = useQuestionSoundPlayback(soundUri, questionId);
+  return <>{children({ playSound: toggleSound, soundPlaying, pulsatingStyle })}</>;
 }
 
 export function GamePlayScreen() {
@@ -81,6 +79,7 @@ export function GamePlayScreen() {
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const expertDropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
   const [refreshingQuestion, setRefreshingQuestion] = useState(false);
+  const [advancingQuestion, setAdvancingQuestion] = useState(false);
 
   const handleRefreshQuestion = useCallback(async () => {
     setRefreshingQuestion(true);
@@ -100,13 +99,16 @@ export function GamePlayScreen() {
   );
 
   useEffect(() => {
-    if (!connected || !game?.token) return;
-    void refreshGameState();
+    if (!game?.token || !player?.token) return;
+    void refreshGameState({ force: true });
     const interval = setInterval(() => {
-      void refreshGameState();
+      if (!connected) {
+        joinGame(game, player, setGame, { force: true });
+      }
+      void refreshGameState({ resyncWs: true, force: true });
     }, 5000);
     return () => clearInterval(interval);
-  }, [connected, game?.token, refreshGameState]);
+  }, [connected, game, player, joinGame, setGame, refreshGameState]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -128,7 +130,7 @@ export function GamePlayScreen() {
     });
   }, [navigation, handleRefreshQuestion, refreshingQuestion, t]);
 
-  const mediaType = game?.media || 'images';
+  const mediaType = normalizeGameMedia(game?.media);
   const currentIndex = mediaIndex;
   const lang = game?.language || (player as any)?.language;
 
@@ -178,6 +180,7 @@ export function GamePlayScreen() {
       question?.id !== prevQuestionIdRef.current
     ) {
       setShowFeedback(false);
+      setAdvancingQuestion(false);
     }
     prevQuestionIdRef.current = question?.id;
   }, [question?.id]);
@@ -243,6 +246,13 @@ export function GamePlayScreen() {
     setMediaReady(false);
   }, [question?.id, mediaIndex, mediaType]);
 
+  useEffect(() => {
+    if (mediaType !== 'audio' || !question?.id) return;
+    setMediaReady(true);
+    const tok = (player as { token?: string })?.token;
+    if (tok) postQuestionMediaReady(question.id, tok).catch(() => {});
+  }, [mediaType, question?.id, player]);
+
   const image = mediaType === 'images' && question?.images?.[currentIndex];
   const video = mediaType === 'video' && question?.videos?.[currentIndex];
   const sound = mediaType === 'audio' ? question?.sounds?.[currentIndex] : undefined;
@@ -297,8 +307,9 @@ export function GamePlayScreen() {
   };
 
   const handleNext = () => {
-    if (!resultsReadyForCurrentQuestion) return;
+    if (!resultsReadyForCurrentQuestion || advancingQuestion) return;
     setShowFeedback(false);
+    setAdvancingQuestion(true);
     nextQuestion();
   };
 
@@ -354,22 +365,28 @@ export function GamePlayScreen() {
     }
   };
 
-  const onFlagSuccess = () => {
-    if (!question || !game) return;
-    setFlagModalVisible(false);
-    setFlagMediaInfo(null);
+  const advanceToNextMedia = useCallback(() => {
+    if (!question) return;
     setImageError(null);
+    setMediaReady(false);
     let maxIndex = 0;
     if (mediaType === 'images' && question.images?.length) maxIndex = question.images.length - 1;
     else if (mediaType === 'video' && question.videos?.length) maxIndex = question.videos.length - 1;
     else if (mediaType === 'audio' && question.sounds?.length) maxIndex = question.sounds.length - 1;
-    const next = currentIndex >= maxIndex ? 0 : currentIndex + 1;
-    setMediaIndex(next);
+    setMediaIndex((idx) => (idx >= maxIndex ? 0 : idx + 1));
+  }, [question, mediaType]);
+
+  const onFlagSuccess = () => {
+    if (!question || !game) return;
+    setFlagModalVisible(false);
+    setFlagMediaInfo(null);
+    advanceToNextMedia();
   };
 
   const isExpert = game.level === 'expert';
   const hasOptions = !!(question?.options && question.options.length > 0);
   const showExpertInput = isExpert && !hasOptions;
+  const answersEnabled = answersEnabledForMedia(mediaType, mediaReady);
 
   const currentMedia = image || video || sound;
   const showPlaceholder = (mediaType === 'images' && (!imageUri || imageError)) ||
@@ -414,7 +431,7 @@ export function GamePlayScreen() {
   }
 
   return (
-    <GamePlayAudio soundUri={soundUri}>
+    <GamePlayAudio soundUri={soundUri} questionId={question.id}>
       {({ playSound, soundPlaying, pulsatingStyle }) => (
     <View style={styles.playRoot}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">
@@ -426,6 +443,13 @@ export function GamePlayScreen() {
         onSuccess={onFlagSuccess}
       />
 
+      {advancingQuestion ? (
+        <QuestionLoadingFeather
+          minHeight={isWide ? Math.round(screenHeight * 0.5) : 280}
+          style={styles.mediaWrap}
+          testID="gamePlay.advancingLoader"
+        />
+      ) : (
       <QuestionMediaView
         feedbackOverlay={
           showFeedback && resultsReadyForCurrentQuestion ? (
@@ -442,6 +466,14 @@ export function GamePlayScreen() {
         imageUri={imageUri}
         imageError={imageError}
         onImageError={setImageError}
+        onImageRetry={() => {
+          setImageError(null);
+          setMediaReady(false);
+        }}
+        onImageAdvance={advanceToNextMedia}
+        reloadImageLabel={t('retry')}
+        nextImageLabel={t('next_image')}
+        showNextImageButton={(question?.images?.length ?? 0) > 1}
         imageMedia={image && typeof image === 'object' ? image : undefined}
         videoUri={videoUri}
         videoMedia={video && typeof video === 'object' ? video : undefined}
@@ -455,7 +487,7 @@ export function GamePlayScreen() {
         showLoadingPlaceholder={!!(showPlaceholder && !currentMedia)}
         loadingLabel={t('loading')}
         imageFailedLabel={currentMedia ? t('image_failed_to_load') : ''}
-        playSoundLabel={`🔊 ${t('play_sound')}`}
+        playSoundLabel={soundPlaying ? `⏸ ${t('stop_sound')}` : `🔊 ${t('play_sound')}`}
         expandImageLabel={t('expand_image_fullscreen_label')}
         expandImageHint={t('expand_image_fullscreen_hint')}
         closeFullScreenLabel={t('close')}
@@ -470,13 +502,14 @@ export function GamePlayScreen() {
           }
         }}
       />
+      )}
 
       <View style={styles.nextSection}>
         {done && resultsReadyForCurrentQuestion ? (
           <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
             <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
           </TouchableOpacity>
-        ) : isHost && resultsReadyForCurrentQuestion ? (
+        ) : isHost && resultsReadyForCurrentQuestion && !advancingQuestion ? (
           <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
             <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
           </TouchableOpacity>
@@ -518,10 +551,10 @@ export function GamePlayScreen() {
               <TouchableOpacity
                 style={[
                   styles.optionButton,
-                  ((submittingId !== null && !(submittingId === opt.id)) || !mediaReady) && styles.optionDisabled,
+                  ((submittingId !== null && !(submittingId === opt.id)) || !answersEnabled) && styles.optionDisabled,
                 ]}
                 onPress={() => handleAnswer(opt)}
-                disabled={submittingId !== null || !mediaReady}
+                disabled={submittingId !== null || !answersEnabled}
                 testID={i === 0 ? 'gamePlay.firstOption' : `gamePlay.option.${opt.id}`}
                 accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
@@ -582,7 +615,7 @@ export function GamePlayScreen() {
               loading={expertSpecies.length === 0}
               minChars={2}
               useFilter
-              editable={!answer && submittingId === null && mediaReady}
+              editable={!answer && submittingId === null && answersEnabled}
               closeOnSubmit
               clearOnFocus={false}
               showClear

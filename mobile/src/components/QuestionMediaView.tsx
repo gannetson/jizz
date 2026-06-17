@@ -5,15 +5,16 @@ import {
   TouchableOpacity,
   Pressable,
   StyleSheet,
-  Image,
-  ViewStyle,
   Animated,
   Platform,
+  type ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { setAudioModeAsync } from 'expo-audio';
 import { MediaCredits } from './MediaCredits';
 import { FullScreenImageViewerModal } from './FullScreenImageViewerModal';
+import { QuestionMediaLoadingOverlay } from './QuestionMediaLoadingOverlay';
 import { colors } from '../theme';
 
 export type MediaWithCredits = {
@@ -43,6 +44,16 @@ export type QuestionMediaViewProps = {
   loadingLabel?: string;
   /** Shown when image failed to load */
   imageFailedLabel?: string;
+  /** Label for the reload button when image failed to load */
+  reloadImageLabel?: string;
+  /** Label for skipping to the next image after a load failure */
+  nextImageLabel?: string;
+  /** When false, hide the next-image action (e.g. only one image available) */
+  showNextImageButton?: boolean;
+  /** Clear parent error state and reset media-ready when user retries image load */
+  onImageRetry?: () => void;
+  /** Parent should show the next media item (same as after flagging) */
+  onImageAdvance?: () => void;
   playSoundLabel?: string;
   /** Optional container style override */
   containerStyle?: ViewStyle;
@@ -99,6 +110,11 @@ export function QuestionMediaView({
   showLoadingPlaceholder = false,
   loadingLabel = 'Loading…',
   imageFailedLabel = '',
+  reloadImageLabel = 'Retry',
+  nextImageLabel = 'Next image',
+  showNextImageButton = true,
+  onImageRetry,
+  onImageAdvance,
   playSoundLabel = '🔊 Play sound',
   containerStyle,
   imageHeight,
@@ -110,6 +126,10 @@ export function QuestionMediaView({
   feedbackOverlay,
 }: QuestionMediaViewProps) {
   const [fullScreenImage, setFullScreenImage] = React.useState(false);
+  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageProgress, setImageProgress] = React.useState<number | null>(null);
+  const [videoReady, setVideoReady] = React.useState(false);
+  const [imageReloadKey, setImageReloadKey] = React.useState(0);
   const mediaReadyOnce = React.useRef(false);
   const fireMediaReady = React.useCallback(() => {
     if (!onMediaReady || mediaReadyOnce.current) return;
@@ -135,7 +155,25 @@ export function QuestionMediaView({
 
   React.useEffect(() => {
     mediaReadyOnce.current = false;
-  }, [imageUri, videoUri, soundUri, mediaType, displayVideoUri]);
+    setImageLoaded(false);
+    setImageProgress(null);
+    setVideoReady(false);
+  }, [imageUri, videoUri, soundUri, mediaType, displayVideoUri, imageReloadKey]);
+
+  const handleImageRetry = React.useCallback(() => {
+    mediaReadyOnce.current = false;
+    setImageLoaded(false);
+    setImageProgress(null);
+    setImageReloadKey((key) => key + 1);
+    onImageRetry?.();
+  }, [onImageRetry]);
+
+  const handleImageNext = React.useCallback(() => {
+    mediaReadyOnce.current = false;
+    setImageLoaded(false);
+    setImageProgress(null);
+    onImageAdvance?.();
+  }, [onImageAdvance]);
 
   const hasMedia =
     (mediaType === 'images' && (imageUri || imageError !== undefined)) ||
@@ -163,7 +201,10 @@ export function QuestionMediaView({
   React.useEffect(() => {
     if (mediaType === 'video' && displayVideoUri && onMediaReady) {
       const sub = videoPlayer.addListener('statusChange', ({ status }: { status: string }) => {
-        if (status === 'readyToPlay') fireMediaReady();
+        if (status === 'readyToPlay') {
+          setVideoReady(true);
+          fireMediaReady();
+        }
       });
       return () => sub.remove();
     }
@@ -198,30 +239,52 @@ export function QuestionMediaView({
           {imageUri && !imageError ? (
             <MediaStage feedbackOverlay={feedbackOverlay}>
               <Pressable
-                onPress={() => setFullScreenImage(true)}
+                onPress={() => imageLoaded && setFullScreenImage(true)}
                 accessibilityRole="button"
                 accessibilityLabel={expandImageLabel}
                 accessibilityHint={expandImageHint}
+                disabled={!imageLoaded}
               >
-                <Image
-                  style={[styles.image, imageHeight != null && { height: imageHeight }]}
-                  resizeMode="contain"
-                  source={{
-                    uri: imageUri,
-                    headers: {
-                      'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
-                    },
-                  }}
-                  onLoad={() => fireMediaReady()}
-                  onError={(e) => {
-                    const message =
-                      (e as any)?.error?.message ||
-                      (e as any)?.nativeEvent?.error ||
-                      'Unknown image error';
-                    onImageError?.(message);
-                    fireMediaReady();
-                  }}
-                />
+                <View
+                  style={[
+                    styles.imageFrame,
+                    imageHeight != null && { height: imageHeight },
+                  ]}
+                >
+                  <Image
+                    key={`${imageUri}-${imageReloadKey}`}
+                    style={styles.image}
+                    contentFit="contain"
+                    source={{
+                      uri: imageUri,
+                      headers: {
+                        'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
+                      },
+                    }}
+                    onLoadStart={() => {
+                      setImageLoaded(false);
+                      setImageProgress(null);
+                    }}
+                    onProgress={({ loaded, total }) => {
+                      if (total > 0) {
+                        setImageProgress(loaded / total);
+                      }
+                    }}
+                    onLoad={() => {
+                      setImageLoaded(true);
+                      fireMediaReady();
+                    }}
+                    onError={(e) => {
+                      const message = e.error || 'Unknown image error';
+                      onImageError?.(message);
+                      setImageLoaded(true);
+                      fireMediaReady();
+                    }}
+                  />
+                  {!imageLoaded ? (
+                    <QuestionMediaLoadingOverlay progress={imageProgress} />
+                  ) : null}
+                </View>
               </Pressable>
               <FullScreenImageViewerModal
                 visible={fullScreenImage}
@@ -232,14 +295,33 @@ export function QuestionMediaView({
                 closeLabel={closeFullScreenLabel}
               />
             </MediaStage>
-          ) : imageError !== undefined || (imageUri && imageError) ? (
+          ) : imageError ? (
             <MediaStage feedbackOverlay={feedbackOverlay}>
               <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
                 <Text style={styles.placeholderText}>🖼</Text>
                 <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
-                {imageError ? (
-                  <Text style={styles.placeholderSubtext}>{imageError}</Text>
-                ) : null}
+                <View style={styles.errorActions}>
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={handleImageRetry}
+                    testID="questionMedia.retryImage"
+                    accessibilityRole="button"
+                    accessibilityLabel={reloadImageLabel}
+                  >
+                    <Text style={styles.retryButtonText}>{reloadImageLabel}</Text>
+                  </TouchableOpacity>
+                  {onImageAdvance && showNextImageButton ? (
+                    <TouchableOpacity
+                      style={styles.nextImageButton}
+                      onPress={handleImageNext}
+                      testID="questionMedia.nextImage"
+                      accessibilityRole="button"
+                      accessibilityLabel={nextImageLabel}
+                    >
+                      <Text style={styles.nextImageButtonText}>{nextImageLabel}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </View>
             </MediaStage>
           ) : null}
@@ -250,13 +332,21 @@ export function QuestionMediaView({
       {mediaType === 'video' && displayVideoUri && (
         <>
           <MediaStage feedbackOverlay={feedbackOverlay}>
-            <VideoView
-              key={displayVideoUri}
-              player={videoPlayer}
-              style={[styles.video, videoHeight != null && { height: videoHeight }]}
-              nativeControls={true}
-              contentFit="contain"
-            />
+            <View
+              style={[
+                styles.videoFrame,
+                videoHeight != null && { height: videoHeight },
+              ]}
+            >
+              <VideoView
+                key={displayVideoUri}
+                player={videoPlayer}
+                style={styles.video}
+                nativeControls={true}
+                contentFit="contain"
+              />
+              {!videoReady ? <QuestionMediaLoadingOverlay /> : null}
+            </View>
           </MediaStage>
           {renderCreditsRow()}
         </>
@@ -331,14 +421,30 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: colors.primary[100],
+  },
+  imageFrame: {
+    position: 'relative',
+    width: '100%',
     height: 280,
     borderRadius: 8,
+    overflow: 'hidden',
     backgroundColor: colors.primary[100],
   },
   video: {
     width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: '#000',
+  },
+  videoFrame: {
+    position: 'relative',
+    width: '100%',
     height: 220,
     borderRadius: 8,
+    overflow: 'hidden',
     backgroundColor: '#000',
   },
   placeholder: {
@@ -350,7 +456,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderText: { fontSize: 48, marginBottom: 8 },
-  placeholderSubtext: { fontSize: 14, color: colors.primary[600] },
+  placeholderSubtext: { fontSize: 14, color: colors.primary[600], textAlign: 'center', paddingHorizontal: 16 },
+  errorActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  retryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: colors.primary[500],
+    borderRadius: 8,
+  },
+  retryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
+  nextImageButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: colors.primary[50],
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary[500],
+  },
+  nextImageButtonText: { color: colors.primary[700], fontSize: 16, fontWeight: '600' },
   mediaLink: {
     paddingVertical: 16,
     paddingHorizontal: 20,

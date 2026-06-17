@@ -6,6 +6,9 @@ Each connection is scoped to one game group `quiz_<game_token>`.
 
 Client -> server actions: join_game, start_game, next_question, submit_answer, rematch, end_game.
 Server -> client: update_players, new_question, game_started, game_updated, game_ended, answer_checked, etc.
+
+All ORM / serializer work runs inside ``database_sync_to_async`` helpers so Django never
+raises SynchronousOnlyOperation in the async consumer (e.g. reconnect join_game on results).
 """
 from __future__ import annotations
 
@@ -13,7 +16,6 @@ import json
 import logging
 from typing import Optional
 
-from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -131,9 +133,6 @@ class QuizConsumer(AsyncWebsocketConsumer):
             return GameSerializer(game).data
 
         try:
-            # Use database_sync_to_async (not plain sync_to_async) so ORM runs in a DB-safe
-            # thread context; otherwise Django can raise SynchronousOnlyOperation and the
-            # client shows "You cannot call this from an async context".
             game_data = await database_sync_to_async(load_game_and_payload)()
         except ObjectDoesNotExist:
             await self.send(
@@ -155,6 +154,8 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self._log_websocket_action("end_game")
 
     async def _handle_join_game(self, data):
+        from django.core.exceptions import ObjectDoesNotExist
+
         from jizz.models import PlayerScore, Game, Player
 
         player_token = (data.get("player_token") or "").strip()
@@ -166,19 +167,32 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             return
 
-        self._player_token = player_token
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        player = await sync_to_async(Player.objects.get)(token=player_token)
-        await sync_to_async(PlayerScore.objects.get_or_create)(player=player, game=game)
+        def do_join():
+            game = Game.objects.get(token=self.game_token)
+            player = Player.objects.get(token=player_token)
+            PlayerScore.objects.get_or_create(player=player, game=game)
+            return player.name, game.ended
 
+        try:
+            player_name, game_ended = await database_sync_to_async(do_join)()
+        except ObjectDoesNotExist:
+            await self.send(
+                text_data=json.dumps(
+                    {"action": "error", "message": "Game or player not found"}
+                )
+            )
+            return
+
+        self._player_token = player_token
         await self.channel_layer.group_send(
             self.game_group_name,
-            {"type": "player_joined", "player_name": player.name},
+            {"type": "player_joined", "player_name": player_name},
         )
         await self._broadcast_players_update()
         await self._send_game_update_to_self()
-        await self._send_current_question_to_self()
-        await self._send_current_answer_to_self()
+        if not game_ended:
+            await self._send_current_question_to_self()
+            await self._send_current_answer_to_self()
         await self._log_websocket_action("join_game")
 
     async def _handle_start_game(self, data):
@@ -227,9 +241,6 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self._log_websocket_action("next_question")
 
     async def _handle_submit_answer(self, data):
-        from jizz.models import PlayerScore, Player, Question, Answer, Game
-        from jizz.serializers import AnswerSerializer
-
         try:
             player_token = (data.get("player_token") or "").strip()
             question_id = _as_int(data.get("question_id"), "question_id")
@@ -248,27 +259,25 @@ class QuizConsumer(AsyncWebsocketConsumer):
             )
             return
 
-        player = await sync_to_async(
-            lambda: Player.objects.select_related('user').get(token=player_token)
-        )()
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        player_score = await sync_to_async(PlayerScore.objects.get)(
-            player=player, game=game
-        )
-        question = await sync_to_async(Question.objects.get)(id=question_id)
-
-        if question.game_id != game.id:
-            await self.send(
-                text_data=json.dumps(
-                    {"action": "error", "message": "Question does not belong to this game"}
-                )
+        def submit_and_serialize():
+            from jizz.models import PlayerScore, Player, Question, Answer, Game
+            from jizz.serializers import AnswerSerializer
+            from jizz.services.checklist import (
+                compute_checklist_added,
+                compute_checklist_missed,
             )
-            return
 
-        correct = answer_id == question.species_id
+            player = Player.objects.select_related('user').get(token=player_token)
+            game = Game.objects.get(token=self.game_token)
+            player_score = PlayerScore.objects.get(player=player, game=game)
+            question = Question.objects.select_related('game__country', 'species').get(
+                id=question_id
+            )
 
-        def _load_answer_for_serialize():
-            from jizz.models import Answer
+            if question.game_id != game.id:
+                raise ValueError("Question does not belong to this game")
+
+            correct = answer_id == question.species_id
 
             qs = Answer.objects.select_related(
                 'question__game__country',
@@ -279,31 +288,32 @@ class QuizConsumer(AsyncWebsocketConsumer):
             if row:
                 row.checklist_added = False
                 row.checklist_missed = False
-                return row
-            from jizz.services.checklist import compute_checklist_added, compute_checklist_missed
+            else:
+                row = Answer.objects.create(
+                    answer_id=answer_id,
+                    player_score=player_score,
+                    question=question,
+                    correct=correct,
+                )
+                checklist_user = player.user if player.user_id else None
+                row.checklist_added = compute_checklist_added(
+                    player, question, correct, user=checklist_user
+                )
+                row.checklist_missed = compute_checklist_missed(
+                    player, question, correct, user=checklist_user
+                )
 
-            row = Answer.objects.create(
-                answer_id=answer_id,
-                player_score=player_score,
-                question=question,
-                correct=correct,
-            )
-            checklist_user = player.user if player.user_id else None
-            row.checklist_added = compute_checklist_added(
-                player, question, correct, user=checklist_user
-            )
-            row.checklist_missed = compute_checklist_missed(
-                player, question, correct, user=checklist_user
-            )
-            return row
+            serializer = AnswerSerializer(row, context={"game": game})
+            return serializer.data
 
-        answer = await sync_to_async(_load_answer_for_serialize)()
+        try:
+            answer_data = await database_sync_to_async(submit_and_serialize)()
+        except ValueError as e:
+            await self.send(
+                text_data=json.dumps({"action": "error", "message": str(e)})
+            )
+            return
 
-        game = await sync_to_async(
-            lambda: type(question).objects.select_related('game__country').get(pk=question.pk).game
-        )()
-        serializer = AnswerSerializer(answer, context={"game": game})
-        answer_data = await sync_to_async(lambda: serializer.data)()
         await self.send(
             text_data=json.dumps({"action": "answer_checked", "answer": answer_data})
         )
@@ -323,13 +333,14 @@ class QuizConsumer(AsyncWebsocketConsumer):
         try:
             from jizz.rematch import create_rematch_game as do_create_rematch
 
-            new_game, player = await database_sync_to_async(do_create_rematch)(
-                self.game_token, player_token
-            )
-            player_name = player.name
+            def run_rematch():
+                new_game, player = do_create_rematch(self.game_token, player_token)
+                return new_game.token, player.name
+
+            new_game_token, player_name = await database_sync_to_async(run_rematch)()
             invitation_data = {
                 "type": "rematch_invitation",
-                "new_game_token": new_game.token,
+                "new_game_token": new_game_token,
                 "host_name": player_name,
             }
             await self.channel_layer.group_send(self.game_group_name, invitation_data)
@@ -337,7 +348,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
                 text_data=json.dumps(
                     {
                         "action": "rematch_invitation",
-                        "new_game_token": new_game.token,
+                        "new_game_token": new_game_token,
                         "host_name": player_name,
                     }
                 )
@@ -359,8 +370,11 @@ class QuizConsumer(AsyncWebsocketConsumer):
     async def _run_next_question(self):
         from .models import Game
 
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        question = await sync_to_async(game.add_question)()
+        def advance():
+            game = Game.objects.get(token=self.game_token)
+            return game.add_question()
+
+        question = await database_sync_to_async(advance)()
         if question:
             await self._broadcast_question_payload(question.id)
         else:
@@ -377,31 +391,37 @@ class QuizConsumer(AsyncWebsocketConsumer):
         from .models import Game
         from .serializers import PlayerScoreSerializer
 
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        player_scores = await sync_to_async(
-            lambda: list(game.scores.order_by("-score").all())
-        )()
-        serializer = PlayerScoreSerializer(player_scores, many=True)
-        return await sync_to_async(lambda: serializer.data)()
+        def get_data():
+            game = Game.objects.get(token=self.game_token)
+            scores = list(
+                game.scores.select_related('player', 'game__country').order_by('-score')
+            )
+            return PlayerScoreSerializer(scores, many=True).data
+
+        return await database_sync_to_async(get_data)()
 
     async def _send_game_update_to_self(self):
         from .models import Game
         from .serializers import GameSerializer
 
         def get_game_data():
-            g = Game.objects.get(token=self.game_token)
+            g = Game.objects.select_related('host', 'country').get(token=self.game_token)
             return GameSerializer(g).data
 
-        game_data = await sync_to_async(get_game_data)()
+        game_data = await database_sync_to_async(get_game_data)()
         await self.send(
             text_data=json.dumps({"action": "game_updated", "game": game_data})
         )
 
-    async def _get_current_question(self):
+    async def _current_question_id(self) -> Optional[int]:
         from .models import Game
 
-        game = await sync_to_async(Game.objects.get)(token=self.game_token)
-        return await sync_to_async(lambda: game.question)()
+        def get_id():
+            game = Game.objects.get(token=self.game_token)
+            question = game.question
+            return question.id if question else None
+
+        return await database_sync_to_async(get_id)()
 
     async def _send_current_question_to_self(self):
         q = await self._serialize_current_question_for_send()
@@ -430,10 +450,10 @@ class QuizConsumer(AsyncWebsocketConsumer):
         )
 
     async def _serialize_current_question_for_send(self):
-        question = await self._get_current_question()
-        if not question:
+        question_id = await self._current_question_id()
+        if not question_id:
             return None
-        return await self._serialize_question_for_send(question.id)
+        return await self._serialize_question_for_send(question_id)
 
     async def _serialize_question_for_send(self, question_id: int):
         from .question_play import load_question_for_play, serialize_question_for_play
@@ -444,33 +464,35 @@ class QuizConsumer(AsyncWebsocketConsumer):
             data["game"] = {"token": str(q.game.token)}
             return data
 
-        return await sync_to_async(_build_payload)()
-
-    async def _get_current_answer_for_connection(self):
-        if not self._player_token:
-            return None
-        question = await self._get_current_question()
-        if not question:
-            return None
-        from jizz.models import Player, Answer
-
-        player = await sync_to_async(Player.objects.get)(token=self._player_token)
-        return await sync_to_async(
-            lambda: Answer.objects.filter(
-                player_score__player=player, question=question
-            ).first()
-        )()
+        return await database_sync_to_async(_build_payload)()
 
     async def _send_current_answer_to_self(self):
-        from jizz.serializers import AnswerSerializer
-
-        answer = await self._get_current_answer_for_connection()
-        if not answer:
+        if not self._player_token:
             return
-        serializer = AnswerSerializer(
-            answer, context={"game": answer.question.game}
-        )
-        data = await sync_to_async(lambda: serializer.data)()
+
+        def load_answer_payload():
+            from jizz.models import Player, Answer
+            from jizz.serializers import AnswerSerializer
+            from .models import Game
+
+            game = Game.objects.get(token=self.game_token)
+            question = game.question
+            if not question:
+                return None
+            player = Player.objects.get(token=self._player_token)
+            answer = Answer.objects.filter(
+                player_score__player=player, question=question
+            ).select_related(
+                'question__game__country',
+                'question__species',
+                'answer',
+            ).first()
+            if not answer:
+                return None
+            serializer = AnswerSerializer(answer, context={"game": game})
+            return serializer.data
+
+        data = await database_sync_to_async(load_answer_payload)()
         if not data:
             return
         await self.send(

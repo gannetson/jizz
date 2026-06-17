@@ -32,6 +32,11 @@ import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesM
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
 import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
+import {
+  questionMediaBlockHeight,
+  questionMediaStageHeight,
+  QUESTION_MEDIA_CREDITS_HEIGHT,
+} from '../constants/questionMediaLayout';
 import { useTranslation } from '../i18n/TranslationContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
@@ -252,6 +257,8 @@ export function ChallengePlayScreen() {
   const options = question?.options ?? [];
   const hasOptions = options.length > 0;
   const answersEnabled = answersEnabledForMedia(mediaType, mediaReady);
+  const mediaStageHeight = questionMediaStageHeight(mediaType as 'images' | 'video' | 'audio');
+  const mediaBlockHeight = questionMediaBlockHeight(mediaType as 'images' | 'video' | 'audio');
 
   useEffect(() => {
     if (mediaType !== 'audio' || !question?.id) return;
@@ -526,12 +533,15 @@ export function ChallengePlayScreen() {
           {t('question_of', { current: String(currentQuestionNum), total: String(levelLength) })}
         </Text>
       ) : null}
-      <View style={styles.mediaWrap}>
+      <View style={[styles.mediaWrap, { minHeight: mediaBlockHeight }]}>
         {loadingNextQuestion ? (
-          <QuestionLoadingFeather
-            style={styles.challengeMediaWrap}
-            testID="challengePlay.advancingLoader"
-          />
+          <>
+            <QuestionLoadingFeather
+              height={mediaStageHeight}
+              testID="challengePlay.advancingLoader"
+            />
+            {mediaType !== 'audio' ? <View style={styles.mediaCreditsSpacer} /> : null}
+          </>
         ) : (
         <QuestionMediaView
           feedbackOverlay={
@@ -753,7 +763,8 @@ const styles = StyleSheet.create({
   link: { fontSize: 16, color: colors.primary[500], fontWeight: '600', marginTop: 12 },
   backLink: { marginTop: 16 },
   mediaWrap: { marginBottom: 16 },
-  challengeMediaWrap: { marginBottom: 16 },
+  challengeMediaWrap: { marginBottom: 0 },
+  mediaCreditsSpacer: { height: QUESTION_MEDIA_CREDITS_HEIGHT },
   mediaImage: { width: '100%', height: 240, borderRadius: 8 },
   mediaVideo: { width: '100%', height: 240, borderRadius: 8 },
   nextSection: { marginTop: 0, marginBottom: 12 },

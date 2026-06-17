@@ -216,6 +216,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
                 setQuestion(undefined);
                 setAnswer(undefined);
                 currentQuestionIdRef.current = undefined;
+                setRematchError(null);
               }
               break;
             case 'answer_checked':

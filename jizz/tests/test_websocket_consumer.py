@@ -683,3 +683,54 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(payload['host_name'], 'Host')
 
         asyncio.run(async_test())
+
+    def test_websocket_end_game_broadcasts_game_ended(self):
+        """end_game must not raise SynchronousOnlyOperation and should broadcast game_ended."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+        )
+        PlayerScore.objects.get_or_create(player=self.player1, game=game)
+        transaction.commit()
+
+        async def async_test():
+            host_comm = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            guest_comm = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await host_comm.connect()
+            self.assertTrue(connected)
+            connected, _ = await guest_comm.connect()
+            self.assertTrue(connected)
+
+            await host_comm.send_json_to({
+                'action': 'join_game',
+                'player_token': str(self.player1.token),
+            })
+            try:
+                while True:
+                    await host_comm.receive_json_from(timeout=1.0)
+            except (asyncio.TimeoutError, TimeoutError):
+                pass
+
+            await host_comm.send_json_to({
+                'action': 'end_game',
+                'player_token': str(self.player1.token),
+            })
+
+            host_payload = await host_comm.receive_json_from(timeout=3.0)
+            self.assertEqual(host_payload.get('action'), 'game_ended')
+            self.assertTrue(host_payload.get('game', {}).get('ended'))
+
+            guest_payload = await guest_comm.receive_json_from(timeout=3.0)
+            self.assertEqual(guest_payload.get('action'), 'game_ended')
+
+            await host_comm.disconnect()
+            await guest_comm.disconnect()
+
+        _run_async(async_test())
+
+        game.refresh_from_db()
+        self.assertTrue(game.force_ended)

@@ -11,6 +11,7 @@ import type { MultiPlayer } from '../types/game';
 import type { Player } from '../api/player';
 import { hiscoresParamsFromGame } from '../game/hiscoresLink';
 import { MegaConfetti } from '../components/MegaConfetti';
+import {Box} from "react-native-feather"
 
 const REMATCH_TIMEOUT_MS = 20000;
 
@@ -218,7 +219,7 @@ export function GameResultsScreen() {
                 {p.ranking != null && (
                   <View style={[styles.scoreTag, isTopScore && styles.scoreTagTop]}>
                     <Text style={[styles.scoreTagText, isTopScore && styles.scoreTagTextTop]}>
-                      {isTopScore ? '🏆 ' : ''}#{p.ranking} {isTopScore ? t('top_high_score') : t('high_score')}
+                      {isTopScore ? '🏆 ' : ''}#{p.ranking}
                     </Text>
                   </View>
                 )}

@@ -22,6 +22,11 @@ import { MediaCredits } from '../components/MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
 import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
+import {
+  questionMediaBlockHeight,
+  questionMediaStageHeight,
+  QUESTION_MEDIA_CREDITS_HEIGHT,
+} from '../constants/questionMediaLayout';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { apiUrl } from '../api/config';
@@ -140,6 +145,14 @@ export function GamePlayScreen() {
   const mediaHeight = maxMediaHeight;
   const videoHeight = maxMediaHeight;
   const optionWidth = isWide ? (screenWidth - 24 * 2 - 12) / 2 : undefined;
+  const mediaStageHeight = questionMediaStageHeight(
+    mediaType as 'images' | 'video' | 'audio',
+    { imageHeight: mediaHeight, videoHeight }
+  );
+  const mediaBlockHeight = questionMediaBlockHeight(
+    mediaType as 'images' | 'video' | 'audio',
+    { imageHeight: mediaHeight, videoHeight }
+  );
 
   // When coming from daily challenge with gameToken/playerToken in params, ensure we have game and player (context may not have updated yet)
   const dailyLoadCancelled = useRef(false);
@@ -443,12 +456,15 @@ export function GamePlayScreen() {
         onSuccess={onFlagSuccess}
       />
 
+      <View style={[styles.mediaWrap, { minHeight: mediaBlockHeight }]}>
       {advancingQuestion ? (
-        <QuestionLoadingFeather
-          minHeight={isWide ? Math.round(screenHeight * 0.5) : 280}
-          style={styles.mediaWrap}
-          testID="gamePlay.advancingLoader"
-        />
+        <>
+          <QuestionLoadingFeather
+            height={mediaStageHeight}
+            testID="gamePlay.advancingLoader"
+          />
+          {mediaType !== 'audio' ? <View style={styles.mediaCreditsSpacer} /> : null}
+        </>
       ) : (
       <QuestionMediaView
         feedbackOverlay={
@@ -491,7 +507,7 @@ export function GamePlayScreen() {
         expandImageLabel={t('expand_image_fullscreen_label')}
         expandImageHint={t('expand_image_fullscreen_hint')}
         closeFullScreenLabel={t('close')}
-        containerStyle={StyleSheet.flatten(isWide ? [styles.mediaWrap, { minHeight: Math.round(screenHeight * 0.5) }] : styles.mediaWrap)}
+        containerStyle={styles.mediaInner}
         imageHeight={mediaHeight}
         videoHeight={videoHeight}
         onMediaReady={() => {
@@ -503,6 +519,7 @@ export function GamePlayScreen() {
         }}
       />
       )}
+      </View>
 
       <View style={styles.nextSection}>
         {done && resultsReadyForCurrentQuestion ? (
@@ -763,7 +780,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
-  mediaWrap: { minHeight: 200, marginBottom: 24 },
+  mediaWrap: { marginBottom: 24, width: '100%' },
+  mediaInner: { marginBottom: 0 },
+  mediaCreditsSpacer: { height: QUESTION_MEDIA_CREDITS_HEIGHT },
   creditsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

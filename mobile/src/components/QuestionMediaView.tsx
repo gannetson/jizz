@@ -16,6 +16,10 @@ import { MediaCredits } from './MediaCredits';
 import { FullScreenImageViewerModal } from './FullScreenImageViewerModal';
 import { QuestionMediaLoadingOverlay } from './QuestionMediaLoadingOverlay';
 import { colors } from '../theme';
+import {
+  QUESTION_IMAGE_HEIGHT,
+  QUESTION_VIDEO_HEIGHT,
+} from '../constants/questionMediaLayout';
 
 export type MediaWithCredits = {
   contributor?: string | null;
@@ -399,7 +403,6 @@ export function QuestionMediaView({
 
 const styles = StyleSheet.create({
   mediaWrap: {
-    minHeight: 200,
     marginBottom: 0,
   },
   mediaStage: {
@@ -428,7 +431,7 @@ const styles = StyleSheet.create({
   imageFrame: {
     position: 'relative',
     width: '100%',
-    height: 280,
+    height: QUESTION_IMAGE_HEIGHT,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: colors.primary[100],
@@ -442,14 +445,14 @@ const styles = StyleSheet.create({
   videoFrame: {
     position: 'relative',
     width: '100%',
-    height: 220,
+    height: QUESTION_VIDEO_HEIGHT,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#000',
   },
   placeholder: {
     width: '100%',
-    height: 280,
+    height: QUESTION_IMAGE_HEIGHT,
     borderRadius: 8,
     backgroundColor: colors.primary[100],
     justifyContent: 'center',

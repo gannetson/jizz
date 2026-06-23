@@ -36,7 +36,7 @@ function useFloatingFeatherAnimation() {
             useNativeDriver: true,
           }),
           Animated.timing(driftX, {
-            toValue: -8,
+            toValue: 0,
             duration: 2000,
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
@@ -50,7 +50,7 @@ function useFloatingFeatherAnimation() {
             useNativeDriver: true,
           }),
           Animated.timing(sway, {
-            toValue: -1,
+            toValue: 0,
             duration: 2400,
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
@@ -63,7 +63,7 @@ function useFloatingFeatherAnimation() {
   }, [driftX, floatY, sway]);
 
   const rotate = sway.interpolate({
-    inputRange: [-1, 1],
+    inputRange: [0, 1],
     outputRange: ['-10deg', '10deg'],
   });
 

@@ -52,7 +52,7 @@ export const TaxFamilyCombobox = ({
   );
 
   const handleChange = (option: OptionType | null) => {
-    onChange(option?.original);
+    onChange(option ? option.original : undefined);
   };
 
   return (

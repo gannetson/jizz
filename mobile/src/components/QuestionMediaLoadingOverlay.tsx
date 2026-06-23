@@ -26,7 +26,7 @@ export function QuestionMediaLoadingOverlay({ progress = null, featherSize = FEA
             <ProgressRing percent={percent} size={RING_SIZE} stroke={5} />
           </View>
         ) : null}
-        <FloatingFeather size={featherSize} />
+        <FloatingFeather />
       </View>
     </View>
   );

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   Platform,
+  Image as RnImage,
   type ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,6 +21,7 @@ import {
   QUESTION_IMAGE_HEIGHT,
   QUESTION_VIDEO_HEIGHT,
 } from '../constants/questionMediaLayout';
+import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
 
 export type MediaWithCredits = {
   contributor?: string | null;
@@ -301,8 +303,19 @@ export function QuestionMediaView({
             </MediaStage>
           ) : imageError ? (
             <MediaStage feedbackOverlay={feedbackOverlay}>
-              <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
-                <Text style={styles.placeholderText}>🖼</Text>
+              <View
+                style={[
+                  styles.placeholder,
+                  styles.errorPlaceholder,
+                  imageHeight != null && { minHeight: imageHeight },
+                ]}
+              >
+                <RnImage
+                  source={BIRDR_MOOD_IMAGES.noimage}
+                  style={styles.placeholderImage}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
                 <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
                 <View style={styles.errorActions}>
                   <TouchableOpacity
@@ -392,7 +405,12 @@ export function QuestionMediaView({
       {showLoadingPlaceholder && !hasMedia && (
         <MediaStage feedbackOverlay={feedbackOverlay}>
           <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
-            <Text style={styles.placeholderText}>🖼</Text>
+            <RnImage
+              source={BIRDR_MOOD_IMAGES.stressed}
+              style={styles.placeholderImage}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
             <Text style={styles.placeholderSubtext}>{loadingLabel}</Text>
           </View>
         </MediaStage>
@@ -458,7 +476,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: { fontSize: 48, marginBottom: 8 },
+  errorPlaceholder: {
+    justifyContent: 'flex-start',
+    paddingTop: 20,
+    height: undefined,
+    minHeight: QUESTION_IMAGE_HEIGHT,
+  },
+  placeholderImage: { width: 160, height: 160, marginBottom: 8 },
   placeholderSubtext: { fontSize: 14, color: colors.primary[600], textAlign: 'center', paddingHorizontal: 16 },
   errorActions: {
     flexDirection: 'row',

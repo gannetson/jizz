@@ -1,5 +1,5 @@
 import { Box, Heading } from "@chakra-ui/react";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef } from "react";
 import AppContext from "../core/app-context";
 import { FormattedMessage, useIntl } from "react-intl";
 import { type TaxOrder, UseTaxOrder } from "../user/use-tax-order";
@@ -9,16 +9,21 @@ const SelectTaxOrder = () => {
   const intl = useIntl();
   const { taxOrders } = UseTaxOrder();
   const { taxOrder, setTaxOrder, game } = useContext(AppContext);
+  const syncedGameToken = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!taxOrder && game?.tax_order) {
-      const orders = Array.isArray(taxOrders) ? taxOrders : [];
-      const foundTaxOrder = orders.find((t) => t.tax_order === game.tax_order);
-      if (foundTaxOrder && setTaxOrder) {
-        setTaxOrder(foundTaxOrder);
-      }
+    if (!game?.token) {
+      syncedGameToken.current = null;
+      return;
     }
-  }, [game?.tax_order, taxOrder, taxOrders, setTaxOrder]);
+    if (!game.tax_order || syncedGameToken.current === game.token) return;
+    const orders = Array.isArray(taxOrders) ? taxOrders : [];
+    const foundTaxOrder = orders.find((t) => t.tax_order === game.tax_order);
+    if (foundTaxOrder && setTaxOrder) {
+      setTaxOrder(foundTaxOrder);
+      syncedGameToken.current = game.token;
+    }
+  }, [game?.token, game?.tax_order, taxOrders, setTaxOrder]);
 
   const onChange = (orderName: string | undefined) => {
     if (!orderName) {

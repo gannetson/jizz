@@ -1,5 +1,5 @@
 import { Box, Heading } from "@chakra-ui/react";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef } from "react";
 import AppContext from "../core/app-context";
 import { FormattedMessage, useIntl } from "react-intl";
 import { type TaxFamily, UseTaxFamily } from "../user/use-tax-family";
@@ -9,16 +9,21 @@ const SelectTaxFamily = () => {
   const intl = useIntl();
   const { taxFamilies } = UseTaxFamily();
   const { taxFamily, setTaxFamily, game } = useContext(AppContext);
+  const syncedGameToken = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!taxFamily && game?.tax_family) {
-      const families = Array.isArray(taxFamilies) ? taxFamilies : [];
-      const foundTaxFamily = families.find((t) => t.tax_family === game.tax_family);
-      if (foundTaxFamily && setTaxFamily) {
-        setTaxFamily(foundTaxFamily);
-      }
+    if (!game?.token) {
+      syncedGameToken.current = null;
+      return;
     }
-  }, [game?.tax_family, taxFamily, taxFamilies, setTaxFamily]);
+    if (!game.tax_family || syncedGameToken.current === game.token) return;
+    const families = Array.isArray(taxFamilies) ? taxFamilies : [];
+    const foundTaxFamily = families.find((t) => t.tax_family === game.tax_family);
+    if (foundTaxFamily && setTaxFamily) {
+      setTaxFamily(foundTaxFamily);
+      syncedGameToken.current = game.token;
+    }
+  }, [game?.token, game?.tax_family, taxFamilies, setTaxFamily]);
 
   const onChange = (family: TaxFamily | undefined) => {
     setTaxFamily?.(family);

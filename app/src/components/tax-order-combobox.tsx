@@ -59,10 +59,13 @@ export const TaxOrderCombobox = ({
     ];
   }, [taxOrders, intl, allowAll]);
 
-  const selectedOption = useMemo(
-    () => options.find((o) => o.value === (value ?? "")) ?? options[0] ?? null,
-    [options, value]
-  );
+  const selectedOption = useMemo(() => {
+    if (allowAll && (value == null || value === "")) {
+      return options.find((o) => o.value === "") ?? null;
+    }
+    if (value == null || value === "") return null;
+    return options.find((o) => o.value === value) ?? null;
+  }, [options, value, allowAll]);
 
   return (
     <Box>
@@ -74,7 +77,7 @@ export const TaxOrderCombobox = ({
           onChange(v ? v : undefined);
         }}
         isSearchable
-        isClearable={false}
+        isClearable={!allowAll}
         placeholder={
           placeholder ??
           intl.formatMessage({ id: "checklist_select_order", defaultMessage: "Select order..." })

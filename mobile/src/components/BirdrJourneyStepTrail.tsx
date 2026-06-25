@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import type { JourneyLevel, JourneyStep } from '../api/birdrJourney';
-import { isDifficultJourneyStep, isFamilyJourneyStep } from '../api/birdrJourney';
+import { isDifficultJourneyStep, isExtremeJourneyStep, isFamilyJourneyStep, isSpeedJourneyStep } from '../api/birdrJourney';
 import { BirdrLevelImage } from './BirdrLevelImage';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
@@ -91,6 +91,10 @@ function StepIcon({
         <FontAwesome5 name="book-open" size={iconSize - 2} color={iconColor} />
       ) : isDifficultJourneyStep(step) ? (
         <FontAwesome5 name="binoculars" size={iconSize - 2} color={iconColor} />
+      ) : isExtremeJourneyStep(step) ? (
+        <FontAwesome5 name="fire" size={iconSize - 2} color={iconColor} />
+      ) : isSpeedJourneyStep(step) ? (
+        <FontAwesome5 name="stopwatch" size={iconSize - 2} color={iconColor} />
       ) : (
         <Feather name="feather" size={iconSize} color={iconColor} />
       )}

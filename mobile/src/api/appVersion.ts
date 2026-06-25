@@ -4,6 +4,8 @@ export type AppVersionResponse = {
   min_version: string;
   app_store_url: string;
   play_store_url: string;
+  store_release_label_ios?: string | null;
+  store_release_label_android?: string | null;
 };
 
 export async function fetchAppVersionRequirements(): Promise<AppVersionResponse | null> {

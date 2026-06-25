@@ -363,7 +363,13 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
         ).data
 
     def get_game(self, obj):
-        return {'token': obj.game.token}
+        game = obj.game
+        return {
+            'token': game.token,
+            'level': game.level,
+            'media': game.media,
+            'speed_seconds': game.speed_seconds,
+        }
 
     class Meta:
         model = Question
@@ -402,8 +408,9 @@ class AnswerSerializer(serializers.ModelSerializer):
     checklist_added = serializers.SerializerMethodField()
     checklist_missed = serializers.SerializerMethodField()
     answer = SpeciesDetailSerializer(read_only=True)
-    answer_id = serializers.IntegerField(write_only=True)
+    answer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     question_id = serializers.IntegerField(write_only=True)
+    timed_out = serializers.BooleanField(write_only=True, required=False, default=False)
     number = serializers.IntegerField(read_only=True, source='question.number')
     sequence = serializers.IntegerField(source='question.sequence', read_only=True)
 
@@ -423,6 +430,14 @@ class AnswerSerializer(serializers.ModelSerializer):
     def get_checklist_missed(self, obj):
         return bool(getattr(obj, 'checklist_missed', False))
 
+    def validate(self, attrs):
+        timed_out = attrs.get('timed_out', False)
+        if not timed_out and not attrs.get('answer_id'):
+            raise serializers.ValidationError(
+                {'answer_id': 'This field is required unless timed_out is true.'}
+            )
+        return attrs
+
     def create(self, validated_data):
         player = Player.objects.select_related('user').get(
             token=validated_data.pop('player_token')
@@ -430,8 +445,23 @@ class AnswerSerializer(serializers.ModelSerializer):
         question = Question.objects.select_related('game__country').get(
             id=validated_data.pop('question_id')
         )
-        answer = Species.objects.get(id=validated_data.pop('answer_id'))
-        correct = answer == question.species
+        timed_out = validated_data.pop('timed_out', False)
+        if timed_out:
+            wrong_option = (
+                QuestionOption.objects.filter(question=question)
+                .exclude(species_id=question.species_id)
+                .select_related('species')
+                .first()
+            )
+            if not wrong_option:
+                raise serializers.ValidationError(
+                    {'timed_out': 'No incorrect option available for this question.'}
+                )
+            answer = wrong_option.species
+            correct = False
+        else:
+            answer = Species.objects.get(id=validated_data.pop('answer_id'))
+            correct = answer == question.species
         player_score, _created = PlayerScore.objects.get_or_create(player=player, game=question.game)
         if Answer.objects.filter(player_score=player_score, question=question).exists():
             existing = Answer.objects.filter(player_score=player_score, question=question).first()
@@ -459,7 +489,7 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'question_id', 'player_token',
             'answer', 'correct', 'species', 'species_frequency', 'checklist_added', 'checklist_missed',
-            'answer_id', 'number', 'score',
+            'answer_id', 'timed_out', 'number', 'score',
             'sequence',
         )
         unique_together = ('question', 'player')
@@ -1066,6 +1096,8 @@ class GameSerializer(serializers.ModelSerializer):
             'rarity',
             'include_escapes',
             'dificult_species',
+            'game_type',
+            'speed_seconds',
             'scores'
         )
 
@@ -1445,6 +1477,8 @@ class JourneyStepSerializer(serializers.ModelSerializer):
             'jokers',
             'rarity',
             'media',
+            'include_escapes',
+            'speed_seconds',
             'status',
             'resolved_family_name_latin',
             'resolved_family_name',

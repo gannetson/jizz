@@ -181,6 +181,41 @@ def get_top_mistake_target_species_ids(
     return [row["question__species_id"] for row in rows[:limit]]
 
 
+def get_user_mistake_target_weights(
+    country_code: str | None,
+    *,
+    player_id: int | None,
+    user_id: int | None,
+) -> dict[int, int]:
+    """
+    Wrong-answer counts per question-target species for one player or user account.
+
+    Used for extreme game question selection (personalized mistake weighting).
+    """
+    if not player_id and not user_id:
+        return {}
+
+    wrong_answers = Answer.objects.filter(correct=False)
+    if user_id:
+        wrong_answers = wrong_answers.filter(player_score__player__user_id=user_id)
+    else:
+        wrong_answers = wrong_answers.filter(player_score__player_id=player_id)
+
+    cc = normalize_country_filter(country_code)
+    if cc:
+        allowed = _allowed_species_ids_for_country(cc)
+        if not allowed:
+            return {}
+        wrong_answers = wrong_answers.filter(question__species_id__in=allowed)
+
+    return {
+        row["question__species_id"]: row["wrongly_answered"]
+        for row in wrong_answers.values("question__species_id")
+        .annotate(wrongly_answered=Count("id"))
+        .filter(question__species_id__isnull=False)
+    }
+
+
 def get_confusion_pair_rows(country_code: str | None = None) -> list[dict[str, Any]]:
     """
     Undirected species pairs from incorrect answers, ordered by total wrong answers (desc).

@@ -399,6 +399,23 @@ class Game(models.Model):
         help_text='Pick question species randomly from the top 100 most often answered wrong '
         'for this country (global mistake stats).',
     )
+    GAME_TYPE_STANDARD = 'standard'
+    GAME_TYPE_EXTREME = 'extreme'
+    GAME_TYPE_CHOICES = [
+        (GAME_TYPE_STANDARD, 'Standard'),
+        (GAME_TYPE_EXTREME, 'Extreme'),
+    ]
+    game_type = models.CharField(
+        max_length=20,
+        default=GAME_TYPE_STANDARD,
+        choices=GAME_TYPE_CHOICES,
+        help_text='Extreme: favor rare species and species this player has missed before.',
+    )
+    speed_seconds = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text='When set, the player must answer within this many seconds or the round counts as wrong.',
+    )
     host = models.ForeignKey('jizz.Player', null=True, related_name='host', on_delete=models.CASCADE)
     force_ended = models.BooleanField(
         default=False,
@@ -1144,6 +1161,8 @@ class JourneyStep(models.Model):
         ('sounds', 'Sounds'),
         ('family', 'Family'),
         ('difficult', 'Difficult'),
+        ('extreme', 'Extreme'),
+        ('speed', 'Speed'),
     ]
 
     journey_level = models.ForeignKey(
@@ -1169,7 +1188,12 @@ class JourneyStep(models.Model):
         default=Game.RARIT_REGULAR,
         choices=Game.RARIT_CHOICES,
     )
-    media = models.CharField(max_length=10, default='images')
+    media = models.CharField(max_length=10, default='images', choices=Game.MEDIA_CHOICES)
+    include_escapes = models.BooleanField(default=False)
+    speed_seconds = models.PositiveSmallIntegerField(
+        default=10,
+        help_text='Seconds to answer each question (speed steps only).',
+    )
 
     class Meta:
         ordering = ['journey_level', 'sequence']

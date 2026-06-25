@@ -288,13 +288,18 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
                 )
             tax_family = family.name_latin
 
+        is_extreme = step.step_type == 'extreme'
+        is_speed = step.step_type == 'speed'
         game = Game.objects.create(
             country=journey.country,
             level=step.level,
             length=step.length,
             media=step.media,
-            rarity=step.rarity,
+            rarity=Game.RARIT_EXCEPTIONAL if is_extreme else step.rarity,
+            include_escapes=step.include_escapes,
             dificult_species=step.step_type in ('difficult', 'dificult'),
+            game_type=Game.GAME_TYPE_EXTREME if is_extreme else Game.GAME_TYPE_STANDARD,
+            speed_seconds=step.speed_seconds if is_speed else None,
             tax_family=tax_family,
             host=host,
             language=language,

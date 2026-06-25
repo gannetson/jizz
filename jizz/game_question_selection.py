@@ -20,9 +20,31 @@ _MEDIA_TYPE = {
     'audio': 'audio',
 }
 
+# Higher weight => more likely question target in extreme games.
+EXTREME_FREQUENCY_WEIGHTS: dict[str | None, float] = {
+    'abundant': 1.0,
+    'very_common': 1.0,
+    'common': 1.0,
+    'fairly_common': 2.0,
+    'uncommon': 4.0,
+    'rare': 10.0,
+    'very_rare': 20.0,
+    'vagrant': 25.0,
+    '': 2.0,
+    None: 2.0,
+}
+EXTREME_USER_MISTAKE_MULTIPLIER = 4.0
+
 
 def media_type_for_game(game: Game) -> str:
     return _MEDIA_TYPE.get(game.media, 'image')
+
+
+def effective_rarity(game: Game) -> str:
+    """Extreme games always allow the full exceptional frequency tier set."""
+    if game.game_type == Game.GAME_TYPE_EXTREME:
+        return Game.RARIT_EXCEPTIONAL
+    return game.rarity
 
 
 def country_statuses_for_game(game: Game) -> list[str]:
@@ -47,7 +69,7 @@ def candidate_species_ids(game: Game) -> list[int]:
     country_species = CountrySpecies.objects.filter(
         country_id=game.country_id,
         status__in=statuses,
-    ).filter(Game.country_species_rarity_q(game.rarity))
+    ).filter(Game.country_species_rarity_q(effective_rarity(game)))
 
     species_qs = Species.objects.filter(
         id__in=country_species.values('species_id'),
@@ -117,6 +139,75 @@ def pick_random_species_id(
     return random.choice(pool)
 
 
+def _species_frequency_map(country_id: str | None, species_ids: Sequence[int]) -> dict[int, str | None]:
+    if not country_id or not species_ids:
+        return {}
+    rows = CountrySpecies.objects.filter(
+        country_id=country_id,
+        species_id__in=species_ids,
+    ).values_list('species_id', 'frequency')
+    return {species_id: frequency or None for species_id, frequency in rows}
+
+
+def build_extreme_target_weights(
+    game: Game,
+    candidate_ids: Sequence[int],
+) -> dict[int, float]:
+    freq_map = _species_frequency_map(game.country_id, candidate_ids)
+    weights = {
+        sid: EXTREME_FREQUENCY_WEIGHTS.get(freq_map.get(sid), EXTREME_FREQUENCY_WEIGHTS[None])
+        for sid in candidate_ids
+    }
+
+    from jizz.quiz_mistake_stats import get_user_mistake_target_weights
+
+    host = game.host
+    mistake_weights = get_user_mistake_target_weights(
+        game.country_id,
+        player_id=host.id if host else None,
+        user_id=host.user_id if host else None,
+    )
+    for sid, wrong_count in mistake_weights.items():
+        if sid in weights and wrong_count > 0:
+            weights[sid] *= 1 + wrong_count * EXTREME_USER_MISTAKE_MULTIPLIER
+    return weights
+
+
+def pick_weighted_species_id(
+    candidate_ids: Sequence[int],
+    weights: dict[int, float],
+    exclude_ids: Iterable[int] = (),
+) -> int | None:
+    exclude = set(exclude_ids)
+    pool = [sid for sid in candidate_ids if sid not in exclude]
+    if not pool:
+        pool = list(candidate_ids)
+    if not pool:
+        return None
+
+    weighted_ids: list[int] = []
+    weighted_values: list[float] = []
+    for sid in pool:
+        weight = weights.get(sid, 1.0)
+        if weight > 0:
+            weighted_ids.append(sid)
+            weighted_values.append(weight)
+    if not weighted_ids:
+        return pick_random_species_id(candidate_ids, exclude_ids)
+    return random.choices(weighted_ids, weights=weighted_values, k=1)[0]
+
+
+def pick_species_id_for_game(
+    game: Game,
+    candidate_ids: Sequence[int],
+    exclude_ids: Iterable[int] = (),
+) -> int | None:
+    if game.game_type == Game.GAME_TYPE_EXTREME:
+        weights = build_extreme_target_weights(game, candidate_ids)
+        return pick_weighted_species_id(candidate_ids, weights, exclude_ids)
+    return pick_random_species_id(candidate_ids, exclude_ids)
+
+
 def pick_species_with_eligible_media(
     game: Game,
     candidate_ids: Sequence[int],
@@ -131,7 +222,7 @@ def pick_species_with_eligible_media(
     tried: set[int] = set()
 
     for _ in range(10):
-        sid = pick_random_species_id(candidate_ids, exclude_ids=tried)
+        sid = pick_species_id_for_game(game, candidate_ids, exclude_ids=tried)
         if sid is None:
             break
         tried.add(sid)
@@ -143,7 +234,7 @@ def pick_species_with_eligible_media(
 
         remaining = [i for i in candidate_ids if i not in tried and i not in used]
         if remaining:
-            sid = pick_random_species_id(remaining)
+            sid = pick_species_id_for_game(game, remaining)
             if sid is not None:
                 tried.add(sid)
                 media_count = count_eligible_media(sid, media_type)

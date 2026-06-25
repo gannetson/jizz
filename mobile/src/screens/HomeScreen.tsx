@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Linking, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, ActivityIndicator, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
@@ -18,17 +18,9 @@ import { fetchChecklist, type ChecklistProgress } from '../api/checklist';
 import { BirdrLevelImage } from '../components/BirdrLevelImage';
 import { ProgressRing } from '../components/ProgressRing';
 import { colors } from '../theme';
-import { APP_STORE_URL, PLAY_STORE_URL } from '../constants/storeUrls';
 import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
 import { FeedbackForm } from '../components/FeedbackForm';
-
-function openStoreReview() {
-  if (Platform.OS === 'android') {
-    Linking.openURL(PLAY_STORE_URL);
-    return;
-  }
-  Linking.openURL(`${APP_STORE_URL}?action=write-review`);
-}
+import { useSoftUpdateAvailable } from '../hooks/useSoftUpdateAvailable';
 
 function countryCodeToFlag(code: string): string {
   if (!code || code.length !== 2) return '';
@@ -68,6 +60,7 @@ export function HomeScreen() {
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { profile, ready: profileReady } = useProfile();
+  const softUpdate = useSoftUpdateAvailable();
   const [updates, setUpdates] = useState<UpdateListItem[]>([]);
   const [activeJourney, setActiveJourney] = useState<BirdrJourney | null>(null);
   const [journeyLoading, setJourneyLoading] = useState(true);
@@ -158,6 +151,25 @@ export function HomeScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.welcome}>{t('welcome')}</Text>
+      {softUpdate.available && softUpdate.storeLabel && (
+        <View style={styles.softUpdateCard}>
+          <View style={styles.softUpdateText}>
+            <Text style={styles.softUpdateTitle}>{t('update_available_title')}</Text>
+            <Text style={styles.softUpdateMessage}>
+              {t('update_available_message', { version: softUpdate.storeLabel })}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.softUpdateButton}
+            onPress={() => Linking.openURL(softUpdate.storeUrl)}
+            testID="home.updateAvailable"
+            accessibilityRole="button"
+            accessibilityLabel={t('update_available_button')}
+          >
+            <Text style={styles.softUpdateButtonText}>{t('update_available_button')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {!isAuthenticated && (
         <View style={styles.signUpSection}>
           <TouchableOpacity
@@ -308,6 +320,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary[800],
     marginBottom: 24,
+  },
+  softUpdateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primary[50],
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  softUpdateText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  softUpdateTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary[800],
+    marginBottom: 2,
+  },
+  softUpdateMessage: {
+    fontSize: 14,
+    color: colors.primary[700],
+    lineHeight: 20,
+  },
+  softUpdateButton: {
+    backgroundColor: colors.primary[600],
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  softUpdateButtonText: {
+    color: colors.primary[50],
+    fontSize: 15,
+    fontWeight: '600',
   },
   signUpSection: {
     marginBottom: 24,

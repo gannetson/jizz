@@ -11,6 +11,8 @@ import {
   type BirdrJourneyGame,
   isFamilyJourneyStep,
   isDifficultJourneyStep,
+  isExtremeJourneyStep,
+  isSpeedJourneyStep,
 } from '../../api/birdrJourney';
 import { BirdrMoodHero } from '../../components/birdr-mood-hero';
 import { Page } from '../../shared/components/layout';
@@ -138,6 +140,23 @@ export function BirdrJourneyStepIntroPage() {
                 <FormattedMessage
                   id="birdr_journey_difficult_step_intro"
                   defaultMessage="You'll see some birds other birders struggle with. Take your time and trust what you know."
+                />
+              </Text>
+            ) : null}
+            {isExtremeJourneyStep(step) ? (
+              <Text fontSize="md" color="primary.700" lineHeight="tall" mb={3}>
+                <FormattedMessage
+                  id="birdr_journey_extreme_step_intro"
+                  defaultMessage="Rare birds show up more often, and species you've missed before are likely to return. Stay sharp!"
+                />
+              </Text>
+            ) : null}
+            {isSpeedJourneyStep(step) ? (
+              <Text fontSize="md" color="primary.700" lineHeight="tall" mb={3}>
+                <FormattedMessage
+                  id="birdr_journey_speed_step_intro"
+                  defaultMessage="You have {seconds} seconds per bird. Answer before time runs out!"
+                  values={{ seconds: step.speed_seconds ?? 10 }}
                 />
               </Text>
             ) : null}

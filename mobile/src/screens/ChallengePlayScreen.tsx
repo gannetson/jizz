@@ -32,6 +32,7 @@ import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesM
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
 import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
+import { SpeedChallengeTimer } from '../components/SpeedChallengeTimer';
 import {
   questionMediaBlockHeight,
   questionMediaStageHeight,
@@ -109,6 +110,8 @@ export function ChallengePlayScreen() {
   const [mediaIndex, setMediaIndex] = useState<number | null>(null);
   const [questionLoadError, setQuestionLoadError] = useState<string | null>(null);
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
+  const [timerExpired, setTimerExpired] = useState(false);
+  const submittingRef = useRef(false);
 
   const getPlayPlayerToken = useCallback(async () => {
     const stored = await resolveBirdrJourneyPlayerToken();
@@ -214,6 +217,8 @@ export function ChallengePlayScreen() {
       setLoadingNextQuestion(false);
     }
     setJourneyStepFailed(false);
+    setTimerExpired(false);
+    submittingRef.current = false;
   }, [question?.id]);
 
   useEffect(() => {
@@ -358,8 +363,9 @@ export function ChallengePlayScreen() {
     }
   }, [loading, question, gameToken, checkLevelEndAndNavigate]);
 
-  const giveAnswer = async (option: QuestionOption | Species) => {
-    if (!question || submitting || feedback) return;
+  const giveAnswer = async (option?: QuestionOption | Species, timedOut = false) => {
+    if (!question || submittingRef.current || submitting || feedback) return;
+    if (!timedOut && timerExpired) return;
     const playerToken = await getPlayPlayerToken();
     if (!playerToken) {
       setQuestionLoadError(t('error_loading_question'));
@@ -368,18 +374,26 @@ export function ChallengePlayScreen() {
     const stepLength =
       journeyGame?.journey_step?.length ?? journeyGame?.game?.length ?? paramStepLength ?? 0;
     const isLastQuestion = stepLength > 0 && (question.sequence ?? 1) >= stepLength;
+    submittingRef.current = true;
     setSubmitting(true);
+    if (timedOut) setTimerExpired(true);
     setFeedback(null);
     setAnswerResult(null);
     setLevelEnded(false);
     setJourneyStepFailed(false);
     try {
       const response = await submitChallengeAnswer(
-        {
-          question_id: question.id,
-          answer_id: option.id,
-          player_token: playerToken,
-        },
+        timedOut
+          ? {
+              question_id: question.id,
+              player_token: playerToken,
+              timed_out: true,
+            }
+          : {
+              question_id: question.id,
+              answer_id: option!.id,
+              player_token: playerToken,
+            },
         playerToken
       );
       const correct = response?.correct ?? false;
@@ -420,12 +434,17 @@ export function ChallengePlayScreen() {
       setShowFeedback(true);
       setAnswerResult({
         correct: false,
-        userAnswer: option as QuestionOption | Species,
+        userAnswer: (option ?? question?.options?.[0]) as QuestionOption | Species,
         correctSpecies: (question?.options?.[0] ?? option) as QuestionOption | Species,
       });
     } finally {
       setSubmitting(false);
+      submittingRef.current = false;
     }
+  };
+
+  const handleSpeedTimeout = () => {
+    void giveAnswer(undefined, true);
   };
 
   if (!gameToken || !journeyId) {
@@ -506,6 +525,9 @@ export function ChallengePlayScreen() {
   const currentQuestionNum = question?.sequence ?? 1;
   const isLastQuestion = levelLength > 0 && currentQuestionNum >= levelLength;
   const showStepContinue = levelEnded || (answerResult !== null && isLastQuestion);
+  const speedSeconds = question.game?.speed_seconds ?? journeyGame?.game?.speed_seconds ?? null;
+  const isSpeedChallenge = typeof speedSeconds === 'number' && speedSeconds > 0;
+  const optionsLocked = submitting || feedback !== null || timerExpired || !answersEnabled;
 
   return (
     <ChallengePlayAudio soundUri={soundUri} questionId={question?.id}>
@@ -624,6 +646,15 @@ export function ChallengePlayScreen() {
         </View>
       ) : null}
 
+      {isSpeedChallenge && answerResult === null ? (
+        <SpeedChallengeTimer
+          speedSeconds={speedSeconds}
+          active={answersEnabled}
+          questionId={question.id}
+          onExpire={handleSpeedTimeout}
+        />
+      ) : null}
+
       {hasOptions ? (
         <View style={styles.optionsSection}>
           {answerResult !== null ? (
@@ -648,9 +679,9 @@ export function ChallengePlayScreen() {
             options.map((opt, idx) => (
               <TouchableOpacity
                 key={opt.id}
-                style={[styles.optionButton, (submitting || !answersEnabled) && styles.optionButtonDisabled]}
+                style={[styles.optionButton, optionsLocked && styles.optionButtonDisabled]}
                 onPress={() => giveAnswer(opt)}
-                disabled={submitting || !answersEnabled}
+                disabled={optionsLocked}
                 testID={idx === 0 ? 'challengePlay.firstOption' : `challengePlay.option.${opt.id}`}
                 accessibilityLabel={idx === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
               >
@@ -697,7 +728,7 @@ export function ChallengePlayScreen() {
                   placeholderTextColor={colors.primary[500]}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!submitting && answersEnabled}
+                  editable={!optionsLocked}
                   testID="challengePlay.expertInput"
                   accessibilityLabel="Species name"
                 />
@@ -716,9 +747,9 @@ export function ChallengePlayScreen() {
                     filteredSpecies.map((item) => (
                       <TouchableOpacity
                         key={item.id}
-                        style={[styles.optionButton, styles.speciesListItem, (submitting || !answersEnabled) && styles.optionButtonDisabled]}
+                        style={[styles.optionButton, styles.speciesListItem, optionsLocked && styles.optionButtonDisabled]}
                         onPress={() => giveAnswer(item)}
-                        disabled={submitting || !answersEnabled}
+                        disabled={optionsLocked}
                         testID={`challengePlay.expertOption.${item.id}`}
                         accessibilityLabel={speciesDisplayName(item, lang)}
                       >

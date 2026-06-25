@@ -15,6 +15,9 @@ export const translations: Record<string, Record<string, string>> = {
     force_update_message:
       'This version of Birdr is too old to use. Please update to version {minVersion} or newer from the app store.',
     force_update_button: 'Update in store',
+    update_available_title: 'Update available',
+    update_available_message: 'Version {version} is in the store.',
+    update_available_button: 'Update',
     // Auth
     login: 'Login',
     logout: 'Logout',
@@ -377,6 +380,12 @@ export const translations: Record<string, Record<string, string>> = {
     birdr_journey_step_intro: 'Identify {length} birds from {media}.',
     birdr_journey_difficult_step_intro:
       "You'll see some birds other birders struggle with. Take your time and trust what you know.",
+    birdr_journey_extreme_step_intro:
+      "Rare birds show up more often, and species you've missed before are likely to return. Stay sharp!",
+    birdr_journey_speed_step_intro:
+      'You have {seconds} seconds per bird. Answer before time runs out!',
+    speed_challenge_timer: 'Time left: {seconds}s',
+    speed_challenge_time_up: "Time's up!",
     birdr_journey_start_step: 'Start step',
     birdr_journey_step_passed: 'Step complete!',
     birdr_journey_step_failed: 'Step failed',
@@ -458,6 +467,9 @@ export const translations: Record<string, Record<string, string>> = {
     force_update_message:
       'Deze versie van Birdr is te oud. Werk bij naar versie {minVersion} of nieuwer via de app store.',
     force_update_button: 'Bijwerken in store',
+    update_available_title: 'Update beschikbaar',
+    update_available_message: 'Versie {version} staat in de store.',
+    update_available_button: 'Bijwerken',
     login: 'Inloggen',
     logout: 'Uitloggen',
     register: 'Registreren',
@@ -810,6 +822,12 @@ export const translations: Record<string, Record<string, string>> = {
     birdr_journey_step_intro: 'Herken {length} vogels via {media}.',
     birdr_journey_difficult_step_intro:
       'Je krijgt vogels te zien waar andere vogelaars moeite mee hebben. Neem de tijd en vertrouw op wat je weet.',
+    birdr_journey_extreme_step_intro:
+      'Zeldzame vogels komen vaker voor en soorten die je eerder miste komen waarschijnlijk terug. Blijf scherp!',
+    birdr_journey_speed_step_intro:
+      'Je hebt {seconds} seconden per vogel. Antwoord voordat de tijd om is!',
+    speed_challenge_timer: 'Tijd over: {seconds}s',
+    speed_challenge_time_up: 'Tijd is om!',
     birdr_journey_start_step: 'Start stap',
     birdr_journey_step_passed: 'Stap voltooid!',
     birdr_journey_step_failed: 'Stap mislukt',

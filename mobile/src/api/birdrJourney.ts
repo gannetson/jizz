@@ -20,6 +20,7 @@ export type JourneyStep = {
   jokers: number;
   rarity: string;
   media: string;
+  speed_seconds?: number;
   status: JourneyStepStatus;
   resolved_family_name_latin?: string | null;
   resolved_family_name?: string | null;
@@ -38,6 +39,14 @@ export function isDifficultJourneyStep(step: JourneyStep): boolean {
   return step.step_type === 'difficult' || step.step_type === 'dificult';
 }
 
+export function isExtremeJourneyStep(step: JourneyStep): boolean {
+  return step.step_type === 'extreme';
+}
+
+export function isSpeedJourneyStep(step: JourneyStep): boolean {
+  return step.step_type === 'speed';
+}
+
 export type JourneyLevel = {
   sequence: number;
   title: string;
@@ -54,6 +63,7 @@ export type JourneyGameRef = {
   level: string;
   length: number;
   media: string;
+  speed_seconds?: number | null;
   ended?: boolean;
   scores?: Array<{ answers?: Array<{ sequence?: number; correct?: boolean }> }>;
 };

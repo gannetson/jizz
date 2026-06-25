@@ -24,7 +24,7 @@ export type ChallengeQuestion = {
   id: number;
   number: number;
   sequence: number;
-  game: { token: string };
+  game: { token: string; speed_seconds?: number | null; level?: string; media?: string };
   options?: QuestionOption[];
   images: Array<{ url: string; link?: string; contributor?: string }>;
   sounds: Array<{ url: string; link?: string; contributor?: string }>;
@@ -33,8 +33,9 @@ export type ChallengeQuestion = {
 
 export type AnswerPayload = {
   question_id: number;
-  answer_id: number;
+  answer_id?: number;
   player_token: string;
+  timed_out?: boolean;
 };
 
 /** Response from submitChallengeAnswer; backend AnswerSerializer returns answer, species, correct. */

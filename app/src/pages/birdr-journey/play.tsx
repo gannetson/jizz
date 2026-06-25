@@ -31,6 +31,7 @@ import { FlagMediaButton } from '../../components/flag-media-button';
 import { Loading } from '../../components/loading';
 import SpeciesCombobox from '../../components/species-combobox';
 import { ZoomablePlayImage } from '../../components/zoomable-play-image';
+import { SpeedChallengeTimer } from '../../components/speed-challenge-timer';
 import AppContext, { Answer, Question, Species } from '../../core/app-context';
 import {
   currentPlayMediaItem,
@@ -74,8 +75,10 @@ export function BirdrJourneyPlayPage() {
   const [journeyGame, setJourneyGame] = useState<BirdrJourneyGame | null>(null);
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
   const [levelEnded, setLevelEnded] = useState(false);
+  const [timerExpired, setTimerExpired] = useState(false);
   const mediaPostedForQuestionId = useRef<number | null>(null);
   const playerTokenRef = useRef<string | null>(null);
+  const submittingRef = useRef(false);
 
   const navigateResults = useCallback(() => {
     navigate(`/journey/${countryCode}/results?gameToken=${gameToken}`, { replace: true });
@@ -117,6 +120,8 @@ export function BirdrJourneyPlayPage() {
     if (question) {
       setMediaIndex(question.number ?? 0);
       setJourneyStepFailed(false);
+      setTimerExpired(false);
+      submittingRef.current = false;
     }
   }, [question?.id]);
 
@@ -204,6 +209,7 @@ export function BirdrJourneyPlayPage() {
   const handleFeedbackComplete = async () => {
     setShowFeedback(false);
     setSubmitting(false);
+    submittingRef.current = false;
     if (journeyStepFailed) {
       navigateResults();
       return;
@@ -230,17 +236,20 @@ export function BirdrJourneyPlayPage() {
     }
   };
 
-  const giveAnswer = async (answer: Species) => {
-    if (submitting || showFeedback) return;
+  const giveAnswer = async (answer?: Species, timedOut = false) => {
+    if (submittingRef.current || submitting || showFeedback || !question) return;
+    if (!timedOut && timerExpired) return;
     const playerToken = await resolveBirdrJourneyPlayerToken();
     if (!playerToken) return;
     playerTokenRef.current = playerToken;
+    submittingRef.current = true;
     setSubmitting(true);
+    if (timedOut) setTimerExpired(true);
     try {
       const result = await submitChallengeAnswer(
         {
           question_id: question.id,
-          answer_id: answer.id,
+          ...(timedOut ? { timed_out: true } : { answer_id: answer!.id }),
           player_token: playerToken,
         },
         playerToken
@@ -270,6 +279,10 @@ export function BirdrJourneyPlayPage() {
     }
   };
 
+  const handleSpeedTimeout = () => {
+    void giveAnswer(undefined, true);
+  };
+
   const totalJokers = journeyGame?.journey_step?.jokers ?? 0;
   const remainingJokers = journeyGame?.remaining_jokers ?? totalJokers;
   const levelLength = journeyGame?.journey_step?.length ?? journeyGame?.game?.length ?? 0;
@@ -292,6 +305,12 @@ export function BirdrJourneyPlayPage() {
 
   const hasOptions = (question.options?.length ?? 0) > 0;
   const isExpert = gameLevel === 'expert';
+  const speedSeconds =
+    (question.game as { speed_seconds?: number | null } | undefined)?.speed_seconds ??
+    journeyGame?.game?.speed_seconds ??
+    null;
+  const isSpeedChallenge = typeof speedSeconds === 'number' && speedSeconds > 0;
+  const optionsLocked = submitting || showFeedback || timerExpired || !answersEnabled;
 
   return (
     <Page>
@@ -404,13 +423,22 @@ export function BirdrJourneyPlayPage() {
           </Flex>
         </Box>
 
+        {isSpeedChallenge && !showFeedback ? (
+          <SpeedChallengeTimer
+            speedSeconds={speedSeconds}
+            active={answersEnabled}
+            questionId={question.id}
+            onExpire={handleSpeedTimeout}
+          />
+        ) : null}
+
         {hasOptions ? (
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mb={6}>
             {question.options!.map((option, key) => (
               <Button
                 key={key}
                 onClick={() => giveAnswer(option)}
-                disabled={submitting || !answersEnabled || showFeedback}
+                disabled={optionsLocked}
                 colorPalette={
                   response?.species?.id === option.id
                     ? 'green'
@@ -427,9 +455,9 @@ export function BirdrJourneyPlayPage() {
           <SpeciesCombobox
             species={species || []}
             playerLanguage={language}
-            onSelect={giveAnswer}
+            onSelect={(species) => giveAnswer(species)}
             loading={submitting}
-            isDisabled={!answersEnabled || showFeedback}
+            isDisabled={optionsLocked}
             autoFocus
             placeholder={
               <FormattedMessage id="type species" defaultMessage="Start typing your answer..." />

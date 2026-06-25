@@ -849,7 +849,7 @@ class GameAdmin(admin.ModelAdmin):
     fields = [
         'country', 'language', 'host', 'created', 'token',
         'length', 'multiplayer', 'media', 'repeat', 'rarity', 'include_escapes',
-        'dificult_species', 'tax_order', 'tax_family'
+        'dificult_species', 'game_type', 'speed_seconds', 'tax_order', 'tax_family'
     ]
     list_display = ['country', 'created', 'level', 'length', 'player_count', 'top_score']
 
@@ -1186,11 +1186,51 @@ class UpdateEmailRecipientAdmin(admin.ModelAdmin):
     search_fields = ['email', 'user__username']
 
 
-class JourneyStepInline(admin.TabularInline):
+class JourneyStepInline(admin.StackedInline):
     model = JourneyStep
     extra = 1
+    ordering = ('sequence',)
     fields = [
-        'sequence', 'step_type', 'level', 'length', 'jokers', 'rarity', 'media',
+        'sequence',
+        'step_type',
+        'level',
+        'length',
+        'jokers',
+        'rarity',
+        'media',
+        'include_escapes',
+        'speed_seconds',
+    ]
+
+
+@admin.register(JourneyStep)
+class JourneyStepAdmin(admin.ModelAdmin):
+    list_display = [
+        'journey_level',
+        'sequence',
+        'step_type',
+        'level',
+        'length',
+        'jokers',
+        'rarity',
+        'media',
+        'speed_seconds',
+    ]
+    list_filter = ['step_type', 'level', 'rarity', 'media']
+    search_fields = ['journey_level__title']
+    ordering = ('journey_level__sequence', 'sequence')
+    raw_id_fields = ['journey_level']
+    fields = [
+        'journey_level',
+        'sequence',
+        'step_type',
+        'level',
+        'length',
+        'jokers',
+        'rarity',
+        'media',
+        'include_escapes',
+        'speed_seconds',
     ]
 
 

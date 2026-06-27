@@ -51,12 +51,6 @@
             margin-top: 1rem;
         }
 
-        #usage-world-map .jvm-region {
-            fill: var(--birdr-50);
-            stroke: #fff;
-            stroke-width: 0.4px;
-        }
-
         input[type="date"] {
             padding: 0.45rem 0.65rem;
             border: 1px solid var(--birdr-200);
@@ -496,7 +490,8 @@
                         },
                         hover: { fillOpacity: 0.85, cursor: "pointer" },
                     },
-                    onLoaded(map) {
+                    onLoaded(...args) {
+                        const map = args.find((arg) => arg && arg.regions) || worldMap;
                         applyRegionColors(map, colorByCode);
                     },
                     onRegionTooltipShow(event, tooltip, code) {

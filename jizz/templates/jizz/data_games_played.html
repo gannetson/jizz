@@ -245,65 +245,24 @@
                 return values;
             }
 
-            function hexToRgb(hex) {
-                const n = parseInt(hex.slice(1), 16);
-                return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-            }
-
-            function rgbToHex(r, g, b) {
-                return `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
-            }
-
-            function lerpHex(a, b, t) {
-                const c1 = hexToRgb(a);
-                const c2 = hexToRgb(b);
-                return rgbToHex(
-                    Math.round(c1[0] + (c2[0] - c1[0]) * t),
-                    Math.round(c1[1] + (c2[1] - c1[1]) * t),
-                    Math.round(c1[2] + (c2[2] - c1[2]) * t),
-                );
-            }
-
-            function colorAtRatio(ratio, colorScale) {
-                const t = Math.max(0, Math.min(1, ratio));
-                const pos = t * (colorScale.length - 1);
-                const i = Math.floor(pos);
-                const f = pos - i;
-                if (i >= colorScale.length - 1) {
-                    return colorScale[colorScale.length - 1];
+            function logScaledSeriesValues(values) {
+                const counts = Object.values(values).map(Number).filter((n) => Number.isFinite(n) && n > 0);
+                if (!counts.length) {
+                    return {};
                 }
-                return lerpHex(colorScale[i], colorScale[i + 1], f);
-            }
-
-            function gameCountToRatio(count, min, max) {
-                if (max <= min) {
-                    return 1;
-                }
-                const v = Math.max(Number(count), min);
-                // Log scale: NL dominates counts; log keeps mid/low countries visually distinct.
+                const min = Math.min(...counts);
+                const max = Math.max(...counts);
                 const logMin = Math.log(min);
                 const logMax = Math.log(max);
-                return (Math.log(v) - logMin) / (logMax - logMin || 1);
-            }
-
-            function buildCountryColors(values, min, max, colorScale) {
-                const colors = {};
+                const out = {};
                 Object.entries(values).forEach(([code, count]) => {
-                    colors[code] = colorAtRatio(gameCountToRatio(count, min, max), colorScale);
-                });
-                return colors;
-            }
-
-            function applyRegionColors(map, colorByCode) {
-                if (!map || !map.regions) {
-                    return;
-                }
-                Object.entries(colorByCode).forEach(([code, color]) => {
-                    const entry = map.regions[code];
-                    if (entry && entry.element && typeof entry.element.setStyle === "function") {
-                        entry.element.setStyle("fill", color);
+                    const n = Number(count);
+                    if (!Number.isFinite(n) || n <= 0) {
+                        return;
                     }
+                    out[code] = ((Math.log(Math.max(n, min)) - logMin) / (logMax - logMin || 1)) * 100;
                 });
+                return out;
             }
 
             function formatLabel(row, granularity) {
@@ -463,10 +422,8 @@
                     return;
                 }
 
-                const counts = Object.values(values);
-                const min = Math.min(...counts);
-                const max = Math.max(...counts);
-                const colorByCode = buildCountryColors(values, min, max, mapStyle.color_scale);
+                const seriesValues = logScaledSeriesValues(values);
+                const hoverFill = mapStyle.color_scale[mapStyle.color_scale.length - 1];
 
                 worldMap = new jsVectorMap({
                     selector: "#games-world-map",
@@ -477,10 +434,19 @@
                             stroke: mapStyle.region_stroke,
                             "stroke-width": mapStyle.region_stroke_width,
                         },
-                        hover: { fillOpacity: 0.85, cursor: "pointer" },
+                        hover: {
+                            fill: hoverFill,
+                            fillOpacity: 0.9,
+                            cursor: "pointer",
+                        },
                     },
-                    onLoaded(map) {
-                        applyRegionColors(map, colorByCode);
+                    series: {
+                        regions: [{
+                            attribute: "fill",
+                            scale: mapStyle.color_scale,
+                            values: seriesValues,
+                            normalizeFunction: "linear",
+                        }],
                     },
                     onRegionTooltipShow(event, tooltip, code) {
                         const count = values[code] || 0;
@@ -492,7 +458,6 @@
                     },
                 });
 
-                applyRegionColors(worldMap, colorByCode);
                 updateMapLegend(values, mapStyle.color_scale);
             }
 

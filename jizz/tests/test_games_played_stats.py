@@ -125,4 +125,5 @@ class GamesPlayedStatsTests(TestCase):
         payload = games_played_payload(date(2026, 4, 1), date(2026, 4, 30), granularity="month")
         self.assertIn("map_style", payload)
         self.assertEqual(payload["map_style"]["color_scale"][-1], "#8b6419")
-        self.assertEqual(payload["map_style"]["region_initial_fill"], "#f5ede0")
+        self.assertEqual(payload["map_style"]["color_scale"][0], "#dcc19c")
+        self.assertEqual(payload["map_style"]["region_initial_fill"], "#e0e0e0")

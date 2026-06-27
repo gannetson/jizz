@@ -6,8 +6,11 @@ export type TroubleSpotSpecies = {
   name: string;
   name_latin: string;
   times_shown: number;
+  correctly_answered: number;
   wrongly_answered: number;
+  correct_rate: number | null;
   error_rate: number | null;
+  illustration_url?: string | null;
 };
 
 export type TroubleSpotPair = {
@@ -49,6 +52,19 @@ export async function startConfusionPairPractice(
   if (countryCode?.trim()) body.country_code = countryCode.trim().toUpperCase();
   const { data } = await axios.post<StartPairPracticeResponse>(
     '/api/practice/confusion-pair/start/',
+    body,
+  );
+  return data;
+}
+
+export async function startSpeciesPractice(
+  speciesId: number,
+  countryCode?: string,
+): Promise<StartPairPracticeResponse> {
+  const body: Record<string, unknown> = { species_id: speciesId };
+  if (countryCode?.trim()) body.country_code = countryCode.trim().toUpperCase();
+  const { data } = await axios.post<StartPairPracticeResponse>(
+    '/api/practice/species/start/',
     body,
   );
   return data;

@@ -5,7 +5,9 @@ import requests
 from django.conf import settings
 
 from jizz.models import Species, Country, CountrySpecies, SpeciesImage, SpeciesSound, SpeciesVideo, Language, \
-    SpeciesName, TaxonomicOrder, TaxonomicFamily
+    SpeciesName, TaxonomicOrder, TaxonomicFamily, TaxonomicGenus
+from jizz.services.taxonomy_texts import fetch_ebird_taxonomy, EBIRD_LOCALE_EN
+from jizz.taxonomy_parse import parse_genus_from_sci_name
 
 SERVER_NAME = 'api.ebird.org'
 API_VERSION = 'v2'
@@ -123,50 +125,56 @@ def download_ebird_regional_zip(url):
 
 
 def sync_species():
-
-    data = requests.get(
-        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale=en_UK&fmt=json',
-        headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
-    )
-    results = data.json()
+    results = fetch_ebird_taxonomy(locale=EBIRD_LOCALE_EN, categories='species')
     for row in results:
-        print(row)
-        if row['category'] == 'species':
-            order, _ = TaxonomicOrder.objects.update_or_create(
-                name_latin=row['order'],
-                defaults={'name_en': row['order'], 'name_nl': row['order']},
-            )
-            family, _ = TaxonomicFamily.objects.update_or_create(
-                name_latin=row['familySciName'],
+        if row['category'] != 'species':
+            continue
+        order, _ = TaxonomicOrder.objects.update_or_create(
+            name_latin=row['order'],
+            defaults={'name_en': row['order'], 'name_nl': row['order']},
+        )
+        family, _ = TaxonomicFamily.objects.update_or_create(
+            name_latin=row['familySciName'],
+            defaults={
+                'name_en': row['familyComName'],
+                'name_nl': row['familyComName'],
+                'taxonomic_order': order,
+            },
+        )
+        genus = None
+        genus_name = parse_genus_from_sci_name(row['sciName'])
+        if genus_name:
+            genus, _ = TaxonomicGenus.objects.update_or_create(
+                name_latin=genus_name,
                 defaults={
-                    'name_en': row['familyComName'],
-                    'name_nl': row['familyComName'],
-                    'taxonomic_order': order,
+                    'name_en': genus_name,
+                    'name_nl': genus_name,
+                    'taxonomic_family': family,
                 },
             )
-            Species.objects.update_or_create(
-                code= row['speciesCode'],
-                defaults={
-                    'name': row['comName'],
-                    'name_latin': row['sciName'],
-                    'taxonomic_order': order,
-                    'taxonomic_family': family,
-                }
-            )
+        tax_ordering = row.get('taxonOrder')
+        Species.objects.update_or_create(
+            code=row['speciesCode'],
+            defaults={
+                'name': row['comName'],
+                'name_latin': row['sciName'],
+                'taxonomic_order': order,
+                'taxonomic_family': family,
+                'taxonomic_genus': genus,
+                'tax_ordering': tax_ordering,
+            },
+        )
 
-    data = requests.get(
-        f'https://{SERVER_NAME}/{API_VERSION}/ref/taxonomy/ebird?locale=nl&fmt=json',
-        headers={'x-ebirdapitoken': settings.EBIRD_API_TOKEN}
-    )
-    results = data.json()
-    for row in results:
-        if row['category'] == 'species':
-            Species.objects.update_or_create(
-                code= row['speciesCode'],
-                defaults={
-                    'name_nl': row['comName'],
-                }
-            )
+    results_nl = fetch_ebird_taxonomy(locale='nl', categories='species')
+    for row in results_nl:
+        if row['category'] != 'species':
+            continue
+        Species.objects.update_or_create(
+            code=row['speciesCode'],
+            defaults={
+                'name_nl': row['comName'],
+            },
+        )
     print("Done syncing species")
 
 

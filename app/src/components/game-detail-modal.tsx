@@ -16,13 +16,14 @@ import {
   AspectRatio,
 } from "@chakra-ui/react";
 import { FormattedMessage } from "react-intl";
+import { useNavigate } from "react-router-dom";
 import { gamesService, GameDetailWithAnswers, QuestionWithAnswer } from "../api/services/games.service";
+import { startSpeciesPractice } from "../api/practice";
 import { format } from "date-fns";
 import ReactPlayer from "react-player";
 import AppContext, { Species } from "../core/app-context";
 import { getCountryDisplayName } from "../data/country-names-nl";
 import { SpeciesButton } from "./species-button";
-import { ComparisonButton } from "./comparison-button";
 import { MediaCredits } from "./media-credits";
 
 const {
@@ -45,12 +46,14 @@ type GameDetailModalProps = {
 };
 
 export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: GameDetailModalProps) => {
-  const { language } = useContext(AppContext);
+  const navigate = useNavigate();
+  const { language, loadGame, loadPlayer, setGame } = useContext(AppContext);
   const locale = language === 'nl' ? 'nl' : 'en';
-  const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
+  const [game, setGameDetail] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedQuestionId, setExpandedQuestionId] = useState<number | null>(null);
+  const [practiceSpeciesId, setPracticeSpeciesId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadGame = async () => {
@@ -65,7 +68,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: Gam
           gameToken,
           playerToken ? { playerToken } : undefined
         );
-        setGame(data);
+        setGameDetail(data);
       } catch (err: any) {
         setError(err.message || "Failed to load game");
       } finally {
@@ -79,9 +82,10 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: Gam
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setGame(null);
+      setGameDetail(null);
       setError(null);
       setExpandedQuestionId(null);
+      setPracticeSpeciesId(null);
     }
   }, [isOpen]);
 
@@ -140,6 +144,29 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: Gam
       setExpandedQuestionId(null);
     } else {
       setExpandedQuestionId(question.id);
+    }
+  };
+
+  const handlePracticeSpecies = async (speciesId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!game?.country?.code) return;
+    setPracticeSpeciesId(speciesId);
+    setError(null);
+    try {
+      const result = await startSpeciesPractice(speciesId, game.country.code);
+      localStorage.setItem('player-token', result.player_token);
+      localStorage.setItem('game-token', result.game.token);
+      await loadPlayer(result.player_token);
+      const playGame = await loadGame(result.game.token);
+      if (playGame) {
+        setGame(playGame);
+        onClose();
+        navigate('/game/play');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to start practice');
+    } finally {
+      setPracticeSpeciesId(null);
     }
   };
 
@@ -365,17 +392,19 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: Gam
                                           colorPalette="error"
                                           size="sm"
                                         />
-                                        <ComparisonButton
-                                          species1Id={question.species.id}
-                                          species2Id={question.user_answer.id}
-                                          species1Name={getSpeciesName(question.species)}
-                                          species2Name={question.user_answer.name_nl && game?.language === 'nl' ? question.user_answer.name_nl : question.user_answer.name}
-                                          stopPropagation
-                                          buttonProps={{
-                                            variant: "subtle",
-                                            size: "sm",
-                                          }}
-                                        />
+                                        <Button
+                                          size="sm"
+                                          colorPalette="primary"
+                                          variant="subtle"
+                                          loading={practiceSpeciesId === question.species.id}
+                                          disabled={practiceSpeciesId != null && practiceSpeciesId !== question.species.id}
+                                          onClick={(e) => void handlePracticeSpecies(question.species.id, e)}
+                                        >
+                                          <FormattedMessage
+                                            id="trouble_spots_practice_species"
+                                            defaultMessage="Practice"
+                                          />
+                                        </Button>
                                       </>
                                     )}
                                   </HStack>

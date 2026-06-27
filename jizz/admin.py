@@ -24,7 +24,7 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          JourneyStep, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesIllustration, SpeciesImage, SpeciesSound, SpeciesVideo,
-                         TaxonomicOrder, TaxonomicFamily,
+                         TaxonomicOrder, TaxonomicFamily, TaxonomicGenus,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent,
@@ -347,13 +347,20 @@ class TaxonomicFamilyAdmin(admin.ModelAdmin):
     list_filter = ['taxonomic_order']
 
 
+@register(TaxonomicGenus)
+class TaxonomicGenusAdmin(admin.ModelAdmin):
+    list_display = ['name_latin', 'taxonomic_family', 'name_en', 'name_nl']
+    search_fields = ['name_latin', 'name_en', 'name_nl']
+    list_filter = ['taxonomic_family']
+
+
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesIllustrationInline, MediaInline]
     search_fields = ['name', 'name_nl', 'name_latin']
     readonly_fields = ['sync_media', 'pic_count', 'infer_machine_predictions']
-    list_display = ['name', 'name_nl', 'pic_count']
-    list_filter = ['taxonomic_order']
+    list_display = ['name', 'name_nl', 'taxonomic_genus', 'tax_ordering', 'pic_count']
+    list_filter = ['taxonomic_order', 'taxonomic_genus']
     actions = ['scrape_traits', 'generate_comparison']
 
     def pic_count(self, obj):

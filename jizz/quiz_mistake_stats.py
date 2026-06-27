@@ -59,6 +59,13 @@ def _error_rate_pct(wrong: int, correct: int) -> float | None:
     return 100.0 * wrong / denom
 
 
+def _target_success_rate_pct(correct: int, times_shown: int) -> float | None:
+    """% correct when this species was the question target: correct / times_shown."""
+    if times_shown <= 0:
+        return None
+    return 100.0 * correct / times_shown
+
+
 def _target_error_rate_pct(wrong: int, times_shown: int) -> float | None:
     """% wrong when this species was the question target: wrong / times_shown."""
     if times_shown <= 0:
@@ -284,13 +291,16 @@ def get_user_species_mistake_rows(
         wr = wrongly_answered.get(sid, 0)
         if ts < USER_MIN_TIMES_SHOWN or wr < USER_MIN_WRONG:
             continue
+        cor = ts - wr
         rows.append(
             {
                 "species_id": sid,
                 "name": sp.name,
                 "name_latin": sp.name_latin,
                 "times_shown": ts,
+                "correctly_answered": cor,
                 "wrongly_answered": wr,
+                "correct_rate": _target_success_rate_pct(cor, ts),
                 "error_rate": _target_error_rate_pct(wr, ts),
             }
         )

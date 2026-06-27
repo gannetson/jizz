@@ -51,7 +51,21 @@ if (typeof document !== 'undefined') {
   }
 }
 
-export function SpeciesModal({species, onClose, isOpen}: { species?: Species, onClose: () => void, isOpen: boolean }) {
+export function SpeciesModal({
+  species,
+  onClose,
+  isOpen,
+  showPracticeButton = false,
+  onPractice,
+  practiceLoading = false,
+}: {
+  species?: Species;
+  onClose: () => void;
+  isOpen: boolean;
+  showPracticeButton?: boolean;
+  onPractice?: (speciesId: number) => void;
+  practiceLoading?: boolean;
+}) {
 
   const {speciesLanguage} = useContext(AppContext)
   const [activeTab, setActiveTab] = useState<'images' | 'videos' | 'sounds'>('images')
@@ -106,6 +120,12 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
 
   const displayName = display.name_translated || (speciesLanguage === 'nl' ? display.name_nl : speciesLanguage === 'la' ? display.name_latin : display.name)
 
+  const speciesCode = display.code?.trim()
+  const ebirdUrl = speciesCode ? `https://ebird.org/species/${speciesCode}` : null
+  const birdsOfTheWorldUrl = speciesCode
+    ? `https://birdsoftheworld.org/bow/species/${speciesCode}/cur/introduction`
+    : null
+
   const illustrationUrl = coverUrl !== undefined ? coverUrl : display.illustration_url
   const illustrationStatus = coverStatus ?? display.illustration_status
   const illustrationPending = coverLoading || illustrationStatus === 'pending'
@@ -139,42 +159,70 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
               <Icon as={BsX} boxSize={5} />
             </IconButton>
             <DialogBodyComponent>
-                <Link href={'https://ebird.org/species/' + display.code} target="_blank" rel="noopener noreferrer">
-                  <Flex gap={2} mb={4} alignItems={'center'}>
-                    <FormattedMessage defaultMessage={'View on eBird'} id={'view on eBird'}/>
-                    <BsBoxArrowRight/>
-                  </Flex>
-                </Link>
-
-                {showIllustration && (
-                  <Box
-                    bg="white"
-                    borderRadius="md"
-                    py={3}
-                    px={4}
-                    mb={4}
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    minH="140px"
+                {(showIllustration || ebirdUrl || birdsOfTheWorldUrl) && (
+                  <Flex
+                    gap={3}
+                    mb={2}
+                    align="flex-start"
+                    direction="row"
                   >
-                    {illustrationUrl ? (
-                      <Image
-                        src={illustrationUrl}
-                        alt={displayName}
-                        maxH="160px"
-                        maxW="100%"
-                        objectFit="contain"
-                      />
-                    ) : (
-                      <Spinner size="md" color="gray.400" />
+                    {showIllustration && (
+                      <Box
+                        flexShrink={0}
+                        alignSelf="flex-start"
+                        bg="white"
+                        borderRadius="md"
+                        py={1}
+                        px={2}
+                        w="72px"
+                        h="72px"
+                        display="flex"
+                        justifyContent="flex-start"
+                        alignItems="center"
+                      >
+                        {illustrationUrl ? (
+                          <Image
+                            src={illustrationUrl}
+                            alt={displayName}
+                            maxH="64px"
+                            maxW="64px"
+                            objectFit="contain"
+                          />
+                        ) : (
+                          <Spinner size="sm" color="gray.400" />
+                        )}
+                      </Box>
                     )}
-                  </Box>
+
+                    {(ebirdUrl || birdsOfTheWorldUrl) && (
+                      <VStack align="start" gap={1} pt={0.5} fontSize="sm">
+                        {ebirdUrl && (
+                          <Link href={ebirdUrl} target="_blank" rel="noopener noreferrer">
+                            <Flex gap={2} alignItems="center" color="primary.600" _hover={{ color: 'primary.700' }}>
+                              <FormattedMessage defaultMessage="View on eBird" id="view_on_ebird" />
+                              <BsBoxArrowRight />
+                            </Flex>
+                          </Link>
+                        )}
+                        {birdsOfTheWorldUrl && (
+                          <Link href={birdsOfTheWorldUrl} target="_blank" rel="noopener noreferrer">
+                            <Flex gap={2} alignItems="center" color="primary.600" _hover={{ color: 'primary.700' }}>
+                              <FormattedMessage
+                                defaultMessage="View on Birds of the World"
+                                id="view_on_birds_of_the_world"
+                              />
+                              <BsBoxArrowRight />
+                            </Flex>
+                          </Link>
+                        )}
+                      </VStack>
+                    )}
+                  </Flex>
                 )}
 
                 <>
                 {/* Tab Buttons */}
-                <HStack gap={2} mb={4} borderBottomWidth="1px" pb={2}>
+                <HStack gap={2} mb={3} borderBottomWidth="1px" pb={2}>
                   <Button
                     variant={activeTab === 'images' ? 'solid' : 'ghost'}
                     colorPalette={activeTab === 'images' ? 'primary' : 'gray'}
@@ -293,9 +341,21 @@ export function SpeciesModal({species, onClose, isOpen}: { species?: Species, on
               </DialogBodyComponent>
 
               <DialogFooterComponent>
-                <Button onClick={onClose} colorPalette="primary">
-                  Close
-                </Button>
+                <Flex gap={2} w="full" justify="flex-end">
+                  {showPracticeButton && species?.id && onPractice ? (
+                    <Button
+                      colorPalette="primary"
+                      loading={practiceLoading}
+                      disabled={practiceLoading}
+                      onClick={() => onPractice(species.id)}
+                    >
+                      <FormattedMessage id="trouble_spots_practice_species" defaultMessage="Practice" />
+                    </Button>
+                  ) : null}
+                  <Button onClick={onClose} colorPalette="primary" variant={showPracticeButton ? 'outline' : 'solid'}>
+                    <FormattedMessage id="close" defaultMessage="Close" />
+                  </Button>
+                </Flex>
               </DialogFooterComponent>
           </DialogContentComponent>
         </DialogPositionerComponent>

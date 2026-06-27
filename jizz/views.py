@@ -823,7 +823,10 @@ class PlayerScoreListView(ListAPIView):
             PlayerScore.objects
             .filter(Q(game__tax_order='') | Q(game__tax_order__isnull=True))
             .filter(Q(game__tax_family='') | Q(game__tax_family__isnull=True))
-            .exclude(game__game_type=Game.GAME_TYPE_PAIR_PRACTICE)
+            .exclude(game__game_type__in=[
+                Game.GAME_TYPE_PAIR_PRACTICE,
+                Game.GAME_TYPE_SPECIES_PRACTICE,
+            ])
             .select_related("player", "game", "game__country")
             .annotate(
                 score_rank=Window(

@@ -1,4 +1,4 @@
-from jizz.models import Species, TaxonomicFamily, TaxonomicOrder
+from jizz.models import Species, TaxonomicFamily, TaxonomicGenus, TaxonomicOrder
 
 
 def make_taxonomic_order(name_latin, name_en=None, name_nl=None):
@@ -22,6 +22,17 @@ def make_taxonomic_family(name_latin, name_en=None, name_nl=None, taxonomic_orde
     )
 
 
+def make_taxonomic_genus(name_latin, taxonomic_family=None, name_en=None, name_nl=None):
+    name_en = name_en or name_latin
+    name_nl = name_nl or name_en
+    return TaxonomicGenus.objects.create(
+        name_latin=name_latin,
+        name_en=name_en,
+        name_nl=name_nl,
+        taxonomic_family=taxonomic_family,
+    )
+
+
 def make_species_with_taxonomy(
     *,
     name,
@@ -30,11 +41,14 @@ def make_species_with_taxonomy(
     tax_order=None,
     tax_family=None,
     tax_family_en=None,
+    tax_genus=None,
     name_nl=None,
+    tax_ordering=None,
     **kwargs,
 ):
     taxonomic_order = None
     taxonomic_family = None
+    taxonomic_genus = None
     if tax_order:
         taxonomic_order, _ = TaxonomicOrder.objects.get_or_create(
             name_latin=tax_order,
@@ -50,6 +64,15 @@ def make_species_with_taxonomy(
             name_latin=tax_family,
             defaults=family_defaults,
         )
+    if tax_genus:
+        taxonomic_genus, _ = TaxonomicGenus.objects.get_or_create(
+            name_latin=tax_genus,
+            defaults={
+                'name_en': tax_genus,
+                'name_nl': tax_genus,
+                'taxonomic_family': taxonomic_family,
+            },
+        )
     return Species.objects.create(
         name=name,
         name_latin=name_latin,
@@ -57,5 +80,7 @@ def make_species_with_taxonomy(
         name_nl=name_nl,
         taxonomic_order=taxonomic_order,
         taxonomic_family=taxonomic_family,
+        taxonomic_genus=taxonomic_genus,
+        tax_ordering=tax_ordering,
         **kwargs,
     )

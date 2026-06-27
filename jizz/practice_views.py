@@ -17,6 +17,7 @@ from jizz.quiz_mistake_stats import (
     normalize_country_filter,
 )
 from jizz.serializers import GameSerializer
+from jizz.services.species_cover import species_cover_url
 from jizz.user_names import player_name_for_user
 
 
@@ -80,12 +81,102 @@ class TroubleSpotsView(APIView):
             except Exception:
                 cc = None
 
+        species_rows = get_user_species_mistake_rows(request.user.id, cc)
+        species_ids = [row['species_id'] for row in species_rows]
+        species_by_id = Species.objects.in_bulk(species_ids)
+        for row in species_rows:
+            sp = species_by_id.get(row['species_id'])
+            row['illustration_url'] = species_cover_url(sp, request) if sp else None
+
         return Response(
             {
                 'country_code': cc,
-                'species': get_user_species_mistake_rows(request.user.id, cc),
+                'species': species_rows,
                 'pairs': get_user_confusion_pair_rows(request.user.id, cc),
             }
+        )
+
+
+def _validate_species_for_country(country: Country, species_id: int) -> None:
+    from jizz.quiz_mistake_stats import _allowed_species_ids_for_country
+
+    allowed = _allowed_species_ids_for_country(country.code)
+    if species_id not in allowed:
+        raise ValidationError({'error': 'Species must be on your country checklist.'})
+
+    media_type = media_type_for_game(
+        Game(country=country, media='images')
+    )
+    if count_eligible_media(species_id, media_type) <= 0:
+        raise ValidationError({'error': 'Species needs eligible images for this country.'})
+
+
+class StartSpeciesPracticeView(APIView):
+    """POST — start a 20-question advanced drill focused on one species and kin."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        species_id = request.data.get('species_id')
+        if species_id is None:
+            raise ValidationError({'error': 'species_id is required.'})
+
+        try:
+            species_id = int(species_id)
+        except (TypeError, ValueError) as exc:
+            raise ValidationError({'error': 'species_id must be an integer.'}) from exc
+
+        if not Species.objects.filter(pk=species_id).exists():
+            raise ValidationError({'error': 'Invalid species id.'})
+
+        country = _resolve_country(request.user, request.data.get('country_code'))
+        _validate_species_for_country(country, species_id)
+
+        from jizz.game_question_selection import species_practice_pool_ids
+
+        probe = Game(
+            country=country,
+            level='advanced',
+            media='images',
+            rarity=Game.RARIT_REGULAR,
+            include_escapes=False,
+            focus_species_id=species_id,
+        )
+        if len(species_practice_pool_ids(probe)) < 2:
+            raise ValidationError(
+                {'error': 'Not enough related species on your checklist to start practice.'}
+            )
+
+        host = _get_or_create_player_for_user(request.user)
+        language = 'en'
+        try:
+            language = request.user.profile.language or language
+        except Exception:
+            pass
+
+        game = Game.objects.create(
+            country=country,
+            level='advanced',
+            length=20,
+            media='images',
+            rarity=Game.RARIT_REGULAR,
+            include_escapes=False,
+            multiplayer=False,
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=species_id,
+            host=host,
+            language=language,
+        )
+        PlayerScore.objects.get_or_create(player=host, game=game, defaults={'score': 0})
+        game.add_question()
+
+        return Response(
+            {
+                'game': GameSerializer(game, context={'request': request}).data,
+                'player_token': host.token,
+            },
+            status=status.HTTP_201_CREATED,
         )
 
 

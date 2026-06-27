@@ -11,6 +11,7 @@ import {
   Dimensions,
   SafeAreaView,
   Animated,
+  Linking,
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
@@ -22,6 +23,7 @@ import { fetchSpeciesDetail, type SpeciesDetail } from '../api/fetchSpeciesDetai
 import { fetchSpeciesCover } from '../api/fetchSpeciesCover';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
+import { useTranslation } from '../i18n/TranslationContext';
 
 type MediaEntry = {
   id?: number;
@@ -33,6 +35,7 @@ type MediaEntry = {
 
 export type SpeciesMediaData = {
   id: number;
+  code?: string;
   name?: string;
   name_nl?: string;
   name_latin?: string;
@@ -50,6 +53,9 @@ type Props = {
   species: SpeciesMediaData | null;
   language?: string;
   playerToken?: string;
+  showPracticeButton?: boolean;
+  onPractice?: (speciesId: number) => void;
+  practiceLoading?: boolean;
 };
 
 type TabKey = 'images' | 'videos' | 'sounds';
@@ -105,7 +111,17 @@ function AudioPlayer({ uri }: { uri: string }) {
   );
 }
 
-export function SpeciesMediaModal({ visible, onClose, species, language, playerToken }: Props) {
+export function SpeciesMediaModal({
+  visible,
+  onClose,
+  species,
+  language,
+  playerToken,
+  showPracticeButton = false,
+  onPractice,
+  practiceLoading = false,
+}: Props) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>('images');
   const [detail, setDetail] = useState<SpeciesDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -235,6 +251,12 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
 
   if (!species) return null;
 
+  const speciesCode = (detail?.code ?? species.code)?.trim()
+  const ebirdUrl = speciesCode ? `https://ebird.org/species/${speciesCode}` : null
+  const birdsOfTheWorldUrl = speciesCode
+    ? `https://birdsoftheworld.org/bow/species/${speciesCode}/cur/introduction`
+    : null
+
   const tabCounts: Record<TabKey, number> = {
     images: images.length,
     videos: videos.length,
@@ -266,19 +288,38 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
           </TouchableOpacity>
         </View>
 
-        {showIllustration && (
-          <View style={styles.illustrationBanner}>
-            {illustrationUrl ? (
-              <Image
-                source={{ uri: resolveUrl(illustrationUrl) }}
-                style={styles.illustrationImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <ActivityIndicator size="small" color={colors.primary[500]} />
+        {showIllustration || ebirdUrl || birdsOfTheWorldUrl ? (
+          <View style={styles.heroRow}>
+            {showIllustration && (
+              <View style={styles.illustrationBanner}>
+                {illustrationUrl ? (
+                  <Image
+                    source={{ uri: resolveUrl(illustrationUrl) }}
+                    style={styles.illustrationImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <ActivityIndicator size="small" color={colors.primary[500]} />
+                )}
+              </View>
+            )}
+
+            {(ebirdUrl || birdsOfTheWorldUrl) && (
+              <View style={styles.externalLinks}>
+                {ebirdUrl && (
+                  <TouchableOpacity onPress={() => Linking.openURL(ebirdUrl)}>
+                    <Text style={styles.externalLinkText}>eBird →</Text>
+                  </TouchableOpacity>
+                )}
+                {birdsOfTheWorldUrl && (
+                  <TouchableOpacity onPress={() => Linking.openURL(birdsOfTheWorldUrl)}>
+                    <Text style={styles.externalLinkText}>Birds of the World →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
-        )}
+        ) : null}
 
         <View style={styles.tabBar}>
           {tabs.map((tab) => (
@@ -373,6 +414,25 @@ export function SpeciesMediaModal({ visible, onClose, species, language, playerT
           media={flagMedia}
           playerToken={playerToken}
         />
+
+        {(showPracticeButton && species?.id && onPractice) ? (
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.practiceFooterBtn, practiceLoading && styles.practiceFooterBtnDisabled]}
+              onPress={() => onPractice(species.id)}
+              disabled={practiceLoading}
+            >
+              {practiceLoading ? (
+                <ActivityIndicator size="small" color={colors.primary[50]} />
+              ) : (
+                <Text style={styles.practiceFooterBtnText}>{t('trouble_spots_practice_species', 'Practice')}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeFooterBtn} onPress={onClose}>
+              <Text style={styles.closeFooterBtnText}>{t('close', 'Close')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </SafeAreaView>
     </Modal>
   );
@@ -402,16 +462,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeBtnText: { fontSize: 18, color: colors.primary[700], fontWeight: '600' },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
   illustrationBanner: {
     backgroundColor: '#fff',
-    minHeight: 140,
-    marginHorizontal: 24,
-    marginTop: 8,
-    marginBottom: 4,
+    width: 72,
+    height: 72,
+    flexShrink: 0,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  illustrationImage: { width: '100%', height: 140 },
+  illustrationImage: { width: 72, height: 64 },
+  externalLinks: {
+    flex: 1,
+    gap: 6,
+    paddingTop: 2,
+  },
+  externalLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[600],
+  },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 24,
@@ -456,4 +533,29 @@ const styles = StyleSheet.create({
   audioBtnText: { fontSize: 15, fontWeight: '600', color: colors.primary[800] },
   audioBtnTextPlaying: { color: colors.primary[50] },
   emptyText: { fontSize: 15, color: colors.primary[500], textAlign: 'center', marginTop: 32 },
+  footer: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.primary[100],
+  },
+  practiceFooterBtn: {
+    flex: 1,
+    backgroundColor: colors.primary[600],
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  practiceFooterBtnDisabled: { opacity: 0.7 },
+  practiceFooterBtnText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
+  closeFooterBtn: {
+    flex: 1,
+    backgroundColor: colors.primary[50],
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  closeFooterBtnText: { color: colors.primary[800], fontSize: 16, fontWeight: '600' },
 });

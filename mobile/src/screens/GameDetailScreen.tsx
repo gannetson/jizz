@@ -13,11 +13,15 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getGameDetail, type GameDetailWithAnswers, type QuestionWithAnswer } from '../api/myGames';
+import { startSpeciesPractice } from '../api/practice';
+import * as playerApi from '../api/player';
 import { apiUrl } from '../api/config';
-import { ComparisonModal } from '../components/ComparisonModal';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
+import { useGame } from '../context/GameContext';
+import { useTranslation } from '../i18n/TranslationContext';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { colors } from '../theme';
 
@@ -81,16 +85,16 @@ function questionStatsLine(q: QuestionWithAnswer): string | null {
 
 export function GameDetailScreen() {
   const route = useRoute<RouteProp<{ GameDetail: GameDetailRouteParams }, 'GameDetail'>>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
+  const { t } = useTranslation();
+  const { loadGame, setGame, setPlayer } = useGame();
   const token = route.params?.token ?? '';
   const playerToken = route.params?.playerToken;
-  const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
+  const [game, setGameDetail] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [comparisonVisible, setComparisonVisible] = useState(false);
-  const [comparisonSpecies1, setComparisonSpecies1] = useState<number | null>(null);
-  const [comparisonSpecies2, setComparisonSpecies2] = useState<number | null>(null);
+  const [practiceSpeciesId, setPracticeSpeciesId] = useState<number | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
 
   const loadGame = useCallback(async () => {
@@ -102,7 +106,7 @@ export function GameDetailScreen() {
         token,
         playerToken ? { playerToken } : undefined
       );
-      setGame(data);
+      setGameDetail(data);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load game');
     } finally {
@@ -114,21 +118,29 @@ export function GameDetailScreen() {
     loadGame();
   }, [loadGame]);
 
+  const handlePracticeSpecies = async (speciesId: number, e?: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    if (!game?.country?.code) return;
+    setPracticeSpeciesId(speciesId);
+    setError(null);
+    try {
+      const result = await startSpeciesPractice(speciesId, game.country.code);
+      const p = await playerApi.getPlayer(result.player_token);
+      if (p) setPlayer(p);
+      const playGame = await loadGame(result.game.token);
+      if (playGame) {
+        setGame(playGame);
+        navigation.navigate('GamePlay' as never);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('failed_load'));
+    } finally {
+      setPracticeSpeciesId(null);
+    }
+  };
+
   const toggleExpand = (questionId: number) => {
     setExpandedId((prev) => (prev === questionId ? null : questionId));
-  };
-
-  const openComparison = (species1Id: number, species2Id: number, e?: any) => {
-    if (e?.stopPropagation) e.stopPropagation();
-    setComparisonSpecies1(species1Id);
-    setComparisonSpecies2(species2Id);
-    setComparisonVisible(true);
-  };
-
-  const closeComparison = () => {
-    setComparisonVisible(false);
-    setComparisonSpecies1(null);
-    setComparisonSpecies2(null);
   };
 
   if (loading && !game) {
@@ -261,9 +273,11 @@ export function GameDetailScreen() {
                           variant="secondary"
                         />
                         <SpeciesViewButton
-                          label="Comparison"
-                          onPress={(e) => openComparison(q.species.id, q.user_answer!.id, e)}
-                          variant="compare"
+                          label={t('trouble_spots_practice_species', 'Practice')}
+                          onPress={(e) => void handlePracticeSpecies(q.species.id, e)}
+                          variant="primary"
+                          viewLabel=""
+                          disabled={practiceSpeciesId != null && practiceSpeciesId !== q.species.id}
                         />
                       </>
                     )}
@@ -273,15 +287,6 @@ export function GameDetailScreen() {
             </Pressable>
           );
         })
-      )}
-
-      {comparisonSpecies1 != null && comparisonSpecies2 != null && (
-        <ComparisonModal
-          visible={comparisonVisible}
-          onClose={closeComparison}
-          species1Id={comparisonSpecies1}
-          species2Id={comparisonSpecies2}
-        />
       )}
 
       <SpeciesMediaModal

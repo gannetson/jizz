@@ -8,8 +8,11 @@ export type TroubleSpotSpecies = {
   name: string;
   name_latin: string;
   times_shown: number;
+  correctly_answered: number;
   wrongly_answered: number;
+  correct_rate: number | null;
   error_rate: number | null;
+  illustration_url?: string | null;
 };
 
 export type TroubleSpotPair = {
@@ -59,6 +62,28 @@ export async function startConfusionPairPractice(
   const body: Record<string, unknown> = { low_id: lowId, high_id: highId };
   if (countryCode?.trim()) body.country_code = countryCode.trim().toUpperCase();
   const response = await fetch(apiUrl('/api/practice/confusion-pair/start/'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiErrorMessage(response));
+  }
+  return (await response.json()) as StartPairPracticeResponse;
+}
+
+export async function startSpeciesPractice(
+  speciesId: number,
+  countryCode?: string,
+): Promise<StartPairPracticeResponse> {
+  const headers = await getAuthHeaders();
+  const body: Record<string, unknown> = { species_id: speciesId };
+  if (countryCode?.trim()) body.country_code = countryCode.trim().toUpperCase();
+  const response = await fetch(apiUrl('/api/practice/species/start/'), {
     method: 'POST',
     headers: {
       Accept: 'application/json',

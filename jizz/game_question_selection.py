@@ -34,6 +34,8 @@ EXTREME_FREQUENCY_WEIGHTS: dict[str | None, float] = {
     None: 2.0,
 }
 EXTREME_USER_MISTAKE_MULTIPLIER = 4.0
+SPECIES_PRACTICE_FOCUS_WEIGHT = 3.0
+SPECIES_PRACTICE_MIN_POOL = 5
 
 
 def media_type_for_game(game: Game) -> str:
@@ -251,30 +253,220 @@ def pick_species_with_eligible_media(
 def _species_map(ids: Iterable[int]) -> dict[int, Species]:
     if not ids:
         return {}
-    return {s.id: s for s in Species.objects.filter(id__in=ids)}
+    return {
+        s.id: s
+        for s in Species.objects.filter(id__in=ids).select_related(
+            'taxonomic_genus',
+            'taxonomic_family',
+            'taxonomic_order',
+        )
+    }
+
+
+def _sort_key_for_taxonomic_neighbor(species: Species) -> tuple:
+    if species.tax_ordering is not None:
+        return (0, species.tax_ordering, species.id)
+    return (1, species.id)
+
+
+def _pick_taxonomic_neighbors(
+    answer_species: Species,
+    pool_ids: Sequence[int],
+    species_by_id: dict[int, Species],
+    count: int,
+) -> list[int]:
+    """Pick up to count species nearest to answer by tax_ordering (or id when null)."""
+    if count <= 0 or not pool_ids:
+        return []
+
+    answer_key = _sort_key_for_taxonomic_neighbor(answer_species)
+    sorted_ids = sorted(pool_ids, key=lambda sid: _sort_key_for_taxonomic_neighbor(species_by_id[sid]))
+
+    lower_ids: list[int] = []
+    higher_ids: list[int] = []
+    for sid in sorted_ids:
+        key = _sort_key_for_taxonomic_neighbor(species_by_id[sid])
+        if key < answer_key:
+            lower_ids.append(sid)
+        elif key > answer_key:
+            higher_ids.append(sid)
+
+    picked: list[int] = []
+    picked.extend(lower_ids[-2:])
+    need = count - len(picked)
+    picked.extend(higher_ids[:need])
+    if len(picked) < count:
+        prev = count - len(picked)
+        picked = lower_ids[-prev:] + picked
+    return picked[:count]
 
 
 def advanced_option_species(
     candidate_ids: Sequence[int],
     answer_species: Species,
 ) -> list[Species]:
-    """Match legacy advanced MC: neighbors by species id + answer (caller shuffles)."""
-    aid = answer_species.id
-    lower_ids = sorted((i for i in candidate_ids if i < aid), reverse=True)
-    higher_ids = sorted(i for i in candidate_ids if i > aid)
+    """Advanced MC: distractors prefer same genus, then family, then order, then global tax order."""
+    answer_id = answer_species.id
+    all_ids = set(candidate_ids) | {answer_id}
+    species_by_id = _species_map(all_ids)
+    answer = species_by_id.get(answer_id, answer_species)
 
-    options1_ids = lower_ids[:2]
-    next_n = 5 - len(options1_ids)
-    options2_ids = higher_ids[:next_n]
-    if len(options2_ids) < 2:
-        prev = 5 - len(options2_ids)
-        options1_ids = lower_ids[:prev]
+    candidate_set = {sid for sid in candidate_ids if sid != answer_id}
+    genus_tier: set[int] = set()
+    if answer.taxonomic_genus_id:
+        genus_tier = {
+            sid for sid in candidate_set
+            if species_by_id[sid].taxonomic_genus_id == answer.taxonomic_genus_id
+        }
 
-    by_id = _species_map(set(options1_ids) | set(options2_ids) | {aid})
-    options = [by_id[i] for i in options1_ids if i in by_id]
-    options.extend(by_id[i] for i in options2_ids if i in by_id)
-    options.append(answer_species)
+    family_tier = {
+        sid for sid in candidate_set
+        if sid not in genus_tier
+        and answer.taxonomic_family_id
+        and species_by_id[sid].taxonomic_family_id == answer.taxonomic_family_id
+    }
+    order_tier = {
+        sid for sid in candidate_set
+        if sid not in genus_tier
+        and sid not in family_tier
+        and answer.taxonomic_order_id
+        and species_by_id[sid].taxonomic_order_id == answer.taxonomic_order_id
+    }
+
+    distractor_ids: list[int] = []
+    for tier in (genus_tier, family_tier, order_tier, candidate_set):
+        if len(distractor_ids) >= 4:
+            break
+        remaining = [sid for sid in tier if sid not in distractor_ids]
+        need = 4 - len(distractor_ids)
+        distractor_ids.extend(
+            _pick_taxonomic_neighbors(answer, remaining, species_by_id, need)
+        )
+
+    options = [species_by_id[sid] for sid in distractor_ids if sid in species_by_id]
+    options.append(answer)
     return options
+
+
+def species_practice_pool_ids(game: Game) -> list[int]:
+    """
+    Focus species plus closely related candidates (genus → family → order → tax neighbors).
+    """
+    focus_id = game.focus_species_id
+    if not focus_id:
+        return []
+
+    all_candidates = set(candidate_species_ids(game))
+    if focus_id not in all_candidates:
+        return []
+
+    species_by_id = _species_map(all_candidates)
+    focus = species_by_id.get(focus_id)
+    if focus is None:
+        return [focus_id]
+
+    pool: set[int] = {focus_id}
+    others = all_candidates - pool
+
+    genus_tier = {
+        sid for sid in others
+        if focus.taxonomic_genus_id
+        and species_by_id[sid].taxonomic_genus_id == focus.taxonomic_genus_id
+    }
+    pool |= genus_tier
+    if len(pool) >= SPECIES_PRACTICE_MIN_POOL:
+        return sorted(pool)
+
+    family_tier = {
+        sid for sid in others - pool
+        if focus.taxonomic_family_id
+        and species_by_id[sid].taxonomic_family_id == focus.taxonomic_family_id
+    }
+    pool |= family_tier
+    if len(pool) >= SPECIES_PRACTICE_MIN_POOL:
+        return sorted(pool)
+
+    order_tier = {
+        sid for sid in others - pool
+        if focus.taxonomic_order_id
+        and species_by_id[sid].taxonomic_order_id == focus.taxonomic_order_id
+    }
+    pool |= order_tier
+    if len(pool) >= SPECIES_PRACTICE_MIN_POOL:
+        return sorted(pool)
+
+    remaining = list(others - pool)
+    if remaining:
+        pool |= set(
+            _pick_taxonomic_neighbors(
+                focus,
+                remaining,
+                species_by_id,
+                max(SPECIES_PRACTICE_MIN_POOL - len(pool), 4),
+            )
+        )
+
+    return sorted(pool)
+
+
+def pick_species_practice_target_with_media(
+    game: Game,
+    pool_ids: Sequence[int],
+    used_species_ids: Iterable[int],
+) -> tuple[Species, int]:
+    """Pick question target from related pool, weighted toward the focus species."""
+    focus_id = game.focus_species_id
+    if not focus_id or not pool_ids:
+        raise ValueError(f'Species practice game {game.id} is missing focus species or pool')
+
+    media_type = media_type_for_game(game)
+    used = set(used_species_ids)
+    weights = {
+        sid: SPECIES_PRACTICE_FOCUS_WEIGHT if sid == focus_id else 1.0
+        for sid in pool_ids
+    }
+    tried: set[int] = set()
+
+    for _ in range(10):
+        sid = pick_weighted_species_id(pool_ids, weights, exclude_ids=tried | used)
+        if sid is None:
+            sid = pick_weighted_species_id(pool_ids, weights, exclude_ids=tried)
+        if sid is None:
+            break
+        tried.add(sid)
+        media_count = count_eligible_media(sid, media_type)
+        if media_count > 0:
+            species = Species.objects.get(pk=sid)
+            number = random.randint(0, media_count - 1)
+            return species, number
+
+    raise ValueError(
+        f'No species with {game.media} media available for species practice game {game.id}'
+    )
+
+
+def create_species_practice_question(game: Game) -> Question:
+    """Advanced MC drill focused on one species and taxonomically related options."""
+    pool = species_practice_pool_ids(game)
+    if not pool:
+        raise ValueError(f'Species practice game {game.id} has no eligible related species')
+
+    used_ids = list(game.questions.values_list('species_id', flat=True))
+    species, number = pick_species_practice_target_with_media(game, pool, used_ids)
+    sequence = game.questions.count() + 1
+
+    options = advanced_option_species(pool, species)
+    random.shuffle(options)
+    question = game.questions.create(
+        species=species, number=number, sequence=sequence
+    )
+    QuestionOption.objects.bulk_create(
+        [
+            QuestionOption(question=question, species=opt, order=index)
+            for index, opt in enumerate(options)
+        ]
+    )
+    return question
 
 
 def beginner_option_species(
@@ -333,6 +525,8 @@ def create_question_for_game(game: Game) -> Question:
     """Build next question + options; caller holds game lock."""
     if game.game_type == Game.GAME_TYPE_PAIR_PRACTICE:
         return create_pair_practice_question(game)
+    if game.game_type == Game.GAME_TYPE_SPECIES_PRACTICE:
+        return create_species_practice_question(game)
 
     option_ids = candidate_species_ids(game)
     target_ids = question_target_species_ids(game)

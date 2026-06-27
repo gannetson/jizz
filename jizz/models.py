@@ -116,6 +116,27 @@ class TaxonomicFamily(models.Model):
         return self.name_latin
 
 
+class TaxonomicGenus(models.Model):
+    taxonomic_family = models.ForeignKey(
+        TaxonomicFamily,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='genera',
+    )
+    name_latin = models.CharField(max_length=200, unique=True)
+    name_en = models.CharField(max_length=200, blank=True, default='')
+    name_nl = models.CharField(max_length=200, blank=True, default='')
+
+    class Meta:
+        ordering = ['name_latin']
+        verbose_name = 'taxonomic genus'
+        verbose_name_plural = 'taxonomic genera'
+
+    def __str__(self):
+        return self.name_latin
+
+
 class Species(models.Model):
     name = models.CharField(max_length=200)
     name_latin = models.CharField(max_length=200)
@@ -138,6 +159,14 @@ class Species(models.Model):
         on_delete=models.SET_NULL,
         related_name='species',
     )
+    taxonomic_genus = models.ForeignKey(
+        TaxonomicGenus,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='species',
+    )
+    tax_ordering = models.FloatField(null=True, blank=True, db_index=True)
     code = models.CharField(max_length=10)
 
     @property
@@ -265,6 +294,7 @@ def _taxonomy_tables_ready():
         return (
             'jizz_taxonomicorder' in connection.introspection.table_names()
             and 'jizz_taxonomicfamily' in connection.introspection.table_names()
+            and 'jizz_taxonomicgenus' in connection.introspection.table_names()
         )
     except OperationalError:
         return False
@@ -402,10 +432,12 @@ class Game(models.Model):
     GAME_TYPE_STANDARD = 'standard'
     GAME_TYPE_EXTREME = 'extreme'
     GAME_TYPE_PAIR_PRACTICE = 'pair_practice'
+    GAME_TYPE_SPECIES_PRACTICE = 'species_practice'
     GAME_TYPE_CHOICES = [
         (GAME_TYPE_STANDARD, 'Standard'),
         (GAME_TYPE_EXTREME, 'Extreme'),
         (GAME_TYPE_PAIR_PRACTICE, 'Pair practice'),
+        (GAME_TYPE_SPECIES_PRACTICE, 'Species practice'),
     ]
     game_type = models.CharField(
         max_length=20,
@@ -426,6 +458,14 @@ class Game(models.Model):
         blank=True,
         related_name='pair_practice_games_high',
         on_delete=models.SET_NULL,
+    )
+    focus_species = models.ForeignKey(
+        'jizz.Species',
+        null=True,
+        blank=True,
+        related_name='species_practice_games',
+        on_delete=models.SET_NULL,
+        help_text='Target species for species_practice games.',
     )
     speed_seconds = models.PositiveSmallIntegerField(
         null=True,

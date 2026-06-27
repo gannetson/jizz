@@ -53,7 +53,11 @@ from jizz.birdr_journey_views import (
 )
 from jizz.checklist_views import ChecklistView
 from jizz.app_version_views import AppVersionView
-from jizz.practice_views import StartConfusionPairPracticeView, TroubleSpotsView
+from jizz.practice_views import (
+    StartConfusionPairPracticeView,
+    StartSpeciesPracticeView,
+    TroubleSpotsView,
+)
 from jizz.daily_challenge_views import (
     FriendsListView,
     FriendRequestsListView,
@@ -261,6 +265,11 @@ urlpatterns = [
         'api/practice/confusion-pair/start/',
         StartConfusionPairPracticeView.as_view(),
         name='practice-confusion-pair-start',
+    ),
+    path(
+        'api/practice/species/start/',
+        StartSpeciesPracticeView.as_view(),
+        name='practice-species-start',
     ),
     re_path(r"^api/updates/$", UpdateListView.as_view(), name="updates"),
     re_path(r"^api/updates/(?P<pk>\d+)/$", UpdateDetailView.as_view(), name="update-detail"),

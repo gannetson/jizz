@@ -97,23 +97,6 @@ export function GameDetailScreen() {
   const [practiceSpeciesId, setPracticeSpeciesId] = useState<number | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
 
-  const loadGame = useCallback(async () => {
-    if (!token) return;
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getGameDetail(
-        token,
-        playerToken ? { playerToken } : undefined
-      );
-      setGameDetail(data);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load game');
-    } finally {
-      setLoading(false);
-    }
-  }, [token, playerToken]);
-
   useEffect(() => {
     loadGame();
   }, [loadGame]);

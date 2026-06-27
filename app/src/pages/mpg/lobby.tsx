@@ -16,11 +16,17 @@ const Lobby: React.FC = () => {
 
   const [copied2, setCopied2] = useState(false)
   const [startingGame, setStartingGame] = useState(false)
-  const {players, startGame, question} = useContext(WebsocketContext)
+  const {players, startGame, question, gameStarted, markGameStarted} = useContext(WebsocketContext)
   const {player, game} = useContext(AppContext)
   const navigate = useNavigate()
   const gameTokenFromStorage = localStorage.getItem('game-token')
   const gameToken = game?.token ?? gameTokenFromStorage
+
+  useEffect(() => {
+    if ((game?.progress ?? 0) > 0) {
+      markGameStarted()
+    }
+  }, [game?.token, game?.progress, markGameStarted])
 
   const gameLink = `${window.location.origin}/join/${gameToken}`
 
@@ -37,27 +43,19 @@ const Lobby: React.FC = () => {
   }
 
   useEffect(() => {
-    // Only navigate if question exists AND it belongs to the current game
-    // Use centralized validator to ensure question belongs to current game
-    if (question && game) {
-      const currentGameToken = getCurrentGameToken(game, gameToken || null)
-      
-      if (validateQuestionForGame(question, currentGameToken || undefined)) {
-        console.log('Navigating to play screen - question belongs to current game:', currentGameToken)
-        navigate('/game/play')
-      } else {
-        // Question doesn't belong to current game - ignore it
-        // This could be an old question from a previous game
-        console.log('Ignoring navigation - question validation failed:', {
-          questionToken: question.game?.token,
-          currentGameToken
-        })
-      }
-    } else if (question && !game) {
-      // Question exists but no game - this shouldn't happen, but ignore it
-      console.log('Question exists but no game - ignoring')
+    if (!gameStarted || !question || !game) return;
+    const currentGameToken = getCurrentGameToken(game, gameToken || null)
+
+    if (validateQuestionForGame(question, currentGameToken || undefined)) {
+      console.log('Navigating to play screen - question belongs to current game:', currentGameToken)
+      navigate('/game/play')
+    } else {
+      console.log('Ignoring navigation - question validation failed:', {
+        questionToken: question.game?.token,
+        currentGameToken
+      })
     }
-  }, [question, game, gameToken, navigate]);
+  }, [question, game, gameToken, gameStarted, navigate]);
 
   useEffect(() => {
     if (question) {

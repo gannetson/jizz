@@ -4,7 +4,6 @@ import {
   Text,
   Modal,
   TouchableOpacity,
-  ScrollView,
   TextInput,
   StyleSheet,
   TouchableWithoutFeedback,
@@ -16,16 +15,6 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { useAuth } from '../context/AuthContext';
 import { flagMediaAsReview } from '../api/flagMedia';
 import { colors } from '../theme';
-
-const CHECKBOX_KEYS = [
-  'wrong_species',
-  'no_bird_visible',
-  'multiple_species',
-  'chick_egg_nest_corpse',
-  'poor_quality',
-] as const;
-
-type CheckboxKey = (typeof CHECKBOX_KEYS)[number];
 
 export type FlagMediaInfo = {
   id: number;
@@ -47,43 +36,14 @@ type Props = {
 export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess }: Props) {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const [checkboxes, setCheckboxes] = useState<Record<CheckboxKey, boolean>>({
-    wrong_species: false,
-    no_bird_visible: false,
-    multiple_species: false,
-    chick_egg_nest_corpse: false,
-    poor_quality: false,
-  });
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setMessage('');
-      setCheckboxes({
-        wrong_species: false,
-        no_bird_visible: false,
-        multiple_species: false,
-        chick_egg_nest_corpse: false,
-        poor_quality: false,
-      });
     }
   }, [visible]);
-
-  const getCheckboxLabel = (key: CheckboxKey): string => {
-    const map: Record<CheckboxKey, string> = {
-      wrong_species: t('wrong_species'),
-      no_bird_visible: t('no_bird_visible'),
-      multiple_species: t('multiple_species'),
-      chick_egg_nest_corpse: t('chick_egg_nest_corpse'),
-      poor_quality: t('poor_quality'),
-    };
-    return map[key];
-  };
-
-  const toggle = (key: CheckboxKey) => {
-    setCheckboxes((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const handleSubmit = async () => {
     const mediaId = media?.id;
@@ -92,23 +52,15 @@ export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess
       onClose();
       return;
     }
-    const labels: string[] = [];
-    CHECKBOX_KEYS.forEach((key) => {
-      if (checkboxes[key]) labels.push(getCheckboxLabel(key));
-    });
-    const parts: string[] = [];
-    if (labels.length > 0) parts.push(`Issues: ${labels.join(' | ')}`);
-    if (message.trim()) parts.push(`Additional notes: ${message.trim()}`);
-    const description = parts.join('\n\n');
 
     setSubmitting(true);
     try {
-      await flagMediaAsReview(mediaId, playerToken ?? undefined, description, isAuthenticated);
+      await flagMediaAsReview(mediaId, playerToken ?? undefined, message, isAuthenticated);
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      const message = err?.message ?? err?.toString?.() ?? 'Request failed';
-      Alert.alert(t('error') || 'Error', (t('problem_flagging') || 'Could not flag media.') + '\n' + message);
+      const errMessage = err?.message ?? err?.toString?.() ?? 'Request failed';
+      Alert.alert(t('error') || 'Error', (t('problem_flagging') || 'Could not flag media.') + '\n' + errMessage);
     } finally {
       setSubmitting(false);
     }
@@ -131,23 +83,6 @@ export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess
             <Text style={styles.title}>{t('flag_media_title')}</Text>
             <Text style={styles.description}>{t('flag_modal_description')}</Text>
 
-            <ScrollView style={styles.checkboxList} keyboardShouldPersistTaps="handled">
-              {CHECKBOX_KEYS.map((key) => (
-                <TouchableOpacity
-                  key={key}
-                  style={styles.checkboxRow}
-                  onPress={() => toggle(key)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.checkbox, checkboxes[key] && styles.checkboxChecked]}>
-                    {checkboxes[key] ? <Text style={styles.checkmark}>✓</Text> : null}
-                  </View>
-                  <Text style={styles.checkboxLabel}>{getCheckboxLabel(key)}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.hint}>{t('flag_description_explanation')}</Text>
             <TextInput
               style={styles.input}
               value={message}
@@ -155,7 +90,7 @@ export function FlagMediaModal({ visible, onClose, media, playerToken, onSuccess
               placeholder={t('flag_description')}
               placeholderTextColor={colors.primary[500]}
               multiline
-              numberOfLines={3}
+              numberOfLines={4}
             />
 
             <View style={styles.footer}>
@@ -196,27 +131,7 @@ const styles = StyleSheet.create({
     maxHeight: '100%',
   },
   title: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  description: { fontSize: 14, color: colors.primary[700], marginBottom: 16 },
-  checkboxList: { maxHeight: 420 },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: colors.primary[500],
-    borderRadius: 4,
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: { backgroundColor: colors.primary[500] },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  checkboxLabel: { flex: 1, fontSize: 14, color: colors.primary[800] },
-  hint: { fontSize: 12, color: colors.primary[600], marginTop: 12, marginBottom: 6 },
+  description: { fontSize: 14, color: colors.primary[700], marginBottom: 12 },
   input: {
     borderWidth: 1,
     borderColor: colors.primary[300],
@@ -224,7 +139,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     color: colors.primary[800],
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   footer: {

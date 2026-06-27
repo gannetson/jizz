@@ -14,6 +14,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const [players, setPlayers] = useState<MultiPlayer[]>([])
   const [question, setQuestion] = useState<Question | undefined>(undefined)
   const [answer, setAnswer] = useState<Answer | undefined>(undefined)
+  const [gameStarted, setGameStarted] = useState(false)
 
   const retryInterval = useRef<number>(1000);
   const maxRetries = useRef<number>(100);
@@ -79,6 +80,10 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     currentQuestionIdRef.current = question?.id
   }, [question?.id])
 
+  const markGameStarted = useCallback(() => {
+    setGameStarted(true)
+  }, [])
+
   const connectSocket = (game?: Game, player?: Player) => {
     // Try to get player from context or localStorage
     const activePlayer = player || (playerToken ? { token: playerToken } as Player : null)
@@ -111,6 +116,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       console.log('Connecting to new game, clearing question/answer:', connectionGameToken)
       setQuestion(undefined)
       setAnswer(undefined)
+      setGameStarted(false)
     }
 
     const socketUrl = getWebSocketUrl(`/mpg/${game.token}`);
@@ -173,6 +179,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           if (validateQuestionForGame(question, socketGameToken)) {
             console.log('Setting question for game:', socketGameToken)
             setQuestion(question)
+            setGameStarted(true)
           } else {
             console.log('Ignoring new_question - validation failed:', {
               questionToken: question.game?.token,
@@ -181,6 +188,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           }
           break
         case 'game_started':
+          setGameStarted(true)
           notify('Game started')
           break
         case 'game_updated':
@@ -305,6 +313,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     console.log('Clearing question/answer before joining new game')
     setQuestion(undefined)
     setAnswer(undefined)
+    setGameStarted(false)
     
     // Mark as connecting
     isConnectingRef.current = true
@@ -332,6 +341,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     console.log('Explicitly clearing question')
     setQuestion(undefined)
     setAnswer(undefined)
+    setGameStarted(false)
   }
 
   useEffect(() => {
@@ -358,6 +368,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setQuestion(undefined)
       setAnswer(undefined)
       setPlayers([])
+      setGameStarted(false)
       isConnectingRef.current = false
       retries.current = 0
       
@@ -373,6 +384,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setQuestion(undefined)
       setAnswer(undefined)
       setPlayers([])
+      setGameStarted(false)
       isConnectingRef.current = false
       retries.current = 0
       prevGameTokenRef.current = undefined
@@ -443,6 +455,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       socket,
       clearQuestion,
       patchQuestionMedia,
+      gameStarted,
+      markGameStarted,
     }}>
       {children}
     </WebsocketContext.Provider>

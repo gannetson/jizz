@@ -16,6 +16,9 @@ type SharedState = {
   clearQuestion: ()=>void
   /** Merge media fields after flagging (next-media API). */
   patchQuestionMedia: (patch: Pick<Question, 'number' | 'images' | 'videos' | 'sounds'>) => void
+  /** True after the host starts the game (or when rejoining a game in progress). */
+  gameStarted: boolean
+  markGameStarted: () => void
 };
 
 const WebsocketContext = createContext<SharedState>({
@@ -26,6 +29,8 @@ const WebsocketContext = createContext<SharedState>({
   endGame: () => {},
   clearQuestion: () => {},
   patchQuestionMedia: () => {},
+  gameStarted: false,
+  markGameStarted: () => {},
 });
 
 export default WebsocketContext;

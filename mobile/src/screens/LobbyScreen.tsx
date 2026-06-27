@@ -28,7 +28,7 @@ export function LobbyScreen() {
   const rematchToken = params.rematch_game_token;
   const rematchJoin = params.rematchJoin === true;
   const { game, player, setGame, loadGame: loadGameFromApi } = useGame();
-  const { players, question, startGame, joinGame, connected, clearQuestion, refreshGameState } = useGameWebSocket();
+  const { players, question, startGame, joinGame, connected, clearQuestion, refreshGameState, gameStarted, markGameStarted } = useGameWebSocket();
 
   const [starting, setStarting] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
@@ -95,13 +95,14 @@ export function LobbyScreen() {
       }
       setGame(g);
       if ((g.progress ?? 0) > 0) {
+        markGameStarted();
         void refreshGameState({ force: true, resyncWs: true });
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [isFocused, game?.token, loadGameFromApi, setGame, refreshGameState]);
+  }, [isFocused, game?.token, loadGameFromApi, setGame, refreshGameState, markGameStarted]);
 
   // Poll game so host sees new joiners even if WebSocket update_players was missed
   useEffect(() => {
@@ -120,22 +121,23 @@ export function LobbyScreen() {
           );
         }
         // Host started while we were in lobby — fetch question if WS events were missed.
-        if ((g.progress ?? 0) > 0 && !question?.id) {
-          void refreshGameState({ force: true, resyncWs: true });
+        if ((g.progress ?? 0) > 0) {
+          markGameStarted();
+          if (!question?.id) {
+            void refreshGameState({ force: true, resyncWs: true });
+          }
         }
       });
     }, LOBBY_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isFocused, game?.token, connected, loadGameFromApi, question?.id, refreshGameState]);
+  }, [isFocused, game?.token, connected, loadGameFromApi, question?.id, refreshGameState, markGameStarted]);
 
   useEffect(() => {
-    if (!isFocused || !question?.id || !game?.token) return;
+    if (!isFocused || !question?.id || !game?.token || !gameStarted) return;
     const qt = question.game?.token;
-    if (qt != null && String(qt).trim() !== '' && String(qt).trim() !== String(game.token).trim()) {
-      return;
-    }
+    if (!qt || String(qt).trim() !== String(game.token).trim()) return;
     (navigation as any).navigate('GamePlay');
-  }, [isFocused, question, game?.token, navigation]);
+  }, [isFocused, question, game?.token, gameStarted, navigation]);
 
   const handleRefreshConnection = useCallback(async () => {
     if (!game?.token || !player?.token) return;

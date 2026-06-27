@@ -94,9 +94,10 @@ export function SpeciesViewButton({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
+    minHeight: 44,
   },
   disabled: { opacity: 0.6 },
   row: {

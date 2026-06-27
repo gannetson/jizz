@@ -29,6 +29,9 @@ type GameWebSocketContextType = {
   clearQuestion: () => void;
   endGameSession: () => void;
   connected: boolean;
+  /** True after the host starts the game (or when rejoining a game in progress). */
+  gameStarted: boolean;
+  markGameStarted: () => void;
   sendRematch: () => void;
   rematchInvitation: { new_game_token: string; host_name: string } | null;
   rematchError: string | null;
@@ -52,7 +55,7 @@ function questionBelongsToSocketGame(
 ): boolean {
   if (!question?.id) return false;
   const qt = question.game?.token;
-  if (qt == null || String(qt).trim() === '') return true;
+  if (qt == null || String(qt).trim() === '') return false;
   return tokensEqual(qt, socketGameToken);
 }
 
@@ -66,6 +69,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [rematchInvitation, setRematchInvitation] = useState<{ new_game_token: string; host_name: string } | null>(null);
   const [rematchError, setRematchError] = useState<string | null>(null);
+  const [gameStarted, setGameStarted] = useState(false);
 
   const playerTokenRef = useRef<string>('');
   const setGameRef = useRef<((g: Game | null) => void) | null>(null);
@@ -93,6 +97,13 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     setQuestion(undefined);
     setAnswer(undefined);
     currentQuestionIdRef.current = undefined;
+    setGameStarted(false);
+    gameStartedRef.current = false;
+  }, []);
+
+  const markGameStarted = useCallback(() => {
+    gameStartedRef.current = true;
+    setGameStarted(true);
   }, []);
 
   const applyQuestion = useCallback((next: Question | null | undefined, gameToken: string) => {
@@ -102,6 +113,8 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     }
     setQuestion(next);
     currentQuestionIdRef.current = next.id;
+    gameStartedRef.current = true;
+    setGameStarted(true);
   }, []);
 
   const fetchCurrentQuestion = useCallback(
@@ -192,6 +205,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
               break;
             case 'game_started':
               gameStartedRef.current = true;
+              setGameStarted(true);
               void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
               [400, 1500, 3500].forEach((delay) => {
                 setTimeout(() => {
@@ -409,6 +423,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         setPlayers([]);
         currentQuestionIdRef.current = undefined;
         gameStartedRef.current = false;
+        setGameStarted(false);
         return;
       }
 
@@ -426,6 +441,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         setPlayers([]);
         currentQuestionIdRef.current = undefined;
         gameStartedRef.current = false;
+        setGameStarted(false);
       }
 
       connectSocket(game, player, setGame);
@@ -438,7 +454,12 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
       if (state !== 'active') return;
       if (!gameTokenRef.current || !playerTokenRef.current) return;
       ensureConnection();
-      void refreshGameState({ resyncWs: true, force: true });
+      const progress = gameRef.current?.progress ?? 0;
+      if (gameStartedRef.current || progress > 0) {
+        void refreshGameState({ resyncWs: true, force: true });
+      } else {
+        void refreshGameState({ resyncWs: true });
+      }
     };
     const sub = AppState.addEventListener('change', onAppStateChange);
     return () => sub.remove();
@@ -476,6 +497,8 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         clearQuestion,
         endGameSession,
         connected,
+        gameStarted,
+        markGameStarted,
         sendRematch,
         rematchInvitation,
         rematchError,

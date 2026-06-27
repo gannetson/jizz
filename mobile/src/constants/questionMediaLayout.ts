@@ -2,7 +2,7 @@
 export const QUESTION_IMAGE_HEIGHT = 280;
 export const QUESTION_VIDEO_HEIGHT = 220;
 /** Space reserved for credits + flag row below the image/video stage. */
-export const QUESTION_MEDIA_CREDITS_HEIGHT = 40;
+export const QUESTION_MEDIA_CREDITS_HEIGHT = 34;
 export const QUESTION_AUDIO_CONTROL_HEIGHT = 56;
 
 export type QuestionMediaType = 'images' | 'video' | 'audio';

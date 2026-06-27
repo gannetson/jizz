@@ -339,7 +339,7 @@ export function BirdrJourneyPlayPage() {
         </Flex>
       </Page.Header>
       <Page.Body>
-        <Box position="relative" mb={4}>
+        <Box position="relative" mb={3}>
           {gameMedia === 'video' && currentVideo && (
             <Box position="relative" minH="220px">
               <ReactPlayer
@@ -433,7 +433,7 @@ export function BirdrJourneyPlayPage() {
         ) : null}
 
         {hasOptions ? (
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mb={6}>
+          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} mb={5}>
             {question.options!.map((option, key) => (
               <Button
                 key={key}

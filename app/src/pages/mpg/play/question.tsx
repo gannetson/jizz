@@ -314,7 +314,7 @@ export const QuestionComponent = () => {
                 />
               )}
             </Box>
-            <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
+            <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2} mt={2}>
               <MediaCredits media={currentVideo} />
               {flag}
             </Flex>
@@ -342,7 +342,7 @@ export const QuestionComponent = () => {
                 />
               )}
             </Box>
-            <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
+            <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2} mt={2}>
               <MediaCredits 
                 media={currentImage} 
                 onClick={skipQuestion}
@@ -378,7 +378,7 @@ export const QuestionComponent = () => {
                   />
                 )}
               </Box>
-              <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2}>
+              <Flex direction="row" justify="space-between" align="center" wrap="wrap" gap={2} mt={2}>
                 <MediaCredits media={currentSound} />
                 {flag}
               </Flex>
@@ -390,7 +390,7 @@ export const QuestionComponent = () => {
       </Box>
 
       {question.options && question.options.length ? (
-        <SimpleGrid columns={{base: 1, md: 2}} gap={4}>
+        <SimpleGrid columns={{base: 1, md: 2}} gap={3} mt={3}>
           {
             question.options.map((option, key) => {
               if (answer) {
@@ -420,7 +420,7 @@ export const QuestionComponent = () => {
 
       ) : (
         answer ? (
-          <SimpleGrid columns={{base: 1, md: 2}} gap={4}>
+          <SimpleGrid columns={{base: 1, md: 2}} gap={3} mt={3}>
             <Button
               onClick={() => answer.species && viewSpecies(answer.species)}
               colorPalette={'success'}

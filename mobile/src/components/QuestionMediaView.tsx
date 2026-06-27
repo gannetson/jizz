@@ -232,7 +232,7 @@ export function QuestionMediaView({
     showCreditsAndFlag ? (
       <View style={styles.creditsRow}>
         <MediaCredits media={creditsMedia ?? undefined} />
-        <TouchableOpacity style={styles.flagLink} onPress={onFlagPress}>
+        <TouchableOpacity onPress={onFlagPress}>
           <Text style={styles.flagLinkText}>🚩 {flagLabel}</Text>
         </TouchableOpacity>
       </View>
@@ -436,9 +436,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   image: {
     width: '100%',
@@ -518,6 +518,5 @@ const styles = StyleSheet.create({
   mediaLinkPlaying: { backgroundColor: colors.primary[500] },
   mediaLinkText: { fontSize: 16, color: colors.primary[700], fontWeight: '600' },
   mediaLinkTextPlaying: { color: colors.primary[50] },
-  flagLink: { marginTop: 8 },
   flagLinkText: { fontSize: 13, color: colors.error[500] },
 });

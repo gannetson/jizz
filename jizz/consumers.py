@@ -191,8 +191,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self._broadcast_players_update()
         await self._send_game_update_to_self()
         if not game_ended:
-            await self._send_current_question_to_self()
-            await self._send_current_answer_to_self()
+            def has_started():
+                g = Game.objects.get(token=self.game_token)
+                return g.progress > 0
+
+            if await database_sync_to_async(has_started)():
+                await self._send_current_question_to_self()
+                await self._send_current_answer_to_self()
         await self._log_websocket_action("join_game")
 
     async def _handle_start_game(self, data):

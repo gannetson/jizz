@@ -52,7 +52,7 @@ export function MediaCredits({ media, fontSize = 13, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   text: { color: colors.primary[600] },
   link: { color: colors.primary[600], textDecorationLine: 'underline' },
 });

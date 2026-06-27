@@ -3,7 +3,12 @@ from datetime import date, datetime
 from django.test import TestCase
 from django.utils import timezone
 
-from jizz.games_played_stats import default_date_range, games_played_by_country, games_played_rows
+from jizz.games_played_stats import (
+    default_date_range,
+    games_played_by_country,
+    games_played_rows,
+    world_map_country_code,
+)
 from jizz.models import Country, Game, Player, PlayerScore
 
 
@@ -81,3 +86,37 @@ class GamesPlayedStatsTests(TestCase):
         self.assertEqual(by_code["DE"]["games"], 1)
         self.assertEqual(stats["country_map"]["NL"], 2)
         self.assertEqual(stats["country_map"]["DE"], 1)
+
+    def test_world_map_rolls_up_us_and_nl_subregions(self):
+        us = Country.objects.create(code="US", name="United States")
+        us_east = Country.objects.create(code="US-EAST", name="US East")
+        us_west = Country.objects.create(code="US-WEST", name="US West")
+        us_ak = Country.objects.create(code="US-AK", name="US Alaska")
+        us_hi = Country.objects.create(code="US-HI", name="US Hawaii")
+        nl = Country.objects.create(code="NL", name="Netherlands")
+        nl_nh = Country.objects.create(code="NL-NH", name="Noord-Holland")
+
+        for idx, country in enumerate((us, us_east, us_west, us_ak, us_hi, nl, nl_nh)):
+            game = Game.objects.create(
+                country=country,
+                level="beginner",
+                length=5,
+                media="images",
+                host=self.players[0],
+            )
+            aware = timezone.make_aware(datetime.combine(date(2026, 5, 1 + idx), datetime.min.time()))
+            Game.objects.filter(pk=game.pk).update(created=aware)
+            PlayerScore.objects.create(player=self.players[0], game=game, score=1)
+
+        stats = games_played_by_country(date(2026, 5, 1), date(2026, 5, 31), granularity="month")
+
+        self.assertEqual(stats["country_map"]["US"], 5)
+        self.assertEqual(stats["country_map"]["NL"], 2)
+        self.assertNotIn("US-EAST", stats["country_map"])
+        self.assertNotIn("NL-NH", stats["country_map"])
+
+    def test_world_map_country_code(self):
+        self.assertEqual(world_map_country_code("US-EAST"), "US")
+        self.assertEqual(world_map_country_code("NL-NH"), "NL")
+        self.assertEqual(world_map_country_code("DE"), "DE")
+        self.assertIsNone(world_map_country_code("US-CA"))

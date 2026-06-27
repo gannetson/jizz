@@ -11,6 +11,15 @@ from jizz.models import PlayerScore
 
 Granularity = Literal['day', 'week', 'month']
 
+# Quiz country codes rolled up onto world-map ISO alpha-2 regions.
+WORLD_MAP_COUNTRY_ROLLUP: dict[str, str] = {
+    'US-EAST': 'US',
+    'US-WEST': 'US',
+    'US-AK': 'US',
+    'US-HI': 'US',
+    'NL-NH': 'NL',
+}
+
 _TRUNC = {
     'day': TruncDay,
     'week': TruncWeek,
@@ -152,6 +161,18 @@ def games_played_rows(
     return rows
 
 
+def world_map_country_code(country_code: str) -> str | None:
+    """Map a quiz country code to ISO alpha-2 for jsVectorMap, or None if unmappable."""
+    code = (country_code or '').strip().upper()
+    if not code:
+        return None
+    if code in WORLD_MAP_COUNTRY_ROLLUP:
+        return WORLD_MAP_COUNTRY_ROLLUP[code]
+    if len(code) == 2 and code.isalpha():
+        return code
+    return None
+
+
 def games_played_by_country(
     start: date,
     end: date,
@@ -191,9 +212,10 @@ def games_played_by_country(
 
     country_map: dict[str, int] = {}
     for row in rows:
-        code = (row['game__country_id'] or '').strip().upper()
-        if len(code) == 2 and code.isalpha():
-            country_map[code] = row['games']
+        map_code = world_map_country_code(row['game__country_id'] or '')
+        if not map_code:
+            continue
+        country_map[map_code] = country_map.get(map_code, 0) + row['games']
 
     return {
         'by_country': by_country,

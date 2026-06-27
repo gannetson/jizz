@@ -101,6 +101,8 @@ class UsageAnalyticsAggregationTests(TestCase):
         self.assertEqual(payload['country_map']['NL'], 2)
         self.assertEqual(payload['country_map']['US'], 1)
         self.assertEqual(len(payload['series']), 2)
+        self.assertIn('map_style', payload)
+        self.assertEqual(payload['map_style']['color_scale'][-1], '#8b6419')
 
     @patch('jizz.ip_geo.lookup_ip_locations')
     @patch('jizz.ip_geo.mmdb_available', return_value=False)

@@ -51,6 +51,12 @@
             margin-top: 1rem;
         }
 
+        #usage-world-map .jvm-region {
+            fill: var(--birdr-50);
+            stroke: #fff;
+            stroke-width: 0.4px;
+        }
+
         input[type="date"] {
             padding: 0.45rem 0.65rem;
             border: 1px solid var(--birdr-200);
@@ -259,6 +265,96 @@
             let eventTypeChart = null;
             let worldMap = null;
 
+            const DEFAULT_MAP_STYLE = {
+                color_scale: ["#f5ede0", "#e8d4b8", "#d4b88a", "#c5a470", "#ae8027", "#8b6419"],
+                region_initial_fill: "#f5ede0",
+                region_stroke: "#ffffff",
+                region_stroke_width: 0.4,
+            };
+
+            function mapStyleFromPayload(payload) {
+                const style = payload && payload.map_style ? payload.map_style : DEFAULT_MAP_STYLE;
+                return {
+                    color_scale: Array.isArray(style.color_scale) && style.color_scale.length
+                        ? style.color_scale
+                        : DEFAULT_MAP_STYLE.color_scale,
+                    region_initial_fill: style.region_initial_fill || DEFAULT_MAP_STYLE.region_initial_fill,
+                    region_stroke: style.region_stroke || DEFAULT_MAP_STYLE.region_stroke,
+                    region_stroke_width: style.region_stroke_width ?? DEFAULT_MAP_STYLE.region_stroke_width,
+                };
+            }
+
+            function normalizeCountryMap(raw) {
+                const values = {};
+                Object.entries(raw || {}).forEach(([code, count]) => {
+                    const n = Number(count);
+                    if (Number.isFinite(n) && n > 0) {
+                        values[String(code).toUpperCase()] = n;
+                    }
+                });
+                return values;
+            }
+
+            function hexToRgb(hex) {
+                const n = parseInt(hex.slice(1), 16);
+                return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+            }
+
+            function rgbToHex(r, g, b) {
+                return `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+            }
+
+            function lerpHex(a, b, t) {
+                const c1 = hexToRgb(a);
+                const c2 = hexToRgb(b);
+                return rgbToHex(
+                    Math.round(c1[0] + (c2[0] - c1[0]) * t),
+                    Math.round(c1[1] + (c2[1] - c1[1]) * t),
+                    Math.round(c1[2] + (c2[2] - c1[2]) * t),
+                );
+            }
+
+            function colorAtRatio(ratio, colorScale) {
+                const t = Math.max(0, Math.min(1, ratio));
+                const pos = t * (colorScale.length - 1);
+                const i = Math.floor(pos);
+                const f = pos - i;
+                if (i >= colorScale.length - 1) {
+                    return colorScale[colorScale.length - 1];
+                }
+                return lerpHex(colorScale[i], colorScale[i + 1], f);
+            }
+
+            function eventCountToRatio(count, min, max) {
+                if (max <= min) {
+                    return 1;
+                }
+                const v = Math.max(Number(count), min);
+                const logMin = Math.log(min);
+                const logMax = Math.log(max);
+                return (Math.log(v) - logMin) / (logMax - logMin || 1);
+            }
+
+            function buildCountryColors(values, min, max, colorScale) {
+                const colors = {};
+                Object.entries(values).forEach(([code, count]) => {
+                    colors[code] = colorAtRatio(eventCountToRatio(count, min, max), colorScale);
+                });
+                return colors;
+            }
+
+            function applyRegionColors(map, colorByCode) {
+                if (!map || !map.regions) {
+                    return;
+                }
+                Object.entries(colorByCode).forEach(([code, color]) => {
+                    const entry = map.regions[code];
+                    if (entry && entry.element && typeof entry.element.setStyle === "function") {
+                        entry.element.setStyle("fill", color);
+                    }
+                });
+            }
+
             const EVENT_TYPE_LABELS = {
                 page_view: "Page views",
                 feature: "Features",
@@ -372,7 +468,8 @@
             }
 
             function buildWorldMap(payload) {
-                const values = payload.country_map || {};
+                const mapStyle = mapStyleFromPayload(payload);
+                const values = normalizeCountryMap(payload.country_map);
                 const container = document.getElementById("usage-world-map");
                 if (worldMap && typeof worldMap.destroy === "function") {
                     worldMap.destroy();
@@ -383,26 +480,32 @@
                     container.innerHTML = "<p class=\"muted\">No country data for this filter.</p>";
                     return;
                 }
+                const counts = Object.values(values);
+                const min = Math.min(...counts);
+                const max = Math.max(...counts);
+                const colorByCode = buildCountryColors(values, min, max, mapStyle.color_scale);
+
                 worldMap = new jsVectorMap({
                     selector: "#usage-world-map",
                     map: "world",
                     regionStyle: {
-                        initial: { fill: "#e8d4b8" },
-                        hover: { fill: "#8b6419" },
+                        initial: {
+                            fill: mapStyle.region_initial_fill,
+                            stroke: mapStyle.region_stroke,
+                            "stroke-width": mapStyle.region_stroke_width,
+                        },
+                        hover: { fillOpacity: 0.85, cursor: "pointer" },
                     },
-                    series: {
-                        regions: [{
-                            attribute: "fill",
-                            scale: ["#f5ede0", "#8b6419"],
-                            values,
-                            normalizeFunction: "linear",
-                        }],
+                    onLoaded(map) {
+                        applyRegionColors(map, colorByCode);
                     },
                     onRegionTooltipShow(event, tooltip, code) {
                         const count = values[code] || 0;
                         tooltip.text(`${code}: ${count} events`, true);
                     },
                 });
+
+                applyRegionColors(worldMap, colorByCode);
             }
 
             function render(payload) {

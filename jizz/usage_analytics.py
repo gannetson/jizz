@@ -331,6 +331,8 @@ def usage_stats_payload(
 
     country_map = {row['country_code']: row['events'] for row in by_country}
 
+    from jizz.games_played_stats import games_played_map_style
+
     return {
         'start': start.isoformat(),
         'end': end.isoformat(),
@@ -347,6 +349,7 @@ def usage_stats_payload(
         'by_event_type': by_event_type,
         'by_country': by_country,
         'country_map': country_map,
+        'map_style': games_played_map_style(),
     }
 
 

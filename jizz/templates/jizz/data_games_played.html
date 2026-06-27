@@ -31,15 +31,6 @@
             height: 14px;
             border-radius: 6px;
             border: 1px solid var(--birdr-200);
-            background: linear-gradient(
-                to right,
-                #dcc19c 0%,
-                #c5a470 20%,
-                #ae8027 40%,
-                #967218 65%,
-                #8b6419 85%,
-                #6d4e14 100%
-            );
         }
 
         .map-legend-label {
@@ -224,14 +215,24 @@
             let chart = null;
             let worldMap = null;
 
-            const MAP_COLOR_SCALE = [
-                "#dcc19c",
-                "#c5a470",
-                "#ae8027",
-                "#967218",
-                "#8b6419",
-                "#6d4e14",
-            ];
+            const DEFAULT_MAP_STYLE = {
+                color_scale: ["#f5ede0", "#e8d4b8", "#d4b88a", "#c5a470", "#ae8027", "#8b6419"],
+                region_initial_fill: "#f5ede0",
+                region_stroke: "#ffffff",
+                region_stroke_width: 0.4,
+            };
+
+            function mapStyleFromPayload(payload) {
+                const style = payload && payload.map_style ? payload.map_style : DEFAULT_MAP_STYLE;
+                return {
+                    color_scale: Array.isArray(style.color_scale) && style.color_scale.length
+                        ? style.color_scale
+                        : DEFAULT_MAP_STYLE.color_scale,
+                    region_initial_fill: style.region_initial_fill || DEFAULT_MAP_STYLE.region_initial_fill,
+                    region_stroke: style.region_stroke || DEFAULT_MAP_STYLE.region_stroke,
+                    region_stroke_width: style.region_stroke_width ?? DEFAULT_MAP_STYLE.region_stroke_width,
+                };
+            }
 
             function normalizeCountryMap(raw) {
                 const values = {};
@@ -263,15 +264,15 @@
                 );
             }
 
-            function colorAtRatio(ratio) {
+            function colorAtRatio(ratio, colorScale) {
                 const t = Math.max(0, Math.min(1, ratio));
-                const pos = t * (MAP_COLOR_SCALE.length - 1);
+                const pos = t * (colorScale.length - 1);
                 const i = Math.floor(pos);
                 const f = pos - i;
-                if (i >= MAP_COLOR_SCALE.length - 1) {
-                    return MAP_COLOR_SCALE[MAP_COLOR_SCALE.length - 1];
+                if (i >= colorScale.length - 1) {
+                    return colorScale[colorScale.length - 1];
                 }
-                return lerpHex(MAP_COLOR_SCALE[i], MAP_COLOR_SCALE[i + 1], f);
+                return lerpHex(colorScale[i], colorScale[i + 1], f);
             }
 
             function gameCountToRatio(count, min, max) {
@@ -285,10 +286,10 @@
                 return (Math.log(v) - logMin) / (logMax - logMin || 1);
             }
 
-            function buildCountryColors(values, min, max) {
+            function buildCountryColors(values, min, max, colorScale) {
                 const colors = {};
                 Object.entries(values).forEach(([code, count]) => {
-                    colors[code] = colorAtRatio(gameCountToRatio(count, min, max));
+                    colors[code] = colorAtRatio(gameCountToRatio(count, min, max), colorScale);
                 });
                 return colors;
             }
@@ -429,8 +430,9 @@
                 }
             }
 
-            function updateMapLegend(values) {
+            function updateMapLegend(values, colorScale) {
                 const legend = document.getElementById("games-map-legend");
+                const bar = document.querySelector(".map-legend-bar");
                 const counts = Object.values(values);
                 if (!counts.length) {
                     legend.hidden = true;
@@ -440,10 +442,14 @@
                 const max = Math.max(...counts);
                 document.getElementById("games-map-legend-min").textContent = String(min);
                 document.getElementById("games-map-legend-max").textContent = String(max);
+                if (bar && colorScale.length) {
+                    bar.style.background = `linear-gradient(to right, ${colorScale.join(", ")})`;
+                }
                 legend.hidden = false;
             }
 
             function buildWorldMap(payload) {
+                const mapStyle = mapStyleFromPayload(payload);
                 const values = normalizeCountryMap(payload.country_map);
                 const container = document.getElementById("games-world-map");
                 if (worldMap && typeof worldMap.destroy === "function") {
@@ -453,20 +459,24 @@
                 container.innerHTML = "";
                 if (!Object.keys(values).length) {
                     container.innerHTML = "<p class=\"muted\">No country data for this period.</p>";
-                    updateMapLegend({});
+                    updateMapLegend({}, mapStyle.color_scale);
                     return;
                 }
 
                 const counts = Object.values(values);
                 const min = Math.min(...counts);
                 const max = Math.max(...counts);
-                const colorByCode = buildCountryColors(values, min, max);
+                const colorByCode = buildCountryColors(values, min, max, mapStyle.color_scale);
 
                 worldMap = new jsVectorMap({
                     selector: "#games-world-map",
                     map: "world",
                     regionStyle: {
-                        initial: { fill: "#e0e0e0", stroke: "#ffffff", "stroke-width": 0.4 },
+                        initial: {
+                            fill: mapStyle.region_initial_fill,
+                            stroke: mapStyle.region_stroke,
+                            "stroke-width": mapStyle.region_stroke_width,
+                        },
                         hover: { fillOpacity: 0.85, cursor: "pointer" },
                     },
                     onLoaded(map) {
@@ -483,7 +493,7 @@
                 });
 
                 applyRegionColors(worldMap, colorByCode);
-                updateMapLegend(values);
+                updateMapLegend(values, mapStyle.color_scale);
             }
 
             function renderPayload(payload) {

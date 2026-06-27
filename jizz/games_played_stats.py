@@ -223,6 +223,23 @@ def games_played_by_country(
     }
 
 
+def games_played_map_style() -> dict:
+    """World map colours for jsVectorMap (Birdr browns; darkest step is brown, not black)."""
+    return {
+        'color_scale': [
+            '#f5ede0',
+            '#e8d4b8',
+            '#d4b88a',
+            '#c5a470',
+            '#ae8027',
+            '#8b6419',
+        ],
+        'region_initial_fill': '#f5ede0',
+        'region_stroke': '#ffffff',
+        'region_stroke_width': 0.4,
+    }
+
+
 def games_played_payload(
     start: date | None = None,
     end: date | None = None,
@@ -242,4 +259,5 @@ def games_played_payload(
         'series': games_played_rows(start, end, granularity=granularity),
         'by_country': country_stats['by_country'],
         'country_map': country_stats['country_map'],
+        'map_style': games_played_map_style(),
     }

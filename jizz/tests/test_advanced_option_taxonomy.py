@@ -22,7 +22,8 @@ class ParseGenusFromSciNameTests(SimpleTestCase):
 class AdvancedOptionTaxonomyTests(TestCase):
     def _distractors(self, candidate_ids, answer):
         options = advanced_option_species(candidate_ids, answer)
-        self.assertEqual(len(options), 5)
+        self.assertEqual(len(options), 6)
+        self.assertEqual(len({s.id for s in options}), 6)
         self.assertIn(answer, options)
         return [s for s in options if s.id != answer.id]
 
@@ -49,7 +50,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
                 tax_genus=genus,
                 tax_ordering=490.0 + i,
             )
-            for i in range(4)
+            for i in range(5)
         ]
         other_family = make_species_with_taxonomy(
             name='Robin',
@@ -62,7 +63,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
         )
         candidate_ids = [s.id for s in same_genus] + [other_family.id, answer.id]
         distractors = self._distractors(candidate_ids, answer)
-        self.assertEqual(len(distractors), 4)
+        self.assertEqual(len(distractors), 5)
         for species in distractors:
             self.assertEqual(species.taxonomic_genus_id, answer.taxonomic_genus_id)
 
@@ -219,8 +220,53 @@ class AdvancedOptionTaxonomyTests(TestCase):
         ]
         candidate_ids = [lower.id] + [s.id for s in higher] + [answer.id]
         distractors = self._distractors(candidate_ids, answer)
-        self.assertEqual(len(distractors), 4)
+        self.assertEqual(len(distractors), 5)
         self.assertTrue(all(s.taxonomic_genus_id == answer.taxonomic_genus_id for s in distractors))
+
+    def test_no_duplicate_options_when_pool_is_small(self):
+        answer = make_species_with_taxonomy(
+            name='Answer',
+            name_latin='Setophaga petechia',
+            code='dupans',
+            tax_order='Passeriformes',
+            tax_family='Parulidae',
+            tax_genus='Setophaga',
+            tax_ordering=500.0,
+        )
+        lower = make_species_with_taxonomy(
+            name='Lower',
+            name_latin='Setophaga a',
+            code='duplow',
+            tax_order='Passeriformes',
+            tax_family='Parulidae',
+            tax_genus='Setophaga',
+            tax_ordering=499.0,
+        )
+        higher = make_species_with_taxonomy(
+            name='Higher',
+            name_latin='Setophaga b',
+            code='duphi',
+            tax_order='Passeriformes',
+            tax_family='Parulidae',
+            tax_genus='Setophaga',
+            tax_ordering=501.0,
+        )
+        extras = [
+            make_species_with_taxonomy(
+                name=f'Extra {i}',
+                name_latin=f'Setophaga e{i}',
+                code=f'dupex{i}',
+                tax_order='Passeriformes',
+                tax_family='Parulidae',
+                tax_genus='Setophaga',
+                tax_ordering=502.0 + i,
+            )
+            for i in range(3)
+        ]
+        candidate_ids = [lower.id, higher.id] + [s.id for s in extras] + [answer.id]
+        options = advanced_option_species(candidate_ids, answer)
+        self.assertEqual(len(options), 6)
+        self.assertEqual(len({s.id for s in options}), 6)
 
     def test_hybrid_skips_genus_tier(self):
         answer = make_species_with_taxonomy(

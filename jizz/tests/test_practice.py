@@ -249,7 +249,7 @@ class SpeciesPracticeTests(TestCase):
         game = Game.objects.get(token=data['game']['token'])
         question = game.questions.first()
         self.assertIsNotNone(question)
-        self.assertEqual(question.options.count(), 5)
+        self.assertEqual(question.options.count(), 6)
         option_ids = set(question.options.values_list('species_id', flat=True))
         self.assertTrue(option_ids.issubset({self.focus.id, self.related.id}))
 

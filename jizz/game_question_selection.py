@@ -269,6 +269,9 @@ def _sort_key_for_taxonomic_neighbor(species: Species) -> tuple:
     return (1, species.id)
 
 
+ADVANCED_DISTRACTOR_COUNT = 5
+
+
 def _pick_taxonomic_neighbors(
     answer_species: Species,
     pool_ids: Sequence[int],
@@ -292,12 +295,22 @@ def _pick_taxonomic_neighbors(
             higher_ids.append(sid)
 
     picked: list[int] = []
-    picked.extend(lower_ids[-2:])
-    need = count - len(picked)
-    picked.extend(higher_ids[:need])
+
+    def add_unique(sid: int) -> None:
+        if sid not in picked and len(picked) < count:
+            picked.append(sid)
+
+    for sid in lower_ids[-2:]:
+        add_unique(sid)
+    for sid in higher_ids:
+        if len(picked) >= count:
+            break
+        add_unique(sid)
     if len(picked) < count:
-        prev = count - len(picked)
-        picked = lower_ids[-prev:] + picked
+        for sid in reversed(lower_ids):
+            if len(picked) >= count:
+                break
+            add_unique(sid)
     return picked[:count]
 
 
@@ -335,13 +348,15 @@ def advanced_option_species(
 
     distractor_ids: list[int] = []
     for tier in (genus_tier, family_tier, order_tier, candidate_set):
-        if len(distractor_ids) >= 4:
+        if len(distractor_ids) >= ADVANCED_DISTRACTOR_COUNT:
             break
         remaining = [sid for sid in tier if sid not in distractor_ids]
-        need = 4 - len(distractor_ids)
-        distractor_ids.extend(
-            _pick_taxonomic_neighbors(answer, remaining, species_by_id, need)
-        )
+        need = ADVANCED_DISTRACTOR_COUNT - len(distractor_ids)
+        for sid in _pick_taxonomic_neighbors(answer, remaining, species_by_id, need):
+            if sid not in distractor_ids:
+                distractor_ids.append(sid)
+            if len(distractor_ids) >= ADVANCED_DISTRACTOR_COUNT:
+                break
 
     options = [species_by_id[sid] for sid in distractor_ids if sid in species_by_id]
     options.append(answer)

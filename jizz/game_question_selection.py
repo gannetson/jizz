@@ -301,8 +301,39 @@ def beginner_option_species(
     return options
 
 
+def create_pair_practice_question(game: Game) -> Question:
+    """Two-option drill between a fixed species pair."""
+    low_id = game.pair_species_low_id
+    high_id = game.pair_species_high_id
+    if not low_id or not high_id:
+        raise ValueError(f'Pair practice game {game.id} is missing pair species')
+
+    pool = [low_id, high_id]
+    used_ids = list(game.questions.values_list('species_id', flat=True))
+    species, number = pick_species_with_eligible_media(game, pool, used_ids)
+    sequence = game.questions.count() + 1
+
+    species_map = _species_map(pool)
+    options = [species_map[low_id], species_map[high_id]]
+    random.shuffle(options)
+
+    question = game.questions.create(
+        species=species, number=number, sequence=sequence
+    )
+    QuestionOption.objects.bulk_create(
+        [
+            QuestionOption(question=question, species=opt, order=index)
+            for index, opt in enumerate(options)
+        ]
+    )
+    return question
+
+
 def create_question_for_game(game: Game) -> Question:
     """Build next question + options; caller holds game lock."""
+    if game.game_type == Game.GAME_TYPE_PAIR_PRACTICE:
+        return create_pair_practice_question(game)
+
     option_ids = candidate_species_ids(game)
     target_ids = question_target_species_ids(game)
     if not option_ids:

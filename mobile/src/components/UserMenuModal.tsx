@@ -27,6 +27,7 @@ const PANEL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 
 const USER_MENU_ITEMS: { route: string; labelKey: string }[] = [
   { route: 'Checklist', labelKey: 'checklist_title' },
+  { route: 'TroubleSpots', labelKey: 'trouble_spots' },
   { route: 'MyGames', labelKey: 'my_games' },
   { route: 'Settings', labelKey: 'profile' },
 ];

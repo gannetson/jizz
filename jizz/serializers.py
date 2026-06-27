@@ -1080,6 +1080,8 @@ class GameSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         if 'country_data' in representation:
             representation['country'] = representation.pop('country_data')
+        if instance.game_type == Game.GAME_TYPE_PAIR_PRACTICE:
+            representation['current_highscore'] = None
         return representation
 
     class Meta:

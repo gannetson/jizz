@@ -165,6 +165,9 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
       <Link href="/checklist" textDecoration="none">
         <FormattedMessage id="checklist_title" defaultMessage="My Checklist" />
       </Link>
+      <Link href="/trouble-spots" textDecoration="none">
+        <FormattedMessage id="trouble_spots" defaultMessage="My tricky birds" />
+      </Link>
       <Link href="/settings" textDecoration="none">
         <FormattedMessage id="settings" defaultMessage="Profile" />
       </Link>

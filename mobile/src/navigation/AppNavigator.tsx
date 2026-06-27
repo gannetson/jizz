@@ -33,6 +33,7 @@ import { BirdrJourneyStepResultsScreen } from '../screens/BirdrJourneyStepResult
 import { BirdrJourneyLevelCelebrationScreen } from '../screens/BirdrJourneyLevelCelebrationScreen';
 import { CountryChallengeLeaderboardScreen } from '../screens/CountryChallengeLeaderboardScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
+import { TroubleSpotsScreen } from '../screens/TroubleSpotsScreen';
 import { UpdateDetailScreen } from '../screens/UpdateDetailScreen';
 
 const Stack = createNativeStackNavigator();
@@ -59,6 +60,7 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'HelpDetail', titleKey: 'help', component: HelpDetailScreenWrapper },
   { name: 'MyGames', titleKey: 'my_games', component: MyGamesScreen },
   { name: 'Checklist', titleKey: 'checklist_title', component: ChecklistScreen },
+  { name: 'TroubleSpots', titleKey: 'trouble_spots', component: TroubleSpotsScreen },
   { name: 'GameDetail', titleKey: 'game_details', component: GameDetailScreen },
   { name: 'Settings', titleKey: 'profile', component: ProfileScreen },
   { name: 'MediaReview', titleKey: 'review_media', component: MediaReviewScreen },

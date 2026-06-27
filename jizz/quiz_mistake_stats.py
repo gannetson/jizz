@@ -22,6 +22,11 @@ MIN_TIMES_SHOWN_COUNTRY = 3
 # When filtering by country, exclude CountrySpecies rows with these statuses for that country.
 EXCLUDED_COUNTRY_SPECIES_STATUSES = frozenset(("introduced", "uncertain", "unknown"))
 
+# Personal trouble-spots thresholds (sparse per-user data).
+USER_MIN_TIMES_SHOWN = 2
+USER_MIN_WRONG = 1
+USER_MIN_PAIR_WRONG = 2
+
 
 def _allowed_species_ids_for_country(country_code: str) -> frozenset[int]:
     """Species that have a non-excluded status for this country in CountrySpecies."""
@@ -52,6 +57,17 @@ def _error_rate_pct(wrong: int, correct: int) -> float | None:
     if denom <= 0:
         return None
     return 100.0 * wrong / denom
+
+
+def _target_error_rate_pct(wrong: int, times_shown: int) -> float | None:
+    """% wrong when this species was the question target: wrong / times_shown."""
+    if times_shown <= 0:
+        return None
+    return 100.0 * wrong / times_shown
+
+
+def _user_answers_qs(user_id: int):
+    return Answer.objects.filter(player_score__player__user_id=user_id)
 
 
 def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, Any]]:
@@ -214,6 +230,152 @@ def get_user_mistake_target_weights(
         .annotate(wrongly_answered=Count("id"))
         .filter(question__species_id__isnull=False)
     }
+
+
+def get_user_species_mistake_rows(
+    user_id: int,
+    country_code: str | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Per question-target species for one user account.
+
+    - times_shown: answers to questions where this species was the target.
+    - wrongly_answered: incorrect answers on those questions.
+    - error_rate: % wrong = wrongly_answered / times_shown.
+
+    Sorted by error_rate desc, then wrongly_answered desc.
+    """
+    if not user_id:
+        return []
+
+    answers = _user_answers_qs(user_id)
+    cc = normalize_country_filter(country_code)
+    if cc:
+        allowed = _allowed_species_ids_for_country(cc)
+        if not allowed:
+            return []
+        answers = answers.filter(question__species_id__in=allowed)
+
+    times_shown = {
+        row["question__species_id"]: row["c"]
+        for row in answers.values("question__species_id")
+        .annotate(c=Count("id"))
+        .filter(question__species_id__isnull=False)
+    }
+    wrongly_answered = {
+        row["question__species_id"]: row["c"]
+        for row in answers.filter(correct=False)
+        .values("question__species_id")
+        .annotate(c=Count("id"))
+        .filter(question__species_id__isnull=False)
+    }
+
+    ids = set(times_shown) | set(wrongly_answered)
+    if not ids:
+        return []
+
+    species_map = Species.objects.in_bulk(ids)
+    rows: list[dict[str, Any]] = []
+    for sid in ids:
+        sp = species_map.get(sid)
+        if sp is None:
+            continue
+        ts = times_shown.get(sid, 0)
+        wr = wrongly_answered.get(sid, 0)
+        if ts < USER_MIN_TIMES_SHOWN or wr < USER_MIN_WRONG:
+            continue
+        rows.append(
+            {
+                "species_id": sid,
+                "name": sp.name,
+                "name_latin": sp.name_latin,
+                "times_shown": ts,
+                "wrongly_answered": wr,
+                "error_rate": _target_error_rate_pct(wr, ts),
+            }
+        )
+
+    rows.sort(
+        key=lambda r: (r["error_rate"] or 0.0, r["wrongly_answered"]),
+        reverse=True,
+    )
+    return rows
+
+
+def get_user_confusion_pair_rows(
+    user_id: int,
+    country_code: str | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Undirected species pairs from a user's incorrect answers (target != pick).
+
+    Same shape as get_confusion_pair_rows(); includes pairs with total_wrong >= USER_MIN_PAIR_WRONG.
+    """
+    if not user_id:
+        return []
+
+    cc = normalize_country_filter(country_code)
+    pairs = (
+        _user_answers_qs(user_id)
+        .filter(correct=False)
+        .exclude(question__species_id=F("answer_id"))
+    )
+    if cc:
+        allowed = _allowed_species_ids_for_country(cc)
+        if not allowed:
+            return []
+        pairs = pairs.filter(
+            question__species_id__in=allowed,
+            answer_id__in=allowed,
+        )
+
+    directed = list(
+        pairs.values("question__species_id", "answer_id").annotate(c=Count("id"))
+    )
+
+    pair_map: dict[tuple[int, int], dict[str, Any]] = {}
+    for row in directed:
+        target_id = row["question__species_id"]
+        pick_id = row["answer_id"]
+        c = row["c"]
+        low_id, high_id = (target_id, pick_id) if target_id < pick_id else (pick_id, target_id)
+        key = (low_id, high_id)
+        if key not in pair_map:
+            pair_map[key] = {
+                "low_id": low_id,
+                "high_id": high_id,
+                "total_wrong": 0,
+                "when_low_was_target": 0,
+                "when_high_was_target": 0,
+            }
+        bucket = pair_map[key]
+        bucket["total_wrong"] += c
+        if target_id == low_id:
+            bucket["when_low_was_target"] += c
+        else:
+            bucket["when_high_was_target"] += c
+
+    ids = {i for p in pair_map for i in p}
+    species_map = Species.objects.in_bulk(ids)
+
+    rows: list[dict[str, Any]] = []
+    for _key, bucket in pair_map.items():
+        if bucket["total_wrong"] < USER_MIN_PAIR_WRONG:
+            continue
+        low = species_map.get(bucket["low_id"])
+        high = species_map.get(bucket["high_id"])
+        rows.append(
+            {
+                **bucket,
+                "low_name": low.name if low else "",
+                "high_name": high.name if high else "",
+                "low_name_latin": low.name_latin if low else "",
+                "high_name_latin": high.name_latin if high else "",
+            }
+        )
+
+    rows.sort(key=lambda r: r["total_wrong"], reverse=True)
+    return rows
 
 
 def get_confusion_pair_rows(country_code: str | None = None) -> list[dict[str, Any]]:

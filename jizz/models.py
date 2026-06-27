@@ -401,15 +401,31 @@ class Game(models.Model):
     )
     GAME_TYPE_STANDARD = 'standard'
     GAME_TYPE_EXTREME = 'extreme'
+    GAME_TYPE_PAIR_PRACTICE = 'pair_practice'
     GAME_TYPE_CHOICES = [
         (GAME_TYPE_STANDARD, 'Standard'),
         (GAME_TYPE_EXTREME, 'Extreme'),
+        (GAME_TYPE_PAIR_PRACTICE, 'Pair practice'),
     ]
     game_type = models.CharField(
         max_length=20,
         default=GAME_TYPE_STANDARD,
         choices=GAME_TYPE_CHOICES,
         help_text='Extreme: favor rare species and species this player has missed before.',
+    )
+    pair_species_low = models.ForeignKey(
+        'jizz.Species',
+        null=True,
+        blank=True,
+        related_name='pair_practice_games_low',
+        on_delete=models.SET_NULL,
+    )
+    pair_species_high = models.ForeignKey(
+        'jizz.Species',
+        null=True,
+        blank=True,
+        related_name='pair_practice_games_high',
+        on_delete=models.SET_NULL,
     )
     speed_seconds = models.PositiveSmallIntegerField(
         null=True,

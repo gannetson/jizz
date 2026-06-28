@@ -996,6 +996,36 @@ class ReactionAdminInline(admin.StackedInline):
     extra = 0
 
 
+class UpdateThumbsUpInline(admin.TabularInline):
+    model = UpdateThumbsUp
+    extra = 0
+    can_delete = True
+    readonly_fields = ['liker_display', 'created']
+    fields = ['liker_display', 'created']
+    ordering = ['-created']
+    verbose_name = 'Like'
+    verbose_name_plural = 'Likes'
+
+    def liker_display(self, obj):
+        if obj.user_id:
+            url = reverse('admin:auth_user_change', args=[obj.user_id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_username())
+        if obj.player_id:
+            return str(obj.player)
+        return '—'
+
+    liker_display.short_description = 'User / player'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'player')
+
+
 @register(Update)
 class UpdateAdmin(admin.ModelAdmin):
     list_display = [
@@ -1018,7 +1048,7 @@ class UpdateAdmin(admin.ModelAdmin):
         'created',
         'email_delivery_summary',
     ]
-    inlines = [ReactionAdminInline]
+    inlines = [ReactionAdminInline, UpdateThumbsUpInline]
 
     def thumbs_up_total(self, obj):
         return obj.thumbs_ups.count()

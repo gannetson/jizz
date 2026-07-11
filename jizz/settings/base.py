@@ -354,6 +354,8 @@ SPECIES_ILLUSTRATION_OUTPUT_FORMAT = os.environ.get('SPECIES_ILLUSTRATION_OUTPUT
 
 # Native mobile app minimum semver (force-update gate in iOS/Android clients).
 APP_MIN_VERSION = os.environ.get('APP_MIN_VERSION', '1.79.0')
+# Latest public store release semver (soft-update prompt; beta builds ahead of this skip the banner).
+APP_STORE_VERSION = os.environ.get('APP_STORE_VERSION', APP_MIN_VERSION)
 APP_STORE_URL = os.environ.get(
     'APP_STORE_URL',
     'https://apps.apple.com/us/app/birdr/id6745144189',

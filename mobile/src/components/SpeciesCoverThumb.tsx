@@ -23,7 +23,12 @@ export function SpeciesCoverThumb({ speciesId, initialUrl, size = 48, alt = '' }
   const [loading, setLoading] = useState(!initialUrl);
 
   useEffect(() => {
-    setUrl(initialUrl ? resolveMediaUrl(initialUrl) : null);
+    if (initialUrl) {
+      setUrl(resolveMediaUrl(initialUrl));
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
     fetchSpeciesCover(speciesId)

@@ -29,14 +29,19 @@ export function useSoftUpdateAvailable(): SoftUpdateState {
       Platform.OS === 'ios'
         ? requirements.store_release_label_ios
         : requirements.store_release_label_android;
-    const { codename } = getAppVersionDisplay();
+    const { version, codename } = getAppVersionDisplay();
     const storeUrl =
       Platform.OS === 'ios'
         ? requirements.app_store_url || APP_STORE_URL
         : requirements.play_store_url || PLAY_STORE_URL;
 
     setState({
-      available: isSoftUpdateAvailable(codename, storeLabel),
+      available: isSoftUpdateAvailable(
+        version,
+        codename,
+        requirements.store_version,
+        storeLabel,
+      ),
       storeLabel: storeLabel?.trim() || null,
       storeUrl,
     });

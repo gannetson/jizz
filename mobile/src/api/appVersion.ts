@@ -2,6 +2,7 @@ import { apiUrl } from './config';
 
 export type AppVersionResponse = {
   min_version: string;
+  store_version: string;
   app_store_url: string;
   play_store_url: string;
   store_release_label_ios?: string | null;

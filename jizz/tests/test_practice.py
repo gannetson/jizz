@@ -9,20 +9,34 @@ from jizz.models import (
     Country,
     CountrySpecies,
     Game,
+    Language,
     Player,
     PlayerScore,
     Question,
     QuestionOption,
     Species,
+    SpeciesName,
     TaxonomicFamily,
     TaxonomicGenus,
     TaxonomicOrder,
     UserProfile,
 )
-from jizz.game_question_selection import species_practice_pool_ids
+from jizz.game_question_selection import (
+    build_species_practice_target_weights,
+    candidate_species_ids,
+    create_species_practice_question,
+    pick_species_practice_target_with_media,
+    species_practice_pool_ids,
+    species_practice_target_pool_ids,
+)
 from jizz.quiz_mistake_stats import (
+    PAIR_PRACTICE_PASS_CORRECT,
+    SPECIES_PRACTICE_PASS_CORRECT,
     get_user_confusion_pair_rows,
+    get_user_fixed_confusion_pair_keys,
+    get_user_fixed_species_ids,
     get_user_species_mistake_rows,
+    get_user_wrong_pick_weights_for_target,
 )
 from media.models import Media
 
@@ -31,6 +45,7 @@ User = get_user_model()
 
 class UserMistakeStatsTests(TestCase):
     def setUp(self):
+        self.client = APIClient()
         self.country = Country.objects.create(code="TS", name="Trouble Spots")
         self.user = User.objects.create_user(username="troubleuser", password="pass")
         UserProfile.objects.create(user=self.user, country=self.country, language="en")
@@ -97,6 +112,58 @@ class UserMistakeStatsTests(TestCase):
         low_id, high_id = sorted([self.sp_a.id, self.sp_b.id])
         self.assertEqual(rows[0]["low_id"], low_id)
         self.assertEqual(rows[0]["high_id"], high_id)
+
+    def test_trouble_spots_uses_preferred_language_names(self):
+        Language.objects.get_or_create(code='nl', defaults={'name': 'Dutch'})
+        lang_nl = Language.objects.get(code='nl')
+        SpeciesName.objects.create(species=self.sp_a, language=lang_nl, name='Alfa NL')
+        SpeciesName.objects.create(species=self.sp_b, language=lang_nl, name='Beta NL')
+        self.user.profile.language = 'nl'
+        self.user.profile.save(update_fields=['language'])
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            reverse('practice-trouble-spots'),
+            {'country_code': 'TS'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        species = {row['species_id']: row for row in data['species']}
+        self.assertEqual(species[self.sp_a.id]['name'], 'Alfa NL')
+        self.assertEqual(species[self.sp_a.id]['name_translated'], 'Alfa NL')
+        self.assertEqual(data['pairs'][0]['low_name'], 'Alfa NL')
+        self.assertEqual(data['pairs'][0]['low_name_translated'], 'Alfa NL')
+        self.assertEqual(data['pairs'][0]['high_name'], 'Beta NL')
+        self.assertEqual(data['pairs'][0]['high_name_translated'], 'Beta NL')
+
+    def test_trouble_spots_falls_back_to_name_nl(self):
+        self.sp_a.name_nl = 'Alfa Nederlands'
+        self.sp_a.save(update_fields=['name_nl'])
+        self.user.profile.language = 'nl'
+        self.user.profile.save(update_fields=['language'])
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            reverse('practice-trouble-spots'),
+            {'country_code': 'TS', 'language': 'NL'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        species = {row['species_id']: row for row in response.json()['species']}
+        self.assertEqual(species[self.sp_a.id]['name'], 'Alfa Nederlands')
+        self.assertEqual(species[self.sp_a.id]['name_translated'], 'Alfa Nederlands')
+
+    def test_trouble_spots_includes_bulk_illustration_urls(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            reverse('practice-trouble-spots'),
+            {'country_code': 'TS'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        species = response.json()['species']
+        self.assertTrue(species)
+        row = species[0]
+        self.assertIn('illustration_url', row)
+        self.assertTrue(row['illustration_url'])
 
 
 class PracticeApiTests(TestCase):
@@ -169,6 +236,81 @@ class PracticeApiTests(TestCase):
             ids,
         )
 
+    def _create_ended_pair_practice(self, correct_count: int):
+        player = Player.objects.create(user=self.user, name="Practice", language="en")
+        game = Game.objects.create(
+            country=self.country,
+            level="beginner",
+            length=20,
+            media="images",
+            game_type=Game.GAME_TYPE_PAIR_PRACTICE,
+            pair_species_low_id=self.low_id,
+            pair_species_high_id=self.high_id,
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=game, score=0)
+        for i in range(20):
+            question = Question.objects.create(
+                game=game,
+                species=self.sp_low if i % 2 == 0 else self.sp_high,
+                number=0,
+                sequence=i + 1,
+                done=True,
+            )
+            Answer.objects.create(
+                player_score=score,
+                question=question,
+                answer=self.sp_low if i % 2 == 0 else self.sp_high,
+                correct=i < correct_count,
+            )
+        return game
+
+    def test_fixed_pair_when_enough_correct(self):
+        self._create_ended_pair_practice(PAIR_PRACTICE_PASS_CORRECT)
+        fixed = get_user_fixed_confusion_pair_keys(self.user.id)
+        self.assertEqual(fixed, {(self.low_id, self.high_id)})
+
+    def test_pair_not_fixed_below_threshold(self):
+        self._create_ended_pair_practice(PAIR_PRACTICE_PASS_CORRECT - 1)
+        fixed = get_user_fixed_confusion_pair_keys(self.user.id)
+        self.assertEqual(fixed, set())
+
+    def test_trouble_spots_marks_fixed_pairs(self):
+        player = Player.objects.create(user=self.user, name="Trouble", language="en")
+        quiz = Game.objects.create(
+            country=self.country,
+            level="beginner",
+            length=5,
+            media="images",
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=quiz)
+        q1 = Question.objects.create(game=quiz, species=self.sp_low, number=0, sequence=1)
+        Answer.objects.create(
+            player_score=score,
+            question=q1,
+            answer=self.sp_high,
+            correct=False,
+        )
+        q2 = Question.objects.create(game=quiz, species=self.sp_high, number=0, sequence=2)
+        Answer.objects.create(
+            player_score=score,
+            question=q2,
+            answer=self.sp_low,
+            correct=False,
+        )
+
+        self._create_ended_pair_practice(PAIR_PRACTICE_PASS_CORRECT)
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            reverse("practice-trouble-spots"),
+            {"country_code": "PR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        pairs = response.json()["pairs"]
+        self.assertEqual(len(pairs), 1)
+        self.assertTrue(pairs[0]["fixed"])
+
 
 class SpeciesPracticeTests(TestCase):
     def setUp(self):
@@ -221,19 +363,129 @@ class SpeciesPracticeTests(TestCase):
                 source='test',
             )
 
-    def test_species_practice_pool_includes_focus_and_genus(self):
+    def test_species_practice_target_pool_excludes_unrelated_species(self):
         game = Game(
             country=self.country,
             level='advanced',
             media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
             focus_species_id=self.focus.id,
         )
-        pool = species_practice_pool_ids(game)
-        self.assertIn(self.focus.id, pool)
-        self.assertIn(self.related.id, pool)
-        self.assertNotIn(self.unrelated.id, pool)
+        target_pool = species_practice_target_pool_ids(game)
+        self.assertIn(self.focus.id, target_pool)
+        self.assertIn(self.related.id, target_pool)
+        self.assertNotIn(self.unrelated.id, target_pool)
 
-    def test_start_species_practice_creates_advanced_game(self):
+        option_pool = candidate_species_ids(game)
+        self.assertIn(self.unrelated.id, option_pool)
+
+    def test_species_practice_target_pool_uses_tax_neighbors_without_family(self):
+        isolated = Species.objects.create(
+            name='Lone Gull',
+            name_latin='Larus solitarius',
+            code='logul2',
+            tax_ordering=502.0,
+        )
+        neighbor = Species.objects.create(
+            name='Near Gull',
+            name_latin='Larus vicinus',
+            code='neagul',
+            tax_ordering=503.0,
+        )
+        for sp in (isolated, neighbor):
+            CountrySpecies.objects.create(country=self.country, species=sp, status='native')
+            Media.objects.create(
+                species=sp,
+                type='image',
+                url=f'https://example.com/{sp.code}.jpg',
+                source='test',
+            )
+
+        game = Game(
+            country=self.country,
+            level='advanced',
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=isolated.id,
+        )
+        pool = species_practice_target_pool_ids(game)
+        self.assertIn(isolated.id, pool)
+        self.assertIn(neighbor.id, pool)
+        self.assertNotIn(self.focus.id, pool)
+
+    def test_species_practice_weights_boost_related_species(self):
+        game = Game(
+            country=self.country,
+            level='advanced',
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=self.focus.id,
+        )
+        pool = species_practice_target_pool_ids(game)
+        weights = build_species_practice_target_weights(game, pool)
+        self.assertGreater(weights[self.related.id], 1.0)
+        self.assertNotIn(self.unrelated.id, weights)
+
+    def test_species_practice_weights_boost_global_wrong_picks(self):
+        other_user = get_user_model().objects.create_user(username='other', password='pass')
+        player = Player.objects.create(user=other_user, name='Other', language='en')
+        game = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=5,
+            media='images',
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=game)
+        question = Question.objects.create(
+            game=game,
+            species=self.focus,
+            number=0,
+            sequence=1,
+        )
+        Answer.objects.create(
+            player_score=score,
+            question=question,
+            answer=self.unrelated,
+            correct=False,
+        )
+
+        practice_game = Game(
+            country=self.country,
+            level='advanced',
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=self.focus.id,
+        )
+        pool = species_practice_target_pool_ids(practice_game)
+        weights = build_species_practice_target_weights(practice_game, pool)
+        self.assertIn(self.unrelated.id, pool)
+        self.assertGreater(weights[self.unrelated.id], 1.0)
+
+    def test_start_species_practice_without_taxonomic_neighbors(self):
+        isolated = Species.objects.create(
+            name='Lone Gull',
+            name_latin='Larus solitarius',
+            code='logul',
+            tax_ordering=900.0,
+        )
+        CountrySpecies.objects.create(country=self.country, species=isolated, status='native')
+        Media.objects.create(
+            species=isolated,
+            type='image',
+            url='https://example.com/logul.jpg',
+            source='test',
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            reverse('practice-species-start'),
+            {'species_id': isolated.id, 'country_code': 'SP'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_start_species_practice_creates_pro_game(self):
         self.client.force_authenticate(user=self.user)
         response = self.client.post(
             reverse('practice-species-start'),
@@ -244,11 +496,17 @@ class SpeciesPracticeTests(TestCase):
         data = response.json()
         self.assertEqual(data['game']['game_type'], 'species_practice')
         self.assertEqual(data['game']['level'], 'advanced')
+        self.assertEqual(data['game']['rarity'], 'exceptional')
         self.assertEqual(data['game']['length'], 20)
+        self.assertEqual(data['game']['focus_species_id'], self.focus.id)
+        self.assertEqual(data['game']['focus_species_name'], self.focus.name)
+        self.assertEqual(data['game']['focus_species_code'], self.focus.code)
+        self.assertIn('focus_species_illustration_url', data['game'])
 
         game = Game.objects.get(token=data['game']['token'])
         question = game.questions.first()
         self.assertIsNotNone(question)
+        self.assertIn(question.species_id, species_practice_target_pool_ids(game))
         self.assertEqual(question.options.count(), 6)
         option_ids = set(question.options.values_list('species_id', flat=True))
         self.assertTrue(option_ids.issubset({self.focus.id, self.related.id}))
@@ -273,3 +531,198 @@ class SpeciesPracticeTests(TestCase):
             PlayerScore.objects.get(player=player, game=game).id,
             ids,
         )
+
+    def test_wrong_pick_weights_for_focus_target(self):
+        player = Player.objects.create(user=self.user, name='Practice', language='en')
+        game = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=5,
+            media='images',
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=game)
+        question = Question.objects.create(
+            game=game,
+            species=self.focus,
+            number=0,
+            sequence=1,
+        )
+        Answer.objects.create(
+            player_score=score,
+            question=question,
+            answer=self.related,
+            correct=False,
+        )
+
+        weights = get_user_wrong_pick_weights_for_target(
+            self.focus.id,
+            country_code='SP',
+            user_id=self.user.id,
+        )
+        self.assertEqual(weights[self.related.id], 1)
+
+    def test_start_species_practice_extirpated_checklist_species(self):
+        extirpated = Species.objects.create(
+            name='Former Resident',
+            name_latin='Former resident',
+            code='formre',
+            tax_ordering=504.0,
+            taxonomic_family=self.focus.taxonomic_family,
+        )
+        CountrySpecies.objects.create(country=self.country, species=extirpated, status='extirpated')
+        Media.objects.create(
+            species=extirpated,
+            type='image',
+            url='https://example.com/formre.jpg',
+            source='test',
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            reverse('practice-species-start'),
+            {'species_id': extirpated.id, 'country_code': 'SP'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_species_practice_focus_shown_about_one_third(self):
+        from unittest.mock import patch
+
+        player = Player.objects.create(user=self.user, name='Practice', language='en')
+        game = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=20,
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=self.focus.id,
+            host=player,
+        )
+        pool = species_practice_target_pool_ids(game)
+
+        rolls = [0.1] * 6 + [0.9] * 14
+        with patch('jizz.game_question_selection.random.random', side_effect=rolls):
+            picks = [
+                pick_species_practice_target_with_media(game, pool)[0].id
+                for _ in range(20)
+            ]
+
+        self.assertEqual(picks.count(self.focus.id), 6)
+
+    def test_species_practice_weights_boost_focus_and_wrong_picks(self):
+        player = Player.objects.create(user=self.user, name='Practice', language='en')
+        game = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=20,
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=self.focus.id,
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=game)
+        question = Question.objects.create(
+            game=game,
+            species=self.focus,
+            number=0,
+            sequence=1,
+        )
+        Answer.objects.create(
+            player_score=score,
+            question=question,
+            answer=self.related,
+            correct=False,
+        )
+
+        pool = species_practice_pool_ids(game)
+        weights = build_species_practice_target_weights(game, pool)
+        self.assertNotIn(self.focus.id, weights)
+        self.assertGreater(weights[self.related.id], 1.0)
+
+    def test_species_practice_can_repeat_species_in_one_game(self):
+        player = Player.objects.create(user=self.user, name='Practice', language='en')
+        game = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=20,
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=self.focus.id,
+            host=player,
+        )
+
+        seen: list[int] = []
+        for _ in range(12):
+            question = create_species_practice_question(game)
+            seen.append(question.species_id)
+
+        self.assertGreater(seen.count(self.focus.id), 1)
+        self.assertGreater(len(seen), len(set(seen)))
+
+    def _create_ended_species_practice(self, correct_count: int):
+        player = Player.objects.create(user=self.user, name='Practice', language='en')
+        game = Game.objects.create(
+            country=self.country,
+            level='advanced',
+            length=20,
+            media='images',
+            game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
+            focus_species_id=self.focus.id,
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=game, score=0)
+        for i in range(20):
+            question = Question.objects.create(
+                game=game,
+                species=self.focus if i % 2 == 0 else self.related,
+                number=0,
+                sequence=i + 1,
+                done=True,
+            )
+            Answer.objects.create(
+                player_score=score,
+                question=question,
+                answer=self.focus,
+                correct=i < correct_count,
+            )
+        return game
+
+    def test_fixed_species_when_enough_correct(self):
+        self._create_ended_species_practice(SPECIES_PRACTICE_PASS_CORRECT)
+        fixed = get_user_fixed_species_ids(self.user.id)
+        self.assertEqual(fixed, {self.focus.id})
+
+    def test_trouble_spots_marks_fixed_species(self):
+        player = Player.objects.create(user=self.user, name='Trouble', language='en')
+        quiz = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=player,
+        )
+        score = PlayerScore.objects.create(player=player, game=quiz)
+        question = Question.objects.create(
+            game=quiz,
+            species=self.focus,
+            number=0,
+            sequence=1,
+        )
+        Answer.objects.create(
+            player_score=score,
+            question=question,
+            answer=self.related,
+            correct=False,
+        )
+
+        self._create_ended_species_practice(SPECIES_PRACTICE_PASS_CORRECT)
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            reverse('practice-trouble-spots'),
+            {'country_code': 'SP'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        species_rows = response.json()['species']
+        focus_row = next(r for r in species_rows if r['species_id'] == self.focus.id)
+        self.assertTrue(focus_row['fixed'])

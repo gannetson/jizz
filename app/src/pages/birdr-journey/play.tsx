@@ -28,7 +28,7 @@ import {
 } from '../../api/birdrJourney';
 import { AnswerFeedback, normalizeChecklistAdded, normalizeChecklistMissed } from '../../components/answer-feedback';
 import { FlagMediaButton } from '../../components/flag-media-button';
-import { Loading } from '../../components/loading';
+import { QuestionLoadingFeather } from '../../components/question-loading-feather';
 import SpeciesCombobox from '../../components/species-combobox';
 import { ZoomablePlayImage } from '../../components/zoomable-play-image';
 import { SpeedChallengeTimer } from '../../components/speed-challenge-timer';
@@ -65,6 +65,7 @@ export function BirdrJourneyPlayPage() {
   const { species, language } = useContext(AppContext);
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -122,6 +123,7 @@ export function BirdrJourneyPlayPage() {
       setJourneyStepFailed(false);
       setTimerExpired(false);
       submittingRef.current = false;
+      setLoadingNextQuestion(false);
     }
   }, [question?.id]);
 
@@ -164,19 +166,35 @@ export function BirdrJourneyPlayPage() {
   }
 
   if (loading && !question) {
-    return <Loading />;
+    return (
+      <Page>
+        <Page.Body>
+          <QuestionLoadingFeather minHeight="280px" />
+        </Page.Body>
+      </Page>
+    );
   }
 
-  if (!question) {
-    return <Loading />;
+  if (!question && !loadingNextQuestion) {
+    return (
+      <Page>
+        <Page.Body>
+          <QuestionLoadingFeather minHeight="280px" />
+        </Page.Body>
+      </Page>
+    );
   }
 
-  const mediaLength = mediaArrayLengthForQuestion(question, gameMedia);
+  const mediaLoaderHeight =
+    gameMedia === 'audio' ? '80px' : gameMedia === 'video' ? '220px' : '280px';
+  const showMediaLoader = loadingNextQuestion || !question;
+
+  const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0;
   const currentMediaIndex =
-    mediaIndex ?? mediaSlotIndexFromQuestion(question, mediaLength);
-  const currentImage = currentPlayMediaItem(question?.images, question);
-  const currentVideo = currentPlayMediaItem(question?.videos, question);
-  const currentSound = currentPlayMediaItem(question?.sounds, question);
+    mediaIndex ?? (question ? mediaSlotIndexFromQuestion(question, mediaLength) : 0);
+  const currentImage = question ? currentPlayMediaItem(question.images, question) : undefined;
+  const currentVideo = question ? currentPlayMediaItem(question.videos, question) : undefined;
+  const currentSound = question ? currentPlayMediaItem(question.sounds, question) : undefined;
 
   const notifyMediaReady = () => {
     setMediaReady(true);
@@ -217,7 +235,7 @@ export function BirdrJourneyPlayPage() {
     setResponse(null);
     setLevelEnded(false);
     setQuestion(null);
-    setLoading(true);
+    setLoadingNextQuestion(true);
     try {
       const token = await resolveBirdrJourneyPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
@@ -232,7 +250,7 @@ export function BirdrJourneyPlayPage() {
       }
       await loadJourneyGame();
     } finally {
-      setLoading(false);
+      setLoadingNextQuestion(false);
     }
   };
 
@@ -303,14 +321,15 @@ export function BirdrJourneyPlayPage() {
     results[index] = 'joker';
   });
 
-  const hasOptions = (question.options?.length ?? 0) > 0;
+  const hasOptions = (question?.options?.length ?? 0) > 0;
   const isExpert = gameLevel === 'expert';
   const speedSeconds =
-    (question.game as { speed_seconds?: number | null } | undefined)?.speed_seconds ??
+    (question?.game as { speed_seconds?: number | null } | undefined)?.speed_seconds ??
     journeyGame?.game?.speed_seconds ??
     null;
   const isSpeedChallenge = typeof speedSeconds === 'number' && speedSeconds > 0;
-  const optionsLocked = submitting || showFeedback || timerExpired || !answersEnabled;
+  const optionsLocked =
+    loadingNextQuestion || submitting || showFeedback || timerExpired || !answersEnabled;
 
   return (
     <Page>
@@ -321,7 +340,7 @@ export function BirdrJourneyPlayPage() {
               id="game progress"
               defaultMessage="Game - {current} of {total}"
               values={{
-                current: question.sequence ?? 1,
+                current: question?.sequence ?? Math.max(1, answers.length),
                 total: levelLength,
               }}
             />
@@ -340,6 +359,10 @@ export function BirdrJourneyPlayPage() {
       </Page.Header>
       <Page.Body>
         <Box position="relative" mb={3}>
+          {showMediaLoader ? (
+            <QuestionLoadingFeather minHeight={mediaLoaderHeight} />
+          ) : question ? (
+          <>
           {gameMedia === 'video' && currentVideo && (
             <Box position="relative" minH="220px">
               <ReactPlayer
@@ -421,9 +444,11 @@ export function BirdrJourneyPlayPage() {
               <FlagMediaButton media={currentSound} onFlagSuccess={handleFlagSuccess} />
             )}
           </Flex>
+          </>
+          ) : null}
         </Box>
 
-        {isSpeedChallenge && !showFeedback ? (
+        {question && isSpeedChallenge && !showFeedback ? (
           <SpeedChallengeTimer
             speedSeconds={speedSeconds}
             active={answersEnabled}
@@ -432,7 +457,7 @@ export function BirdrJourneyPlayPage() {
           />
         ) : null}
 
-        {hasOptions ? (
+        {question && hasOptions ? (
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} mb={5}>
             {question.options!.map((option, key) => (
               <Button
@@ -451,7 +476,7 @@ export function BirdrJourneyPlayPage() {
               </Button>
             ))}
           </SimpleGrid>
-        ) : isExpert ? (
+        ) : question && isExpert ? (
           <SpeciesCombobox
             species={species || []}
             playerLanguage={language}

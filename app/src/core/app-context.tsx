@@ -37,6 +37,19 @@ export type Game = {
   user_score?: number
   correct_count?: number
   total_questions?: number
+  game_type?: string
+  pair_species_low_id?: number | null
+  pair_species_high_id?: number | null
+  pair_species_low_name?: string | null
+  pair_species_high_name?: string | null
+  pair_species_low_code?: string | null
+  pair_species_high_code?: string | null
+  pair_species_low_illustration_url?: string | null
+  pair_species_high_illustration_url?: string | null
+  focus_species_id?: number | null
+  focus_species_name?: string | null
+  focus_species_code?: string | null
+  focus_species_illustration_url?: string | null
 }
 
 export type SpeciesImage = {

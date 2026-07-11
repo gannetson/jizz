@@ -19,6 +19,7 @@ from jizz.models import (
     CountrySpecies,
     Player,
     PlayerScore,
+    Species,
     SpeciesName,
     UserProfile,
 )
@@ -317,14 +318,49 @@ def _iso_datetime(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
+def normalize_species_language(language: str | None) -> str:
+    """Normalize profile/UI codes (nl, NL, nl-NL) to SpeciesName language ids."""
+    lang = (language or 'en').strip().lower()
+    if not lang:
+        return 'en'
+    return lang.split('_')[0].split('-')[0] or 'en'
+
+
 def _translated_names(species_ids: list[int], language: str) -> dict[int, str]:
     if not language or not species_ids:
         return {}
+    language = normalize_species_language(language)
     names = SpeciesName.objects.filter(
         species_id__in=species_ids,
         language_id=language,
     ).values_list('species_id', 'name')
     return dict(names)
+
+
+def localized_species_names(
+    species_by_id: dict[int, Species],
+    language: str | None,
+) -> dict[int, str]:
+    """Display names for species using the user's preferred language."""
+    if not species_by_id:
+        return {}
+    language = normalize_species_language(language)
+    if language.startswith('la'):
+        return {
+            sid: (sp.name_latin or sp.name)
+            for sid, sp in species_by_id.items()
+        }
+
+    translated = _translated_names(list(species_by_id.keys()), language)
+    out: dict[int, str] = {}
+    for sid, sp in species_by_id.items():
+        if sid in translated:
+            out[sid] = translated[sid]
+        elif language.startswith('nl') and sp.name_nl:
+            out[sid] = sp.name_nl
+        else:
+            out[sid] = sp.name
+    return out
 
 
 def _tax_order_filters(country: Country) -> list[dict[str, Any]]:

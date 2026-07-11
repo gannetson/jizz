@@ -16,6 +16,7 @@ class AppVersionView(APIView):
         response = Response(
             {
                 'min_version': settings.APP_MIN_VERSION,
+                'store_version': settings.APP_STORE_VERSION,
                 'app_store_url': settings.APP_STORE_URL,
                 'play_store_url': settings.PLAY_STORE_URL,
                 'store_release_label_ios': store_labels['ios'],

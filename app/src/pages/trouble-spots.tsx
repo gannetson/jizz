@@ -1,10 +1,11 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
   Flex,
   Heading,
   Spinner,
+  Switch,
   Text,
   VStack,
 } from '@chakra-ui/react';
@@ -14,8 +15,11 @@ import AppContext, { type Species } from '../core/app-context';
 import { Page } from '../shared/components/layout';
 import { SpeciesModal } from '../components/species-modal';
 import { SpeciesCoverThumb } from '../components/species-cover-thumb';
+import { SpeciesName } from '../components/species-name';
+import CountryCombobox from '../components/country-combobox';
 import { authService } from '../api/services/auth.service';
 import { profileService, type UserProfile } from '../api/services/profile.service';
+import UseCountries from '../user/use-countries';
 import {
   fetchTroubleSpots,
   startConfusionPairPractice,
@@ -26,22 +30,42 @@ import {
 
 const SPECIES_THUMB = '48px';
 
-function speciesModalPayload(row: TroubleSpotSpecies): Species {
+function troubleSpotSpecies(
+  row: TroubleSpotSpecies,
+  allSpecies: Species[] | undefined,
+): Species {
+  const fromList = allSpecies?.find((s) => s.id === row.species_id);
+  const nameTranslated =
+    fromList?.name_translated || row.name_translated || row.name;
   return {
     id: row.species_id,
-    code: '',
+    code: fromList?.code || '',
     name: row.name,
     name_latin: row.name_latin,
-    name_nl: '',
-    name_translated: row.name,
-    tax_order: '',
-    tax_family: '',
-    tax_family_en: '',
-    images: [],
-    videos: [],
-    sounds: [],
-    illustration_url: row.illustration_url ?? undefined,
+    name_nl: fromList?.name_nl || row.name_nl || '',
+    name_translated: nameTranslated,
+    tax_order: fromList?.tax_order || '',
+    tax_family: fromList?.tax_family || '',
+    tax_family_en: fromList?.tax_family_en || '',
+    images: fromList?.images || [],
+    videos: fromList?.videos || [],
+    sounds: fromList?.sounds || [],
+    illustration_url: row.illustration_url ?? fromList?.illustration_url ?? undefined,
   };
+}
+
+function pairDisplayName(
+  name: string,
+  nameNl: string | undefined,
+  speciesId: number,
+  allSpecies: Species[] | undefined,
+  speciesLanguage: string,
+): string {
+  const fromList = allSpecies?.find((s) => s.id === speciesId);
+  if (fromList?.name_translated) return fromList.name_translated;
+  if (name.trim()) return name;
+  if (speciesLanguage.startsWith('nl') && nameNl?.trim()) return nameNl.trim();
+  return name;
 }
 
 type TabKey = 'species' | 'pairs';
@@ -54,7 +78,8 @@ function formatRate(rate: number | null): string {
 export default function TroubleSpotsPage() {
   const navigate = useNavigate();
   const intl = useIntl();
-  const { loadGame, loadPlayer, setGame } = useContext(AppContext);
+  const { loadGame, loadPlayer, setGame, speciesLanguage, species: allSpecies } =
+    useContext(AppContext);
   const [activeTab, setActiveTab] = useState<TabKey>('species');
   const [authenticated, setAuthenticated] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -65,8 +90,21 @@ export default function TroubleSpotsPage() {
   const [startingPairKey, setStartingPairKey] = useState<string | null>(null);
   const [startingSpeciesId, setStartingSpeciesId] = useState<number | null>(null);
   const [modalSpecies, setModalSpecies] = useState<Species | undefined>();
+  const [countryCode, setCountryCode] = useState<string | undefined>();
+  const [includeFixed, setIncludeFixed] = useState(false);
+  const { countries } = UseCountries();
 
-  const countryCode = profile?.country_code?.trim()?.toUpperCase();
+  const countriesList = Array.isArray(countries) ? countries : [];
+  const effectiveCountryCode = countryCode ?? profile?.country_code?.trim()?.toUpperCase();
+
+  const visibleSpecies = useMemo(
+    () => (includeFixed ? species : species.filter((row) => !row.fixed)),
+    [species, includeFixed],
+  );
+  const visiblePairs = useMemo(
+    () => (includeFixed ? pairs : pairs.filter((pair) => !pair.fixed)),
+    [pairs, includeFixed],
+  );
 
   const checkAuth = useCallback(async () => {
     const ok = await authService.ensureValidAccessToken();
@@ -90,7 +128,7 @@ export default function TroubleSpotsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchTroubleSpots(countryCode);
+      const data = await fetchTroubleSpots(effectiveCountryCode, speciesLanguage);
       setSpecies(data.species);
       setPairs(data.pairs);
     } catch (e: unknown) {
@@ -100,7 +138,7 @@ export default function TroubleSpotsPage() {
     } finally {
       setLoading(false);
     }
-  }, [authenticated, countryCode]);
+  }, [authenticated, effectiveCountryCode, speciesLanguage]);
 
   useEffect(() => {
     void checkAuth();
@@ -115,7 +153,7 @@ export default function TroubleSpotsPage() {
     setStartingPairKey(key);
     setError(null);
     try {
-      const result = await startConfusionPairPractice(pair.low_id, pair.high_id, countryCode);
+      const result = await startConfusionPairPractice(pair.low_id, pair.high_id, effectiveCountryCode);
       localStorage.setItem('player-token', result.player_token);
       localStorage.setItem('game-token', result.game.token);
       await loadPlayer(result.player_token);
@@ -135,7 +173,7 @@ export default function TroubleSpotsPage() {
     setStartingSpeciesId(speciesId);
     setError(null);
     try {
-      const result = await startSpeciesPractice(speciesId, countryCode);
+      const result = await startSpeciesPractice(speciesId, effectiveCountryCode);
       localStorage.setItem('player-token', result.player_token);
       localStorage.setItem('game-token', result.game.token);
       await loadPlayer(result.player_token);
@@ -206,10 +244,52 @@ export default function TroubleSpotsPage() {
       <Page.Header>{pageTitle}</Page.Header>
       <Page.Body>
         <VStack gap={6} align="stretch">
+          {effectiveCountryCode && countriesList.length > 0 ? (
+            <Box>
+              <Text fontSize="sm" fontWeight="semibold" color="primary.700" mb={1}>
+                <FormattedMessage id="checklist_country" defaultMessage="Country" />
+              </Text>
+              <CountryCombobox
+                countries={countriesList}
+                value={
+                  countriesList.find((c) => c.code === effectiveCountryCode) ?? {
+                    code: effectiveCountryCode,
+                    name: effectiveCountryCode,
+                  }
+                }
+                onChange={(c) => {
+                  if (c?.code) setCountryCode(c.code);
+                }}
+              />
+            </Box>
+          ) : (
+            <Text fontSize="sm" color="primary.700">
+              <FormattedMessage
+                id="trouble_spots_set_country"
+                defaultMessage="Set your country in profile to filter by your checklist."
+              />
+            </Text>
+          )}
+          <Flex align="center" justify="space-between" gap={4}>
+            <Text fontSize="sm" color="primary.700" flex={1}>
+              <FormattedMessage
+                id="trouble_spots_include_fixed"
+                defaultMessage="Show fixed birds & pairs"
+              />
+            </Text>
+            <Switch.Root
+              checked={includeFixed}
+              onCheckedChange={(e) => setIncludeFixed(!!e.checked)}
+              colorPalette="primary"
+            >
+              <Switch.HiddenInput />
+              <Switch.Control />
+            </Switch.Root>
+          </Flex>
           <Flex gap={2} role="tablist">
             {([
-              { key: 'species' as const, label: speciesTabLabel, count: species.length },
-              { key: 'pairs' as const, label: pairsTabLabel, count: pairs.length },
+              { key: 'species' as const, label: speciesTabLabel, count: visibleSpecies.length },
+              { key: 'pairs' as const, label: pairsTabLabel, count: visiblePairs.length },
             ]).map((tab) => (
               <Button
                 key={tab.key}
@@ -226,14 +306,6 @@ export default function TroubleSpotsPage() {
             ))}
           </Flex>
 
-          {!countryCode && (
-            <Text fontSize="sm" color="primary.700">
-              <FormattedMessage
-                id="trouble_spots_set_country"
-                defaultMessage="Set your country in profile to filter by your checklist."
-              />
-            </Text>
-          )}
           {error ? (
             <Text color="red.600" fontSize="sm">
               {error}
@@ -241,13 +313,13 @@ export default function TroubleSpotsPage() {
           ) : null}
 
           {activeTab === 'species' ? (
-            species.length === 0 ? (
+            visibleSpecies.length === 0 ? (
               <Text color="primary.700">
                 <FormattedMessage id="trouble_spots_no_species" defaultMessage="No species yet." />
               </Text>
             ) : (
               <VStack gap={0} align="stretch">
-                {species.map((row) => {
+                {visibleSpecies.map((row) => {
                   const busy = startingSpeciesId === row.species_id;
                   return (
                     <Flex
@@ -260,7 +332,6 @@ export default function TroubleSpotsPage() {
                     >
                       <Box
                         as="button"
-                        type="button"
                         flex={1}
                         minW={0}
                         display="flex"
@@ -269,21 +340,39 @@ export default function TroubleSpotsPage() {
                         textAlign="left"
                         bg="transparent"
                         cursor="pointer"
-                        onClick={() => setModalSpecies(speciesModalPayload(row))}
+                        onClick={() => setModalSpecies(troubleSpotSpecies(row, allSpecies))}
                       >
                         <SpeciesCoverThumb
                           speciesId={row.species_id}
                           initialUrl={row.illustration_url}
                           size={SPECIES_THUMB}
-                          alt={row.name}
+                          alt={row.name_translated || row.name}
                         />
                         <Box flex={1} minW={0}>
                           <Text fontWeight="semibold" fontSize="sm" lineClamp={1}>
-                            {row.name}
+                            <SpeciesName species={troubleSpotSpecies(row, allSpecies)} />
                           </Text>
                           <Text fontSize="xs" color="primary.700" lineClamp={1}>
                             {row.name_latin}
                           </Text>
+                          {row.fixed ? (
+                            <Text
+                              as="span"
+                              fontSize="2xs"
+                              fontWeight="extrabold"
+                              color="green.700"
+                              bg="green.50"
+                              borderWidth="1px"
+                              borderColor="green.600"
+                              borderRadius="md"
+                              px={2}
+                              py={0.5}
+                              mt={1}
+                              display="inline-block"
+                            >
+                              <FormattedMessage id="trouble_spots_pair_fixed" defaultMessage="FIXED!" />
+                            </Text>
+                          ) : null}
                           <Text fontSize="xs" color="primary.600" mt={0.5}>
                             <FormattedMessage
                               id="trouble_spots_correct_rate"
@@ -321,13 +410,13 @@ export default function TroubleSpotsPage() {
                 })}
               </VStack>
             )
-          ) : pairs.length === 0 ? (
+          ) : visiblePairs.length === 0 ? (
             <Text color="primary.700">
               <FormattedMessage id="trouble_spots_no_pairs" defaultMessage="No pairs yet." />
             </Text>
           ) : (
             <VStack gap={3} align="stretch">
-              {pairs.map((pair) => {
+              {visiblePairs.map((pair) => {
                 const key = `${pair.low_id}-${pair.high_id}`;
                 const busy = startingPairKey === key;
                 return (
@@ -337,7 +426,43 @@ export default function TroubleSpotsPage() {
                     borderBottomWidth="1px"
                     borderColor="primary.100"
                   >
-                    <Text fontWeight="semibold">{pair.low_name} · {pair.high_name}</Text>
+                    <Flex align="flex-start" gap={2} flexWrap="wrap" mb={1}>
+                      <Text fontWeight="semibold">
+                        {pairDisplayName(
+                          pair.low_name,
+                          pair.low_name_nl,
+                          pair.low_id,
+                          allSpecies,
+                          speciesLanguage,
+                        )}
+                        {' · '}
+                        {pairDisplayName(
+                          pair.high_name,
+                          pair.high_name_nl,
+                          pair.high_id,
+                          allSpecies,
+                          speciesLanguage,
+                        )}
+                      </Text>
+                      {pair.fixed ? (
+                        <Box
+                          as="span"
+                          px={2}
+                          py={0.5}
+                          borderRadius="md"
+                          bg="green.50"
+                          borderWidth="1px"
+                          borderColor="green.600"
+                          fontSize="xs"
+                          fontWeight="800"
+                          color="green.700"
+                          letterSpacing="0.05em"
+                          flexShrink={0}
+                        >
+                          <FormattedMessage id="trouble_spots_pair_fixed" defaultMessage="FIXED!" />
+                        </Box>
+                      ) : null}
+                    </Flex>
                     <Text fontSize="sm" color="primary.700" mb={2}>
                       <FormattedMessage
                         id="trouble_spots_pair_wrong"

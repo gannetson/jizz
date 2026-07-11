@@ -568,8 +568,8 @@ class Game(models.Model):
             # Lock only jizz_game — select_related + FOR UPDATE breaks PostgreSQL
             # ("nullable side of an outer join") when FKs like country are nullable.
             game = Game.objects.select_for_update(of=("self",)).get(pk=self.pk)
-            current = game.question
-            if current is not None and not game.can_advance_to_next_question():
+            current = game.questions.filter(done=False).order_by('sequence').first()
+            if current is not None and not game.can_advance_to_next_question(current):
                 return current
 
             game.questions.filter(done=False).update(done=True)
@@ -595,7 +595,7 @@ class Game(models.Model):
         """
         return self.questions.filter(done=False).order_by('sequence').first()
 
-    def can_advance_to_next_question(self):
+    def can_advance_to_next_question(self, current=None):
         """
         True when the current round may be closed and a new one created.
 
@@ -603,7 +603,7 @@ class Game(models.Model):
         ``next_question`` / ``start_game`` WebSocket actions cannot skip rounds.
         If ``host`` is unset, any answer on the current question suffices.
         """
-        current = self.question
+        current = current if current is not None else self.question
         if current is None:
             return False
         host = self.host

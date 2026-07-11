@@ -23,16 +23,19 @@ class AppVersionApiTestCase(TestCase):
         response = self.client.get('/api/app-version/')
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data['min_version'], '1.63.0')
+        self.assertEqual(data['min_version'], '1.79.0')
+        self.assertEqual(data['store_version'], '1.79.0')
         self.assertEqual(data['store_release_label_ios'], 'Common Kingfisher')
         self.assertEqual(data['store_release_label_android'], 'Common Kingfisher')
         self.assertEqual(response['Cache-Control'], 'no-store, no-cache, must-revalidate, max-age=0')
         self.assertIn('apps.apple.com', data['app_store_url'])
         self.assertIn('play.google.com', data['play_store_url'])
 
-    @override_settings(APP_MIN_VERSION='2.0.0')
+    @override_settings(APP_MIN_VERSION='2.0.0', APP_STORE_VERSION='2.1.0')
     @patch('jizz.app_version_views.get_store_release_labels')
     def test_app_version_respects_settings_override(self, mock_labels):
         mock_labels.return_value = {'ios': None, 'android': None}
         response = self.client.get('/api/app-version/')
-        self.assertEqual(response.json()['min_version'], '2.0.0')
+        data = response.json()
+        self.assertEqual(data['min_version'], '2.0.0')
+        self.assertEqual(data['store_version'], '2.1.0')

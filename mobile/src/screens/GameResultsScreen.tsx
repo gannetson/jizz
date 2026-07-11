@@ -11,7 +11,10 @@ import type { MultiPlayer } from '../types/game';
 import type { Player } from '../api/player';
 import { hiscoresParamsFromGame } from '../game/hiscoresLink';
 import { MegaConfetti } from '../components/MegaConfetti';
-import {Box} from "react-native-feather"
+import { BirdrMoodHero } from '../components/BirdrMoodHero';
+import { PracticeSpeciesLinks } from '../components/PracticeSpeciesLinks';
+
+const PRACTICE_PASS_CORRECT = 18;
 
 const REMATCH_TIMEOUT_MS = 20000;
 
@@ -202,6 +205,111 @@ export function GameResultsScreen() {
     return getMpgResultsStats(game, player, players || []);
   }, [game, player, players]);
 
+  const isPairPractice = game?.game_type === 'pair_practice';
+  const isSpeciesPractice = game?.game_type === 'species_practice';
+  const isPracticeGame = isPairPractice || isSpeciesPractice;
+  const practicePassed =
+    isPracticeGame &&
+    resultsStats != null &&
+    resultsStats.correctCount >= PRACTICE_PASS_CORRECT;
+
+  const handleBackToTroubleSpots = () => {
+    (navigation as any).replace('TroubleSpots');
+    InteractionManager.runAfterInteractions(() => {
+      clearGame();
+    });
+  };
+
+  if (isPracticeGame && resultsStats) {
+    const scoreText = t('pair_practice_score')
+      .replace('{correct}', String(resultsStats.correctCount))
+      .replace('{total}', String(resultsStats.totalQuestions));
+
+    let message: string;
+    if (practicePassed) {
+      if (isSpeciesPractice) {
+        message = t('species_practice_fixed_message').replace(
+          '{species}',
+          game?.focus_species_name || '—',
+        );
+      } else {
+        message = t('pair_practice_fixed_message')
+          .replace('{species1}', game?.pair_species_low_name || '—')
+          .replace('{species2}', game?.pair_species_high_name || '—');
+      }
+    } else if (isSpeciesPractice) {
+      message = t('practice_failed_message_species').replace(
+        '{species}',
+        game?.focus_species_name || '—',
+      );
+    } else {
+      message = t('practice_failed_message_pair')
+        .replace('{species1}', game?.pair_species_low_name || '—')
+        .replace('{species2}', game?.pair_species_high_name || '—');
+    }
+
+    const resultsTitle = isSpeciesPractice
+      ? t('species_practice_results_title')
+      : t('pair_practice_results_title');
+
+    return (
+      <View style={styles.wrapper}>
+        <MegaConfetti active={practicePassed} celebration />
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.pairPracticeContent}
+          testID="practiceResults.screen"
+        >
+          <BirdrMoodHero
+            mood={practicePassed ? 'success' : 'failed'}
+            title={resultsTitle}
+            subtitle={message}
+          />
+          <Text style={styles.pairPracticeScore}>{scoreText}</Text>
+          {!practicePassed ? (
+            <View style={styles.practiceReadMoreSection}>
+              <Text style={styles.practiceReadMoreHint}>{t('practice_read_more_hint')}</Text>
+              {isSpeciesPractice && game?.focus_species_id ? (
+                <PracticeSpeciesLinks
+                  speciesId={game.focus_species_id}
+                  name={game.focus_species_name || ''}
+                  code={game.focus_species_code}
+                  illustrationUrl={game.focus_species_illustration_url}
+                />
+              ) : null}
+              {isPairPractice && game?.pair_species_low_id && game?.pair_species_high_id ? (
+                <>
+                  <PracticeSpeciesLinks
+                    speciesId={game.pair_species_low_id}
+                    name={game.pair_species_low_name || ''}
+                    code={game.pair_species_low_code}
+                    illustrationUrl={game.pair_species_low_illustration_url}
+                  />
+                  <PracticeSpeciesLinks
+                    speciesId={game.pair_species_high_id}
+                    name={game.pair_species_high_name || ''}
+                    code={game.pair_species_high_code}
+                    illustrationUrl={game.pair_species_high_illustration_url}
+                  />
+                </>
+              ) : null}
+            </View>
+          ) : null}
+          <View style={styles.buttons}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleBackToTroubleSpots}>
+              <Text style={styles.primaryButtonText}>{t('back_to_trouble_spots')}</Text>
+            </TouchableOpacity>
+            {game?.token && (isAuthenticated || player?.token) && (
+              <TouchableOpacity style={styles.outlineButton} onPress={handleGameDetails}>
+                <Text style={styles.outlineButtonText}>{t('review_answers')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.wrapper}>
       <MegaConfetti active={!!showTopScoreCelebration} celebration />
@@ -359,6 +467,26 @@ const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1 },
   content: { padding: 24, paddingBottom: 48 },
+  pairPracticeContent: { padding: 24, paddingBottom: 48, alignItems: 'center' },
+  pairPracticeScore: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.primary[700],
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  practiceReadMoreSection: {
+    width: '100%',
+    gap: 12,
+    marginBottom: 24,
+  },
+  practiceReadMoreHint: {
+    fontSize: 14,
+    color: colors.primary[600],
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
   title: { fontSize: 22, fontWeight: '700', color: colors.primary[800], marginBottom: 20 },
   errorText: { fontSize: 14, color: colors.error[500], marginBottom: 12 },
   list: { marginBottom: 24 },

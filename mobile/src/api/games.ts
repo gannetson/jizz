@@ -26,6 +26,19 @@ export type Game = {
   created?: string;
   host?: { id: number; name: string; token?: string };
   ended?: boolean;
+  game_type?: string;
+  pair_species_low_id?: number | null;
+  pair_species_high_id?: number | null;
+  pair_species_low_name?: string | null;
+  pair_species_high_name?: string | null;
+  pair_species_low_code?: string | null;
+  pair_species_high_code?: string | null;
+  pair_species_low_illustration_url?: string | null;
+  pair_species_high_illustration_url?: string | null;
+  focus_species_id?: number | null;
+  focus_species_name?: string | null;
+  focus_species_code?: string | null;
+  focus_species_illustration_url?: string | null;
   current_highscore?: { name: string; score?: number };
   scores?: GameScore[];
   /** Number of questions created so far (0 = still in lobby). */

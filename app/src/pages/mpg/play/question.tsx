@@ -10,7 +10,8 @@ import {
   Text,
   useDisclosure
 } from "@chakra-ui/react"
-import React, {useContext, useState, useEffect, useCallback, useRef} from "react"
+import React, {useContext, useState, useEffect, useCallback, useRef, useMemo} from "react"
+import { FaHeart, FaHeartBroken } from "react-icons/fa"
 import ReactPlayer from "react-player"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
@@ -36,6 +37,13 @@ import {
   mediaArrayLengthForQuestion,
   mediaSlotIndexFromQuestion,
 } from "../../../core/question-media-index"
+import { QuestionLoadingFeather } from "../../../components/question-loading-feather"
+import {
+  countWrongAnswers,
+  PRACTICE_JOKERS,
+  remainingJokers,
+  sessionAnswersFromGameScores,
+} from "../../../game/jokerProgress"
 
 export const QuestionComponent = () => {
   const {species, player, game, speciesLanguage} = useContext(AppContext)
@@ -57,6 +65,55 @@ export const QuestionComponent = () => {
   const [audioPlaying, setAudioPlaying] = useState(true)
   const [advancingQuestion, setAdvancingQuestion] = useState(false)
   const mediaPostedKey = useRef<string | null>(null)
+  const pairPracticeEndSent = useRef(false)
+
+  const isPairPractice = game?.game_type === 'pair_practice'
+  const isSpeciesPractice = game?.game_type === 'species_practice'
+  const isPracticeGame = isPairPractice || isSpeciesPractice
+
+  const practiceAnswers = useMemo(
+    () =>
+      isPracticeGame && game && player
+        ? sessionAnswersFromGameScores(game.scores, player.name)
+        : [],
+    [isPracticeGame, game, player],
+  )
+
+  const practicePendingAnswer = useMemo(() => {
+    if (!isPracticeGame || !answer || !question) return null
+    if (practiceAnswers.some((a) => a.sequence === question.sequence)) return null
+    return { sequence: question.sequence ?? 0, correct: !!answer.correct }
+  }, [isPracticeGame, answer, question, practiceAnswers])
+
+  const practiceRemainingJokers = remainingJokers(
+    PRACTICE_JOKERS,
+    practiceAnswers,
+    practicePendingAnswer,
+  )
+
+  const resultsReadyForCurrentQuestion =
+    !!question &&
+    !!answer &&
+    (answer.question?.id === question.id ||
+      (answer.sequence != null &&
+        question.sequence != null &&
+        answer.sequence === question.sequence))
+
+  useEffect(() => {
+    if (!isPracticeGame || !resultsReadyForCurrentQuestion || !answer || answer.correct) return
+    const wrongBefore = countWrongAnswers(practiceAnswers)
+    if (wrongBefore >= PRACTICE_JOKERS && !pairPracticeEndSent.current) {
+      pairPracticeEndSent.current = true
+      const timer = window.setTimeout(() => endGameSession(), 1200)
+      return () => window.clearTimeout(timer)
+    }
+  }, [
+    isPracticeGame,
+    resultsReadyForCurrentQuestion,
+    answer,
+    practiceAnswers,
+    endGameSession,
+  ])
 
   const done = (game?.length || 1) <= (question?.sequence || 0)
 
@@ -141,13 +198,14 @@ export const QuestionComponent = () => {
   // Show loading state when question is being fetched (cleared during game transition)
   if (!question) {
     return (
-      <Box textAlign="center" py={8}>
-        <Text fontSize="lg">
-          <FormattedMessage id="loading question" defaultMessage="Loading question..." />
-        </Text>
+      <Box py={2}>
+        <QuestionLoadingFeather minHeight="280px" />
       </Box>
     )
   }
+
+  const mediaLoaderHeight =
+    gameMedia === 'audio' ? '80px' : gameMedia === 'video' ? '220px' : '280px'
 
   const flagMedia = () => {
     if (!question || !game) return
@@ -291,8 +349,56 @@ export const QuestionComponent = () => {
           }
         }}
       />
+      {isPracticeGame ? (
+        <Box mb={3}>
+          <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
+            <Box minW={0}>
+              {isSpeciesPractice && game.focus_species_name ? (
+                <Text fontWeight="semibold" color="primary.800" lineClamp={2}>
+                  {game.focus_species_name}
+                </Text>
+              ) : null}
+              {isPairPractice && game.pair_species_low_name ? (
+                <Text fontWeight="semibold" color="primary.800" lineClamp={1}>
+                  {game.pair_species_low_name}
+                </Text>
+              ) : null}
+              {isPairPractice && game.pair_species_high_name ? (
+                <Text fontWeight="semibold" color="primary.800" lineClamp={1}>
+                  {game.pair_species_high_name}
+                </Text>
+              ) : null}
+            </Box>
+            <Flex gap={2} flexShrink={0}>
+              {Array.from({ length: PRACTICE_JOKERS }).map((_, i) => {
+                const Icon = i < practiceRemainingJokers ? FaHeart : FaHeartBroken
+                return (
+                  <Icon
+                    key={i}
+                    size={22}
+                    color={i < practiceRemainingJokers ? 'var(--chakra-colors-primary-600)' : 'var(--chakra-colors-primary-300)'}
+                  />
+                )
+              })}
+            </Flex>
+          </Flex>
+          {question?.sequence && game.length ? (
+            <Text fontSize="md" color="primary.700">
+              <FormattedMessage
+                id="question_of"
+                defaultMessage="Question {current} of {total}"
+                values={{ current: question.sequence, total: game.length }}
+              />
+            </Text>
+          ) : null}
+        </Box>
+      ) : null}
       {nextButton}
       <Box position={'relative'}>
+        {advancingQuestion ? (
+          <QuestionLoadingFeather minHeight={mediaLoaderHeight} />
+        ) : (
+        <>
         {gameMedia === 'video' && currentVideo && (
           <>
             <Box position="relative" minH="220px">
@@ -387,6 +493,8 @@ export const QuestionComponent = () => {
 
         )}
 
+        </>
+        )}
       </Box>
 
       {question.options && question.options.length ? (

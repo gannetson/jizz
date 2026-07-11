@@ -28,6 +28,7 @@ import {
   QUESTION_MEDIA_CREDITS_HEIGHT,
 } from '../constants/questionMediaLayout';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
+import { PracticeSpeciesLinks } from '../components/PracticeSpeciesLinks';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { apiUrl } from '../api/config';
 import { getSpeciesForCountry } from '../api/species';
@@ -36,6 +37,12 @@ import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
 import { answersEnabledForMedia, normalizeGameMedia } from '../game/mediaAnswerGate';
+import {
+  countWrongAnswers,
+  PRACTICE_JOKERS,
+  remainingJokers,
+  sessionAnswersFromGameScores,
+} from '../game/jokerProgress';
 import type { Species } from '../types/game';
 import * as playerApi from '../api/player';
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
@@ -85,6 +92,7 @@ export function GamePlayScreen() {
   const expertDropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
   const [refreshingQuestion, setRefreshingQuestion] = useState(false);
   const [advancingQuestion, setAdvancingQuestion] = useState(false);
+  const practiceEndSent = useRef(false);
 
   const handleRefreshQuestion = useCallback(async () => {
     setRefreshingQuestion(true);
@@ -281,22 +289,30 @@ export function GamePlayScreen() {
     [expertSpecies, langForDisplay]
   );
 
-  if (!game || !player) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.muted}>{t('no_game')}</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Start')}>
-          <Text style={styles.link}>{t('start')}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const isPairPractice = game?.game_type === 'pair_practice';
+  const isSpeciesPractice = game?.game_type === 'species_practice';
+  const isPracticeGame = isPairPractice || isSpeciesPractice;
 
-  const gameLength = typeof game.length === 'number' ? game.length : parseInt(String(game.length), 10) || 10;
-  const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
-  const done = gameLength <= (question?.sequence ?? 0);
+  const practiceAnswers = useMemo(
+    () =>
+      isPracticeGame && game && player
+        ? sessionAnswersFromGameScores(game.scores, player.name)
+        : [],
+    [isPracticeGame, game, player],
+  );
 
-  /** Server `answer_checked` for this question id — not stale state or mid-submit. */
+  const practicePendingAnswer = useMemo(() => {
+    if (!isPracticeGame || !answer || !question) return null;
+    if (practiceAnswers.some((a) => a.sequence === question.sequence)) return null;
+    return { sequence: question.sequence ?? 0, correct: !!answer.correct };
+  }, [isPracticeGame, answer, question, practiceAnswers]);
+
+  const practiceRemainingJokers = remainingJokers(
+    PRACTICE_JOKERS,
+    practiceAnswers,
+    practicePendingAnswer,
+  );
+
   const resultsReadyForCurrentQuestion =
     !!question &&
     !!answer &&
@@ -311,6 +327,48 @@ export function GamePlayScreen() {
         answer.sequence === question.sequence
       );
     })();
+
+  useEffect(() => {
+    if (!isPracticeGame || !resultsReadyForCurrentQuestion || !answer || answer.correct) return;
+    const wrongBefore = countWrongAnswers(practiceAnswers);
+    if (wrongBefore >= PRACTICE_JOKERS && !practiceEndSent.current) {
+      practiceEndSent.current = true;
+      const timer = setTimeout(() => endGameSession(), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    isPracticeGame,
+    resultsReadyForCurrentQuestion,
+    answer,
+    practiceAnswers,
+    endGameSession,
+  ]);
+
+  const advanceToNextMedia = useCallback(() => {
+    if (!question) return;
+    setImageError(null);
+    setMediaReady(false);
+    let maxIndex = 0;
+    if (mediaType === 'images' && question.images?.length) maxIndex = question.images.length - 1;
+    else if (mediaType === 'video' && question.videos?.length) maxIndex = question.videos.length - 1;
+    else if (mediaType === 'audio' && question.sounds?.length) maxIndex = question.sounds.length - 1;
+    setMediaIndex((idx) => (idx >= maxIndex ? 0 : idx + 1));
+  }, [question, mediaType]);
+
+  if (!game || !player) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.muted}>{t('no_game')}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Start')}>
+          <Text style={styles.link}>{t('start')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const gameLength = typeof game.length === 'number' ? game.length : parseInt(String(game.length), 10) || 10;
+  const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
+  const done = gameLength <= (question?.sequence ?? 0);
 
   const waitingForHost = !isHost && !done && resultsReadyForCurrentQuestion;
 
@@ -378,17 +436,6 @@ export function GamePlayScreen() {
     }
   };
 
-  const advanceToNextMedia = useCallback(() => {
-    if (!question) return;
-    setImageError(null);
-    setMediaReady(false);
-    let maxIndex = 0;
-    if (mediaType === 'images' && question.images?.length) maxIndex = question.images.length - 1;
-    else if (mediaType === 'video' && question.videos?.length) maxIndex = question.videos.length - 1;
-    else if (mediaType === 'audio' && question.sounds?.length) maxIndex = question.sounds.length - 1;
-    setMediaIndex((idx) => (idx >= maxIndex ? 0 : idx + 1));
-  }, [question, mediaType]);
-
   const onFlagSuccess = () => {
     if (!question || !game) return;
     setFlagModalVisible(false);
@@ -455,6 +502,30 @@ export function GamePlayScreen() {
         playerToken={(player as any)?.token}
         onSuccess={onFlagSuccess}
       />
+
+      {isPracticeGame ? (
+        <>
+          <View style={styles.pairPracticeHeader}>
+            <View style={styles.pairPracticeTitleBlock}>
+                <Text style={styles.pairPracticeSpecies} numberOfLines={2}>
+                  {isSpeciesPractice
+                    ? game.focus_species_name
+                    : `${game.pair_species_low_name} · ${game.pair_species_high_name}`}
+                </Text>
+            </View>
+            <View style={styles.jokersHearts}>
+              {Array.from({ length: PRACTICE_JOKERS }).map((_, i) =>
+                i < practiceRemainingJokers ? (
+                  <FontAwesome5 key={i} name="heart" solid size={22} color={colors.primary[500]} />
+                ) : (
+                  <FontAwesome5 key={i} name="heart-broken" solid size={22} color={colors.primary[300]} />
+                ),
+              )}
+            </View>
+          </View>
+
+        </>
+      ) : null}
 
       <View style={[styles.mediaWrap, { minHeight: mediaBlockHeight }]}>
       {advancingQuestion ? (
@@ -662,7 +733,39 @@ export function GamePlayScreen() {
         <Text style={styles.muted}>Free answer not implemented.</Text>
       )}
 
-      {players.length > 0 && (
+
+      {isPracticeGame &&
+      ((isSpeciesPractice && game.focus_species_id) ||
+        (isPairPractice && game.pair_species_low_id && game.pair_species_high_id)) ? (
+        <View style={styles.pairPracticeFooter}>
+          {isSpeciesPractice && game.focus_species_id ? (
+            <PracticeSpeciesLinks
+              speciesId={game.focus_species_id}
+              name={game.focus_species_name || ''}
+              code={game.focus_species_code}
+              illustrationUrl={game.focus_species_illustration_url}
+            />
+          ) : null}
+          {isPairPractice && game.pair_species_low_id && game.pair_species_high_id ? (
+            <>
+              <PracticeSpeciesLinks
+                speciesId={game.pair_species_low_id}
+                name={game.pair_species_low_name || ''}
+                code={game.pair_species_low_code}
+                illustrationUrl={game.pair_species_low_illustration_url}
+              />
+              <PracticeSpeciesLinks
+                speciesId={game.pair_species_high_id}
+                name={game.pair_species_high_name || ''}
+                code={game.pair_species_high_code}
+                illustrationUrl={game.pair_species_high_illustration_url}
+              />
+            </>
+          ) : null}
+        </View>
+      ) : null}
+
+      {!isPracticeGame && players.length > 0 ? (
         <View style={styles.playersSection}>
           <Text style={styles.sectionTitle}>{t('scores')}</Text>
           {players.map((p, i) => (
@@ -699,7 +802,7 @@ export function GamePlayScreen() {
             </View>
           ))}
         </View>
-      )}
+      ) : null}
 
       <SpeciesMediaModal
         visible={!!mediaSpecies}
@@ -744,6 +847,28 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.error[500], marginTop: 12, textAlign: 'center' },
   link: { fontSize: 16, color: colors.primary[500], marginTop: 8 },
   nextSection: { marginBottom: 12 },
+  pairPracticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 4,
+  },
+  pairPracticeTitleBlock: { flex: 1, minWidth: 0 },
+  pairPracticeSpecies: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary[800],
+  },
+  jokersHearts: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, flexShrink: 0 },
+  questionProgress: { fontSize: 16, color: colors.primary[700], marginBottom: 12 },
+  pairPracticeFooter: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.primary[200],
+    gap: 12,
+  },
   waitForHostRow: {
     flexDirection: 'row',
     alignItems: 'center',

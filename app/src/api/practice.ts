@@ -5,12 +5,15 @@ export type TroubleSpotSpecies = {
   species_id: number;
   name: string;
   name_latin: string;
+  name_nl?: string;
+  name_translated?: string;
   times_shown: number;
   correctly_answered: number;
   wrongly_answered: number;
   correct_rate: number | null;
   error_rate: number | null;
   illustration_url?: string | null;
+  fixed?: boolean;
 };
 
 export type TroubleSpotPair = {
@@ -21,8 +24,13 @@ export type TroubleSpotPair = {
   when_high_was_target: number;
   low_name: string;
   high_name: string;
+  low_name_translated?: string;
+  high_name_translated?: string;
   low_name_latin: string;
   high_name_latin: string;
+  low_name_nl?: string;
+  high_name_nl?: string;
+  fixed?: boolean;
 };
 
 export type TroubleSpotsResponse = {
@@ -31,9 +39,13 @@ export type TroubleSpotsResponse = {
   pairs: TroubleSpotPair[];
 };
 
-export async function fetchTroubleSpots(countryCode?: string): Promise<TroubleSpotsResponse> {
+export async function fetchTroubleSpots(
+  countryCode?: string,
+  language?: string | null,
+): Promise<TroubleSpotsResponse> {
   const params: Record<string, string> = {};
   if (countryCode?.trim()) params.country_code = countryCode.trim().toUpperCase();
+  if (language?.trim()) params.language = language.trim();
   const { data } = await axios.get<TroubleSpotsResponse>('/api/practice/trouble-spots/', { params });
   return data;
 }

@@ -7,6 +7,7 @@ import { QuestionComponent } from "./play/question"
 import { WaitingComponent } from "./play/waiting"
 import { ResultsComponent } from "./play/results"
 import AppContext from "../../core/app-context"
+import { QuestionLoadingFeather } from "../../components/question-loading-feather"
 
 
 const MultiPlayerGame: React.FC = () => {
@@ -36,8 +37,10 @@ const MultiPlayerGame: React.FC = () => {
         <>
           {game?.ended ? (
             <ResultsComponent />
-          ) :  (
-            question && <QuestionComponent />
+          ) : question ? (
+            <QuestionComponent />
+          ) : (
+            <QuestionLoadingFeather minHeight="280px" />
           )}
         </>
       </Page.Body>

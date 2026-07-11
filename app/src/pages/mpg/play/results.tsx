@@ -1,5 +1,5 @@
-import {Box, Button, Flex, Heading, ListRoot, ListItem} from "@chakra-ui/react"
-import {FormattedMessage} from "react-intl"
+import {Box, Button, Flex, Heading, ListRoot, ListItem, Text} from "@chakra-ui/react"
+import {FormattedMessage, useIntl} from "react-intl"
 import React, {useContext, useState, useEffect, useMemo} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {type Game, type MultiPlayer, type Player} from "../../../core/app-context"
@@ -10,6 +10,10 @@ import { apiUrl } from '../../../api/baseUrl'
 import { authService } from "../../../api/services/auth.service"
 import { buildHiscoresPath } from "../../../core/hiscores-link"
 import { ResultsTopScoreConfetti } from "../../../components/results-top-score-confetti"
+import { BirdrMoodHero } from "../../../components/birdr-mood-hero"
+import { PracticeSpeciesLinks } from "../../../components/practice-species-links"
+
+const PRACTICE_PASS_CORRECT = 18;
 
 /** Merge MPG results data so GameRow can show points + correct/total like My games. */
 function enrichGameForResults(
@@ -35,6 +39,7 @@ function enrichGameForResults(
 
 export const ResultsComponent = () => {
 
+  const intl = useIntl()
   const {players, socket, clearQuestion} = useContext(WebsocketContext)
   const {game, player, createRematchGame, setGame} = useContext(AppContext)
   const navigate = useNavigate()
@@ -65,6 +70,14 @@ export const ResultsComponent = () => {
   )
 
   const showTopScoreCelebration = currentPlayerResult?.ranking === 1
+
+  const isPairPractice = game?.game_type === 'pair_practice'
+  const isSpeciesPractice = game?.game_type === 'species_practice'
+  const isPracticeGame = isPairPractice || isSpeciesPractice
+  const practicePassed =
+    isPracticeGame &&
+    displayGame != null &&
+    (displayGame.correct_count ?? 0) >= PRACTICE_PASS_CORRECT
 
   const createGame = () => {
     navigate('/start')
@@ -208,6 +221,110 @@ export const ResultsComponent = () => {
       window.removeEventListener('rematch_invitation', handleRematchInvitation as EventListener)
     }
   }, [isHost])
+
+  if (isPracticeGame && displayGame) {
+    const species1 = game?.pair_species_low_name || '—'
+    const species2 = game?.pair_species_high_name || '—'
+    const focusSpecies = game?.focus_species_name || '—'
+    const correctCount = displayGame.correct_count ?? 0
+    const totalQuestions = displayGame.total_questions ?? 0
+    let message: string
+    if (practicePassed) {
+      message = isSpeciesPractice
+        ? intl.formatMessage(
+            { id: 'species_practice_fixed_message', defaultMessage: 'Nice work! {species} is starting to stick.' },
+            { species: focusSpecies },
+          )
+        : intl.formatMessage(
+            { id: 'pair_practice_fixed_message', defaultMessage: 'You fixed it! {species1} and {species2} no longer seem that confusing to you!' },
+            { species1, species2 },
+          )
+    } else if (isSpeciesPractice) {
+      message = intl.formatMessage(
+        { id: 'practice_failed_message_species', defaultMessage: "You didn't make it. Clearly you need to practice a bit more to learn {species}." },
+        { species: focusSpecies },
+      )
+    } else {
+      message = intl.formatMessage(
+        { id: 'practice_failed_message_pair', defaultMessage: "You didn't make it. Clearly you need to practice a bit more to learn {species1} and {species2}." },
+        { species1, species2 },
+      )
+    }
+
+    const titleId = isSpeciesPractice ? 'species_practice_results_title' : 'pair_practice_results_title'
+    const titleDefault = isSpeciesPractice ? 'Species practice' : 'Pair practice'
+
+    return (
+      <>
+        <ResultsTopScoreConfetti active={practicePassed} />
+        <Box position="relative">
+          <Flex direction="column" gap={6} align="center" maxW="480px" mx="auto">
+            <BirdrMoodHero
+              mood={practicePassed ? 'success' : 'failed'}
+              titleId={titleId}
+              titleDefault={titleDefault}
+            />
+            <Text fontSize="md" color="primary.600" textAlign="center" lineHeight="tall" px={4}>
+              {message}
+            </Text>
+            <Text fontSize="lg" fontWeight="semibold" color="primary.700">
+              <FormattedMessage
+                id="pair_practice_score"
+                defaultMessage="{correct} / {total} correct"
+                values={{ correct: correctCount, total: totalQuestions }}
+              />
+            </Text>
+            {!practicePassed ? (
+              <Flex direction="column" gap={3} w="full">
+                <Text fontSize="sm" color="primary.600" textAlign="center" lineHeight="tall">
+                  <FormattedMessage
+                    id="practice_read_more_hint"
+                    defaultMessage="Read up on them using the links below — eBird and Birds of the World are great places to start."
+                  />
+                </Text>
+                {isSpeciesPractice && game?.focus_species_id ? (
+                  <PracticeSpeciesLinks
+                    speciesId={game.focus_species_id}
+                    name={game.focus_species_name || ''}
+                    code={game.focus_species_code}
+                    illustrationUrl={game.focus_species_illustration_url}
+                  />
+                ) : null}
+                {isPairPractice && game?.pair_species_low_id && game?.pair_species_high_id ? (
+                  <>
+                    <PracticeSpeciesLinks
+                      speciesId={game.pair_species_low_id}
+                      name={game.pair_species_low_name || ''}
+                      code={game.pair_species_low_code}
+                      illustrationUrl={game.pair_species_low_illustration_url}
+                    />
+                    <PracticeSpeciesLinks
+                      speciesId={game.pair_species_high_id}
+                      name={game.pair_species_high_name || ''}
+                      code={game.pair_species_high_code}
+                      illustrationUrl={game.pair_species_high_illustration_url}
+                    />
+                  </>
+                ) : null}
+              </Flex>
+            ) : null}
+            <Flex direction="column" gap={3} w="full">
+              <Button colorPalette="primary" onClick={() => navigate('/trouble-spots')}>
+                <FormattedMessage id="back_to_trouble_spots" defaultMessage="Back to tricky birds" />
+              </Button>
+              {displayGame && (
+                <GameRow
+                  game={displayGame}
+                  emphasizeClickable
+                  playerToken={gameDetailPlayerToken}
+                />
+              )}
+            </Flex>
+          </Flex>
+        </Box>
+      </>
+    )
+  }
 
   return (
     <>

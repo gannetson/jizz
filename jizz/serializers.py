@@ -1085,6 +1085,47 @@ class GameSerializer(serializers.ModelSerializer):
             Game.GAME_TYPE_SPECIES_PRACTICE,
         ):
             representation['current_highscore'] = None
+        if instance.pair_species_low_id and instance.pair_species_high_id:
+            from jizz.services.checklist import localized_species_names, normalize_species_language
+            from jizz.services.species_cover import species_cover_url
+
+            request = self.context.get('request')
+            pair_ids = [instance.pair_species_low_id, instance.pair_species_high_id]
+            species_by_id = Species.objects.in_bulk(pair_ids)
+            lang = normalize_species_language(instance.language or 'en')
+            display_names = localized_species_names(species_by_id, lang)
+            low = species_by_id.get(instance.pair_species_low_id)
+            high = species_by_id.get(instance.pair_species_high_id)
+            representation['pair_species_low_name'] = display_names.get(
+                instance.pair_species_low_id,
+                low.name if low else '',
+            )
+            representation['pair_species_high_name'] = display_names.get(
+                instance.pair_species_high_id,
+                high.name if high else '',
+            )
+            representation['pair_species_low_code'] = (low.code or '') if low else ''
+            representation['pair_species_high_code'] = (high.code or '') if high else ''
+            representation['pair_species_low_illustration_url'] = (
+                species_cover_url(low, request) if low else None
+            )
+            representation['pair_species_high_illustration_url'] = (
+                species_cover_url(high, request) if high else None
+            )
+        if instance.focus_species_id:
+            from jizz.services.checklist import localized_species_names, normalize_species_language
+            from jizz.services.species_cover import species_cover_url
+
+            request = self.context.get('request')
+            focus = Species.objects.filter(pk=instance.focus_species_id).first()
+            if focus:
+                lang = normalize_species_language(instance.language or 'en')
+                display_names = localized_species_names({focus.id: focus}, lang)
+                representation['focus_species_name'] = display_names.get(focus.id, focus.name)
+                representation['focus_species_code'] = focus.code or ''
+                representation['focus_species_illustration_url'] = species_cover_url(
+                    focus, request
+                )
         return representation
 
     class Meta:
@@ -1102,6 +1143,9 @@ class GameSerializer(serializers.ModelSerializer):
             'include_escapes',
             'dificult_species',
             'game_type',
+            'pair_species_low_id',
+            'pair_species_high_id',
+            'focus_species_id',
             'speed_seconds',
             'scores'
         )

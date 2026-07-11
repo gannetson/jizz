@@ -4,6 +4,7 @@ Query-count guards for add_question and play serialization.
 
 import time
 
+from django.core.cache import cache
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
@@ -39,6 +40,9 @@ class QuestionPerformanceTestCase(TestCase):
                 source='test',
             )
 
+    def tearDown(self):
+        cache.clear()
+
     def test_candidate_species_ids_bounded_queries(self):
         game = Game.objects.create(
             country=self.country,
@@ -67,6 +71,21 @@ class QuestionPerformanceTestCase(TestCase):
         self.assertIsNotNone(q)
         # candidate pool + species/media pick + create (+ options for beginner)
         self.assertLessEqual(len(ctx), 25)
+
+    def test_add_question_reuses_cached_species_pool(self):
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=100,
+            media='images',
+            host=self.player,
+            rarity='regular',
+        )
+        create_question_for_game(game)
+        with CaptureQueriesContext(connection) as ctx:
+            create_question_for_game(game)
+        # Second question should not re-query the full country species pool.
+        self.assertLessEqual(len(ctx), 18)
 
     def test_serialize_play_bounded_queries(self):
         game = Game.objects.create(

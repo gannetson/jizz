@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,10 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  Pressable,
+  TextInput,
+  Switch,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +18,10 @@ import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { useGame } from '../context/GameContext';
+import {
+  troubleSpotDisplayName,
+  troubleSpotPairDisplayName,
+} from '../utils/troubleSpotDisplayName';
 import {
   SpeciesMediaModal,
   type SpeciesMediaData,
@@ -26,6 +34,8 @@ import {
   type TroubleSpotPair,
   type TroubleSpotSpecies,
 } from '../api/practice';
+import { loadCountries, type Country } from '../api/countries';
+import { getCountryDisplayName } from '../i18n/countryNames';
 import * as playerApi from '../api/player';
 import { colors } from '../theme';
 
@@ -40,8 +50,13 @@ export function TroubleSpotsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const { profile } = useProfile();
+  const { profile, ready: profileReady } = useProfile();
   const { loadGame, setGame, setPlayer } = useGame();
+
+  const speciesLanguage = useMemo(
+    () => (profile?.language?.trim() || locale).toLowerCase(),
+    [profile?.language, locale],
+  );
 
   const [activeTab, setActiveTab] = useState<TabKey>('species');
   const [species, setSpecies] = useState<TroubleSpotSpecies[]>([]);
@@ -52,11 +67,66 @@ export function TroubleSpotsScreen() {
   const [startingPairKey, setStartingPairKey] = useState<string | null>(null);
   const [startingSpeciesId, setStartingSpeciesId] = useState<number | null>(null);
   const [modalSpecies, setModalSpecies] = useState<SpeciesMediaData | null>(null);
+  const [countryCode, setCountryCode] = useState<string | undefined>(undefined);
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [includeFixed, setIncludeFixed] = useState(false);
 
-  const countryCode = profile?.country_code?.trim()?.toUpperCase();
+  const effectiveCountryCode = countryCode ?? profile?.country_code?.trim()?.toUpperCase();
+
+  useEffect(() => {
+    if (!countryModalVisible || countries.length > 0) return;
+    loadCountries()
+      .then(setCountries)
+      .catch(() => {});
+  }, [countryModalVisible, countries.length]);
+
+  const countryOptions = useMemo(() => {
+    const withDisplay = countries.map((c) => ({
+      ...c,
+      displayName: getCountryDisplayName(c, locale),
+    }));
+    withDisplay.sort((a, b) =>
+      a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }),
+    );
+    return withDisplay;
+  }, [countries, locale]);
+
+  const filteredCountryOptions = useMemo(() => {
+    if (!countrySearch.trim()) return countryOptions;
+    const q = countrySearch.trim().toLowerCase();
+    return countryOptions.filter((o) => o.displayName.toLowerCase().includes(q));
+  }, [countryOptions, countrySearch]);
+
+  const countryDisplayName = useMemo(() => {
+    if (!effectiveCountryCode) return null;
+    const match = countryOptions.find((c) => c.code === effectiveCountryCode);
+    return match?.displayName ?? effectiveCountryCode;
+  }, [effectiveCountryCode, countryOptions]);
+
+  useEffect(() => {
+    if (!isAuthenticated || countries.length > 0) return;
+    loadCountries()
+      .then(setCountries)
+      .catch(() => {});
+  }, [isAuthenticated, countries.length]);
+
+  const visibleSpecies = useMemo(
+    () => (includeFixed ? species : species.filter((row) => !row.fixed)),
+    [species, includeFixed],
+  );
+  const visiblePairs = useMemo(
+    () => (includeFixed ? pairs : pairs.filter((pair) => !pair.fixed)),
+    [pairs, includeFixed],
+  );
 
   const load = useCallback(async (showRefresh = false) => {
     if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+    if (!profileReady) {
       setLoading(false);
       return;
     }
@@ -64,7 +134,7 @@ export function TroubleSpotsScreen() {
     else setLoading(true);
     setError(null);
     try {
-      const data = await fetchTroubleSpots(countryCode);
+      const data = await fetchTroubleSpots(effectiveCountryCode, speciesLanguage);
       setSpecies(data.species);
       setPairs(data.pairs);
     } catch (e: unknown) {
@@ -75,7 +145,7 @@ export function TroubleSpotsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isAuthenticated, countryCode, t]);
+  }, [isAuthenticated, profileReady, effectiveCountryCode, speciesLanguage, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,7 +158,7 @@ export function TroubleSpotsScreen() {
     setStartingPairKey(key);
     setError(null);
     try {
-      const result = await startConfusionPairPractice(pair.low_id, pair.high_id, countryCode);
+      const result = await startConfusionPairPractice(pair.low_id, pair.high_id, effectiveCountryCode);
       const p = await playerApi.getPlayer(result.player_token);
       if (p) setPlayer(p);
       const game = await loadGame(result.game.token);
@@ -107,7 +177,7 @@ export function TroubleSpotsScreen() {
     setStartingSpeciesId(speciesId);
     setError(null);
     try {
-      const result = await startSpeciesPractice(speciesId, countryCode);
+      const result = await startSpeciesPractice(speciesId, effectiveCountryCode);
       const p = await playerApi.getPlayer(result.player_token);
       if (p) setPlayer(p);
       const game = await loadGame(result.game.token);
@@ -124,19 +194,143 @@ export function TroubleSpotsScreen() {
   };
 
   const openSpecies = (row: TroubleSpotSpecies) => {
+    const displayName = troubleSpotDisplayName(row, speciesLanguage);
     setModalSpecies({
       id: row.species_id,
-      name: row.name,
+      name: displayName,
       name_latin: row.name_latin,
-      name_translated: row.name,
+      name_nl: row.name_nl,
+      name_translated: displayName,
       illustration_url: row.illustration_url,
     });
   };
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
-    { key: 'species', label: t('trouble_spots_species_title'), count: species.length },
-    { key: 'pairs', label: t('trouble_spots_pairs_title'), count: pairs.length },
+    { key: 'species', label: t('trouble_spots_species_title'), count: visibleSpecies.length },
+    { key: 'pairs', label: t('trouble_spots_pairs_title'), count: visiblePairs.length },
   ];
+
+  const countryPicker = effectiveCountryCode ? (
+    <TouchableOpacity
+      onPress={() => setCountryModalVisible(true)}
+      accessibilityRole="button"
+      accessibilityLabel={t('trouble_spots_change_country')}
+    >
+      <Text style={styles.subtitle}>
+        {countryDisplayName ?? effectiveCountryCode}{' '}
+        <Text style={styles.subtitleChevron}>▾</Text>
+      </Text>
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Settings' as never)}
+      accessibilityRole="button"
+    >
+      <Text style={styles.subtitle}>{t('trouble_spots_set_country')}</Text>
+    </TouchableOpacity>
+  );
+
+  const listBody =
+    loading && !refreshing ? (
+      <View style={styles.listLoading}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    ) : activeTab === 'species' ? (
+      visibleSpecies.length === 0 ? (
+        <Text style={styles.muted}>{t('trouble_spots_no_species')}</Text>
+      ) : (
+        visibleSpecies.map((row) => {
+          const busy = startingSpeciesId === row.species_id;
+          const displayName = row.name_translated ?? row.name;
+          return (
+            <View key={row.species_id} style={styles.speciesRow}>
+              <TouchableOpacity
+                style={styles.speciesRowMain}
+                onPress={() => openSpecies(row)}
+                accessibilityRole="button"
+              >
+                <SpeciesCoverThumb
+                  speciesId={row.species_id}
+                  initialUrl={row.illustration_url}
+                  size={48}
+                  alt={displayName}
+                />
+                <View style={styles.rowText}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>{displayName}</Text>
+                  <Text style={styles.rowSub} numberOfLines={1}>{row.name_latin}</Text>
+                  {row.fixed ? (
+                    <View style={styles.fixedBadge}>
+                      <Text style={styles.fixedBadgeText}>{t('trouble_spots_pair_fixed')}</Text>
+                    </View>
+                  ) : null}
+                  <Text style={styles.rowStatCompact} numberOfLines={1}>
+                    {t('trouble_spots_correct_rate').replace('{rate}', formatRate(row.correct_rate))}
+                    {' · '}
+                    {t('trouble_spots_wrong_rate')
+                      .replace('{wrong}', String(row.wrongly_answered))
+                      .replace('{shown}', String(row.times_shown))
+                      .replace('{rate}', formatRate(row.error_rate))}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.practiceButtonCompact, busy && styles.practiceButtonDisabled]}
+                onPress={() => void handlePracticeSpecies(row.species_id)}
+                disabled={busy || startingSpeciesId != null}
+              >
+                {busy ? (
+                  <ActivityIndicator size="small" color={colors.primary[50]} />
+                ) : (
+                  <Text style={styles.practiceButtonTextCompact}>
+                    {t('trouble_spots_practice_species')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          );
+        })
+      )
+    ) : visiblePairs.length === 0 ? (
+      <Text style={styles.muted}>{t('trouble_spots_no_pairs')}</Text>
+    ) : (
+      visiblePairs.map((pair) => {
+        const key = `${pair.low_id}-${pair.high_id}`;
+        const busy = startingPairKey === key;
+        const lowName = troubleSpotPairDisplayName(pair.low_name, pair.low_name_nl, speciesLanguage);
+        const highName = troubleSpotPairDisplayName(pair.high_name, pair.high_name_nl, speciesLanguage);
+        return (
+          <View key={key} style={styles.speciesRow}>
+            <View style={styles.pairRowMain}>
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle} numberOfLines={1}>{lowName}</Text>
+                <Text style={styles.rowTitle} numberOfLines={1}>{highName}</Text>
+                {pair.fixed ? (
+                  <View style={styles.fixedBadge}>
+                    <Text style={styles.fixedBadgeText}>{t('trouble_spots_pair_fixed')}</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.rowStatCompact} numberOfLines={1}>
+                  {t('trouble_spots_pair_wrong').replace('{count}', String(pair.total_wrong))}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.practiceButtonCompact, busy && styles.practiceButtonDisabled]}
+              onPress={() => void handlePracticePair(pair)}
+              disabled={busy || startingPairKey != null}
+            >
+              {busy ? (
+                <ActivityIndicator size="small" color={colors.primary[50]} />
+              ) : (
+                <Text style={styles.practiceButtonTextCompact}>
+                  {t('trouble_spots_practice_species')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        );
+      })
+    );
 
   if (!isAuthenticated) {
     return (
@@ -149,16 +343,23 @@ export function TroubleSpotsScreen() {
     );
   }
 
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.root}>
+      <View style={styles.controlsPanel}>
+        <View style={styles.countryPickerWrap}>{countryPicker}</View>
+        <View style={styles.fixedToggleRow}>
+          <Text style={styles.fixedToggleLabel} numberOfLines={1}>
+            {t('trouble_spots_include_fixed')}
+          </Text>
+          <Switch
+            value={includeFixed}
+            onValueChange={setIncludeFixed}
+            trackColor={{ false: colors.primary[200], true: colors.primary[400] }}
+            thumbColor={includeFixed ? colors.primary[600] : '#f4f3f4'}
+          />
+        </View>
+      </View>
+
       <View style={styles.tabBar}>
         {tabs.map((tab) => (
           <TouchableOpacity
@@ -182,102 +383,75 @@ export function TroubleSpotsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />
         }
       >
-        {!countryCode && (
-          <Text style={styles.hint}>{t('trouble_spots_set_country')}</Text>
-        )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        {activeTab === 'species' ? (
-          species.length === 0 ? (
-            <Text style={styles.muted}>{t('trouble_spots_no_species')}</Text>
-          ) : (
-            species.map((row) => {
-              const busy = startingSpeciesId === row.species_id;
-              return (
-                <View key={row.species_id} style={styles.speciesRow}>
-                  <TouchableOpacity
-                    style={styles.speciesRowMain}
-                    onPress={() => openSpecies(row)}
-                    accessibilityRole="button"
-                  >
-                    <SpeciesCoverThumb
-                      speciesId={row.species_id}
-                      initialUrl={row.illustration_url}
-                      size={48}
-                      alt={row.name}
-                    />
-                    <View style={styles.rowText}>
-                      <Text style={styles.rowTitle} numberOfLines={1}>{row.name}</Text>
-                      <Text style={styles.rowSub} numberOfLines={1}>{row.name_latin}</Text>
-                      <Text style={styles.rowStatCompact} numberOfLines={1}>
-                        {t('trouble_spots_correct_rate').replace('{rate}', formatRate(row.correct_rate))}
-                        {' · '}
-                        {t('trouble_spots_wrong_rate')
-                          .replace('{wrong}', String(row.wrongly_answered))
-                          .replace('{shown}', String(row.times_shown))
-                          .replace('{rate}', formatRate(row.error_rate))}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.practiceButtonCompact, busy && styles.practiceButtonDisabled]}
-                    onPress={() => void handlePracticeSpecies(row.species_id)}
-                    disabled={busy || startingSpeciesId != null}
-                  >
-                    {busy ? (
-                      <ActivityIndicator size="small" color={colors.primary[50]} />
-                    ) : (
-                      <Text style={styles.practiceButtonTextCompact}>
-                        {t('trouble_spots_practice_species')}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })
-          )
-        ) : pairs.length === 0 ? (
-          <Text style={styles.muted}>{t('trouble_spots_no_pairs')}</Text>
-        ) : (
-          pairs.map((pair) => {
-            const key = `${pair.low_id}-${pair.high_id}`;
-            const busy = startingPairKey === key;
-            return (
-              <View key={key} style={styles.pairCard}>
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle}>
-                    {pair.low_name} · {pair.high_name}
-                  </Text>
-                  <Text style={styles.rowSub}>
-                    {t('trouble_spots_pair_wrong').replace('{count}', String(pair.total_wrong))}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.practiceButton, busy && styles.practiceButtonDisabled]}
-                  onPress={() => void handlePracticePair(pair)}
-                  disabled={busy || startingPairKey != null}
-                >
-                  {busy ? (
-                    <ActivityIndicator size="small" color={colors.primary[50]} />
-                  ) : (
-                    <Text style={styles.practiceButtonText}>{t('trouble_spots_practice_pair')}</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            );
-          })
-        )}
+        {listBody}
       </ScrollView>
 
       <SpeciesMediaModal
         visible={!!modalSpecies}
         onClose={() => setModalSpecies(null)}
         species={modalSpecies}
-        language={locale}
+        language={speciesLanguage}
         showPracticeButton
         onPractice={(speciesId) => void handlePracticeSpecies(speciesId)}
         practiceLoading={startingSpeciesId === modalSpecies?.id}
       />
+
+      <Modal visible={countryModalVisible} transparent animationType="slide">
+        <Pressable
+          style={styles.countryModalBackdrop}
+          onPress={() => {
+            setCountryModalVisible(false);
+            setCountrySearch('');
+          }}
+        >
+          <Pressable style={styles.countryModalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.countryModalTitle}>{t('trouble_spots_select_country')}</Text>
+            <TextInput
+              style={styles.countrySearchInput}
+              placeholder={t('search')}
+              value={countrySearch}
+              onChangeText={setCountrySearch}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {filteredCountryOptions.map((item) => (
+                <TouchableOpacity
+                  key={item.code}
+                  style={[
+                    styles.countryModalItem,
+                    effectiveCountryCode === item.code && styles.countryModalItemSelected,
+                  ]}
+                  onPress={() => {
+                    setCountryCode(item.code);
+                    setCountryModalVisible(false);
+                    setCountrySearch('');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.countryModalItemText,
+                      effectiveCountryCode === item.code && styles.countryModalItemTextSelected,
+                    ]}
+                  >
+                    {item.displayName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.countryModalClose}
+              onPress={() => {
+                setCountryModalVisible(false);
+                setCountrySearch('');
+              }}
+            >
+              <Text style={styles.countryModalCloseText}>{t('close')}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -286,6 +460,28 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
+  controlsPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.primary[200],
+  },
+  countryPickerWrap: {
+    flexShrink: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  subtitle: { fontSize: 14, color: colors.primary[600] },
+  subtitleChevron: { fontSize: 12, color: colors.primary[500] },
+  listLoading: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -293,14 +489,23 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: '#fff',
   },
+  fixedToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    gap: 8,
+  },
+  fixedToggleLabel: {
+    fontSize: 13,
+    color: colors.primary[600],
+    maxWidth: 140,
+  },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 10,
     gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primary[100],
     backgroundColor: '#fff',
   },
   tab: {
@@ -319,12 +524,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tabTextActive: { color: colors.primary[50] },
-  hint: {
-    fontSize: 14,
-    color: colors.primary[700],
-    marginBottom: 12,
-    lineHeight: 20,
-  },
   muted: {
     fontSize: 16,
     color: colors.primary[700],
@@ -345,14 +544,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   ctaText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.primary[200],
-  },
   speciesRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -368,26 +559,31 @@ const styles = StyleSheet.create({
     gap: 10,
     minWidth: 0,
   },
-  pairCard: {
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.primary[200],
-    gap: 10,
+  pairRowMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  fixedBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#dcfce7',
+    borderColor: '#16a34a',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  fixedBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803d',
+    letterSpacing: 0.5,
   },
   rowText: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 15, fontWeight: '600', color: colors.primary[800] },
   rowSub: { fontSize: 12, color: colors.primary[600], marginTop: 1 },
-  rowStat: { fontSize: 13, color: colors.primary[700], textAlign: 'right', maxWidth: 120 },
   rowStatCompact: { fontSize: 11, color: colors.primary[600], marginTop: 2 },
-  practiceButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary[600],
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
   practiceButtonDisabled: { opacity: 0.7 },
-  practiceButtonText: { color: colors.primary[50], fontSize: 15, fontWeight: '600' },
   practiceButtonCompact: {
     flexShrink: 0,
     backgroundColor: colors.primary[600],
@@ -398,4 +594,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   practiceButtonTextCompact: { color: colors.primary[50], fontSize: 13, fontWeight: '600' },
+  countryModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  countryModalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
+  countryModalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
+  countrySearchInput: {
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  countryModalItem: { paddingVertical: 14, paddingHorizontal: 8 },
+  countryModalItemSelected: { backgroundColor: colors.primary[100] },
+  countryModalItemText: { fontSize: 16, color: colors.primary[800] },
+  countryModalItemTextSelected: { fontWeight: '600', color: colors.primary[700] },
+  countryModalClose: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
+  countryModalCloseText: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
 });

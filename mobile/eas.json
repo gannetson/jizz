@@ -26,6 +26,13 @@
         "autoIncrement": true
       },
       "android": {
+        "credentialsSource": "remote",
+        "autoIncrement": true
+      }
+    },
+    "production-local": {
+      "extends": "production",
+      "android": {
         "credentialsSource": "local"
       }
     }

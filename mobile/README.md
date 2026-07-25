@@ -115,7 +115,56 @@ Tests live in `mobile/android/app/src/androidTest/kotlin/pro/birdr/app/CountryCh
 - **CI:** Add a job that starts an Android emulator (e.g. `system-images;android-34;google_apis;x86_64`), runs `./gradlew connectedDebugAndroidTest`, and fails the build if any test fails.
 - **Firebase Test Lab:** Build the debug APK and test APK, then run `gcloud firebase test android run` with the APKs to run the same tests on multiple devices/API levels.
 
+## Automated store releases (GitHub Actions)
+
+Ship new versions to **TestFlight / App Store Connect** and **Google Play** without a Mac in CI. The workflow only starts an EAS build on Expo’s servers (`ubuntu-latest`), so it fits a free GitHub plan.
+
+### One-time setup
+
+1. **Expo access token**  
+   Create at [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens), then add a repo secret named `EXPO_TOKEN`.
+
+2. **iOS credentials on EAS** (if not already):
+   ```bash
+   cd mobile
+   eas credentials --platform ios
+   ```
+   Use your existing distribution cert / App Store profile, or let EAS manage them. Also configure App Store Connect API key under submit credentials when prompted (or in the Expo dashboard).
+
+3. **Android keystore on EAS** (required for cloud builds — production profile uses `credentialsSource: "remote"`):
+   ```bash
+   cd mobile
+   eas credentials --platform android
+   ```
+   Choose “Use existing keystore”, upload `android/keys/upload-keystore.jks` (or `android/app/upload-keystore.jks` if that’s where yours lives), and enter the alias/passwords from `keystore.properties`.  
+   Also link a Play Console service account JSON for submit (Expo dashboard → project → credentials / `eas submit` prompts).
+
+4. **Bump the release** in `mobile/app.json` before shipping:
+   - `expo.version` (e.g. `1.83.0`)
+   - `expo.buildNumber` (must increase each store upload)
+   - `expo.releaseCodename` (optional display name)
+
+### Run a release
+
+- **GitHub:** Actions → **Mobile store release** → Run workflow → pick `ios` / `android` / `all`, leave submit on.
+- **Local:**
+  ```bash
+  cd mobile
+  npm run release:ios        # EAS cloud + auto-submit
+  npm run release:android
+  npm run release:store      # both
+  ```
+
+Builds land in App Store Connect (TestFlight) and Play Console. You still press **Submit for review** in each console unless you later add fully automatic review submission.
+
+Local Android builds that need `credentials.json` on disk still use:
+```bash
+npm run build:android        # profile production-local --local
+npm run build:android:push
+```
+
 ## Android release / AAB (testing & Play Store)
+
 
 Use **Node 22+** in the same terminal as for debug.
 
@@ -172,11 +221,10 @@ For **production** you must sign release builds with your own keystore:
 
 ### EAS Build: use keystore from `android/app/`
 
-Release builds via EAS are configured to use the **local** keystore at `android/app/upload-keystore.jks` (see `android/app/keystore.properties` for alias and passwords). `eas.json` has `credentialsSource: "local"` for Android, and `credentials.json` in the project root points to that keystore.
+Release builds via EAS **cloud** (`production` profile) use the **remote** keystore stored in your Expo project. Upload it once with `eas credentials --platform android` (see [Automated store releases](#automated-store-releases-github-actions)).
 
-- **`npm run build:android`** and **`npm run build:android:push`** use **`eas build --platform android --profile production --local`** so the build runs on your machine and can read `credentials.json` and `android/app/upload-keystore.jks`. Then **`npm run push:android`** submits the latest build to the Play Store.
-
-- **EAS cloud builds:** `credentials.json` and `*.jks` are in `.gitignore`, so they are not uploaded. Either use the local scripts above, or upload the keystore once with **`eas credentials --platform android`** (choose “Use existing keystore”, upload `android/app/upload-keystore.jks`, use passwords from `keystore.properties`). After that you can use **`npm run build:android:cloud`** for cloud builds with remote credentials.
+- **`npm run build:android`** / **`npm run build:android:push`** use profile **`production-local`** so the build runs on your machine and reads `credentials.json` + the local `.jks`.
+- **`npm run build:android:cloud`**, **`npm run release:android`**, and the GitHub **Mobile store release** workflow use **`production`** with remote credentials.
 
 ### Google Play: 16 KB page size support
 

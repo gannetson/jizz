@@ -19,7 +19,7 @@ import { SpeciesName } from '../components/species-name';
 import CountryCombobox from '../components/country-combobox';
 import { authService } from '../api/services/auth.service';
 import { profileService, type UserProfile } from '../api/services/profile.service';
-import UseCountries from '../user/use-countries';
+import { UseCountries } from '../user/use-countries';
 import {
   fetchTroubleSpots,
   startConfusionPairPractice,
@@ -279,7 +279,7 @@ export default function TroubleSpotsPage() {
             </Text>
             <Switch.Root
               checked={includeFixed}
-              onCheckedChange={(e) => setIncludeFixed(!!e.checked)}
+              onCheckedChange={(e: { checked: boolean }) => setIncludeFixed(e.checked === true)}
               colorPalette="primary"
             >
               <Switch.HiddenInput />
@@ -433,7 +433,7 @@ export default function TroubleSpotsPage() {
                           pair.low_name_nl,
                           pair.low_id,
                           allSpecies,
-                          speciesLanguage,
+                          speciesLanguage || 'en',
                         )}
                         {' · '}
                         {pairDisplayName(
@@ -441,7 +441,7 @@ export default function TroubleSpotsPage() {
                           pair.high_name_nl,
                           pair.high_id,
                           allSpecies,
-                          speciesLanguage,
+                          speciesLanguage || 'en',
                         )}
                       </Text>
                       {pair.fixed ? (

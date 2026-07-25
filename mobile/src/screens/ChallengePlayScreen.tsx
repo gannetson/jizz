@@ -138,11 +138,7 @@ export function ChallengePlayScreen() {
 
   const handleFeedbackComplete = useCallback(() => {
     setShowFeedback(false);
-    if (journeyId && journeyStepFailed) {
-      setJourneyStepFailed(false);
-      navigateJourneyResults();
-    }
-  }, [journeyId, journeyStepFailed, navigateJourneyResults]);
+  }, []);
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
@@ -623,15 +619,13 @@ export function ChallengePlayScreen() {
       {answerResult !== null ? (
         <View style={styles.nextSection}>
           {showStepContinue ? (
-            journeyStepFailed ? null : (
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={navigateJourneyResults}
-                testID="journeyPlay.viewResults"
-              >
-                <Text style={styles.primaryButtonText}>{t('continue')}</Text>
-              </TouchableOpacity>
-            )
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={navigateJourneyResults}
+              testID="journeyPlay.viewResults"
+            >
+              <Text style={styles.primaryButtonText}>{t('continue')}</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={styles.primaryButton}

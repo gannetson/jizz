@@ -228,8 +228,9 @@ export function BirdrJourneyPlayPage() {
     setShowFeedback(false);
     setSubmitting(false);
     submittingRef.current = false;
-    if (journeyStepFailed) {
-      navigateResults();
+    // On step failure, stay on the question so the player can review the answer.
+    // A Continue button navigates to the failed-step results screen.
+    if (journeyStepFailed || levelEnded) {
       return;
     }
     setResponse(null);
@@ -488,6 +489,17 @@ export function BirdrJourneyPlayPage() {
               <FormattedMessage id="type species" defaultMessage="Start typing your answer..." />
             }
           />
+        ) : null}
+
+        {response && (journeyStepFailed || levelEnded) ? (
+          <Button
+            colorPalette="primary"
+            width="full"
+            mb={5}
+            onClick={navigateResults}
+          >
+            <FormattedMessage id="continue" defaultMessage="Continue" />
+          </Button>
         ) : null}
 
         <Heading size="md" mb={2}>

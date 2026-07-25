@@ -105,8 +105,14 @@ class IpGeoTests(TestCase):
             city='',
         )
         with patch('jizz.ip_geo._resolve_ip_location_live') as mock_live:
+            mock_live.return_value = {
+                'country_code': 'US',
+                'country_name': 'United States',
+                'city': '',
+            }
             locations = lookup_ip_locations(['84.85.68.210', '139.178.131.76'])
         self.assertEqual(locations['84.85.68.210']['country_code'], 'NL')
+        self.assertEqual(locations['139.178.131.76']['country_code'], 'US')
         mock_live.assert_called_once_with('139.178.131.76')
 
     @patch('jizz.ip_geo.lookup_ip_locations')

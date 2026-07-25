@@ -6,6 +6,7 @@ from django.utils import timezone
 from jizz.games_played_stats import (
     default_date_range,
     games_played_by_country,
+    games_played_payload,
     games_played_rows,
     world_map_country_code,
 )

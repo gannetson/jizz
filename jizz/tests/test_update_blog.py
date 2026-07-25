@@ -145,6 +145,7 @@ class UpdateEmailTests(TestCase):
         self.assertIsNone(second_delivery)
 
     def test_failed_send_does_not_record_recipient(self):
+        UserProfile.objects.filter(user=self.admin).update(receive_updates=False)
         user = User.objects.create_user('fail', password='x', email='fail@example.com')
         UserProfile.objects.create(user=user, receive_updates=True)
 

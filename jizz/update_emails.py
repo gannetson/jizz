@@ -272,19 +272,22 @@ def send_update_email_broadcast(update: Update, sent_by, *, delivery: UpdateEmai
         )
 
     sent = 0
+    attempted = 0
     try:
         for profile in pending.iterator():
             try:
                 if send_update_email_to_user(update, profile.user, delivery=delivery):
                     sent += 1
+                attempted += 1
             except Exception:
                 logger.exception('Update email failed for user %s', profile.user_id)
-        delivery.recipient_count = sent
+                attempted += 1
+        delivery.recipient_count = attempted
         delivery.status = UpdateEmailDelivery.STATUS_COMPLETED
         delivery.save(update_fields=['recipient_count', 'status'])
     except Exception:
         logger.exception('Update email broadcast failed for update %s', update.pk)
-        delivery.recipient_count = sent
+        delivery.recipient_count = attempted
         delivery.status = UpdateEmailDelivery.STATUS_FAILED
         delivery.save(update_fields=['recipient_count', 'status'])
         raise

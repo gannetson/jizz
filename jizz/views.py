@@ -790,12 +790,13 @@ class QuestionNextMediaView(APIView):
 
         loaded = load_question_for_play(updated.id)
         data = serialize_question_for_play(loaded)
+        # After rotation, return only the new active clip (index 0), not the full list.
         return Response(
             {
                 'number': data['number'],
-                'images': data['images'],
-                'videos': data['videos'],
-                'sounds': data['sounds'],
+                'images': data['images'][:1],
+                'videos': data['videos'][:1],
+                'sounds': data['sounds'][:1],
             }
         )
 

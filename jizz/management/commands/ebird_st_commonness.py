@@ -200,7 +200,9 @@ def apply_vagrant_frequency(country_code: str, *, force: bool = False) -> int:
         status="rare",
     )
     if not force:
-        qs = qs.filter(Q(frequency__isnull=True) | Q(frequency=""))
+        qs = qs.filter(
+            Q(frequency__isnull=True) | Q(frequency="") | Q(frequency="very_rare")
+        )
     return qs.update(frequency="vagrant")
 
 

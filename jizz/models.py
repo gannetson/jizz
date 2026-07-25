@@ -631,7 +631,7 @@ class Player(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True)
     name = models.CharField(max_length=255)
     language = models.CharField(max_length=100, default='en')
-    token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
+    token = models.CharField(max_length=100, default=lambda: str(uuid.uuid4()), editable=False)
     score = models.IntegerField(default=0)
 
     @property

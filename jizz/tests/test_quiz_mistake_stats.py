@@ -208,13 +208,14 @@ class QuizMistakeStatsTests(TestCase):
             media="images",
             multiplayer=False,
         )
-        ps = PlayerScore.objects.create(player=self.player, game=game)
         q = Question.objects.create(game=game, species=self.sp_c, number=1, sequence=1)
         for order, sp in enumerate([self.sp_c, self.sp_a, self.sp_b], start=1):
             QuestionOption.objects.create(question=q, species=sp, order=order)
-        for _i in range(MIN_TIMES_SHOWN_COUNTRY):
+        for i in range(MIN_TIMES_SHOWN_COUNTRY):
+            p = Player.objects.create(name=f"Pc-{i}", language="en")
+            sc = PlayerScore.objects.create(player=p, game=game)
             Answer.objects.create(
-                player_score=ps,
+                player_score=sc,
                 question=q,
                 answer=self.sp_c,
                 correct=False,
@@ -239,15 +240,17 @@ class QuizMistakeStatsTests(TestCase):
             media="images",
             multiplayer=False,
         )
-        ps = PlayerScore.objects.create(player=self.player, game=game2)
-        q = Question.objects.create(game=game2, species=sp_intro, number=1, sequence=1)
+        # Target a native species; pick the introduced species as the wrong answer.
+        q = Question.objects.create(game=game2, species=self.sp_a, number=1, sequence=1)
         for order, sp in enumerate([sp_intro, self.sp_a, self.sp_b], start=1):
             QuestionOption.objects.create(question=q, species=sp, order=order)
-        for _i in range(10):
+        for i in range(10):
+            p = Player.objects.create(name=f"Pi-{i}", language="en")
+            sc = PlayerScore.objects.create(player=p, game=game2)
             Answer.objects.create(
-                player_score=ps,
+                player_score=sc,
                 question=q,
-                answer=self.sp_a,
+                answer=sp_intro,
                 correct=False,
             )
 

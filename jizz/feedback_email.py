@@ -1,5 +1,7 @@
 """Email notifications for user feedback."""
 
+from __future__ import annotations
+
 from email.utils import formataddr
 
 from django.conf import settings

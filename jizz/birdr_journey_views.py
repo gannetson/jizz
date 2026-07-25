@@ -248,7 +248,8 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             .first()
         )
         if existing:
-            if existing.status == 'running':
+            if existing.status in ('running', 'new'):
+                # Idempotent: return the same game whether or not a question was loaded yet.
                 step_ctx = BirdrJourneySerializer(
                     journey, context={'request': request}
                 )._serializer_context()
@@ -258,17 +259,7 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
                         existing, context=step_ctx
                     ).data,
                 })
-            if existing.status == 'new' and existing.game.questions.count() > 0:
-                step_ctx = BirdrJourneySerializer(
-                    journey, context={'request': request}
-                )._serializer_context()
-                return self._no_cache_response({
-                    'journey': self._serialize_journey(journey, request),
-                    'journey_game': BirdrJourneyGameSerializer(
-                        existing, context=step_ctx
-                    ).data,
-                })
-            # Failed attempt or empty shell (question never loaded): start fresh.
+            # Failed attempt: start fresh.
             existing.game.delete()
 
         host = get_journey_host(journey)

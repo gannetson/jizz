@@ -692,27 +692,19 @@ def classify_from_abundance(
 
     if rdo is not None:
         if rdo < 14:
-            capped = _cap_tier(tier, "very_rare")
-            if capped != tier:
-                rarity_cap = "very_rare"
-            tier = capped
+            rarity_cap = rarity_cap or "very_rare"
+            tier = _cap_tier(tier, "very_rare")
         elif rdo < 30 and not extremely_high:
-            capped = _cap_tier(tier, "rare")
-            if capped != tier:
-                rarity_cap = rarity_cap or "rare"
-            tier = capped
+            rarity_cap = rarity_cap or "rare"
+            tier = _cap_tier(tier, "rare")
 
     if rop is not None:
         if rop < 0.01:
-            capped = _cap_tier(tier, "very_rare")
-            if capped != tier:
-                rarity_cap = rarity_cap or "very_rare"
-            tier = capped
+            rarity_cap = rarity_cap or "very_rare"
+            tier = _cap_tier(tier, "very_rare")
         elif rop < 0.05:
-            capped = _cap_tier(tier, "rare")
-            if capped != tier:
-                rarity_cap = rarity_cap or "rare"
-            tier = capped
+            rarity_cap = rarity_cap or "rare"
+            tier = _cap_tier(tier, "rare")
 
     if rop is not None and rdo is not None and rop > 0.5 and rdo >= 180:
         upgraded = _upgrade_tier_one_step(tier)

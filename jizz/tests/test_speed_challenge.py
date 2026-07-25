@@ -89,7 +89,7 @@ class SpeedChallengeTests(TestCase):
         journey = BirdrJourney.objects.create(
             player=self.player,
             country=self.country,
-            current_sequence=1,
+            current_sequence=0,
             current_step_sequence=0,
             user=None,
         )

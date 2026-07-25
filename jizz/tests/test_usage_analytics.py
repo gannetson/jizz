@@ -2,7 +2,7 @@ from datetime import date, datetime
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -26,15 +26,15 @@ class UsageAnalyticsHelpersTests(TestCase):
         self.assertEqual(parse_device_type(''), 'unknown')
 
     def test_resolve_country_code_prefers_client_then_cf_then_profile(self):
-        request = self.client.get('/', HTTP_CF_IPCOUNTRY='DE')
+        factory = RequestFactory()
+        request = factory.get('/', HTTP_CF_IPCOUNTRY='DE')
         self.assertEqual(resolve_country_code(request, 'nl'), 'NL')
         self.assertEqual(resolve_country_code(request, None), 'DE')
 
         user = User.objects.create_user('statsuser', password='x')
         Country.objects.get_or_create(code='BE', defaults={"name": 'Belgium'})[0]
         UserProfile.objects.create(user=user, country_id='BE')
-        self.client.force_login(user)
-        request = self.client.get('/')
+        request = factory.get('/')
         request.user = user
         self.assertEqual(resolve_country_code(request, None), 'BE')
 
@@ -108,7 +108,7 @@ class UsageAnalyticsAggregationTests(TestCase):
 
     @patch('jizz.ip_geo.lookup_ip_locations')
     @patch('jizz.ip_geo.mmdb_available', return_value=False)
-    def test_usage_by_ip_country_falls_back_to_api_without_mmdb(self, mock_locations):
+    def test_usage_by_ip_country_falls_back_to_api_without_mmdb(self, _mock_mmdb, mock_locations):
         from jizz.usage_analytics import usage_by_ip_country
 
         mock_locations.return_value = {
@@ -162,7 +162,11 @@ class UsageAnalyticsApiTests(TestCase):
         self.assertContains(response, 'Usage metrics')
 
     def test_record_usage_event_from_request(self):
-        request = self.client.get('/', HTTP_USER_AGENT='Mozilla/5.0 (Android 14; Mobile)', REMOTE_ADDR='10.0.0.1')
+        request = RequestFactory().get(
+            '/',
+            HTTP_USER_AGENT='Mozilla/5.0 (Android 14; Mobile)',
+            REMOTE_ADDR='10.0.0.1',
+        )
         event = record_usage_event(request, path='/data/', platform='web')
         self.assertEqual(event.path, '/data/')
         self.assertEqual(event.device_type, 'mobile')
@@ -170,7 +174,7 @@ class UsageAnalyticsApiTests(TestCase):
         self.assertEqual(event.metadata['proxy']['remote_addr'], '10.0.0.1')
 
     def test_client_ip_uses_x_forwarded_for(self):
-        request = self.client.get(
+        request = RequestFactory().get(
             '/',
             REMOTE_ADDR='127.0.0.1',
             HTTP_X_FORWARDED_FOR='203.0.113.50, 10.0.0.1',
@@ -190,8 +194,14 @@ class UsageAnalyticsApiTests(TestCase):
         client = Client()
         client.force_login(user)
         with patch(
-            'jizz.ip_geo.lookup_ip_location',
-            return_value={'country_code': 'NL', 'country_name': 'Netherlands', 'city': 'Amsterdam'},
+            'jizz.ip_geo.lookup_ip_locations',
+            return_value={
+                '203.0.113.99': {
+                    'country_code': 'NL',
+                    'country_name': 'Netherlands',
+                    'city': 'Amsterdam',
+                },
+            },
         ):
             response = client.get(reverse('staff-usage'))
         self.assertEqual(response.status_code, 200)

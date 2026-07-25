@@ -150,21 +150,33 @@ def advance_question_media_after_exclusion(
     media_type = {'images': 'image', 'video': 'video', 'audio': 'audio'}.get(
         game.media, 'image'
     )
-    eligible = fetch_eligible_media_for_species(question.species_id, media_type)
-    if excluded_media_id:
-        eligible = [m for m in eligible if m.id != excluded_media_id]
-    if not eligible:
+    full_eligible = fetch_eligible_media_for_species(question.species_id, media_type)
+    if not full_eligible:
         return None
 
-    if len(eligible) == 1:
-        question.number = 0
+    remaining = full_eligible
+    if excluded_media_id:
+        remaining = [m for m in full_eligible if m.id != excluded_media_id]
+    if not remaining:
+        return None
+
+    if len(remaining) == 1:
+        question.number = full_eligible.index(remaining[0])
         question.save(update_fields=['number'])
         return question
 
-    current = min(max(question.number or 0, 0), len(eligible) - 1)
-    for offset in range(1, len(eligible) + 1):
-        idx = (current + offset) % len(eligible)
-        question.number = idx
-        question.save(update_fields=['number'])
-        return question
-    return None
+    current_idx = min(max(question.number or 0, 0), len(full_eligible) - 1)
+    current_media = full_eligible[current_idx]
+
+    if excluded_media_id and current_media.id == excluded_media_id:
+        next_media = remaining[0]
+    else:
+        try:
+            pos_in_remaining = remaining.index(current_media)
+            next_media = remaining[(pos_in_remaining + 1) % len(remaining)]
+        except ValueError:
+            next_media = remaining[0]
+
+    question.number = full_eligible.index(next_media)
+    question.save(update_fields=['number'])
+    return question

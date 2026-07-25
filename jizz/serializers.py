@@ -270,7 +270,12 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
         if game:
             language = game.language
         elif isinstance(self.context, dict) and 'request' in self.context:
-            language = self.context['request'].query_params.get('language')
+            request = self.context['request']
+            query_params = getattr(request, 'query_params', None)
+            if query_params is not None:
+                language = query_params.get('language')
+            else:
+                language = request.GET.get('language')
         
         if language:
             try:
@@ -1678,7 +1683,7 @@ class BirdrJourneySerializer(serializers.ModelSerializer):
         from jizz.birdr_journey_views import get_journey_host
 
         host = get_journey_host(obj)
-        return host.token if host else None
+        return str(host.token) if host else None
 
     def _serializer_context(self):
         journey = self.instance

@@ -25,7 +25,7 @@ from media.models import Media
 
 class DificultSpeciesSelectionTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code="DS", name="Difficult land")
+        self.country = Country.objects.get_or_create(code="DS", defaults={"name": "Difficult land"})[0]
         self.player = Player.objects.create(name="Host", language="en")
         self.game_country = Game.objects.create(
             country=self.country,

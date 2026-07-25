@@ -27,14 +27,16 @@ from jizz.user_names import player_name_for_user
 def user_preferred_language(user, request) -> str:
     language = (request.query_params.get('language') or '').strip()
     if not language:
+        try:
+            language = (user.profile.language or '').strip()
+        except Exception:
+            language = ''
+    if not language:
         player = Player.objects.filter(user=user).order_by('id').first()
         if player and player.language:
             language = player.language
     if not language:
-        try:
-            language = user.profile.language or 'en'
-        except Exception:
-            language = 'en'
+        language = 'en'
     return normalize_species_language(language)
 
 

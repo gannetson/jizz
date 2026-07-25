@@ -26,7 +26,7 @@ from jizz.quiz_mistake_stats import (
 
 class QuizMistakeStatsTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code="QM", name="Quiz Mistake Land")
+        self.country = Country.objects.get_or_create(code="QM", defaults={"name": "Quiz Mistake Land"})[0]
         self.game = Game.objects.create(
             country=self.country,
             level="beginner",
@@ -164,7 +164,7 @@ class QuizMistakeStatsTests(TestCase):
         self.assertIn("CONFUSED PAIRS", res_pairs.content.decode())
 
     def test_country_filter_scopes_species_list_not_answers(self):
-        Country.objects.create(code="OT", name="Empty land")
+        Country.objects.get_or_create(code="OT", defaults={"name": "Empty land"})[0]
         rows_all = {r["species_id"]: r for r in get_species_mistake_rows()}
         rows_qm = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
         self.assertEqual(set(rows_qm), set(rows_all))
@@ -174,7 +174,7 @@ class QuizMistakeStatsTests(TestCase):
 
     def test_country_filter_uses_global_answers_for_checklist_species(self):
         """A country with no local games still gets stats from answers elsewhere."""
-        neighbour = Country.objects.create(code="NB", name="Neighbour land")
+        neighbour = Country.objects.get_or_create(code="NB", defaults={"name": "Neighbour land"})[0]
         for sp in (self.sp_a, self.sp_b, self.sp_c):
             CountrySpecies.objects.create(country=neighbour, species=sp, status="native")
 

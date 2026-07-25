@@ -45,7 +45,7 @@ class ClassifyFrequencyTests(TestCase):
 
 class PersistFrequencyTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code='EF', name='Ebird Freq Land')
+        self.country = Country.objects.get_or_create(code='EF', defaults={"name": 'Ebird Freq Land'})[0]
         self.sp = Species.objects.create(name='Test Warbler', name_latin='Test t', code='teswar')
         self.cs = CountrySpecies.objects.create(
             country=self.country,

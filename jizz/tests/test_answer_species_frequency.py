@@ -15,7 +15,7 @@ from jizz.serializers import AnswerSerializer, PlayerScoreSerializer
 
 class AnswerSpeciesFrequencyTestCase(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code='NL', name='Netherlands')
+        self.country = Country.objects.get_or_create(code='NL', defaults={"name": 'Netherlands'})[0]
         self.species = Species.objects.create(
             name='Rarity Bird',
             name_latin='Rarus birdus',

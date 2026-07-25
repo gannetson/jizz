@@ -35,8 +35,8 @@ def _make_level(sequence, title, step_count=2):
 
 class CountryChallengeLeaderboardTests(TestCase):
     def setUp(self):
-        self.country_nl = Country.objects.create(code='NL', name='Netherlands')
-        self.country_de = Country.objects.create(code='DE', name='Germany')
+        self.country_nl = Country.objects.get_or_create(code='NL', defaults={"name": 'Netherlands'})[0]
+        self.country_de = Country.objects.get_or_create(code='DE', defaults={"name": 'Germany'})[0]
         _make_level(0, 'Nestling', step_count=2)
         _make_level(1, 'Fledgling', step_count=2)
         _make_level(2, 'Champion', step_count=0)

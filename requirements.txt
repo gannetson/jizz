@@ -32,6 +32,7 @@ jedi==0.18.2
 markdown==3.5.2
 matplotlib-inline==0.1.6
 numpy==1.26.4
+pandas==2.2.3
 scikit-learn==1.4.2
 joblib==1.4.2
 opencv-python-headless==4.10.0.84

@@ -31,7 +31,7 @@ class UsageAnalyticsHelpersTests(TestCase):
         self.assertEqual(resolve_country_code(request, None), 'DE')
 
         user = User.objects.create_user('statsuser', password='x')
-        Country.objects.create(code='BE', name='Belgium')
+        Country.objects.get_or_create(code='BE', defaults={"name": 'Belgium'})[0]
         UserProfile.objects.create(user=user, country_id='BE')
         self.client.force_login(user)
         request = self.client.get('/')

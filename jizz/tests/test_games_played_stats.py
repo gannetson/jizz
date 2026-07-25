@@ -14,7 +14,7 @@ from jizz.models import Country, Game, Player, PlayerScore
 
 class GamesPlayedStatsTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code="X9", name="Games Played Land")
+        self.country = Country.objects.get_or_create(code="X9", defaults={"name": "Games Played Land"})[0]
         self.players = [
             Player.objects.create(name=f"Player {i}", language="en") for i in range(3)
         ]
@@ -65,8 +65,8 @@ class GamesPlayedStatsTests(TestCase):
         self.assertGreaterEqual((end.year - start.year) * 12 + (end.month - start.month), 11)
 
     def test_by_country_counts_distinct_games(self):
-        nl = Country.objects.create(code="NL", name="Netherlands")
-        de = Country.objects.create(code="DE", name="Germany")
+        nl = Country.objects.get_or_create(code="NL", defaults={"name": "Netherlands"})[0]
+        de = Country.objects.get_or_create(code="DE", defaults={"name": "Germany"})[0]
         for idx, country in enumerate((nl, de, nl)):
             game = Game.objects.create(
                 country=country,
@@ -88,13 +88,13 @@ class GamesPlayedStatsTests(TestCase):
         self.assertEqual(stats["country_map"]["DE"], 1)
 
     def test_world_map_rolls_up_us_and_nl_subregions(self):
-        us = Country.objects.create(code="US", name="United States")
-        us_east = Country.objects.create(code="US-EAST", name="US East")
-        us_west = Country.objects.create(code="US-WEST", name="US West")
-        us_ak = Country.objects.create(code="US-AK", name="US Alaska")
-        us_hi = Country.objects.create(code="US-HI", name="US Hawaii")
-        nl = Country.objects.create(code="NL", name="Netherlands")
-        nl_nh = Country.objects.create(code="NL-NH", name="Noord-Holland")
+        us = Country.objects.get_or_create(code="US", defaults={"name": "United States"})[0]
+        us_east = Country.objects.get_or_create(code="US-EAST", defaults={"name": "US East"})[0]
+        us_west = Country.objects.get_or_create(code="US-WEST", defaults={"name": "US West"})[0]
+        us_ak = Country.objects.get_or_create(code="US-AK", defaults={"name": "US Alaska"})[0]
+        us_hi = Country.objects.get_or_create(code="US-HI", defaults={"name": "US Hawaii"})[0]
+        nl = Country.objects.get_or_create(code="NL", defaults={"name": "Netherlands"})[0]
+        nl_nh = Country.objects.get_or_create(code="NL-NH", defaults={"name": "Noord-Holland"})[0]
 
         for idx, country in enumerate((us, us_east, us_west, us_ak, us_hi, nl, nl_nh)):
             game = Game.objects.create(

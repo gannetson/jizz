@@ -9,10 +9,11 @@ from collections import defaultdict
 from io import StringIO
 from typing import Any
 
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.http import HttpRequest, HttpResponse
 
-from jizz.models import Answer, Country, CountrySpecies, QuestionOption, Species
+from jizz.models import Answer, Country, CountrySpecies, Question, QuestionOption, Species
 
 # Include a species only when it was picked at least this many times (all countries).
 MIN_TIMES_SHOWN = 10
@@ -474,6 +475,25 @@ def get_user_fixed_confusion_pair_keys(user_id: int) -> set[tuple[int, int]]:
 
     from jizz.models import Game
 
+    done_questions = (
+        Question.objects.filter(game_id=OuterRef('pk'), done=True)
+        .order_by()
+        .values('game_id')
+        .annotate(c=Count('id'))
+        .values('c')[:1]
+    )
+    correct_answers = (
+        Answer.objects.filter(
+            player_score__game_id=OuterRef('pk'),
+            player_score__player__user_id=user_id,
+            correct=True,
+        )
+        .order_by()
+        .values('player_score__game_id')
+        .annotate(c=Count('id'))
+        .values('c')[:1]
+    )
+
     rows = (
         Game.objects.filter(
             game_type=Game.GAME_TYPE_PAIR_PRACTICE,
@@ -482,15 +502,8 @@ def get_user_fixed_confusion_pair_keys(user_id: int) -> set[tuple[int, int]]:
         .exclude(pair_species_low_id__isnull=True)
         .exclude(pair_species_high_id__isnull=True)
         .annotate(
-            done_questions=Count('questions', filter=Q(questions__done=True), distinct=True),
-            correct_answers=Count(
-                'scores__answers',
-                filter=Q(
-                    scores__answers__correct=True,
-                    scores__player__user_id=user_id,
-                ),
-                distinct=True,
-            ),
+            done_questions=Coalesce(Subquery(done_questions, output_field=IntegerField()), 0),
+            correct_answers=Coalesce(Subquery(correct_answers, output_field=IntegerField()), 0),
         )
         .filter(
             Q(force_ended=True) | Q(done_questions__gte=F('length')),
@@ -508,6 +521,25 @@ def get_user_fixed_species_ids(user_id: int) -> set[int]:
 
     from jizz.models import Game
 
+    done_questions = (
+        Question.objects.filter(game_id=OuterRef('pk'), done=True)
+        .order_by()
+        .values('game_id')
+        .annotate(c=Count('id'))
+        .values('c')[:1]
+    )
+    correct_answers = (
+        Answer.objects.filter(
+            player_score__game_id=OuterRef('pk'),
+            player_score__player__user_id=user_id,
+            correct=True,
+        )
+        .order_by()
+        .values('player_score__game_id')
+        .annotate(c=Count('id'))
+        .values('c')[:1]
+    )
+
     rows = (
         Game.objects.filter(
             game_type=Game.GAME_TYPE_SPECIES_PRACTICE,
@@ -515,15 +547,8 @@ def get_user_fixed_species_ids(user_id: int) -> set[int]:
         )
         .exclude(focus_species_id__isnull=True)
         .annotate(
-            done_questions=Count('questions', filter=Q(questions__done=True), distinct=True),
-            correct_answers=Count(
-                'scores__answers',
-                filter=Q(
-                    scores__answers__correct=True,
-                    scores__player__user_id=user_id,
-                ),
-                distinct=True,
-            ),
+            done_questions=Coalesce(Subquery(done_questions, output_field=IntegerField()), 0),
+            correct_answers=Coalesce(Subquery(correct_answers, output_field=IntegerField()), 0),
         )
         .filter(
             Q(force_ended=True) | Q(done_questions__gte=F('length')),

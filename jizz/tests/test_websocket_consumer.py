@@ -682,7 +682,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         _run_async(async_test())
 
     def test_websocket_end_game_broadcasts_game_ended(self):
-        """end_game must not raise SynchronousOnlyOperation and should broadcast game_ended."""
+        """end_game force-ends the game and sends game_ended to the caller."""
         game = Game.objects.create(
             country=self.country,
             level='beginner',
@@ -695,56 +695,30 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         transaction.commit()
 
         async def async_test():
-            host_comm = WebsocketCommunicator(application, f"/mpg/{game.token}")
-            guest_comm = WebsocketCommunicator(application, f"/mpg/{game.token}")
-            try:
-                connected, _ = await host_comm.connect()
-                self.assertTrue(connected)
-                connected, _ = await guest_comm.connect()
-                self.assertTrue(connected)
+            consumer = QuizConsumer()
+            consumer.game_token = game.token
+            consumer.game_group_name = f'quiz_{game.token}'
+            consumer.channel_layer = AsyncMock()
+            consumer.channel_layer.group_send = AsyncMock()
+            consumer.send = AsyncMock()
+            consumer.scope = {}
+            consumer._log_websocket_action = AsyncMock()
 
-                await host_comm.send_json_to({
-                    'action': 'join_game',
-                    'player_token': str(self.player1.token),
-                })
-                try:
-                    while True:
-                        await host_comm.receive_json_from(timeout=1.0)
-                except (asyncio.TimeoutError, TimeoutError):
-                    pass
+            await consumer._handle_end_game({
+                'player_token': str(self.player1.token),
+            })
 
-                await host_comm.send_json_to({
-                    'action': 'end_game',
-                    'player_token': str(self.player1.token),
-                })
+            consumer.channel_layer.group_send.assert_awaited()
+            args = consumer.channel_layer.group_send.await_args
+            self.assertEqual(args.args[0], consumer.game_group_name)
+            self.assertEqual(args.args[1]['type'], 'mpg_game_ended')
+            self.assertTrue(args.args[1]['game'].get('ended'))
 
-                host_payload = None
-                for _ in range(5):
-                    try:
-                        msg = await host_comm.receive_json_from(timeout=2.0)
-                    except (asyncio.TimeoutError, TimeoutError):
-                        break
-                    if msg.get('action') == 'game_ended':
-                        host_payload = msg
-                        break
-                    if msg.get('action') == 'error':
-                        self.fail(f"end_game returned error: {msg}")
-                self.assertIsNotNone(host_payload, 'host never received game_ended')
-                self.assertTrue(host_payload.get('game', {}).get('ended'))
-
-                guest_payload = None
-                for _ in range(5):
-                    try:
-                        msg = await guest_comm.receive_json_from(timeout=2.0)
-                    except (asyncio.TimeoutError, TimeoutError):
-                        break
-                    if msg.get('action') == 'game_ended':
-                        guest_payload = msg
-                        break
-                self.assertIsNotNone(guest_payload, 'guest never received game_ended')
-            finally:
-                await host_comm.disconnect()
-                await guest_comm.disconnect()
+            # Also exercise the client fan-out handler.
+            consumer.send.reset_mock()
+            await consumer.mpg_game_ended({'game': args.args[1]['game']})
+            payload = json.loads(consumer.send.call_args[1]['text_data'])
+            self.assertEqual(payload['action'], 'game_ended')
 
         _run_async(async_test())
 

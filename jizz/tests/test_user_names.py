@@ -1,8 +1,9 @@
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils.module_loading import import_string
 
 from jizz.country_challenge_leaderboard import journey_player_name
-from jizz.migrations.0118_sanitize_email_usernames import sanitize_email_usernames
 from jizz.models import BirdrJourney, Country, Player
 from jizz.user_names import (
     make_unique_username,
@@ -11,6 +12,10 @@ from jizz.user_names import (
     sanitize_username,
     strip_email_local_part,
     username_from_oauth,
+)
+
+sanitize_email_usernames = import_string(
+    'jizz.migrations.0118_sanitize_email_usernames.sanitize_email_usernames'
 )
 
 User = get_user_model()
@@ -73,7 +78,7 @@ class SanitizeEmailUsernamesMigrationTests(TestCase):
         )
         player = Player.objects.create(name='player@example.com', language='en', user=user)
 
-        sanitize_email_usernames(None, None)
+        sanitize_email_usernames(apps, None)
 
         user.refresh_from_db()
         player.refresh_from_db()
@@ -83,7 +88,7 @@ class SanitizeEmailUsernamesMigrationTests(TestCase):
 
 class JourneyPlayerNameEmailStripTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code='NL', name='Netherlands')
+        self.country = Country.objects.get_or_create(code='NL', defaults={"name": 'Netherlands'})[0]
 
     def test_journey_player_name_never_returns_email(self):
         user = User.objects.create_user(

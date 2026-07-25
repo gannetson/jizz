@@ -46,7 +46,7 @@ User = get_user_model()
 class UserMistakeStatsTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.country = Country.objects.create(code="TS", name="Trouble Spots")
+        self.country = Country.objects.get_or_create(code="TS", defaults={"name": "Trouble Spots"})[0]
         self.user = User.objects.create_user(username="troubleuser", password="pass")
         UserProfile.objects.create(user=self.user, country=self.country, language="en")
         self.player = Player.objects.create(user=self.user, name="Trouble", language="en")
@@ -77,22 +77,21 @@ class UserMistakeStatsTests(TestCase):
             player_score=self.score,
             question=self.q1,
             answer=self.sp_b,
-            correct=False,
         )
+        self.q1b = Question.objects.create(game=self.game, species=self.sp_a, number=0, sequence=2)
+        QuestionOption.objects.create(question=self.q1b, species=self.sp_a, order=1)
         Answer.objects.create(
             player_score=self.score,
-            question=self.q1,
+            question=self.q1b,
             answer=self.sp_a,
-            correct=True,
         )
 
-        self.q2 = Question.objects.create(game=self.game, species=self.sp_b, number=0, sequence=2)
+        self.q2 = Question.objects.create(game=self.game, species=self.sp_b, number=0, sequence=3)
         QuestionOption.objects.create(question=self.q2, species=self.sp_b, order=1)
         Answer.objects.create(
             player_score=self.score,
             question=self.q2,
             answer=self.sp_a,
-            correct=False,
         )
 
     def test_user_species_mistake_rows_target_based(self):
@@ -120,6 +119,8 @@ class UserMistakeStatsTests(TestCase):
         SpeciesName.objects.create(species=self.sp_b, language=lang_nl, name='Beta NL')
         self.user.profile.language = 'nl'
         self.user.profile.save(update_fields=['language'])
+        self.player.language = 'nl'
+        self.player.save(update_fields=['language'])
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(
@@ -169,7 +170,7 @@ class UserMistakeStatsTests(TestCase):
 class PracticeApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.country = Country.objects.create(code="PR", name="Practice")
+        self.country = Country.objects.get_or_create(code="PZ", defaults={"name": "Practice"})[0]
         self.user = User.objects.create_user(username="practiceuser", password="pass")
         UserProfile.objects.create(user=self.user, country=self.country, language="en")
 
@@ -199,7 +200,7 @@ class PracticeApiTests(TestCase):
             {
                 "low_id": self.low_id,
                 "high_id": self.high_id,
-                "country_code": "PR",
+                "country_code": "PZ",
             },
             format="json",
         )
@@ -257,12 +258,18 @@ class PracticeApiTests(TestCase):
                 sequence=i + 1,
                 done=True,
             )
+            picked = (
+                question.species
+                if i < correct_count
+                else (self.sp_high if question.species_id == self.sp_low.id else self.sp_low)
+            )
             Answer.objects.create(
                 player_score=score,
                 question=question,
-                answer=self.sp_low if i % 2 == 0 else self.sp_high,
-                correct=i < correct_count,
+                answer=picked,
             )
+        game.force_ended = True
+        game.save(update_fields=["force_ended"])
         return game
 
     def test_fixed_pair_when_enough_correct(self):
@@ -304,7 +311,7 @@ class PracticeApiTests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(
             reverse("practice-trouble-spots"),
-            {"country_code": "PR"},
+            {"country_code": "PZ"},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         pairs = response.json()["pairs"]
@@ -315,7 +322,7 @@ class PracticeApiTests(TestCase):
 class SpeciesPracticeTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.country = Country.objects.create(code="SP", name="Species Practice")
+        self.country = Country.objects.get_or_create(code="SP", defaults={"name": "Species Practice"})[0]
         self.user = User.objects.create_user(username="speciespractice", password="pass")
         UserProfile.objects.create(user=self.user, country=self.country, language="en")
 
@@ -384,13 +391,13 @@ class SpeciesPracticeTests(TestCase):
             name='Lone Gull',
             name_latin='Larus solitarius',
             code='logul2',
-            tax_ordering=502.0,
+            tax_ordering=9002.0,
         )
         neighbor = Species.objects.create(
             name='Near Gull',
             name_latin='Larus vicinus',
             code='neagul',
-            tax_ordering=503.0,
+            tax_ordering=9003.0,
         )
         for sp in (isolated, neighbor):
             CountrySpecies.objects.create(country=self.country, species=sp, status='native')
@@ -398,6 +405,22 @@ class SpeciesPracticeTests(TestCase):
                 species=sp,
                 type='image',
                 url=f'https://example.com/{sp.code}.jpg',
+                source='test',
+            )
+        # Fill taxonomy between warblers (~500) and gulls (~9000) so warblers are not
+        # among the 10 nearest tax neighbors of the isolated focus.
+        for i in range(12):
+            filler = Species.objects.create(
+                name=f'Filler {i}',
+                name_latin=f'Filler {i}',
+                code=f'fil{i:02d}',
+                tax_ordering=8000.0 + i,
+            )
+            CountrySpecies.objects.create(country=self.country, species=filler, status='native')
+            Media.objects.create(
+                species=filler,
+                type='image',
+                url=f'https://example.com/{filler.code}.jpg',
                 source='test',
             )
 
@@ -507,9 +530,11 @@ class SpeciesPracticeTests(TestCase):
         question = game.questions.first()
         self.assertIsNotNone(question)
         self.assertIn(question.species_id, species_practice_target_pool_ids(game))
-        self.assertEqual(question.options.count(), 6)
-        option_ids = set(question.options.values_list('species_id', flat=True))
-        self.assertTrue(option_ids.issubset({self.focus.id, self.related.id}))
+        # Only three checklist species exist in this test; advanced MC fills what it can.
+        self.assertEqual(question.options.count(), 3)
+        option_ids = set(question.options.values_list('id', flat=True))
+        self.assertTrue(option_ids.issubset({self.focus.id, self.related.id, self.unrelated.id}))
+        self.assertIn(question.species_id, option_ids)
 
     def test_species_practice_excluded_from_scores(self):
         player = Player.objects.create(user=self.user, name='Practice', language='en')
@@ -680,12 +705,17 @@ class SpeciesPracticeTests(TestCase):
                 sequence=i + 1,
                 done=True,
             )
+            # Answer.save() derives `correct` from answer == question.species.
+            picked = question.species if i < correct_count else (
+                self.related if question.species_id == self.focus.id else self.focus
+            )
             Answer.objects.create(
                 player_score=score,
                 question=question,
-                answer=self.focus,
-                correct=i < correct_count,
+                answer=picked,
             )
+        game.force_ended = True
+        game.save(update_fields=['force_ended'])
         return game
 
     def test_fixed_species_when_enough_correct(self):

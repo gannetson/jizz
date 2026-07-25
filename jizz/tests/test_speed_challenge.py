@@ -23,7 +23,7 @@ from media.models import Media
 class SpeedChallengeTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.country = Country.objects.create(code="SP", name="Speed land")
+        self.country = Country.objects.get_or_create(code="SP", defaults={"name": "Speed land"})[0]
         self.player = Player.objects.create(name="Speedy", language="en")
         self.species_a = Species.objects.create(name="Bird A", name_latin="Birda a", code="SPA1")
         self.species_b = Species.objects.create(name="Bird B", name_latin="Birdb b", code="SPB2")

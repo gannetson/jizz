@@ -553,7 +553,7 @@ class BirdrJourneyFamilyStepTestCase(TestCase):
         self.assertEqual(game.questions.count(), 20)
 
     def test_start_step_fails_when_no_eligible_families(self):
-        empty_country = Country.objects.create(code='XX', name='Empty')
+        empty_country = Country.objects.get_or_create(code='XX', defaults={"name": 'Empty'})[0]
         icon = SimpleUploadedFile('empty.png', PNG_1X1, content_type='image/png')
         level = JourneyLevel.objects.create(
             sequence=1,

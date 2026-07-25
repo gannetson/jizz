@@ -7,7 +7,7 @@ from jizz.models import Country, CountrySpecies, Game, Species
 
 class GameRarityFrequencyFilterTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code="NL", name="Netherlands")
+        self.country = Country.objects.get_or_create(code="NL", defaults={"name": "Netherlands"})[0]
         self.sp_abundant = Species.objects.create(
             name="Abundant Bird", name_latin="Abun b", code="abunbr"
         )

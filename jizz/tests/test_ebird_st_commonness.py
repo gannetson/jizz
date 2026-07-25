@@ -331,8 +331,8 @@ class SpeciesCodesForSelectedCountriesTests(TestCase):
     def setUp(self):
         from jizz.models import Country, CountrySpecies, Species
 
-        self.nl = Country.objects.create(code="NL", name="Netherlands")
-        self.de = Country.objects.create(code="DE", name="Germany")
+        self.nl = Country.objects.get_or_create(code="NL", defaults={"name": "Netherlands"})[0]
+        self.de = Country.objects.get_or_create(code="DE", defaults={"name": "Germany"})[0]
         self.sp_nl = Species.objects.create(name="NL Bird", name_latin="Nl b", code="nlbird")
         self.sp_both = Species.objects.create(
             name="Both Bird", name_latin="Both b", code="bothbr"
@@ -354,7 +354,7 @@ class ApplyVagrantFrequencyTests(TestCase):
     def setUp(self):
         from jizz.models import Country, CountrySpecies, Species
 
-        self.country = Country.objects.create(code="VG", name="Vagrant Land")
+        self.country = Country.objects.get_or_create(code="VG", defaults={"name": "Vagrant Land"})[0]
         self.native_sp = Species.objects.create(
             name="Native Bird", name_latin="Native b", code="natbir"
         )
@@ -409,7 +409,7 @@ class ApplyNativeEndemicDefaultRareTests(TestCase):
     def setUp(self):
         from jizz.models import Country, CountrySpecies, Species
 
-        self.country = Country.objects.create(code="NR", name="Native Rare Land")
+        self.country = Country.objects.get_or_create(code="NR", defaults={"name": "Native Rare Land"})[0]
         self.sp_native_missing = Species.objects.create(
             name="Native Missing", name_latin="Native m", code="natmis"
         )

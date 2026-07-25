@@ -7,7 +7,7 @@ from jizz.tests.taxonomy_helpers import make_species_with_taxonomy
 
 class DataViewsTests(TestCase):
     def setUp(self):
-        self.country = Country.objects.create(code="NL", name="Netherlands")
+        self.country = Country.objects.get_or_create(code="NL", defaults={"name": "Netherlands"})[0]
 
         self.sp_passer1 = make_species_with_taxonomy(
             name="House Sparrow",

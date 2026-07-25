@@ -1,7 +1,6 @@
 #!/bin/sh
-# Xcode Cloud: Pods/ is gitignored (correct for open source). Generate CocoaPods
-# support files before Xcode resolves baseConfigurationReference to Pods-*.xcconfig.
-# Working directory when this runs is the repository root.
+# Xcode Cloud may discover ci_scripts at the repository root (monorepo).
+# Delegate to the iOS project script next to Birdr.xcodeproj.
 set -eu
-cd mobile/ios
-pod install
+REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(cd "$(dirname "$0")/.." && pwd)}"
+exec "$REPO_ROOT/mobile/ios/ci_scripts/ci_post_clone.sh"

@@ -5,6 +5,7 @@ from django.test import TransactionTestCase
 from django.db import transaction
 from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
+from asgiref.sync import async_to_sync
 from unittest.mock import AsyncMock, patch
 from jizz.models import Game, Player, Answer, Species, Country, CountrySpecies, PlayerScore
 from media.models import Media
@@ -13,17 +14,11 @@ from jizz.consumers import QuizConsumer
 
 
 def _run_async(coro):
-    """Run async test coroutine with explicit loop and clean shutdown to avoid CancelledError in CI."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        try:
-            loop.run_until_complete(loop.shutdown_asyncgens())
-        except Exception:
-            pass
-        loop.close()
+    """Run an async test coroutine under Django/Channels (Python 3.12-safe)."""
+    async def _runner():
+        return await coro
+
+    return async_to_sync(_runner)()
 
 
 class WebSocketConsumerTestCase(TransactionTestCase):
@@ -119,7 +114,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             # Clean up
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_websocket_disconnect(self):
         """Test that connect then disconnect runs without error."""
@@ -138,7 +133,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertTrue(connected)
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_websocket_receive_invalid_json_no_crash(self):
         """Test that invalid JSON in receive() does not raise."""
@@ -159,7 +154,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             # Consumer should not raise; no response expected for invalid JSON
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_websocket_receive_unknown_action_no_crash(self):
         """Test that unknown action in receive() does not raise."""
@@ -180,7 +175,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             # Consumer should not raise
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     @unittest.skip("WebSocket rematch with DB: consumer runs in async thread; DB visibility can prevent response in CI")
     def test_websocket_rematch_as_host_returns_invitation(self):
@@ -226,7 +221,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertNotEqual(msg['new_game_token'], game.token)
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     @unittest.skip("WebSocket rematch with DB: consumer runs in async thread; DB visibility can prevent response in CI")
     def test_websocket_rematch_as_non_host_returns_error(self):
@@ -269,7 +264,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertIn('host', msg['message'].lower())
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_websocket_rematch_without_player_token_returns_error(self):
         """Test that rematch without player_token sends error."""
@@ -292,7 +287,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertIn('player_token', msg.get('message', ''))
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     @unittest.skip("start_game/add_question in consumer run in thread pool; test DB visibility can cause timeouts")
     def test_websocket_start_game_sends_question(self):
@@ -360,7 +355,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
 
             await communicator1.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     @unittest.skip("start_game/add_question in consumer run in thread pool; test DB visibility can cause timeouts")
     def test_websocket_multiple_players_receive_question(self):
@@ -441,7 +436,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             await communicator1.disconnect()
             await communicator2.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     @unittest.skip("submit_answer in consumer runs in thread pool; test DB visibility can cause timeouts")
     def test_websocket_submit_answer(self):
@@ -514,7 +509,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
 
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     @unittest.skip("next_question/add_question in consumer run in thread pool; test DB visibility can cause timeouts")
     def test_websocket_next_question(self):
@@ -581,7 +576,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
 
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_receive_missing_action_no_crash(self):
         """Receive with empty object or missing 'action' does not raise."""
@@ -603,7 +598,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             # No response expected; disconnect without error
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_websocket_connect_invalid_game_token_accepts(self):
         """Connect with a game token that does not exist in DB still accepts (game loaded later on join)."""
@@ -613,7 +608,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertTrue(connected)
             await communicator.disconnect()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_channel_handler_update_players_sends_correct_json(self):
         """Group handler update_players sends action and players to client."""
@@ -626,7 +621,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(payload['action'], 'update_players')
             self.assertEqual(payload['players'], [{'name': 'P1', 'score': 10}])
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_channel_handler_player_joined_sends_correct_json(self):
         """Group handler player_joined sends action and player_name."""
@@ -639,19 +634,21 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(payload['action'], 'player_joined')
             self.assertEqual(payload['player_name'], 'Alice')
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_channel_handler_game_started_sends_correct_json(self):
-        """Group handler game_started sends action."""
+        """Group handler game_started sends action (and tries to push current question)."""
         async def async_test():
             consumer = QuizConsumer()
             consumer.send = AsyncMock()
+            consumer._send_current_question_to_self = AsyncMock()
             await consumer.game_started({})
             consumer.send.assert_called_once()
             payload = json.loads(consumer.send.call_args[1]['text_data'])
             self.assertEqual(payload['action'], 'game_started')
+            consumer._send_current_question_to_self.assert_awaited_once()
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_channel_handler_new_question_sends_correct_json(self):
         """Group handler new_question sends action and question."""
@@ -665,7 +662,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(payload['action'], 'new_question')
             self.assertEqual(payload['question'], question_data)
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_channel_handler_rematch_invitation_sends_correct_json(self):
         """Group handler rematch_invitation sends action, new_game_token, host_name."""
@@ -682,7 +679,7 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             self.assertEqual(payload['new_game_token'], 'abc123')
             self.assertEqual(payload['host_name'], 'Host')
 
-        asyncio.run(async_test())
+        _run_async(async_test())
 
     def test_websocket_end_game_broadcasts_game_ended(self):
         """end_game must not raise SynchronousOnlyOperation and should broadcast game_ended."""
@@ -700,35 +697,54 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         async def async_test():
             host_comm = WebsocketCommunicator(application, f"/mpg/{game.token}")
             guest_comm = WebsocketCommunicator(application, f"/mpg/{game.token}")
-            connected, _ = await host_comm.connect()
-            self.assertTrue(connected)
-            connected, _ = await guest_comm.connect()
-            self.assertTrue(connected)
-
-            await host_comm.send_json_to({
-                'action': 'join_game',
-                'player_token': str(self.player1.token),
-            })
             try:
-                while True:
-                    await host_comm.receive_json_from(timeout=1.0)
-            except (asyncio.TimeoutError, TimeoutError):
-                pass
+                connected, _ = await host_comm.connect()
+                self.assertTrue(connected)
+                connected, _ = await guest_comm.connect()
+                self.assertTrue(connected)
 
-            await host_comm.send_json_to({
-                'action': 'end_game',
-                'player_token': str(self.player1.token),
-            })
+                await host_comm.send_json_to({
+                    'action': 'join_game',
+                    'player_token': str(self.player1.token),
+                })
+                try:
+                    while True:
+                        await host_comm.receive_json_from(timeout=1.0)
+                except (asyncio.TimeoutError, TimeoutError):
+                    pass
 
-            host_payload = await host_comm.receive_json_from(timeout=3.0)
-            self.assertEqual(host_payload.get('action'), 'game_ended')
-            self.assertTrue(host_payload.get('game', {}).get('ended'))
+                await host_comm.send_json_to({
+                    'action': 'end_game',
+                    'player_token': str(self.player1.token),
+                })
 
-            guest_payload = await guest_comm.receive_json_from(timeout=3.0)
-            self.assertEqual(guest_payload.get('action'), 'game_ended')
+                host_payload = None
+                for _ in range(5):
+                    try:
+                        msg = await host_comm.receive_json_from(timeout=2.0)
+                    except (asyncio.TimeoutError, TimeoutError):
+                        break
+                    if msg.get('action') == 'game_ended':
+                        host_payload = msg
+                        break
+                    if msg.get('action') == 'error':
+                        self.fail(f"end_game returned error: {msg}")
+                self.assertIsNotNone(host_payload, 'host never received game_ended')
+                self.assertTrue(host_payload.get('game', {}).get('ended'))
 
-            await host_comm.disconnect()
-            await guest_comm.disconnect()
+                guest_payload = None
+                for _ in range(5):
+                    try:
+                        msg = await guest_comm.receive_json_from(timeout=2.0)
+                    except (asyncio.TimeoutError, TimeoutError):
+                        break
+                    if msg.get('action') == 'game_ended':
+                        guest_payload = msg
+                        break
+                self.assertIsNotNone(guest_payload, 'guest never received game_ended')
+            finally:
+                await host_comm.disconnect()
+                await guest_comm.disconnect()
 
         _run_async(async_test())
 

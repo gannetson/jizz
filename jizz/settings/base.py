@@ -31,6 +31,8 @@ MEDIA_HTTP_FETCH_DELAY_SECONDS = float(os.environ.get('MEDIA_HTTP_FETCH_DELAY_SE
 # Use Commons thumbnail URLs for ML fetches (smaller, less rate-limited than original files).
 # Desired width; actual fetch uses Wikimedia $wgThumbnailSteps (e.g. 500, 960), not arbitrary px.
 MEDIA_WIKIMEDIA_THUMB_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_THUMB_WIDTH_PX', '500'))
+# Width served to clients for Wikimedia images in game/API serializers (standard step).
+MEDIA_WIKIMEDIA_DISPLAY_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_DISPLAY_WIDTH_PX', '960'))
 
 # Optional YOLO bird detector (offline only; used by handcrafted_v2_yolo extractor).
 # Provide an ONNX file path (e.g. yolov5n.onnx exported with 640x640 input).

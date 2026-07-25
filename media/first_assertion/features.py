@@ -8,9 +8,8 @@ Important architectural rule:
 
 from __future__ import annotations
 
-import re
 import time
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
@@ -19,6 +18,12 @@ from media.first_assertion import DEFAULT_FEATURES_VERSION
 from media.first_assertion.feature_extraction.base import ExtractorInput, FeatureExtractor
 from media.first_assertion.feature_extraction.handcrafted_v1 import HandcraftedV1Extractor
 from media.first_assertion.feature_extraction.handcrafted_v2 import HandcraftedV2Extractor, HandcraftedV2YoloExtractor
+from media.wikimedia_urls import (
+    WIKIMEDIA_THUMB_STEPS,
+    is_wikimedia_upload as _is_wikimedia_upload,
+    wikimedia_candidate_steps as _wikimedia_candidate_steps,
+    wikimedia_commons_thumb_url as _wikimedia_commons_thumb_url,
+)
 
 MAX_DOWNLOAD_BYTES = 12 * 1024 * 1024
 REQUEST_TIMEOUT = 20
@@ -32,68 +37,6 @@ _DEFAULT_BROWSER_UA = (
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
     '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 )
-
-# Wikimedia production $wgThumbnailSteps — other widths return 400/429 guidance.
-# https://w.wiki/GHai
-WIKIMEDIA_THUMB_STEPS = (20, 40, 60, 120, 250, 330, 500, 960, 1280, 1920, 3840)
-
-
-def _wikimedia_snap_step(requested: int) -> int:
-    """Smallest standard step >= requested (Wikimedia rejects arbitrary widths)."""
-    r = max(1, min(int(requested), WIKIMEDIA_THUMB_STEPS[-1]))
-    for s in WIKIMEDIA_THUMB_STEPS:
-        if s >= r:
-            return s
-    return WIKIMEDIA_THUMB_STEPS[-1]
-
-
-def _wikimedia_candidate_steps(requested: int) -> list[int]:
-    """Primary snapped width, then smaller standard steps (for 400/404 fallbacks)."""
-    primary = _wikimedia_snap_step(requested)
-    idx = WIKIMEDIA_THUMB_STEPS.index(primary)
-    return [primary] + list(reversed(WIKIMEDIA_THUMB_STEPS[:idx]))
-
-
-def _is_wikimedia_upload(url: str) -> bool:
-    try:
-        host = urlparse(url).netloc.lower()
-    except Exception:
-        return False
-    return 'upload.wikimedia.org' in host or host.endswith('.wikimedia.org')
-
-
-def _wikimedia_commons_thumb_url(url: str, step_px: int) -> str:
-    """
-    Build a Commons thumbnail URL using a Wikimedia $wgThumbnailSteps width only.
-
-    Accepts direct file URLs or existing /thumb/.../OLDpx-... URLs (rewrites width).
-    """
-    parsed = urlparse(url)
-    path = parsed.path or ''
-    step_px = int(step_px)
-
-    # Existing thumb: .../thumb/X/XY/Orig.ext/Wpx-Orig.ext
-    m_thumb = re.match(
-        r'^(/wikipedia/commons/thumb/[0-9a-f]/[0-9a-f]{2}/)([^/]+)/(\d+)px-(.+)$',
-        path,
-        re.IGNORECASE,
-    )
-    if m_thumb:
-        base, orig, _old_w, _suffix = m_thumb.groups()
-        thumb_path = f'{base}{orig}/{step_px}px-{orig}'
-        return urlunparse((parsed.scheme, parsed.netloc, thumb_path, '', '', ''))
-
-    # Direct file: /wikipedia/commons/{1hex}/{2hex}/filename.ext
-    m = re.match(
-        r'^(/wikipedia/commons/)([0-9a-f])(/[0-9a-f]{2}/)([^/]+\.(?:jpe?g|png|webp|gif))$',
-        path,
-        re.IGNORECASE,
-    )
-    if not m:
-        return url
-    prefix, c1, mid, filename = m.groups()
-    thumb_path = f'{prefix}thumb/{c1}{mid}{filename}/{step_px}px-{filename}'
-    return urlunparse((parsed.scheme, parsed.netloc, thumb_path, '', '', ''))
 
 
 def _browser_like_headers(url: str) -> dict:

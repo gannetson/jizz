@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference';
 import { loadCountries } from '../api/countries';
 import { loadLanguages } from '../api/languages';
+import { updateProfile } from '../api/profile';
 import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
 import { getCountryDisplayName } from '../i18n/countryNames';
@@ -33,6 +34,7 @@ import {
   type TaxFamilyRow,
 } from '../api/taxonomy';
 import type { PlayLevel } from '../game/playLevel';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const PLAY_LEVELS: { value: PlayLevel; labelKey: string; subKey: string }[] = [
   { value: 'beginner', labelKey: 'beginner', subKey: 'play_level_beginner_sub' },
@@ -54,7 +56,7 @@ export function StartScreen() {
   const navigation = useNavigation();
   const { t, locale } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const { profile, ready: profileReady } = useProfile();
+  const { profile, ready: profileReady, refreshProfile } = useProfile();
   const {
     playerName,
     setPlayerName,
@@ -97,6 +99,7 @@ export function StartScreen() {
   const [familyModalVisible, setFamilyModalVisible] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [familySearch, setFamilySearch] = useState('');
+  const [saveToProfile, setSaveToProfile] = useState(false);
 
   useEffect(() => {
     if (!country?.code) {
@@ -165,6 +168,19 @@ export function StartScreen() {
     );
   }, [taxFamilies, familySearch]);
 
+  const differsFromProfile = useMemo(() => {
+    if (!isAuthenticated || !profile) return false;
+    const profileCountry = profile.country_code?.trim()?.toUpperCase() || '';
+    const selectedCountry = country?.code?.trim()?.toUpperCase() || '';
+    const profileLang = (profile.language || '').trim().toLowerCase();
+    const selectedLang = (language || '').trim().toLowerCase();
+    return profileCountry !== selectedCountry || profileLang !== selectedLang;
+  }, [isAuthenticated, profile, country?.code, language]);
+
+  useEffect(() => {
+    if (!differsFromProfile) setSaveToProfile(false);
+  }, [differsFromProfile]);
+
   useFocusEffect(
     useCallback(() => {
       joinGame(null, null, setGame);
@@ -210,6 +226,13 @@ export function StartScreen() {
       return;
     }
     try {
+      if (isAuthenticated && saveToProfile && differsFromProfile) {
+        await updateProfile({
+          country_code: country.code,
+          language: language || undefined,
+        });
+        await refreshProfile();
+      }
       joinGame(null, null, setGame);
       const game = await createGame();
       if (game) {
@@ -329,6 +352,23 @@ export function StartScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {differsFromProfile ? (
+        <TouchableOpacity
+          style={styles.saveProfileRow}
+          onPress={() => setSaveToProfile((v) => !v)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: saveToProfile }}
+          testID="start.saveToProfile"
+        >
+          <View style={[styles.checkbox, saveToProfile && styles.checkboxChecked]}>
+            {saveToProfile ? (
+              <FontAwesome5 name="check" size={12} color={colors.primary[50]} />
+            ) : null}
+          </View>
+          <Text style={styles.saveProfileLabel}>{t('save_settings_to_profile')}</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <Modal visible={orderModalVisible} transparent animationType="slide">
         <Pressable
@@ -618,6 +658,33 @@ const styles = StyleSheet.create({
   levelLabelSelected: { color: colors.primary[800] },
   levelSub: { fontSize: 12, color: colors.primary[600], marginTop: 2 },
   levelSubSelected: { color: colors.primary[800] },
+  saveProfileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.primary[400],
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary[600],
+    borderColor: colors.primary[600],
+  },
+  saveProfileLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.primary[700],
+    lineHeight: 20,
+  },
   startButton: {
     marginTop: 24,
     marginBottom: 8,

@@ -9,6 +9,7 @@ from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer
     JourneyLevel, JourneyStep, TaxonomicOrder, TaxonomicFamily, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
+from media.wikimedia_urls import wikimedia_display_url
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -24,6 +25,11 @@ class CountrySerializer(serializers.ModelSerializer):
 
 class QuestionMediaSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
+
+    def get_url(self, obj):
+        # Safe no-op for non-Wikimedia / non-image paths (videos, audio).
+        return wikimedia_display_url(obj.url)
 
     def get_link(self, obj):
         if not obj.link:
@@ -45,6 +51,12 @@ class MediaSerializer(serializers.ModelSerializer):
     species_code = serializers.CharField(source='species.code', read_only=True)
     species_id = serializers.IntegerField(source='species.id', read_only=True)
     review_status = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
+
+    def get_url(self, obj):
+        if obj.type == 'image':
+            return wikimedia_display_url(obj.url)
+        return obj.url
 
     def get_species_name(self, obj):
         """Return species name in the requested language if available."""
@@ -1352,7 +1364,7 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
                 image = images[media_index]
                 return {
                     'type': 'image',
-                    'url': image.url,
+                    'url': wikimedia_display_url(image.url),
                     'link': image.link,
                     'contributor': image.contributor,
                 }

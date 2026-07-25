@@ -1,6 +1,6 @@
-import {useContext, useEffect, useState} from "react"
+import {useContext, useEffect, useMemo, useState} from "react"
 import AppContext, {Player} from "../core/app-context"
-import {Box, Button, Flex, Heading, Link} from "@chakra-ui/react"
+import {Box, Button, Checkbox, Flex, Heading, Link} from "@chakra-ui/react"
 import {FormattedMessage} from "react-intl"
 import SelectCountry from "./select-country"
 import SelectLanguage from "./select-language"
@@ -15,6 +15,8 @@ import {UseCountries} from "../user/use-countries"
 import {playLevelFromSettings, type PlayLevel} from "../core/play-level"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
+import {authService} from "../api/services/auth.service"
+import {profileService, type UserProfile} from "../api/services/profile.service"
 
 
 type GameProps = {
@@ -46,12 +48,12 @@ export const CreateGame = ({
     setPlayLevel,
     setMediaType,
     playerName,
-    setPlayerName,
     language,
-    setLanguage
   } = useContext(AppContext);
   const {joinGame} = useContext(WebsocketContext)
   const [loading, setLoading] = useState(false)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [saveToProfile, setSaveToProfile] = useState(false)
   const navigate = useNavigate()
   const {countries} = UseCountries()
 
@@ -80,11 +82,51 @@ export const CreateGame = ({
     setPlayLevel, setMediaType, setLength, setCountry
   ]);
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const ok = await authService.ensureValidAccessToken()
+      if (cancelled) return
+      if (!ok || !authService.getAccessToken()) {
+        setProfile(null)
+        return
+      }
+      try {
+        const p = await profileService.getProfile()
+        if (!cancelled) setProfile(p)
+      } catch {
+        if (!cancelled) setProfile(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const differsFromProfile = useMemo(() => {
+    if (!profile) return false
+    const profileCountry = profile.country_code?.trim()?.toUpperCase() || ''
+    const selectedCountry = country?.code?.trim()?.toUpperCase() || ''
+    const profileLang = (profile.language || '').trim().toLowerCase()
+    const selectedLang = (language || '').trim().toLowerCase()
+    return profileCountry !== selectedCountry || profileLang !== selectedLang
+  }, [profile, country?.code, language])
+
+  useEffect(() => {
+    if (!differsFromProfile) setSaveToProfile(false)
+  }, [differsFromProfile])
 
   const create = async () => {
     if (loading) return
     setLoading(true)
     try {
+      if (saveToProfile && differsFromProfile && country) {
+        const updated = await profileService.updateProfile({
+          country_code: country.code,
+          language: language || undefined,
+        })
+        setProfile(updated)
+      }
       let myPlayer: Player | undefined = player
       if (!myPlayer) {
         myPlayer = await createPlayer()
@@ -124,6 +166,27 @@ export const CreateGame = ({
         <SetName/>
         <SelectLanguage/>
         {!pickCountry &&  <SelectCountry/>}
+
+        {differsFromProfile ? (
+          <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
+            <Checkbox.Root
+              colorPalette="primary"
+              checked={saveToProfile}
+              onCheckedChange={(e: { checked: boolean }) => setSaveToProfile(e.checked === true)}
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control cursor="pointer">
+                <Checkbox.Indicator />
+              </Checkbox.Control>
+              <Checkbox.Label>
+                <FormattedMessage
+                  id="save_settings_to_profile"
+                  defaultMessage="Save these as my profile defaults"
+                />
+              </Checkbox.Label>
+            </Checkbox.Root>
+          </Box>
+        ) : null}
 
         <Button
           disabled={startDisabled}

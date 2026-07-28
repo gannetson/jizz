@@ -25,7 +25,8 @@ import type { Species } from '../types/game';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
-import { answersEnabledForMedia, normalizeGameMedia } from '../game/mediaAnswerGate';
+import { answersEnabledForMedia } from '../game/mediaAnswerGate';
+import { resolvePlayMediaType } from '../utils/questionMediaIndex';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
@@ -253,7 +254,7 @@ export function ChallengePlayScreen() {
   }, [question?.id]);
 
   const lang = paramLanguage || 'en';
-  const mediaType = normalizeGameMedia(gameMedia || (question?.game ? (question as any).game?.media : undefined));
+  const mediaType = resolvePlayMediaType(question as any, gameMedia);
   const isExpert = gameLevel === 'expert' || (question as any)?.game?.level === 'expert';
   const options = question?.options ?? [];
   const hasOptions = options.length > 0;

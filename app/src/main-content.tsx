@@ -43,6 +43,14 @@ import { MediaReviewPage } from "./pages/media-review"
 import { HelpOverviewPage, HelpPageDetail } from "./pages/help"
 import UpdateDetailPage from "./pages/update-detail"
 import { AnalyticsTracker } from "./components/analytics-tracker"
+import { FlocksListPage } from "./pages/flocks/list"
+import { FlocksIntroPage } from "./pages/flocks/intro"
+import { FlockDetailPage } from "./pages/flocks/detail"
+import { FlockMembersPage } from "./pages/flocks/members"
+import { FlockInvitePage } from "./pages/flocks/invite"
+import { FlockLeaderboardPage } from "./pages/flocks/leaderboard"
+import { FlockInviteLandingPage } from "./pages/flocks/invite-landing"
+import { FlockResultPage } from "./pages/flocks/result"
 export const MainContent = () => {
   useEffect(() => {
     document.title = "Birdr"
@@ -74,6 +82,17 @@ export const MainContent = () => {
             <Route path="/my-games" element={<MyGamesPage />} />
             <Route path="/checklist" element={<ChecklistPage />} />
             <Route path="/trouble-spots" element={<TroubleSpotsPage />} />
+            <Route path="/flocks/intro" element={<FlocksIntroPage />} />
+            <Route path="/flocks" element={<FlocksListPage />} />
+            <Route path="/flocks/results/:token" element={<FlockResultPage />} />
+            <Route path="/flocks/:slug/members" element={<FlockMembersPage />} />
+            <Route path="/flocks/:slug/invite" element={<FlockInvitePage />} />
+            <Route
+              path="/flocks/:slug/challenges/:challengeId/leaderboard"
+              element={<FlockLeaderboardPage />}
+            />
+            <Route path="/flocks/:slug" element={<FlockDetailPage />} />
+            <Route path="/join/flock/:token/web" element={<FlockInviteLandingPage />} />
             <Route path="/journey" element={<BirdrJourneyListPage />} />
             <Route path="/journey/leaderboard" element={<CountryChallengeLeaderboardPage />} />
             <Route path="/journey/intro" element={<BirdrJourneyIntroPage />} />

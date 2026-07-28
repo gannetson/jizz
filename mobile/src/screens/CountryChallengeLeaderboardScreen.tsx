@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   fetchCountryChallengeLeaderboard,
   type CountryChallengeLeaderboardRow,
 } from '../api/birdrJourney';
+import { loadCountries, type Country } from '../api/countries';
 import { BirdrLevelImage } from '../components/BirdrLevelImage';
+import { CountrySelect } from '../components/CountrySelect';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
@@ -55,28 +57,39 @@ function isPodiumRank(index: number): boolean {
 
 export function CountryChallengeLeaderboardScreen() {
   const { t, locale } = useTranslation();
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [country, setCountry] = useState<Country | null>(null);
   const [rows, setRows] = useState<CountryChallengeLeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (isRefresh = false) => {
-    setError(null);
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    try {
-      setRows(await fetchCountryChallengeLeaderboard());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t('failed_load'));
-      setRows([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [t]);
+  useEffect(() => {
+    loadCountries()
+      .then((list) => setCountries(list.filter((c) => !c.code.includes('NL-NH'))))
+      .catch(() => {});
+  }, []);
+
+  const load = useCallback(
+    async (isRefresh = false) => {
+      setError(null);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      try {
+        setRows(await fetchCountryChallengeLeaderboard(100, country?.code || undefined));
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : t('failed_load'));
+        setRows([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [t, country?.code]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -93,6 +106,20 @@ export function CountryChallengeLeaderboardScreen() {
       }
     >
       <Text style={styles.hint}>{t('country_challenge_leaderboard_hint')}</Text>
+
+      <View style={styles.filterRow}>
+        <CountrySelect
+          value={country}
+          onChange={setCountry}
+          countries={countries}
+          allowEmpty
+          emptyLabel={t('all_countries')}
+          title={t('country')}
+          style={styles.filterSelect}
+          buttonStyle={styles.filterButton}
+          buttonTextStyle={styles.filterButtonValue}
+        />
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -138,11 +165,8 @@ export function CountryChallengeLeaderboardScreen() {
               <Text style={styles.countryLine} numberOfLines={1}>
                 {countryCodeToFlag(code)} {code} · {countryLabel}
               </Text>
-              <Text style={styles.levelTitle}>
-                {leaderboardLevelTitle(row, locale)}
-                <Text style={styles.stepText}>{stepLabel(row)}</Text>
-              </Text>
-
+              <Text style={styles.levelTitle}>{leaderboardLevelTitle(row, locale)}</Text>
+              <Text style={styles.stepText}>{stepLabel(row)}</Text>
             </View>
             <View style={styles.levelIconAside}>
               <BirdrLevelImage iconUrl={row.level_icon_url} variant="plain" size={64} />
@@ -157,7 +181,19 @@ export function CountryChallengeLeaderboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary[50] },
   content: { padding: 24, paddingBottom: 48 },
-  hint: { fontSize: 14, color: colors.primary[600], marginBottom: 20, lineHeight: 20 },
+  hint: { fontSize: 14, color: colors.primary[600], marginBottom: 16, lineHeight: 20 },
+  filterRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  filterSelect: { flex: 1 },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+    backgroundColor: '#fff',
+  },
+  filterButtonValue: { fontSize: 15, color: colors.primary[800], fontWeight: '500' },
   errorBox: { backgroundColor: colors.error[50], padding: 12, borderRadius: 8, marginBottom: 16 },
   errorText: { fontSize: 14, color: colors.error[500] },
   loader: { marginVertical: 24 },

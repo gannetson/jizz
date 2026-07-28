@@ -34,6 +34,14 @@ import { BirdrJourneyLevelCelebrationScreen } from '../screens/BirdrJourneyLevel
 import { CountryChallengeLeaderboardScreen } from '../screens/CountryChallengeLeaderboardScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
 import { TroubleSpotsScreen } from '../screens/TroubleSpotsScreen';
+import { FlockListScreen } from '../screens/FlockListScreen';
+import { FlockIntroScreen } from '../screens/FlockIntroScreen';
+import { FlockDetailScreen } from '../screens/FlockDetailScreen';
+import { FlockMembersScreen } from '../screens/FlockMembersScreen';
+import { FlockInviteScreen } from '../screens/FlockInviteScreen';
+import { FlockLeaderboardScreen } from '../screens/FlockLeaderboardScreen';
+import { FlockInviteLandingScreen } from '../screens/FlockInviteLandingScreen';
+import { FlockChallengeResultScreen } from '../screens/FlockChallengeResultScreen';
 import { UpdateDetailScreen } from '../screens/UpdateDetailScreen';
 
 const Stack = createNativeStackNavigator();
@@ -53,6 +61,14 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'DailyChallenge', titleKey: 'daily_challenge', component: DailyChallengeListScreen },
   { name: 'DailyChallengeDetail', titleKey: 'daily_challenge', component: DailyChallengeDetailScreen },
   { name: 'DailyChallengeCreate', titleKey: 'new_daily_challenge', component: DailyChallengeCreateScreen },
+  { name: 'FlockIntro', titleKey: 'flocks_start', component: FlockIntroScreen },
+  { name: 'FlockList', titleKey: 'flocks', component: FlockListScreen },
+  { name: 'FlockDetail', titleKey: 'flocks', component: FlockDetailScreen },
+  { name: 'FlockMembers', titleKey: 'flock_members', component: FlockMembersScreen },
+  { name: 'FlockInvite', titleKey: 'flock_invite_members', component: FlockInviteScreen },
+  { name: 'FlockLeaderboard', titleKey: 'flock_leaderboard', component: FlockLeaderboardScreen },
+  { name: 'FlockInviteLanding', titleKey: 'flock_invite_title', component: FlockInviteLandingScreen },
+  { name: 'FlockChallengeResult', titleKey: 'flock_challenge_result', component: FlockChallengeResultScreen },
   { name: 'ChallengePlay', titleKey: 'country_challenge', component: ChallengePlayScreen },
   { name: 'Updates', titleKey: 'updates', component: UpdatesScreen },
   { name: 'UpdateDetail', titleKey: 'updates', component: UpdateDetailScreen },

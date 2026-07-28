@@ -1,6 +1,6 @@
-import {Box, Button, Flex, Heading, ListRoot, ListItem, Text} from "@chakra-ui/react"
+import {Box, Button, Flex, Heading, ListRoot, ListItem, Text, Spinner} from "@chakra-ui/react"
 import {FormattedMessage, useIntl} from "react-intl"
-import React, {useContext, useState, useEffect, useMemo} from "react"
+import React, {useContext, useState, useEffect, useMemo, useRef} from "react"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {type Game, type MultiPlayer, type Player} from "../../../core/app-context"
 import {PlayerItem} from "./player-item"
@@ -8,6 +8,12 @@ import {useNavigate} from "react-router-dom"
 import {GameRow} from "../../../components/game-row"
 import { apiUrl } from '../../../api/baseUrl'
 import { authService } from "../../../api/services/auth.service"
+import {
+  clearFlockPlayContext,
+  completeFlockChallenge,
+  getFlockPlayContext,
+  getFlockResultPath,
+} from '../../../api/flocks'
 import { buildHiscoresPath } from "../../../core/hiscores-link"
 import { ResultsTopScoreConfetti } from "../../../components/results-top-score-confetti"
 import { BirdrMoodHero } from "../../../components/birdr-mood-hero"
@@ -45,6 +51,27 @@ export const ResultsComponent = () => {
   const navigate = useNavigate()
   const [rematchInvitation, setRematchInvitation] = useState<{new_game_token: string, host_name: string} | null>(null)
   const [isRematchLoading, setIsRematchLoading] = useState(false)
+  const [flockCompleting, setFlockCompleting] = useState(false)
+  const flockCompleteSent = useRef(false)
+
+  // Finish flock challenge (ranked/practice) and go to shareable result page
+  useEffect(() => {
+    if (!game?.ended || !game?.token || flockCompleteSent.current) return
+    const ctx = getFlockPlayContext()
+    if (!ctx) return
+    flockCompleteSent.current = true
+    setFlockCompleting(true)
+    void (async () => {
+      try {
+        const result = await completeFlockChallenge(ctx.flockSlug, ctx.challengeId, game.token)
+        clearFlockPlayContext()
+        navigate(getFlockResultPath(result.result_token), { replace: true })
+      } catch {
+        clearFlockPlayContext()
+        setFlockCompleting(false)
+      }
+    })()
+  }, [game?.ended, game?.token, navigate])
 
   // Check if current player is the host
   // Players array now includes is_host field from PlayerScoreSerializer
@@ -221,6 +248,20 @@ export const ResultsComponent = () => {
       window.removeEventListener('rematch_invitation', handleRematchInvitation as EventListener)
     }
   }, [isHost])
+
+  if (flockCompleting) {
+    return (
+      <Flex direction="column" align="center" gap={4} py={8}>
+        <Spinner size="lg" color="primary.500" />
+        <Text color="primary.700" textAlign="center">
+          <FormattedMessage
+            id="flocks_saving_result"
+            defaultMessage="Saving your flock challenge result…"
+          />
+        </Text>
+      </Flex>
+    )
+  }
 
   if (isPracticeGame && displayGame) {
     const species1 = game?.pair_species_low_name || '—'

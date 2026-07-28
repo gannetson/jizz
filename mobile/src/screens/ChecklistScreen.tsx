@@ -10,7 +10,6 @@ import {
   Modal,
   Pressable,
   RefreshControl,
-  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +33,7 @@ import {
   type SpeciesMediaData,
 } from '../components/SpeciesMediaModal';
 import { loadCountries, type Country } from '../api/countries';
-import { getCountryDisplayName } from '../i18n/countryNames';
+import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 import { API_BASE_URL } from '../api/config';
 
@@ -56,37 +55,24 @@ export function ChecklistScreen() {
   const [sort, setSort] = useState<SortKey>('recent');
   const [taxOrder, setTaxOrder] = useState<string | undefined>();
   const [modalSpecies, setModalSpecies] = useState<SpeciesMediaData | null>(null);
-  const [countryCode, setCountryCode] = useState<string | undefined>(undefined);
-  const [countryModalVisible, setCountryModalVisible] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
+  const [country, setCountry] = useState<Country | null>(null);
   const [countries, setCountries] = useState<Country[]>([]);
   const [taxOrderModalVisible, setTaxOrderModalVisible] = useState(false);
 
-  const effectiveCountryCode = countryCode ?? profile?.country_code ?? undefined;
-
   useEffect(() => {
-    if (!countryModalVisible || countries.length > 0) return;
     loadCountries()
       .then(setCountries)
       .catch(() => {});
-  }, [countryModalVisible, countries.length]);
+  }, []);
 
-  const countryOptions = useMemo(() => {
-    const withDisplay = countries.map((c) => ({
-      ...c,
-      displayName: getCountryDisplayName(c, locale),
-    }));
-    withDisplay.sort((a, b) =>
-      a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })
-    );
-    return withDisplay;
-  }, [countries, locale]);
+  const effectiveCountry = useMemo(() => {
+    if (country) return country;
+    const code = profile?.country_code;
+    if (!code) return null;
+    return countries.find((c) => c.code === code) ?? { code, name: code };
+  }, [country, profile?.country_code, countries]);
 
-  const filteredCountryOptions = useMemo(() => {
-    if (!countrySearch.trim()) return countryOptions;
-    const q = countrySearch.trim().toLowerCase();
-    return countryOptions.filter((o) => o.displayName.toLowerCase().includes(q));
-  }, [countryOptions, countrySearch]);
+  const effectiveCountryCode = effectiveCountry?.code;
 
   const taxOrderOptions = useMemo(() => {
     const rows = [...(data?.tax_orders ?? [])];
@@ -208,15 +194,28 @@ export function ChecklistScreen() {
         <View style={styles.progressText}>
           <Text style={styles.title}>{t('checklist_title', 'My Checklist')}</Text>
           {data?.country ? (
-            <TouchableOpacity
-              onPress={() => setCountryModalVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t('checklist_change_country', 'Change country')}
-            >
-              <Text style={styles.subtitle}>
-                {data.country.name} <Text style={styles.subtitleChevron}>▾</Text>
-              </Text>
-            </TouchableOpacity>
+            <CountrySelect
+              value={
+                effectiveCountry ?? {
+                  code: data.country.code,
+                  name: data.country.name,
+                }
+              }
+              onChange={setCountry}
+              countries={countries}
+              title={t('checklist_select_country', 'Select country')}
+              renderTrigger={({ open, label }) => (
+                <TouchableOpacity
+                  onPress={open}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('checklist_change_country', 'Change country')}
+                >
+                  <Text style={styles.subtitle}>
+                    {label} <Text style={styles.subtitleChevron}>▾</Text>
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
           ) : null}
           {taxOrderOptions.length > 0 ? (
             <TouchableOpacity
@@ -373,64 +372,6 @@ export function ChecklistScreen() {
         </Pressable>
       </Modal>
 
-      <Modal visible={countryModalVisible} transparent animationType="slide">
-        <Pressable
-          style={styles.countryModalBackdrop}
-          onPress={() => {
-            setCountryModalVisible(false);
-            setCountrySearch('');
-          }}
-        >
-          <Pressable style={styles.countryModalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.countryModalTitle}>
-              {t('checklist_select_country', 'Select country')}
-            </Text>
-            <TextInput
-              style={styles.countrySearchInput}
-              placeholder={t('search', 'Search')}
-              placeholderTextColor={colors.primary[400]}
-              value={countrySearch}
-              onChangeText={setCountrySearch}
-            />
-            <FlatList
-              data={filteredCountryOptions}
-              keyExtractor={(c) => c.code}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.countryModalItem,
-                    effectiveCountryCode === item.code && styles.countryModalItemSelected,
-                  ]}
-                  onPress={() => {
-                    setCountryCode(item.code);
-                    setCountryModalVisible(false);
-                    setCountrySearch('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.countryModalItemText,
-                      effectiveCountryCode === item.code && styles.countryModalItemTextSelected,
-                    ]}
-                  >
-                    {item.displayName}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity
-              style={styles.countryModalClose}
-              onPress={() => {
-                setCountryModalVisible(false);
-                setCountrySearch('');
-              }}
-            >
-              <Text style={styles.countryModalCloseText}>{t('close', 'Close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
       <SpeciesMediaModal
         visible={!!modalSpecies}
         onClose={() => setModalSpecies(null)}
@@ -555,15 +496,6 @@ const styles = StyleSheet.create({
   },
   countryModalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
   countryModalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
-  countrySearchInput: {
-    borderWidth: 1,
-    borderColor: colors.primary[300],
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    color: colors.primary[800],
-    marginBottom: 8,
-  },
   countryModalItem: { paddingVertical: 14, paddingHorizontal: 8 },
   countryModalItemSelected: { backgroundColor: colors.primary[100] },
   countryModalItemText: { fontSize: 16, color: colors.primary[800] },

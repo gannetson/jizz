@@ -49,6 +49,14 @@ class Question(models.Model):
     errors = models.IntegerField(default=0)
     done = models.BooleanField(default=False)
     sequence = models.IntegerField(default=1)
+    media = models.ForeignKey(
+        'media.Media',
+        null=True,
+        blank=True,
+        related_name='locked_questions',
+        on_delete=models.PROTECT,
+        help_text='When set, play always uses this exact media asset (pregenerated games).',
+    )
 
     def __str__(self):
         return f'{self.game} - {self.species}'
@@ -433,17 +441,24 @@ class Game(models.Model):
     GAME_TYPE_EXTREME = 'extreme'
     GAME_TYPE_PAIR_PRACTICE = 'pair_practice'
     GAME_TYPE_SPECIES_PRACTICE = 'species_practice'
+    GAME_TYPE_FLOCK_CHALLENGE = 'flock_challenge'
     GAME_TYPE_CHOICES = [
         (GAME_TYPE_STANDARD, 'Standard'),
         (GAME_TYPE_EXTREME, 'Extreme'),
         (GAME_TYPE_PAIR_PRACTICE, 'Pair practice'),
         (GAME_TYPE_SPECIES_PRACTICE, 'Species practice'),
+        (GAME_TYPE_FLOCK_CHALLENGE, 'Flock challenge'),
     ]
     game_type = models.CharField(
         max_length=20,
         default=GAME_TYPE_STANDARD,
         choices=GAME_TYPE_CHOICES,
         help_text='Extreme: favor rare species and species this player has missed before.',
+    )
+    questions_pregenerated = models.BooleanField(
+        default=False,
+        help_text='When True, all questions (and locked media) exist before play; '
+        'add_question only advances to the next pre-created row.',
     )
     pair_species_low = models.ForeignKey(
         'jizz.Species',
@@ -536,6 +551,22 @@ class Game(models.Model):
     def last_question(self):
         return self.questions.last()
 
+    def can_accept_start_game(self) -> bool:
+        """
+        Whether WebSocket start_game should activate/broadcast the first round.
+
+        Pregenerated games already have questions; allow start while Q1 is still
+        the active round. Lazy games only accept start when no questions exist yet.
+        """
+        if self.questions_pregenerated or self.game_type == self.GAME_TYPE_FLOCK_CHALLENGE:
+            current = self.questions.filter(done=False).order_by('sequence').first()
+            if current is None:
+                return False
+            if current.sequence != 1 or self.questions.filter(done=True).exists():
+                return False
+            return True
+        return not self.questions.exists()
+
     def add_question(self):
         """
         Generate a new question for this game.
@@ -551,6 +582,9 @@ class Game(models.Model):
         3. Select random media item for the species
         4. Generate answer options based on game level
         5. Create Question and QuestionOption instances
+
+        For ``questions_pregenerated`` games, steps 2–5 are skipped: the next
+        pre-created Question row is returned instead.
 
         Returns:
             Question instance or None if game has ended
@@ -571,6 +605,13 @@ class Game(models.Model):
             current = game.questions.filter(done=False).order_by('sequence').first()
             if current is not None and not game.can_advance_to_next_question(current):
                 return current
+
+            if game.questions_pregenerated or game.game_type == Game.GAME_TYPE_FLOCK_CHALLENGE:
+                if current is not None:
+                    current.done = True
+                    current.save(update_fields=['done'])
+                nxt = game.questions.filter(done=False).order_by('sequence').first()
+                return nxt
 
             game.questions.filter(done=False).update(done=True)
             return Game._add_question_body(game)
@@ -625,13 +666,17 @@ class CountryBadges(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
 
+def generate_player_token():
+    return str(uuid.uuid4())
+
+
 class Player(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey('auth.User', blank=True, null=True, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True, blank=True)
     name = models.CharField(max_length=255)
     language = models.CharField(max_length=100, default='en')
-    token = models.CharField(max_length=100, default=uuid.uuid4, editable=False)
+    token = models.CharField(max_length=100, default=generate_player_token, editable=False)
     score = models.IntegerField(default=0)
 
     @property
@@ -1624,6 +1669,237 @@ class UsageEvent(models.Model):
     def proxy_headers(self) -> dict:
         meta = self.metadata or {}
         return meta.get('proxy') or meta.get('_request') or {}
+
+
+class Flock(models.Model):
+    """Persistent club/group of birders that runs standardized challenges."""
+
+    name = models.CharField(max_length=120)
+    slug = models.SlugField(max_length=50, unique=True)
+    owner = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='owned_flocks',
+    )
+    default_country = models.ForeignKey(
+        Country,
+        on_delete=models.PROTECT,
+        related_name='flocks',
+    )
+    is_private = models.BooleanField(
+        default=True,
+        help_text='Private flocks are only visible to members and invitees.',
+    )
+    logo = models.ImageField(upload_to='flock_logos/', null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def member_count(self) -> int:
+        return self.memberships.count()
+
+    def is_admin(self, user) -> bool:
+        if not user or not user.is_authenticated:
+            return False
+        if self.owner_id == user.id:
+            return True
+        return self.memberships.filter(
+            user=user, role__in=('owner', 'admin')
+        ).exists()
+
+    def is_member(self, user) -> bool:
+        if not user or not user.is_authenticated:
+            return False
+        if self.owner_id == user.id:
+            return True
+        return self.memberships.filter(user=user).exists()
+
+
+class FlockMembership(models.Model):
+    ROLE_OWNER = 'owner'
+    ROLE_ADMIN = 'admin'
+    ROLE_MEMBER = 'member'
+    ROLE_CHOICES = [
+        (ROLE_OWNER, 'Owner'),
+        (ROLE_ADMIN, 'Admin'),
+        (ROLE_MEMBER, 'Member'),
+    ]
+
+    flock = models.ForeignKey(Flock, related_name='memberships', on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        'auth.User',
+        related_name='flock_memberships',
+        on_delete=models.CASCADE,
+    )
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_MEMBER)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('flock', 'user')]
+        indexes = [models.Index(fields=['flock', 'role'])]
+
+    def __str__(self):
+        return f'{self.user_id}@{self.flock_id} ({self.role})'
+
+
+class FlockInvite(models.Model):
+    flock = models.ForeignKey(Flock, related_name='invites', on_delete=models.CASCADE)
+    code = models.CharField(max_length=8, db_index=True)
+    token = models.CharField(max_length=32, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='flock_invites_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['code'],
+                condition=models.Q(is_active=True),
+                name='flock_invite_active_code_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.code} ({"active" if self.is_active else "revoked"})'
+
+
+class FlockChallenge(models.Model):
+    PRESET_CLUB_MIX = 'club_mix'
+    PRESET_CHOICES = [(PRESET_CLUB_MIX, 'Club Mix')]
+    STATUS_DRAFT = 'draft'
+    STATUS_ACTIVE = 'active'
+    STATUS_ENDED = 'ended'
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, 'Draft'),
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_ENDED, 'Ended'),
+    ]
+
+    flock = models.ForeignKey(Flock, related_name='challenges', on_delete=models.CASCADE)
+    title = models.CharField(max_length=160)
+    country = models.ForeignKey(Country, on_delete=models.PROTECT, related_name='flock_challenges')
+    length = models.PositiveSmallIntegerField(default=20)
+    preset = models.CharField(max_length=32, choices=PRESET_CHOICES, default=PRESET_CLUB_MIX)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='flock_challenges_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    public_token = models.CharField(max_length=16, unique=True, editable=False)
+
+    class Meta:
+        ordering = ['-starts_at']
+        indexes = [
+            models.Index(fields=['flock', 'status', '-starts_at']),
+            models.Index(fields=['ends_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.title} ({self.flock_id})'
+
+    @property
+    def is_open(self) -> bool:
+        now_ts = now()
+        return (
+            self.status == self.STATUS_ACTIVE
+            and self.starts_at <= now_ts <= self.ends_at
+        )
+
+
+class FlockChallengeItem(models.Model):
+    """Immutable snapshot row: same species/media/options for every participant."""
+
+    challenge = models.ForeignKey(
+        FlockChallenge, related_name='items', on_delete=models.CASCADE
+    )
+    sequence = models.PositiveSmallIntegerField()
+    species = models.ForeignKey(Species, on_delete=models.PROTECT)
+    media = models.ForeignKey('media.Media', on_delete=models.PROTECT)
+    media_type = models.CharField(max_length=16)
+    level = models.CharField(max_length=32)
+    rarity = models.CharField(max_length=32)
+    option_species_ids = models.JSONField(default=list)
+
+    class Meta:
+        ordering = ['sequence']
+        unique_together = [('challenge', 'sequence')]
+
+    def __str__(self):
+        return f'{self.challenge_id}#{self.sequence} species={self.species_id}'
+
+
+class FlockChallengeAttempt(models.Model):
+    challenge = models.ForeignKey(
+        FlockChallenge, related_name='attempts', on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='flock_challenge_attempts',
+    )
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name='flock_challenge_attempts',
+    )
+    game = models.OneToOneField(
+        Game,
+        on_delete=models.CASCADE,
+        related_name='flock_challenge_attempt',
+    )
+    is_ranked = models.BooleanField(default=False)
+    is_practice = models.BooleanField(default=False)
+    correct_count = models.PositiveSmallIntegerField(default=0)
+    birdr_score = models.IntegerField(default=0)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    result_token = models.CharField(max_length=24, unique=True, editable=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['challenge', '-correct_count', '-birdr_score', 'completed_at']),
+            models.Index(fields=['challenge', 'user']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['challenge', 'user'],
+                condition=models.Q(is_ranked=True, completed_at__isnull=False),
+                name='flock_one_ranked_completed_attempt',
+            ),
+        ]
+
+    def __str__(self):
+        kind = 'ranked' if self.is_ranked else 'practice'
+        return f'{self.user_id} {kind} on {self.challenge_id}'
+
+
+class FlockChallengeAttemptQuestion(models.Model):
+    attempt = models.ForeignKey(
+        FlockChallengeAttempt, related_name='question_links', on_delete=models.CASCADE
+    )
+    challenge_item = models.ForeignKey(FlockChallengeItem, on_delete=models.CASCADE)
+    question = models.OneToOneField(
+        Question, on_delete=models.CASCADE, related_name='flock_attempt_link'
+    )
+
+    class Meta:
+        unique_together = [('attempt', 'challenge_item')]
 
 
 class IpGeoCache(models.Model):

@@ -18,6 +18,7 @@ import { getMedia, reviewMedia, getSpeciesReviewStats } from '../api/media';
 import type { MediaItem, ReviewLevel, SpeciesReviewStatsResponse } from '../api/media';
 import { loadCountries } from '../api/countries';
 import type { Country } from '../api/countries';
+import { CountrySelect } from '../components/CountrySelect';
 import { getSpeciesForCountry } from '../api/species';
 import type { Species } from '../types/game';
 import { apiUrl } from '../api/config';
@@ -102,7 +103,7 @@ export function MediaReviewScreen() {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [reviewedItems, setReviewedItems] = useState<Map<number, 'approved' | 'rejected' | 'not_sure'>>(new Map());
   const [countries, setCountries] = useState<Country[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [speciesStats, setSpeciesStats] = useState<SpeciesReviewStatsResponse | null>(null);
   const [speciesStatsLoading, setSpeciesStatsLoading] = useState(true);
   const [selectedMediaType, setSelectedMediaType] = useState<MediaTypeFilter>('image');
@@ -120,16 +121,16 @@ export function MediaReviewScreen() {
   }, []);
 
   useEffect(() => {
-    if (!selectedCountry) {
+    if (!selectedCountry?.code) {
       setSpeciesList([]);
       return;
     }
     setSpeciesListLoading(true);
-    getSpeciesForCountry(selectedCountry, languageParam)
+    getSpeciesForCountry(selectedCountry.code, languageParam)
       .then(setSpeciesList)
       .catch(() => setSpeciesList([]))
       .finally(() => setSpeciesListLoading(false));
-  }, [selectedCountry, languageParam]);
+  }, [selectedCountry?.code, languageParam]);
 
   const loadMedia = useCallback(
     async (page: number = 1, reset: boolean = false) => {
@@ -144,7 +145,7 @@ export function MediaReviewScreen() {
         const data = await getMedia(
           selectedMediaType,
           page,
-          selectedCountry || undefined,
+          selectedCountry?.code || undefined,
           languageParam,
           selectedSpecies?.id,
           reviewLevel
@@ -167,20 +168,20 @@ export function MediaReviewScreen() {
         setLoadingMore(false);
       }
     },
-    [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam]
+    [selectedCountry?.code, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam]
   );
 
   useEffect(() => {
     loadMedia(1, true);
-  }, [loadMedia, selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel]);
+  }, [loadMedia, selectedCountry?.code, selectedMediaType, selectedSpecies?.id, reviewLevel]);
 
   useEffect(() => {
     setSpeciesStatsLoading(true);
-    getSpeciesReviewStats(selectedCountry || undefined, selectedMediaType, languageParam)
+    getSpeciesReviewStats(selectedCountry?.code || undefined, selectedMediaType, languageParam)
       .then(setSpeciesStats)
       .catch(() => setSpeciesStats(null))
       .finally(() => setSpeciesStatsLoading(false));
-  }, [selectedCountry, selectedMediaType, languageParam]);
+  }, [selectedCountry?.code, selectedMediaType, languageParam]);
 
   const handleReview = async (mediaId: number, reviewType: 'approved' | 'rejected' | 'not_sure') => {
     const token = await getAccessToken();
@@ -358,19 +359,16 @@ export function MediaReviewScreen() {
             />
           </View>
           <View style={styles.filterRow}>
-            <FilterSelect
-              label={t('select_country_placeholder')}
+            <CountrySelect
               value={selectedCountry}
-              displayLabel={
-                selectedCountry
-                  ? countries.find((c) => c.code === selectedCountry)?.name ?? selectedCountry
-                  : 'All countries'
-              }
-              onSelect={(code) => setSelectedCountry(code)}
-              options={[
-                { value: '', label: 'All countries' },
-                ...countries.map((c) => ({ value: c.code, label: c.name })),
-              ]}
+              onChange={setSelectedCountry}
+              countries={countries}
+              allowEmpty
+              emptyLabel={t('all_countries')}
+              title={t('select_country_placeholder')}
+              style={styles.filterSelect}
+              buttonStyle={styles.filterButton}
+              buttonTextStyle={styles.filterButtonValue}
             />
           </View>
         </View>
@@ -494,6 +492,7 @@ const styles = StyleSheet.create({
   instructionItem: { marginLeft: 4, marginBottom: 4, color: colors.primary[800] },
   filters: { marginBottom: 12 },
   filterRow: { flexDirection: 'row' as const, gap: 12, marginBottom: 12 },
+  filterSelect: { flex: 1 },
   filterButton: {
     flex: 1,
     paddingVertical: 12,

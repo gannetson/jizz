@@ -1,7 +1,4 @@
-import { useContext } from "react";
 import { useIntl } from "react-intl";
-import AppContext from "../core/app-context";
-import { getCountryDisplayName } from "../data/country-names-nl";
 import CountryCombobox from "./country-combobox";
 
 interface CountrySelectProps {
@@ -10,6 +7,7 @@ interface CountrySelectProps {
   onChange: (value: string | null) => void;
 }
 
+/** Thin adapter for profile forms that store country as a code string. */
 export const ProfileCountrySelect = ({ countries, value, onChange }: CountrySelectProps) => {
   const intl = useIntl();
   const countriesArray = Array.isArray(countries) ? countries : [];
@@ -22,6 +20,7 @@ export const ProfileCountrySelect = ({ countries, value, onChange }: CountrySele
       onChange={(c) => onChange(c?.code ?? null)}
       allowEmpty
       emptyLabel={intl.formatMessage({ id: "none", defaultMessage: "None" })}
+      excludeRegionCodes
     />
   );
 };

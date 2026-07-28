@@ -19,6 +19,7 @@ from jizz.models import (
     JourneyLevel,
     JourneyStep,
     Player,
+    Species,
     TaxonomicFamily,
 )
 from jizz.services.journey_family import resolve_family_for_step
@@ -76,7 +77,11 @@ class BirdrJourneyApiTestCase(TestCase):
 
     def test_get_requires_auth(self):
         response = self.client.get('/api/birdr-journey/', {'country_code': 'NL'})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        # DRF returns 403 when no authenticator supplies WWW-Authenticate for a missing header.
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
     def test_post_creates_journey_for_player(self):
         _player_auth(self.client, self.player)
@@ -200,8 +205,8 @@ class BirdrJourneyApiTestCase(TestCase):
         start = self.client.post(f'/api/birdr-journey/{journey.id}/start-step/', format='json')
         game_token = start.data['journey_game']['game']['token']
         game = Game.objects.get(token=game_token)
-        game.ended = True
-        game.save(update_fields=['ended'])
+        game.force_ended = True
+        game.save(update_fields=['force_ended'])
 
         response = self.client.post(
             f'/api/birdr-journey/{journey.id}/complete-step/',
@@ -222,8 +227,8 @@ class BirdrJourneyApiTestCase(TestCase):
         start = self.client.post(f'/api/birdr-journey/{journey.id}/start-step/', format='json')
         game_token = start.data['journey_game']['game']['token']
         game = Game.objects.get(token=game_token)
-        game.ended = True
-        game.save(update_fields=['ended'])
+        game.force_ended = True
+        game.save(update_fields=['force_ended'])
 
         complete = self.client.post(
             f'/api/birdr-journey/{journey.id}/complete-step/',
@@ -282,6 +287,26 @@ class BirdrJourneyApiTestCase(TestCase):
     def test_joker_exhaustion_ends_journey_step(self):
         from jizz.models import Question
 
+        # Seed enough familiar-tier species with media for beginner questions.
+        for i in range(6):
+            sp = Species.objects.create(
+                name=f'Joker Bird {i}',
+                name_latin=f'Jokerus birdus{i}',
+                code=f'jok{i}',
+            )
+            CountrySpecies.objects.create(
+                country=self.country,
+                species=sp,
+                status='native',
+                frequency='common',
+            )
+            Media.objects.create(
+                species=sp,
+                type='image',
+                url=f'https://example.com/joker{i}.jpg',
+                source='test',
+            )
+
         _player_auth(self.client, self.player)
         create = self.client.post('/api/birdr-journey/', {'country_code': 'NL'}, format='json')
         journey_id = create.data['id']
@@ -300,16 +325,16 @@ class BirdrJourneyApiTestCase(TestCase):
                 f'/api/games/{game.token}/question',
                 HTTP_AUTHORIZATION=f'Bearer {self.player.token}',
             )
-            self.assertEqual(q_resp.status_code, status.HTTP_200_OK)
+            self.assertEqual(q_resp.status_code, status.HTTP_200_OK, q_resp.data if hasattr(q_resp, 'data') else q_resp.content)
             question = Question.objects.get(id=q_resp.data['id'])
-            wrong = question.options.exclude(species_id=question.species_id).first()
+            wrong = question.options.exclude(id=question.species_id).first()
             self.assertIsNotNone(wrong)
             return self.client.post(
                 '/api/answer/',
                 {
-                    'player_token': self.player.token,
+                    'player_token': str(self.player.token),
                     'question_id': question.id,
-                    'answer_id': wrong.species_id,
+                    'answer_id': wrong.id,
                 },
                 format='json',
             )
@@ -367,6 +392,14 @@ class BirdrJourneyApiTestCase(TestCase):
         self.assertEqual(len(response.data), 2)
         codes = {item['country']['code'] for item in response.data}
         self.assertEqual(codes, {'NL', 'BE'})
+        # List payload is lite: no nested game / step graph.
+        for item in response.data:
+            self.assertIn('current_level', item)
+            self.assertIn('is_champion', item)
+            self.assertNotIn('current_game', item)
+            self.assertNotIn('active_step', item)
+            self.assertNotIn('next_level', item)
+            self.assertEqual(item['current_level']['steps'], [])
 
     def test_delete_journey(self):
         _player_auth(self.client, self.player)

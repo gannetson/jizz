@@ -12,7 +12,11 @@ from rest_framework.views import APIView
 
 from jizz.models import BirdrJourney, BirdrJourneyGame, Country, Game, JourneyLevel, JourneyStep, Player
 from jizz.services.journey_family import is_family_step, resolve_family_for_step
-from jizz.serializers import BirdrJourneyGameSerializer, BirdrJourneySerializer
+from jizz.serializers import (
+    BirdrJourneyGameSerializer,
+    BirdrJourneyListSerializer,
+    BirdrJourneySerializer,
+)
 from jizz.user_names import player_name_for_user
 from jizz.views import GetPlayerMixin
 
@@ -162,6 +166,13 @@ class BirdrJourneyMixin(GetPlayerMixin):
             return qs.filter(user=owner['user'])
         return qs.filter(player=owner['player'])
 
+    def _list_queryset(self, owner):
+        """Slim queryset for the overview list — no games/scores/answers."""
+        qs = BirdrJourney.objects.select_related('country', 'user', 'player')
+        if owner['user']:
+            return qs.filter(user=owner['user'])
+        return qs.filter(player=owner['player'])
+
     def _get_journey(self, owner, country):
         return self._journey_queryset(owner).filter(country=country).first()
 
@@ -172,6 +183,27 @@ class BirdrJourneyMixin(GetPlayerMixin):
 
     def _serialize_journey(self, journey, request):
         return BirdrJourneySerializer(journey, context={'request': request}).data
+
+    def _list_player_token(self, owner, journeys):
+        """Resolve host player token once for the whole list response."""
+        if owner.get('player'):
+            return str(owner['player'].token)
+        if not journeys:
+            return None
+        host = get_journey_host(journeys[0])
+        return str(host.token) if host else None
+
+    def _serialize_journey_list(self, journeys, request, owner):
+        levels = get_journey_levels_ordered()
+        return BirdrJourneyListSerializer(
+            journeys,
+            many=True,
+            context={
+                'request': request,
+                'journey_levels': levels,
+                'player_token': self._list_player_token(owner, journeys),
+            },
+        ).data
 
     def _no_cache_response(self, data, status=status.HTTP_200_OK):
         response = Response(data, status=status)
@@ -187,11 +219,10 @@ class BirdrJourneyView(BirdrJourneyMixin, APIView):
         owner = self._resolve_owner(request)
         country_code = request.query_params.get('country_code')
         if not country_code or not str(country_code).strip():
-            journeys = self._journey_queryset(owner).order_by('-updated')
-            return self._no_cache_response([
-                self._serialize_journey(journey, request)
-                for journey in journeys
-            ])
+            journeys = list(self._list_queryset(owner).order_by('-updated'))
+            return self._no_cache_response(
+                self._serialize_journey_list(journeys, request, owner)
+            )
         country = self._get_country(country_code)
         journey = self._get_journey(owner, country)
         if not journey:
@@ -248,7 +279,8 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
             .first()
         )
         if existing:
-            if existing.status == 'running':
+            if existing.status in ('running', 'new'):
+                # Idempotent: return the same game whether or not a question was loaded yet.
                 step_ctx = BirdrJourneySerializer(
                     journey, context={'request': request}
                 )._serializer_context()
@@ -258,17 +290,7 @@ class BirdrJourneyStartStepView(BirdrJourneyMixin, APIView):
                         existing, context=step_ctx
                     ).data,
                 })
-            if existing.status == 'new' and existing.game.questions.count() > 0:
-                step_ctx = BirdrJourneySerializer(
-                    journey, context={'request': request}
-                )._serializer_context()
-                return self._no_cache_response({
-                    'journey': self._serialize_journey(journey, request),
-                    'journey_game': BirdrJourneyGameSerializer(
-                        existing, context=step_ctx
-                    ).data,
-                })
-            # Failed attempt or empty shell (question never loaded): start fresh.
+            # Failed attempt: start fresh.
             existing.game.delete()
 
         host = get_journey_host(journey)
@@ -385,13 +407,19 @@ class CountryChallengeLeaderboardView(APIView):
 
     def get(self, request):
         from jizz.country_challenge_leaderboard import country_challenge_leaderboard
+        from jizz.quiz_mistake_stats import normalize_country_filter
 
         try:
             limit = int(request.query_params.get('limit', 100))
         except (TypeError, ValueError):
             limit = 100
         limit = max(1, min(limit, 200))
-        payload = country_challenge_leaderboard(limit=limit, request=request)
+        country_code = normalize_country_filter(request.query_params.get('country'))
+        payload = country_challenge_leaderboard(
+            limit=limit,
+            country_code=country_code,
+            request=request,
+        )
         response = Response({'leaderboard': payload})
         response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
         response['Pragma'] = 'no-cache'

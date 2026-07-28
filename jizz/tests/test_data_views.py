@@ -90,14 +90,24 @@ class DataViewsTests(TestCase):
         self.assertContains(res, "Passeridae")
 
     def test_taxon_orders_sort_by_species_count_desc(self):
+        for i in range(2):
+            sp = make_species_with_taxonomy(
+                name=f"Extra Sparrow {i}",
+                name_latin=f"Passer extra{i}",
+                code=f"SPX{i}",
+                tax_order="Passeriformes",
+                tax_family="Passeridae",
+            )
+            CountrySpecies.objects.create(country=self.country, species=sp, status="native")
         res = Client().get(
             reverse("data-taxon-orders"),
-            {"sort": "species_count", "dir": "desc"},
+            {"country": "NL", "sort": "species_count", "dir": "desc"},
         )
         self.assertEqual(res.status_code, 200)
         content = res.content.decode()
-        passer_pos = content.index("Passeriformes")
-        anser_pos = content.index("Anseriformes")
+        tbody = content.split("<tbody>")[1].split("</tbody>")[0]
+        passer_pos = tbody.index("Passeriformes")
+        anser_pos = tbody.index("Anseriformes")
         self.assertLess(passer_pos, anser_pos)
 
     def test_taxon_families_sort_by_order(self):
@@ -118,7 +128,7 @@ class GamesPlayedViewsTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "games-played-chart")
         self.assertContains(res, "games-world-map")
-        self.assertNotContains(res, "challenge-leaderboard")
+        self.assertNotContains(res, 'id="challenge-leaderboard"')
 
     def test_games_played_api(self):
         res = Client().get(

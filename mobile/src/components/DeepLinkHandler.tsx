@@ -4,12 +4,14 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 import { API_BASE_URL } from '../api/config';
+import { parseFlockJoinUrl } from '../api/flocks';
 
 /**
  * Handles deep links:
  * - OAuth redirects: birdr://auth/google, birdr://auth/apple
  * - Game join: https://birdr.pro/join/{token} or birdr://join/{token}
  * - Daily challenge invite: birdr://join/challenge/{invite_token} or https://birdr.pro/join/challenge/{invite_token}
+ * - Flock invite: birdr://join/flock/{token} or https://birdr.pro/join/flock/{token}/
  * - Update: birdr://updates/{id} or https://birdr.pro/open/update/{id}/
  * - App home: birdr://home or https://birdr.pro/open/app/
  */
@@ -60,6 +62,35 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const flockInviteToken = parseFlockJoinUrl(url);
+      if (flockInviteToken) {
+        handled.current = url;
+        navigation.navigate('FlockInviteLanding', { inviteToken: flockInviteToken });
+        return;
+      }
+
+      const challengeShareToken = parseFlockChallengeShareUrl(url);
+      if (challengeShareToken) {
+        handled.current = url;
+        try {
+          if (isAuthenticated) {
+            const { listFlocks } = await import('../api/flocks');
+            const flocks = await listFlocks();
+            const match = flocks.find(
+              (f) => f.active_challenge?.public_token === challengeShareToken
+            );
+            if (match) {
+              navigation.navigate('FlockDetail', { slug: match.slug });
+              return;
+            }
+          }
+        } catch {
+          // fall through
+        }
+        navigation.navigate('Home');
+        return;
+      }
+
       const updateId = parseUpdateUrl(url);
       if (updateId !== null) {
         handled.current = url;
@@ -106,6 +137,25 @@ function parseAppHomeUrl(url: string): boolean {
   return false;
 }
 
+/** Parse flock challenge share URL; returns public_token or null. */
+function parseFlockChallengeShareUrl(url: string): string | null {
+  const base = API_BASE_URL.replace(/\/$/, '');
+  if (url.startsWith(`${base}/flocks/c/`)) {
+    const token = url
+      .slice(`${base}/flocks/c/`.length)
+      .replace(/\/og\.png.*$/, '')
+      .replace(/[/?#].*$/, '')
+      .replace(/\/+$/, '');
+    if (/^[\w-]+$/.test(token)) return token;
+  }
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/^\/flocks\/c\/([\w-]+)\/?$/);
+    if (match) return match[1];
+  } catch {}
+  return null;
+}
+
 function parseUpdateUrl(url: string): number | null {
   const schemeMatch = url.match(/^birdr:\/\/updates\/(\d+)$/);
   if (schemeMatch) return parseInt(schemeMatch[1], 10);
@@ -126,8 +176,9 @@ function parseUpdateUrl(url: string): number | null {
 }
 
 function parseGameJoinUrl(url: string): string | null {
-  // Don't treat join/challenge/... as game join
+  // Don't treat join/challenge/... or join/flock/... as game join
   if (url.includes('/join/challenge/')) return null;
+  if (url.includes('/join/flock/')) return null;
   // Game token: ShortUUID (alphanumeric) or UUID-style, e.g. 1234, abc12xyz, or with hyphens
   const tokenRegex = /^([a-z0-9-]{4,50})$/;
   // birdr://join/{token}

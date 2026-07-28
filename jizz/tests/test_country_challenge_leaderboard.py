@@ -62,6 +62,26 @@ class CountryChallengeLeaderboardTests(TestCase):
         codes = {row['country_code'] for row in rows}
         self.assertEqual(codes, {'NL', 'DE'})
 
+    def test_filters_by_country(self):
+        player = Player.objects.create(name='Ada', language='en')
+        BirdrJourney.objects.create(
+            player=player,
+            country=self.country_nl,
+            current_sequence=1,
+            current_step_sequence=0,
+        )
+        BirdrJourney.objects.create(
+            player=player,
+            country=self.country_de,
+            current_sequence=0,
+            current_step_sequence=1,
+        )
+
+        rows = country_challenge_leaderboard(limit=10, country_code='NL')
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['country_code'], 'NL')
+        self.assertEqual(rows[0]['level_title'], 'Fledgling')
+
     def test_sorts_by_highest_level_then_step(self):
         ahead = Player.objects.create(name='Ahead', language='en')
         behind = Player.objects.create(name='Behind', language='en')

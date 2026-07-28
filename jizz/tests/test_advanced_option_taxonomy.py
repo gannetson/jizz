@@ -98,7 +98,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
                 tax_genus='Parula',
                 tax_ordering=510.0 + i,
             )
-            for i in range(3)
+            for i in range(4)
         ]
         other_order = make_species_with_taxonomy(
             name='Duck',
@@ -135,7 +135,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
                 tax_genus='Turdus',
                 tax_ordering=600.0 + i,
             )
-            for i in range(4)
+            for i in range(5)
         ]
         other_order = make_species_with_taxonomy(
             name='Duck',
@@ -171,7 +171,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
                 tax_genus=f'Genus{i}',
                 tax_ordering=498.0 + i,
             )
-            for i in range(4)
+            for i in range(5)
         ]
         far = make_species_with_taxonomy(
             name='Far',
@@ -216,7 +216,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
                 tax_genus='Setophaga',
                 tax_ordering=None,
             )
-            for i in range(3)
+            for i in range(4)
         ]
         candidate_ids = [lower.id] + [s.id for s in higher] + [answer.id]
         distractors = self._distractors(candidate_ids, answer)
@@ -288,7 +288,7 @@ class AdvancedOptionTaxonomyTests(TestCase):
                 tax_genus='Anas',
                 tax_ordering=201.0 + i,
             )
-            for i in range(4)
+            for i in range(5)
         ]
         candidate_ids = [s.id for s in same_family] + [answer.id]
         distractors = self._distractors(candidate_ids, answer)

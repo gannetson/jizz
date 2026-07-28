@@ -100,6 +100,8 @@ export type Question = {
   number: number
   sequence: number
   done?: boolean
+  /** Effective media for this question when mixed (flock Club Mix). */
+  media?: string
   game: Game
   options?: Species[]
   images: SpeciesImage[]

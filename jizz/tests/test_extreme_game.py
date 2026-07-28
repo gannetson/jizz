@@ -91,28 +91,28 @@ class ExtremeGameSelectionTests(TestCase):
             length=1,
             media="images",
         )
-        q = Question.objects.create(
-            game=other_game,
-            species=self.rare_sp,
-            number=0,
-            sequence=1,
-        )
-        QuestionOption.objects.create(question=q, species=self.rare_sp, order=1)
-        QuestionOption.objects.create(question=q, species=self.common_sp, order=2)
         ps = PlayerScore.objects.create(player=self.player, game=other_game)
-        for _ in range(3):
+        for i in range(3):
+            qi = Question.objects.create(
+                game=other_game,
+                species=self.rare_sp,
+                number=i,
+                sequence=i + 1,
+            )
+            QuestionOption.objects.create(question=qi, species=self.rare_sp, order=1)
+            QuestionOption.objects.create(question=qi, species=self.common_sp, order=2)
             Answer.objects.create(
                 player_score=ps,
-                question=q,
+                question=qi,
                 answer=self.common_sp,
                 correct=False,
             )
 
+        other_host = Player.objects.create(name="NoMistakes", language="en")
+        baseline_game = self._extreme_game(host=other_host)
         game = self._extreme_game()
-        baseline = build_extreme_target_weights(game, [self.rare_sp.id])[self.rare_sp.id]
-        boosted = build_extreme_target_weights(
-            game, [self.common_sp.id, self.rare_sp.id, self.vagrant_sp.id]
-        )[self.rare_sp.id]
+        baseline = build_extreme_target_weights(baseline_game, [self.rare_sp.id])[self.rare_sp.id]
+        boosted = build_extreme_target_weights(game, [self.rare_sp.id])[self.rare_sp.id]
         self.assertGreater(boosted, baseline)
 
     def test_extreme_pick_prefers_weighted_species(self):
@@ -132,6 +132,8 @@ class ExtremeGameSelectionTests(TestCase):
             side_effect=[self.vagrant_sp.id, self.rare_sp.id, self.vagrant_sp.id],
         ):
             for _ in range(3):
-                create_question_for_game(game)
+                question = create_question_for_game(game)
+                question.done = True
+                question.save(update_fields=["done"])
         species_ids = list(game.questions.values_list("species_id", flat=True))
         self.assertEqual(species_ids, [self.vagrant_sp.id, self.rare_sp.id, self.vagrant_sp.id])

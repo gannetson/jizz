@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if missing %}
+  <title>Challenge not found · Birdr</title>
+  {% else %}
+  <title>{{ og_title }}</title>
+  <meta name="description" content="{{ description }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:site_name" content="Birdr">
+  <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ og_title }}">
+  <meta name="twitter:description" content="{{ description }}">
+  <meta name="twitter:image" content="{{ og_image }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% endif %}
+  <style>
+    :root {
+      color-scheme: light;
+      --birdr-50: #f5ede0;
+      --birdr-100: #e8d4b8;
+      --birdr-200: #d4b88a;
+      --birdr-300: #c09c5c;
+      --birdr-500: #8b6419;
+      --birdr-600: #6d4e14;
+      --birdr-800: #31220a;
+      --birdr-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--birdr-font);
+      background: var(--birdr-50);
+      color: var(--birdr-800);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      max-width: 440px;
+      width: 100%;
+      background: #fff;
+      border: 2px solid var(--birdr-200);
+      border-radius: 16px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 12px 28px rgba(49, 34, 10, 0.12);
+    }
+    .brand {
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--birdr-500);
+    }
+    .hero {
+      display: block;
+      width: min(220px, 70%);
+      height: auto;
+      margin: 16px auto 8px;
+      object-fit: contain;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 12px 0 4px;
+    }
+    .logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: var(--birdr-50);
+      border: 1px solid var(--birdr-100);
+      flex-shrink: 0;
+    }
+    h1 {
+      font-size: 1.55rem;
+      margin: 0;
+      font-weight: 700;
+      color: var(--birdr-800);
+      line-height: 1.25;
+    }
+    .countdown-wrap {
+      text-align: center;
+      margin: 18px 0 16px;
+      padding: 16px 12px;
+      border-radius: 14px;
+      background: var(--birdr-50);
+      border: 1px solid var(--birdr-100);
+    }
+    .countdown-label {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--birdr-600);
+      margin-bottom: 8px;
+    }
+    .countdown {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--birdr-500);
+      line-height: 1.1;
+    }
+    .countdown.ended {
+      font-size: 1.35rem;
+      color: var(--birdr-600);
+      font-family: var(--birdr-font);
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: var(--birdr-600);
+      margin: 0 0 16px;
+      text-align: center;
+    }
+    .board {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px;
+    }
+    .board li {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--birdr-100);
+      font-size: 1.05rem;
+    }
+    .board li:last-child { border-bottom: none; }
+    .rank { color: var(--birdr-600); min-width: 2rem; font-weight: 600; }
+    .name { flex: 1; font-weight: 700; color: var(--birdr-800); }
+    .score { color: var(--birdr-500); font-weight: 700; }
+    .empty {
+      color: var(--birdr-600);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .cta {
+      display: inline-block;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: var(--birdr-500);
+      color: var(--birdr-50);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .cta:hover { background: var(--birdr-600); }
+    .cta.secondary {
+      background: transparent;
+      color: var(--birdr-600);
+      border: 2px solid var(--birdr-200);
+    }
+    .cta.secondary:hover {
+      border-color: var(--birdr-300);
+      color: var(--birdr-800);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    {% if missing %}
+      <div class="brand">Birdr</div>
+      <img class="hero" src="/images/birdr-leaderboard.png" alt="">
+      <h1>Challenge not found</h1>
+      <p class="empty">This share link is invalid or no longer available.</p>
+      <a class="cta" href="/">Go to Birdr</a>
+    {% else %}
+      <div class="brand">Birdr</div>
+      <img class="hero" src="/images/birdr-leaderboard.png" alt="">
+      <div class="header">
+        {% if logo_url %}
+          <img class="logo" src="{{ logo_url }}" alt="">
+        {% endif %}
+        <h1>{{ flock_name }}</h1>
+      </div>
+      <div class="countdown-wrap">
+        <div class="countdown-label">Time left</div>
+        <div class="countdown" id="countdown" data-ends-at="{{ ends_at_iso }}">--:--:--</div>
+      </div>
+      <p class="meta">
+        {{ participant_count }} player{{ participant_count|pluralize }}
+      </p>
+      {% if top %}
+        <ol class="board">
+          {% for entry in top %}
+            <li>
+              <span class="rank">#{{ entry.rank }}</span>
+              <span class="name">{{ entry.display_name }}</span>
+              <span class="score">{{ entry.score_label }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="empty">No scores yet — be the first to play!</p>
+      {% endif %}
+      <div class="actions">
+        {% if join_url %}
+          <a class="cta" href="{{ join_url }}">Join flock &amp; play</a>
+        {% else %}
+          <a class="cta" href="/flocks/">Open Birdr</a>
+        {% endif %}
+        <a class="cta secondary" href="/">Birdr home</a>
+      </div>
+      <script>
+        (function () {
+          var el = document.getElementById('countdown');
+          if (!el) return;
+          var endsAt = Date.parse(el.getAttribute('data-ends-at'));
+          function pad(n) { return n < 10 ? '0' + n : String(n); }
+          function tick() {
+            var ms = endsAt - Date.now();
+            if (!isFinite(endsAt) || ms <= 0) {
+              el.textContent = 'Challenge ended';
+              el.classList.add('ended');
+              return;
+            }
+            var totalSec = Math.floor(ms / 1000);
+            var days = Math.floor(totalSec / 86400);
+            var hours = Math.floor((totalSec % 86400) / 3600);
+            var mins = Math.floor((totalSec % 3600) / 60);
+            var secs = totalSec % 60;
+            el.textContent = days > 0
+              ? days + 'd ' + pad(hours) + ':' + pad(mins) + ':' + pad(secs)
+              : pad(hours) + ':' + pad(mins) + ':' + pad(secs);
+            requestAnimationFrame(function () { setTimeout(tick, 250); });
+          }
+          tick();
+        })();
+      </script>
+    {% endif %}
+  </main>
+</body>
+</html>

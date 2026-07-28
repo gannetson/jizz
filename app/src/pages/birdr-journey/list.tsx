@@ -26,7 +26,7 @@ import {
   levelTitle,
   listBirdrJourneys,
   setStoredBirdrJourneyCountryCode,
-  type BirdrJourney,
+  type BirdrJourneyListItem,
 } from '../../api/birdrJourney';
 import { authService } from '../../api/services/auth.service';
 import { BirdrLevelImage } from '../../components/birdr-level-image';
@@ -39,7 +39,7 @@ export function BirdrJourneyListPage() {
   const intl = useIntl();
   const { language } = useContext(AppContext);
   const locale = language === 'nl' ? 'nl' : 'en';
-  const [journeys, setJourneys] = useState<BirdrJourney[]>([]);
+  const [journeys, setJourneys] = useState<BirdrJourneyListItem[]>([]);
   const [activeCountryCode, setActiveCountryCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,13 +114,13 @@ export function BirdrJourneyListPage() {
     load();
   }, [isAuthenticated, load]);
 
-  const handleContinue = async (journey: BirdrJourney) => {
+  const handleContinue = async (journey: BirdrJourneyListItem) => {
     const code = journey.country.code;
     setStoredBirdrJourneyCountryCode(code);
     navigate(`/journey/${code}`);
   };
 
-  const handleRemove = async (journey: BirdrJourney) => {
+  const handleRemove = async (journey: BirdrJourneyListItem) => {
     const countryName = getCountryDisplayName(journey.country, locale);
     const confirmed = window.confirm(
       intl.formatMessage(

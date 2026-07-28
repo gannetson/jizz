@@ -6,7 +6,41 @@
  * use `mediaSlotIndexFromQuestion` so both full and lean payloads work.
  *
  * `Question.sequence` is which turn in the game — never use it for media.
+ *
+ * Mixed-media games (flock Club Mix) lock type per question. Prefer `question.media`
+ * (or infer from which array has items) over `game.media`, which may stay `images`.
  */
+
+import { normalizeGameMedia } from './media-answer-gate';
+
+export type PlayMediaQuestion = {
+  media?: string | null;
+  number?: number | string | null;
+  images?: unknown[];
+  videos?: unknown[];
+  sounds?: unknown[];
+  game?: { media?: string | null } | null;
+};
+
+/** Effective play media for this question (`images` | `video` | `audio`). */
+export function resolvePlayMediaType(
+  question: PlayMediaQuestion | null | undefined,
+  gameMedia?: string | null
+): 'images' | 'video' | 'audio' {
+  if (question?.media) {
+    return normalizeGameMedia(question.media);
+  }
+  if (question?.game?.media) {
+    return normalizeGameMedia(question.game.media);
+  }
+  const hasImages = (question?.images?.length ?? 0) > 0;
+  const hasVideos = (question?.videos?.length ?? 0) > 0;
+  const hasSounds = (question?.sounds?.length ?? 0) > 0;
+  if (hasSounds && !hasImages && !hasVideos) return 'audio';
+  if (hasVideos && !hasImages) return 'video';
+  if (hasImages) return 'images';
+  return normalizeGameMedia(gameMedia);
+}
 
 export function currentPlayMediaItem<T>(
   items: T[] | undefined,

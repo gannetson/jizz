@@ -3,6 +3,7 @@ import {FormattedMessage} from "react-intl"
 import {Link as RouterLink} from "react-router-dom";
 import ChangeLanguage from "../../../components/change-language";
 import { getCountryChallengesPath, getCountryChallengeLeaderboardPath } from "../../../api/birdrJourney";
+import { getFlocksPath } from "../../../api/flocks";
 
 export const BirdrMenu = () => {
     return (
@@ -15,6 +16,11 @@ export const BirdrMenu = () => {
             </Link>
             <Link href={'/scores'} textDecoration="none">
               <FormattedMessage id={'High scores'} defaultMessage={'High scores'} />
+            </Link>
+            <Link asChild textDecoration="none">
+              <RouterLink to={getFlocksPath()}>
+                <FormattedMessage id={'flocks_title'} defaultMessage={'Flocks'} />
+              </RouterLink>
             </Link>
             <Link asChild textDecoration="none">
               <RouterLink to={getCountryChallengesPath()}>

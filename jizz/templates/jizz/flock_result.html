@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if missing %}
+  <title>Result not found · Birdr</title>
+  {% else %}
+  <title>{{ score_label }} in {{ flock_name }} · Birdr</title>
+  <meta name="description" content="{{ description }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ score_label }} — {{ challenge_title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:site_name" content="Birdr">
+  <meta property="og:image" content="{{ og_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ score_label }} — {{ challenge_title }}">
+  <meta name="twitter:description" content="{{ description }}">
+  <meta name="twitter:image" content="{{ og_image }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% endif %}
+  <style>
+    :root {
+      color-scheme: light;
+      --birdr-50: #f5ede0;
+      --birdr-100: #e8d4b8;
+      --birdr-200: #d4b88a;
+      --birdr-500: #8b6419;
+      --birdr-600: #6d4e14;
+      --birdr-800: #31220a;
+      --birdr-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--birdr-font);
+      background: var(--birdr-50);
+      color: var(--birdr-800);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      max-width: 420px;
+      width: 100%;
+      background: #fff;
+      border: 2px solid var(--birdr-200);
+      border-radius: 16px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 12px 28px rgba(49, 34, 10, 0.12);
+      text-align: center;
+    }
+    .brand {
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--birdr-500);
+    }
+    .hero {
+      display: block;
+      width: min(220px, 70%);
+      height: auto;
+      margin: 16px auto 12px;
+      object-fit: contain;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin: 8px 0 4px;
+      font-weight: 700;
+      color: var(--birdr-800);
+    }
+    .challenge {
+      color: var(--birdr-600);
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+    }
+    .score {
+      font-size: 2.4rem;
+      margin: 8px 0 4px;
+      font-weight: 800;
+      color: var(--birdr-500);
+    }
+    .rank {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--birdr-800);
+      margin-bottom: 12px;
+    }
+    p {
+      line-height: 1.45;
+      color: var(--birdr-600);
+      margin: 0 0 16px;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: var(--birdr-500);
+      color: var(--birdr-50);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .cta:hover { background: var(--birdr-600); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    {% if missing %}
+      <div class="brand">Birdr</div>
+      <img class="hero" src="/images/birdr-leaderboard.png" alt="">
+      <h1>Result not found</h1>
+      <p>This shared result link is invalid or no longer available.</p>
+      <a class="cta" href="/">Go to Birdr</a>
+    {% else %}
+      <div class="brand">Birdr</div>
+      <img class="hero" src="/images/birdr-leaderboard.png" alt="">
+      <h1>{{ flock_name }}</h1>
+      <p class="challenge">{{ challenge_title }}</p>
+      <div class="score">{{ score_label }}</div>
+      {% if rank_label %}<div class="rank">{{ rank_label }}</div>{% endif %}
+      <p>{{ display_name }} · Can you beat this score?</p>
+      <a class="cta" href="/flocks/">Play on Birdr</a>
+    {% endif %}
+  </main>
+</body>
+</html>

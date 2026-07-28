@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from jizz.flock_challenge import (
+    CLUB_MIX_LENGTH,
     SnapshotItem,
     clone_challenge_into_game,
     flock_content_fingerprint,
@@ -75,10 +76,10 @@ def _seed_species(country, n, *, prefix='sp', frequency='common', media_types=('
     return species_list
 
 
-def _manual_snapshot(species_list, length=20):
+def _manual_snapshot(species_list, length=CLUB_MIX_LENGTH):
     items = []
     for i in range(length):
-        sp = species_list[i]
+        sp = species_list[i % len(species_list)]
         media = Media.objects.filter(species=sp, type='image').first()
         opts = [species_list[(i + j) % len(species_list)].id for j in range(4)]
         if sp.id not in opts:
@@ -104,7 +105,7 @@ class FlockApiTests(TestCase):
         self.member = User.objects.create_user('flockmember', password='x')
         self.outsider = User.objects.create_user('outsider', password='x')
         self.client = APIClient()
-        self.species = _seed_species(self.country, 24, prefix='fl')
+        self.species = _seed_species(self.country, CLUB_MIX_LENGTH, prefix='fl')
 
     def _create_flock(self, user=None):
         user = user or self.admin
@@ -130,7 +131,7 @@ class FlockApiTests(TestCase):
         slug = flock['slug']
         with patch(
             'jizz.flock_views.generate_club_mix_snapshot',
-            return_value=_manual_snapshot(self.species, 20),
+            return_value=_manual_snapshot(self.species),
         ):
             ch = self.client.post(f'/api/flocks/{slug}/challenges/', {'title': 'W1'}, format='json')
         self.assertEqual(ch.status_code, 201, ch.data)
@@ -245,8 +246,8 @@ class FlockApiTests(TestCase):
                 format='json',
             )
             self.assertEqual(ok.status_code, status.HTTP_201_CREATED, ok.data)
-            self.assertEqual(ok.data['length'], 20)
-            self.assertEqual(ok.data['item_count'], 20)
+            self.assertEqual(ok.data['length'], CLUB_MIX_LENGTH)
+            self.assertEqual(ok.data['item_count'], CLUB_MIX_LENGTH)
 
     def test_create_challenge_notifies_other_members(self):
         flock = self._create_flock()
@@ -582,7 +583,7 @@ class FlockApiTests(TestCase):
             self.skipTest('Not enough local media/species for full Club Mix generation')
         species_ids = {item.species_id for item in snapshot}
         self.assertNotIn(vagrant.id, species_ids)
-        self.assertEqual(len(snapshot), 20)
+        self.assertEqual(len(snapshot), CLUB_MIX_LENGTH)
         media_types = {item.media_type for item in snapshot}
         self.assertEqual(media_types, {'image'})
         self.assertNotIn('audio', media_types)
@@ -593,7 +594,7 @@ class FlockApiTests(TestCase):
         for level, _rarity, _media, count in CLUB_MIX_SLOTS:
             expected_levels.extend([level] * count)
         self.assertEqual([item.level for item in snapshot], expected_levels)
-        self.assertEqual([item.sequence for item in snapshot], list(range(1, 21)))
+        self.assertEqual([item.sequence for item in snapshot], list(range(1, CLUB_MIX_LENGTH + 1)))
 
     def test_clone_preserves_difficulty_ramp_order(self):
         """Players must play easy→hard in snapshot order (no per-attempt shuffle)."""
@@ -697,7 +698,7 @@ class FlockApiTests(TestCase):
         game = Game.objects.create(
             country=self.country,
             level='advanced',
-            length=20,
+            length=CLUB_MIX_LENGTH,
             media='images',
             rarity=Game.RARIT_REGULAR,
             host=player,
@@ -716,7 +717,7 @@ class FlockApiTests(TestCase):
             result_token='share-lb-token-123456',
         )
         page2 = anon.get(f'/flocks/c/{public_token}/')
-        self.assertContains(page2, '17/20')
+        self.assertContains(page2, f'17/{CLUB_MIX_LENGTH}')
 
     def test_flock_challenge_24h_reminder_skips_completed_members(self):
         from django.core.management import call_command
@@ -752,7 +753,7 @@ class FlockApiTests(TestCase):
             game=Game.objects.create(
                 country=self.country,
                 level='advanced',
-                length=20,
+                length=CLUB_MIX_LENGTH,
                 media='images',
                 rarity=Game.RARIT_REGULAR,
                 host=Player.objects.filter(user=self.admin).first(),

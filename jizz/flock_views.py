@@ -157,7 +157,7 @@ def _serialize_invite(invite: FlockInvite, request, flock: Flock) -> dict:
         'share_message': (
             f'Join {flock.name} on Birdr! Play our weekly bird identification challenge '
             f'and see how you compare with other members. Can you recognise this week’s '
-            f'20 birds? {absolute}'
+            f'{CLUB_MIX_LENGTH} birds? {absolute}'
         ),
     }
 

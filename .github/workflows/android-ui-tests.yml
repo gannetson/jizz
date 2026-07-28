@@ -69,6 +69,5 @@ jobs:
             -no-snapshot
             -camera-back none
           disable-animations: true
-          script: |
-            cd mobile/android
-            ./gradlew connectedDebugAndroidTest --no-daemon --stacktrace
+          working-directory: ./mobile/android
+          script: ./gradlew connectedDebugAndroidTest --no-daemon --stacktrace

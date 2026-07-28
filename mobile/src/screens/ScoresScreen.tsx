@@ -17,6 +17,7 @@ import { loadCountries } from '../api/countries';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import type { Country } from '../api/countries';
+import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 import { PLAY_LEVEL_ORDER, playLevelFromSettings, type PlayLevel } from '../game/playLevel';
 
@@ -127,7 +128,7 @@ function ScoreCard({ score, mediaLabels, locale, playLevelLabel }: { score: Scor
         <Text style={[styles.cardRank, isMine && styles.cardRankMine]}>#{score.ranking}</Text>
         <View style={styles.cardCenter}>
           <Text style={[styles.cardName, isMine && styles.cardNameMine]} numberOfLines={1}>
-            {score.name}{isMine ? ` (${t('your_score')})` : ''}
+            {score.name}
           </Text>
           <View style={styles.cardMeta}>
             <Text style={styles.cardMetaText}>{flag} {countryName}</Text>
@@ -211,12 +212,7 @@ export function ScoresScreen() {
     label: 'labelKey' in o ? t((o as { labelKey: string }).labelKey) : (o as { valueLabel: string }).valueLabel,
   }));
   const mediaOptions = MEDIA_VALUES.map((o) => ({ value: o.value, label: t(o.labelKey) }));
-  const countryOptions = [
-    { value: '', label: t('all_countries') },
-    ...countries.map((c) => ({ value: c.code, label: getCountryDisplayName(c, locale) })),
-  ];
 
-  const countryDisplayLabel = country ? getCountryDisplayName(country, locale) : t('all_countries');
   const levelDisplayLabel = levelOptions.find((o) => o.value === playLevel)?.label ?? t('any_level');
   const lengthDisplayLabel = lengthOptions.find((o) => o.value === length)?.label ?? t('any_length');
   const mediaDisplayLabel = mediaOptions.find((o) => o.value === media)?.label ?? t('any_media');
@@ -246,13 +242,16 @@ export function ScoresScreen() {
       </View>
 
       <View style={styles.filterRow}>
-        <FilterSelect
-          label={t('country')}
-          value={country?.code ?? ''}
-          displayLabel={countryDisplayLabel}
-          onSelect={(code) => setCountry(code ? countries.find((c) => c.code === code) ?? null : null)}
-          options={countryOptions}
-          closeLabel={t('close')}
+        <CountrySelect
+          value={country}
+          onChange={setCountry}
+          countries={countries}
+          allowEmpty
+          emptyLabel={t('all_countries')}
+          title={t('country')}
+          style={styles.filterSelect}
+          buttonStyle={styles.filterButton}
+          buttonTextStyle={styles.filterButtonValue}
         />
         <FilterSelect
           label={t('media')}
@@ -321,6 +320,7 @@ const styles = StyleSheet.create({
   refreshButtonText: { fontSize: 15, fontWeight: '600', color: colors.primary[700] },
   refreshButtonDisabled: { opacity: 0.6 },
   filterRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  filterSelect: { flex: 1 },
   filterButton: {
     flex: 1,
     paddingVertical: 12,

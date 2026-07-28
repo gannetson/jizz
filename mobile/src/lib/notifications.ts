@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { getAccessToken } from '../api/auth';
 import { registerPushWithBackend } from '../api/pushRegister';
-import { navigateToDailyChallenge } from '../navigation/navigationRef';
+import { navigateToDailyChallenge, navigateToFlockDetail } from '../navigation/navigationRef';
 
 const WELCOME_TITLE = 'Birdr';
 const WELCOME_BODY = "You're good to go!";
@@ -269,9 +269,16 @@ export async function runBirdrJourneyPushOnboarding(): Promise<void> {
 
 export function setupNotificationResponseHandler(): () => void {
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-    const data = response.notification.request.content.data as { type?: string };
+    const data = response.notification.request.content.data as {
+      type?: string;
+      flock_slug?: string;
+    };
     if (data?.type === 'signup_test' || data?.type === 'daily_challenge') {
       navigateToDailyChallenge();
+      return;
+    }
+    if (data?.type === 'flock_challenge' && data.flock_slug) {
+      navigateToFlockDetail(data.flock_slug);
     }
   });
   return () => sub.remove();

@@ -10,7 +10,7 @@ const SelectCountry = () => {
   const { country, setCountry, game } = useContext(AppContext);
 
   const countriesList = Array.isArray(countryList) ? countryList : [];
-  const countries = countriesList.filter((c) => !c.code.includes("NL-NH"));
+  const countries = countriesList;
 
   useEffect(() => {
     if (!country && game?.country) {
@@ -27,6 +27,7 @@ const SelectCountry = () => {
         countries={countries}
         value={country ?? null}
         onChange={(c) => c && setCountry(c)}
+        excludeRegionCodes
       />
     </Box>
   );

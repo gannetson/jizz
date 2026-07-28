@@ -72,6 +72,26 @@ export type BirdrJourneyGame = {
   created: string;
 };
 
+export type BirdrJourneyListLevel = {
+  sequence: number;
+  title: string;
+  title_nl?: string;
+  icon_url: string | null;
+  is_champion: boolean;
+  steps: [];
+};
+
+/** Lightweight row from GET /api/birdr-journey/ (overview list). */
+export type BirdrJourneyListItem = {
+  id: number;
+  country: CountryRef;
+  player_token?: string | null;
+  current_sequence: number;
+  is_champion: boolean;
+  current_level: BirdrJourneyListLevel | null;
+  updated: string;
+};
+
 export type BirdrJourney = {
   id: number;
   country: CountryRef;
@@ -150,12 +170,14 @@ export function clearStoredBirdrJourneyCountryCode(): void {
   }
 }
 
-function persistJourneyCountry(journey: BirdrJourney | null | undefined): void {
+function persistJourneyCountry(
+  journey: { country?: CountryRef | null } | null | undefined
+): void {
   const code = journey?.country?.code?.trim();
   if (code) setStoredBirdrJourneyCountryCode(code);
 }
 
-function reconcileStoredBirdrJourneyCountry(journeys: BirdrJourney[]): void {
+function reconcileStoredBirdrJourneyCountry(journeys: Array<{ country: CountryRef }>): void {
   const stored = getStoredBirdrJourneyCountryCode()?.trim()?.toUpperCase();
   if (!stored) return;
   const codes = new Set(journeys.map((j) => j.country.code.trim().toUpperCase()));
@@ -205,7 +227,7 @@ export function clearBirdrJourneySession(): void {
 }
 
 export async function syncBirdrJourneyPlayerToken(
-  journey: BirdrJourney | null | undefined
+  journey: { country?: CountryRef | null; player_token?: string | null } | null | undefined
 ): Promise<string | null> {
   persistJourneyCountry(journey);
   const token = journey?.player_token?.trim();
@@ -214,7 +236,7 @@ export async function syncBirdrJourneyPlayerToken(
   return token;
 }
 
-export function isBirdrJourneyInProgress(journey: BirdrJourney): boolean {
+export function isBirdrJourneyInProgress(journey: { is_champion: boolean }): boolean {
   return !journey.is_champion;
 }
 
@@ -223,36 +245,44 @@ function canQueryBirdrJourney(): boolean {
   return !!(getStoredBirdrJourneyPlayerToken() || localStorage.getItem('player-token'));
 }
 
-export async function findInProgressBirdrJourney(
-  countryCandidates: Array<string | null | undefined>
-): Promise<BirdrJourney | null> {
-  if (!canQueryBirdrJourney()) return null;
-  const tried = new Set<string>();
+/** Pick the active in-progress journey from a list (candidates first, else most recent). */
+export function pickInProgressBirdrJourney(
+  journeys: BirdrJourneyListItem[],
+  countryCandidates: Array<string | null | undefined> = []
+): BirdrJourneyListItem | null {
+  const inProgress = journeys.filter(isBirdrJourneyInProgress);
+  if (!inProgress.length) return null;
+  const byCode = new Map(
+    inProgress.map((j) => [j.country.code.trim().toUpperCase(), j] as const)
+  );
   for (const raw of countryCandidates) {
     const code = raw?.trim()?.toUpperCase();
-    if (!code || tried.has(code)) continue;
-    tried.add(code);
-    try {
-      const journey = await getBirdrJourney(code);
-      if (journey && isBirdrJourneyInProgress(journey)) return journey;
-    } catch {
-      /* skip candidate */
-    }
+    if (!code) continue;
+    const match = byCode.get(code);
+    if (match) return match;
   }
+  return inProgress[0] ?? null;
+}
+
+/** Load the active in-progress journey (stored country, then most recently updated). */
+export async function findInProgressBirdrJourney(
+  countryCandidates: Array<string | null | undefined>
+): Promise<BirdrJourneyListItem | null> {
+  if (!canQueryBirdrJourney()) return null;
   try {
     const journeys = await listBirdrJourneys();
-    return journeys.find(isBirdrJourneyInProgress) ?? null;
+    return pickInProgressBirdrJourney(journeys, countryCandidates);
   } catch {
     return null;
   }
 }
 
 /** List all country challenges for the current user or guest player. */
-export async function listBirdrJourneys(): Promise<BirdrJourney[]> {
+export async function listBirdrJourneys(): Promise<BirdrJourneyListItem[]> {
   return fetchBirdrJourneyList(false);
 }
 
-async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourney[]> {
+async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourneyListItem[]> {
   const response = await journeyRequest(apiUrl('/api/birdr-journey/'), { method: 'GET' });
   const data = await response.json().catch(() => ({}));
 
@@ -272,7 +302,7 @@ async function fetchBirdrJourneyList(retried: boolean): Promise<BirdrJourney[]> 
     throw new Error(parseError(data, 'Failed to load journeys'));
   }
 
-  const journeys = data as BirdrJourney[];
+  const journeys = data as BirdrJourneyListItem[];
   reconcileStoredBirdrJourneyCountry(journeys);
   if (journeys.length > 0) {
     await syncBirdrJourneyPlayerToken(journeys[0]);
@@ -301,9 +331,12 @@ export function getCountryChallengeLeaderboardPath(): string {
 }
 
 export async function fetchCountryChallengeLeaderboard(
-  limit = 100
+  limit = 100,
+  countryCode?: string
 ): Promise<CountryChallengeLeaderboardRow[]> {
-  const url = apiUrl(`/api/birdr-journey/leaderboard/?limit=${limit}&_=${Date.now()}`);
+  const params = new URLSearchParams({ limit: String(limit), _: String(Date.now()) });
+  if (countryCode?.trim()) params.set('country', countryCode.trim().toUpperCase());
+  const url = apiUrl(`/api/birdr-journey/leaderboard/?${params.toString()}`);
   const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
@@ -519,7 +552,10 @@ export async function submitChallengeAnswer(
   return data as Answer;
 }
 
-export function levelTitle(level: JourneyLevel | null | undefined, locale: string): string {
+export function levelTitle(
+  level: { title: string; title_nl?: string } | null | undefined,
+  locale: string
+): string {
   if (!level) return '';
   if (locale === 'nl' && level.title_nl?.trim()) return level.title_nl;
   return level.title;

@@ -18,13 +18,15 @@ export type Species = {
   [key: string]: unknown;
 };
 
-export type GameRef = { token: string };
+export type GameRef = { token: string; media?: string; level?: string };
 
 export type Question = {
   id: number;
   number: number;
   sequence: number;
   done?: boolean;
+  /** Effective media for this question when mixed (flock Club Mix). */
+  media?: string;
   game: GameRef;
   options?: Species[];
   images: SpeciesImage[];

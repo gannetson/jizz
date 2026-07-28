@@ -79,11 +79,21 @@ def journey_leaderboard_row(
     }
 
 
-def country_challenge_leaderboard(*, limit: int = 100, request=None) -> list[dict[str, Any]]:
-    """All-time Country Challenge progress, highest level first."""
+def country_challenge_leaderboard(
+    *,
+    limit: int = 100,
+    country_code: str | None = None,
+    request=None,
+) -> list[dict[str, Any]]:
+    """All-time Country Challenge progress, highest level first.
+
+    When ``country_code`` is set, only journeys for that quiz country are included.
+    """
     levels = get_journey_levels_ordered()
 
     journeys = BirdrJourney.objects.select_related('country', 'user', 'player').all()
+    if country_code:
+        journeys = journeys.filter(country_id=country_code)
     rows = [
         journey_leaderboard_row(journey, levels=levels, request=request)
         for journey in journeys

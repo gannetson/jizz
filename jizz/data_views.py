@@ -200,18 +200,31 @@ def data_games_played_api_view(request):
 
 
 def data_country_challenge_leaderboard_view(request):
-    leaderboard = country_challenge_leaderboard(limit=100, request=request)
+    country_code = normalize_country_filter(request.GET.get("country"))
+    leaderboard = country_challenge_leaderboard(
+        limit=100,
+        country_code=country_code,
+        request=request,
+    )
     return render(
         request,
         "jizz/data_country_challenge_leaderboard.html",
         {
             "active_section": "country-challenge-leaderboard",
             "leaderboard": leaderboard,
+            "country_code": country_code or "",
         },
     )
 
 
 def data_country_challenge_leaderboard_api_view(request):
+    country_code = normalize_country_filter(request.GET.get("country"))
     return JsonResponse(
-        {"leaderboard": country_challenge_leaderboard(limit=100, request=request)}
+        {
+            "leaderboard": country_challenge_leaderboard(
+                limit=100,
+                country_code=country_code,
+                request=request,
+            )
+        }
     )

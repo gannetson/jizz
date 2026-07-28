@@ -333,6 +333,9 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
     Live play payload: all eligible media for the active type, rotated so index 0 is
     the current item (``question.number`` in DB). Serialized ``number`` is always 0.
     Option species omit embedded media lists.
+
+    ``media`` is the effective type for *this* question (``images`` / ``video`` / ``audio``).
+    Prefer it over ``game.media`` for mixed-media games (e.g. flock Club Mix).
     """
 
     images = serializers.SerializerMethodField()
@@ -341,6 +344,20 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
     options = serializers.SerializerMethodField()
     game = serializers.SerializerMethodField()
     number = serializers.SerializerMethodField()
+    media = serializers.SerializerMethodField()
+
+    def _effective_game_media(self) -> str:
+        play_type = self.context.get('play_media_type')
+        if play_type == 'audio':
+            return 'audio'
+        if play_type == 'video':
+            return 'video'
+        if play_type == 'image':
+            return 'images'
+        game = self.context.get('game')
+        if game is not None and getattr(game, 'media', None):
+            return game.media
+        return 'images'
 
     def _media_list_for_play(self, obj):
         from jizz.question_play import rotate_media_list_for_play
@@ -355,6 +372,9 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
     def get_number(self, obj):
         # Active media is always at array index 0 after rotation.
         return 0
+
+    def get_media(self, obj):
+        return self._effective_game_media()
 
     def get_images(self, obj):
         if self.context.get('play_media_type') != 'image':
@@ -384,13 +404,16 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
         return {
             'token': game.token,
             'level': game.level,
-            'media': game.media,
+            'media': self._effective_game_media(),
             'speed_seconds': game.speed_seconds,
         }
 
     class Meta:
         model = Question
-        fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number', 'sequence', 'game')
+        fields = (
+            'id', 'done', 'options', 'images', 'videos', 'sounds',
+            'number', 'sequence', 'game', 'media',
+        )
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -1645,6 +1668,72 @@ class BirdrJourneyGameSerializer(serializers.ModelSerializer):
     class Meta:
         model = BirdrJourneyGame
         fields = ['id', 'journey_step', 'game', 'created', 'status', 'remaining_jokers']
+
+
+class BirdrJourneyListSerializer(serializers.ModelSerializer):
+    """Lightweight payload for the country-challenge overview list."""
+
+    country = CountrySerializer(read_only=True)
+    player_token = serializers.SerializerMethodField()
+    is_champion = serializers.SerializerMethodField()
+    current_level = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BirdrJourney
+        fields = [
+            'id',
+            'country',
+            'player_token',
+            'current_sequence',
+            'is_champion',
+            'current_level',
+            'updated',
+        ]
+
+    def _levels(self):
+        levels = self.context.get('journey_levels')
+        if levels is None:
+            from jizz.birdr_journey_views import get_journey_levels_ordered
+
+            levels = get_journey_levels_ordered()
+            self.context['journey_levels'] = levels
+        return levels
+
+    def _level_at(self, sequence):
+        levels = self._levels()
+        if sequence < 0 or sequence >= len(levels):
+            return None
+        return levels[sequence]
+
+    def get_player_token(self, obj):
+        token = self.context.get('player_token')
+        if token is not None:
+            return token
+        from jizz.birdr_journey_views import get_journey_host
+
+        host = get_journey_host(obj)
+        return str(host.token) if host else None
+
+    def get_is_champion(self, obj):
+        level = self._level_at(obj.current_sequence)
+        return bool(level and len(level.steps.all()) == 0)
+
+    def get_current_level(self, obj):
+        level = self._level_at(obj.current_sequence)
+        if not level:
+            return None
+        from jizz.services.species_cover import absolute_media_url
+
+        request = self.context.get('request')
+        icon_url = absolute_media_url(level.icon.url, request) if level.icon else None
+        return {
+            'sequence': level.sequence,
+            'title': level.title,
+            'title_nl': level.title_nl or '',
+            'icon_url': icon_url,
+            'is_champion': len(level.steps.all()) == 0,
+            'steps': [],
+        }
 
 
 class BirdrJourneySerializer(serializers.ModelSerializer):

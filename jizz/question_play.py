@@ -88,7 +88,7 @@ def prefetch_eligible_media_by_species(
 
 def load_question_for_play(question_id: int) -> Question:
     return (
-        Question.objects.select_related('game', 'game__country', 'species')
+        Question.objects.select_related('game', 'game__country', 'species', 'media')
         .prefetch_related(
             Prefetch(
                 'options',
@@ -109,10 +109,24 @@ def build_play_serializer_context(question: Question) -> dict:
     species_ids = [question.species_id]
     species_ids.extend(opt.species_id for opt in question.options.all())
 
+    locked_media = None
+    if question.media_id:
+        locked_media = question.media
+    elif game.game_type == Game.GAME_TYPE_FLOCK_CHALLENGE or game.questions_pregenerated:
+        from jizz.flock_challenge import locked_media_for_question
+
+        locked_media = locked_media_for_question(question)
+
+    if locked_media is not None:
+        media_type = locked_media.type
+
     # Play UI only shows media for the answer species; options are names only.
-    media_by_species = prefetch_eligible_media_by_species(
-        [question.species_id], media_type
-    )
+    if locked_media is not None:
+        media_by_species = {question.species_id: [locked_media]}
+    else:
+        media_by_species = prefetch_eligible_media_by_species(
+            [question.species_id], media_type
+        )
 
     lang = game.language
     names: dict[tuple[int, str], str] = {}
@@ -150,6 +164,9 @@ def advance_question_media_after_exclusion(
     media_type = {'images': 'image', 'video': 'video', 'audio': 'audio'}.get(
         game.media, 'image'
     )
+    # Mixed-media games (flock Club Mix) lock type on the question itself.
+    if question.media_id and question.media is not None:
+        media_type = question.media.type
     full_eligible = fetch_eligible_media_for_species(question.species_id, media_type)
     if not full_eligible:
         return None

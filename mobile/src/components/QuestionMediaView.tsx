@@ -43,8 +43,8 @@ export type QuestionMediaViewProps = {
   onPlaySound?: () => void;
   soundPlaying?: boolean;
   pulsatingStyle?: Animated.AnimatedProps<ViewStyle>;
-  onFlagPress: () => void;
-  flagLabel: string;
+  onFlagPress?: () => void;
+  flagLabel?: string;
   /** Show loading placeholder when no media is available yet */
   showLoadingPlaceholder?: boolean;
   loadingLabel?: string;
@@ -232,9 +232,11 @@ export function QuestionMediaView({
     showCreditsAndFlag ? (
       <View style={styles.creditsRow}>
         <MediaCredits media={creditsMedia ?? undefined} />
-        <TouchableOpacity onPress={onFlagPress}>
-          <Text style={styles.flagLinkText}>🚩 {flagLabel}</Text>
-        </TouchableOpacity>
+        {onFlagPress && flagLabel ? (
+          <TouchableOpacity onPress={onFlagPress}>
+            <Text style={styles.flagLinkText}>🚩 {flagLabel}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     ) : null;
 

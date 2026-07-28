@@ -3,9 +3,9 @@
     "name": "Birdr",
     "slug": "birdr",
     "scheme": "birdr",
-    "version": "1.83.0",
-    "buildNumber": "83",
-    "releaseCodename": "Rufous Turtle Dove",
+    "version": "1.84.0",
+    "buildNumber": "84",
+    "releaseCodename": "Common Woodpigeon",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -58,6 +58,21 @@
               "scheme": "https",
               "host": "birdr.pro",
               "pathPrefix": "/open/app/"
+            },
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/flocks/results/"
+            },
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/flocks/c/"
+            },
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/join/flock/"
             }
           ],
           "category": [

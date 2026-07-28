@@ -7,9 +7,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
-  Modal,
-  Pressable,
-  TextInput,
   Switch,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -35,7 +32,7 @@ import {
   type TroubleSpotSpecies,
 } from '../api/practice';
 import { loadCountries, type Country } from '../api/countries';
-import { getCountryDisplayName } from '../i18n/countryNames';
+import { CountrySelect } from '../components/CountrySelect';
 import * as playerApi from '../api/player';
 import { colors } from '../theme';
 
@@ -67,43 +64,9 @@ export function TroubleSpotsScreen() {
   const [startingPairKey, setStartingPairKey] = useState<string | null>(null);
   const [startingSpeciesId, setStartingSpeciesId] = useState<number | null>(null);
   const [modalSpecies, setModalSpecies] = useState<SpeciesMediaData | null>(null);
-  const [countryCode, setCountryCode] = useState<string | undefined>(undefined);
-  const [countryModalVisible, setCountryModalVisible] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
+  const [country, setCountry] = useState<Country | null>(null);
   const [countries, setCountries] = useState<Country[]>([]);
   const [includeFixed, setIncludeFixed] = useState(false);
-
-  const effectiveCountryCode = countryCode ?? profile?.country_code?.trim()?.toUpperCase();
-
-  useEffect(() => {
-    if (!countryModalVisible || countries.length > 0) return;
-    loadCountries()
-      .then(setCountries)
-      .catch(() => {});
-  }, [countryModalVisible, countries.length]);
-
-  const countryOptions = useMemo(() => {
-    const withDisplay = countries.map((c) => ({
-      ...c,
-      displayName: getCountryDisplayName(c, locale),
-    }));
-    withDisplay.sort((a, b) =>
-      a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }),
-    );
-    return withDisplay;
-  }, [countries, locale]);
-
-  const filteredCountryOptions = useMemo(() => {
-    if (!countrySearch.trim()) return countryOptions;
-    const q = countrySearch.trim().toLowerCase();
-    return countryOptions.filter((o) => o.displayName.toLowerCase().includes(q));
-  }, [countryOptions, countrySearch]);
-
-  const countryDisplayName = useMemo(() => {
-    if (!effectiveCountryCode) return null;
-    const match = countryOptions.find((c) => c.code === effectiveCountryCode);
-    return match?.displayName ?? effectiveCountryCode;
-  }, [effectiveCountryCode, countryOptions]);
 
   useEffect(() => {
     if (!isAuthenticated || countries.length > 0) return;
@@ -111,6 +74,15 @@ export function TroubleSpotsScreen() {
       .then(setCountries)
       .catch(() => {});
   }, [isAuthenticated, countries.length]);
+
+  const effectiveCountry = useMemo(() => {
+    if (country) return country;
+    const code = profile?.country_code?.trim()?.toUpperCase();
+    if (!code) return null;
+    return countries.find((c) => c.code === code) ?? { code, name: code };
+  }, [country, profile?.country_code, countries]);
+
+  const effectiveCountryCode = effectiveCountry?.code;
 
   const visibleSpecies = useMemo(
     () => (includeFixed ? species : species.filter((row) => !row.fixed)),
@@ -211,16 +183,24 @@ export function TroubleSpotsScreen() {
   ];
 
   const countryPicker = effectiveCountryCode ? (
-    <TouchableOpacity
-      onPress={() => setCountryModalVisible(true)}
-      accessibilityRole="button"
-      accessibilityLabel={t('trouble_spots_change_country')}
-    >
-      <Text style={styles.subtitle}>
-        {countryDisplayName ?? effectiveCountryCode}{' '}
-        <Text style={styles.subtitleChevron}>▾</Text>
-      </Text>
-    </TouchableOpacity>
+    <CountrySelect
+      value={effectiveCountry}
+      onChange={setCountry}
+      countries={countries}
+      title={t('trouble_spots_select_country')}
+      renderTrigger={({ open, label }) => (
+        <TouchableOpacity
+          onPress={open}
+          accessibilityRole="button"
+          accessibilityLabel={t('trouble_spots_change_country')}
+        >
+          <Text style={styles.subtitle}>
+            {label}{' '}
+            <Text style={styles.subtitleChevron}>▾</Text>
+          </Text>
+        </TouchableOpacity>
+      )}
+    />
   ) : (
     <TouchableOpacity
       onPress={() => navigation.navigate('Settings' as never)}
@@ -396,62 +376,6 @@ export function TroubleSpotsScreen() {
         onPractice={(speciesId) => void handlePracticeSpecies(speciesId)}
         practiceLoading={startingSpeciesId === modalSpecies?.id}
       />
-
-      <Modal visible={countryModalVisible} transparent animationType="slide">
-        <Pressable
-          style={styles.countryModalBackdrop}
-          onPress={() => {
-            setCountryModalVisible(false);
-            setCountrySearch('');
-          }}
-        >
-          <Pressable style={styles.countryModalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.countryModalTitle}>{t('trouble_spots_select_country')}</Text>
-            <TextInput
-              style={styles.countrySearchInput}
-              placeholder={t('search')}
-              value={countrySearch}
-              onChangeText={setCountrySearch}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {filteredCountryOptions.map((item) => (
-                <TouchableOpacity
-                  key={item.code}
-                  style={[
-                    styles.countryModalItem,
-                    effectiveCountryCode === item.code && styles.countryModalItemSelected,
-                  ]}
-                  onPress={() => {
-                    setCountryCode(item.code);
-                    setCountryModalVisible(false);
-                    setCountrySearch('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.countryModalItemText,
-                      effectiveCountryCode === item.code && styles.countryModalItemTextSelected,
-                    ]}
-                  >
-                    {item.displayName}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.countryModalClose}
-              onPress={() => {
-                setCountryModalVisible(false);
-                setCountrySearch('');
-              }}
-            >
-              <Text style={styles.countryModalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -594,26 +518,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   practiceButtonTextCompact: { color: colors.primary[50], fontSize: 13, fontWeight: '600' },
-  countryModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  countryModalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
-  countryModalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
-  countrySearchInput: {
-    borderWidth: 1,
-    borderColor: colors.primary[200],
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  countryModalItem: { paddingVertical: 14, paddingHorizontal: 8 },
-  countryModalItemSelected: { backgroundColor: colors.primary[100] },
-  countryModalItemText: { fontSize: 16, color: colors.primary[800] },
-  countryModalItemTextSelected: { fontWeight: '600', color: colors.primary[700] },
-  countryModalClose: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
-  countryModalCloseText: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
 });

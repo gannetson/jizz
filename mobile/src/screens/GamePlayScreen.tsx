@@ -36,7 +36,8 @@ import { postQuestionMediaReady } from '../api/games';
 import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
-import { answersEnabledForMedia, normalizeGameMedia } from '../game/mediaAnswerGate';
+import { answersEnabledForMedia } from '../game/mediaAnswerGate';
+import { resolvePlayMediaType } from '../utils/questionMediaIndex';
 import {
   countWrongAnswers,
   PRACTICE_JOKERS,
@@ -73,11 +74,15 @@ export function GamePlayScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const dailyChallengeId = (route.params as { dailyChallengeId?: number })?.dailyChallengeId;
+  const flockSlug = (route.params as { flockSlug?: string })?.flockSlug;
+  const flockChallengeId = (route.params as { flockChallengeId?: number })?.flockChallengeId;
   const gameTokenParam = (route.params as { gameToken?: string })?.gameToken;
   const playerTokenParam = (route.params as { playerToken?: string })?.playerToken;
+  const soloGameMode = dailyChallengeId != null || (flockSlug != null && flockChallengeId != null);
   const { game, player, setGame, setPlayer, loadGame } = useGame();
   const { question, answer, players, nextQuestion, submitAnswer, joinGame, startGame, connected, endGameSession, refreshGameState } = useGameWebSocket();
   const dailyChallengeStartSent = useRef(false);
+  const flockCompleteSent = useRef(false);
   const [dailyChallengeLoadTimeout, setDailyChallengeLoadTimeout] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [expertSpecies, setExpertSpecies] = useState<Species[]>([]);
@@ -143,7 +148,7 @@ export function GamePlayScreen() {
     });
   }, [navigation, handleRefreshQuestion, refreshingQuestion, t]);
 
-  const mediaType = normalizeGameMedia(game?.media);
+  const mediaType = resolvePlayMediaType(question, game?.media);
   const currentIndex = mediaIndex;
   const lang = game?.language || (player as any)?.language;
 
@@ -188,10 +193,26 @@ export function GamePlayScreen() {
   }, [answer]);
 
   useEffect(() => {
-    if (game?.ended) {
-      (navigation as any).navigate('GameResults', { dailyChallengeId });
+    if (!game?.ended) return;
+    if (flockSlug && flockChallengeId && game.token && !flockCompleteSent.current) {
+      flockCompleteSent.current = true;
+      void (async () => {
+        try {
+          const { completeFlockChallenge } = await import('../api/flocks');
+          const result = await completeFlockChallenge(flockSlug, flockChallengeId, game.token);
+          (navigation as any).replace('FlockChallengeResult', {
+            result: result,
+            flockSlug,
+            resultToken: result.result_token,
+          });
+        } catch {
+          (navigation as any).navigate('GameResults', { dailyChallengeId });
+        }
+      })();
+      return;
     }
-  }, [game?.ended, navigation, dailyChallengeId]);
+    (navigation as any).navigate('GameResults', { dailyChallengeId });
+  }, [game?.ended, game?.token, navigation, dailyChallengeId, flockSlug, flockChallengeId]);
 
   const prevQuestionIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -221,30 +242,30 @@ export function GamePlayScreen() {
     navigation.setOptions({ title });
   }, [navigation, game, question, totalQuestions, questionNum, t]);
 
-  // When playing daily challenge we skip lobby: join WebSocket and (if host) start game from here
+  // When playing daily challenge or flock challenge we skip lobby: join WebSocket and (if host) start game from here
   useEffect(() => {
-    if (dailyChallengeId && game?.token && player?.token) {
+    if (soloGameMode && game?.token && player?.token) {
       joinGame(game, player, setGame);
     }
-  }, [dailyChallengeId, game?.token, player?.token, joinGame, setGame]);
+  }, [soloGameMode, game?.token, player?.token, joinGame, setGame]);
 
   useEffect(() => {
-    if (dailyChallengeId && connected && !question && game && player) {
+    if (soloGameMode && connected && !question && game && player) {
       const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
       if (isHost && !dailyChallengeStartSent.current) {
         dailyChallengeStartSent.current = true;
         startGame();
       }
     }
-  }, [dailyChallengeId, connected, question, game, player, startGame]);
+  }, [soloGameMode, connected, question, game, player, startGame]);
 
-  // If we're in daily challenge and waiting for first question, show error after timeout so we don't hang
+  // If we're in solo challenge mode and waiting for first question, show error after timeout so we don't hang
   useEffect(() => {
-    if (!dailyChallengeId || question || !game || !player) return;
+    if (!soloGameMode || question || !game || !player) return;
     setDailyChallengeLoadTimeout(false);
     const t = setTimeout(() => setDailyChallengeLoadTimeout(true), 20000);
     return () => clearTimeout(t);
-  }, [dailyChallengeId, question, game, player]);
+  }, [soloGameMode, question, game, player]);
 
   useEffect(() => {
     if (!question || game?.level !== 'expert') return;
@@ -274,8 +295,8 @@ export function GamePlayScreen() {
     if (tok) postQuestionMediaReady(question.id, tok).catch(() => {});
   }, [mediaType, question?.id, player]);
 
-  const image = mediaType === 'images' && question?.images?.[currentIndex];
-  const video = mediaType === 'video' && question?.videos?.[currentIndex];
+  const image = mediaType === 'images' ? question?.images?.[currentIndex] : undefined;
+  const video = mediaType === 'video' ? question?.videos?.[currentIndex] : undefined;
   const sound = mediaType === 'audio' ? question?.sounds?.[currentIndex] : undefined;
   const soundUri = sound?.url ? (sound.url.startsWith('http') ? sound.url : apiUrl(sound.url)) : null;
 
@@ -496,7 +517,7 @@ export function GamePlayScreen() {
     <View style={styles.playRoot}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">
       <FlagMediaModal
-        visible={flagModalVisible}
+        visible={!flockSlug && game?.game_type !== 'flock_challenge' && flagModalVisible}
         onClose={() => { setFlagModalVisible(false); setFlagMediaInfo(null); }}
         media={flagMediaInfo}
         playerToken={(player as any)?.token}
@@ -569,8 +590,8 @@ export function GamePlayScreen() {
         onPlaySound={playSound}
         soundPlaying={soundPlaying}
         pulsatingStyle={pulsatingStyle}
-        onFlagPress={openFlagModal}
-        flagLabel={t('this_seems_wrong')}
+        onFlagPress={flockSlug || game?.game_type === 'flock_challenge' ? undefined : openFlagModal}
+        flagLabel={flockSlug || game?.game_type === 'flock_challenge' ? undefined : t('this_seems_wrong')}
         showLoadingPlaceholder={!!(showPlaceholder && !currentMedia)}
         loadingLabel={t('loading')}
         imageFailedLabel={currentMedia ? t('image_failed_to_load') : ''}
@@ -765,7 +786,7 @@ export function GamePlayScreen() {
         </View>
       ) : null}
 
-      {!isPracticeGame && players.length > 0 ? (
+      {!isPracticeGame && !flockSlug && players.length > 0 ? (
         <View style={styles.playersSection}>
           <Text style={styles.sectionTitle}>{t('scores')}</Text>
           {players.map((p, i) => (

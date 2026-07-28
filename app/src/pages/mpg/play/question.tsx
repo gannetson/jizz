@@ -31,11 +31,13 @@ import { ComparisonButton } from "../../../components/comparison-button"
 import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
 import { postQuestionNextMedia } from "../../../api/question-next-media"
-import { answersEnabledForMedia, normalizeGameMedia } from "../../../core/media-answer-gate"
+import { getFlockPlayContext } from "../../../api/flocks"
+import { answersEnabledForMedia } from "../../../core/media-answer-gate"
 import {
   currentPlayMediaItem,
   mediaArrayLengthForQuestion,
   mediaSlotIndexFromQuestion,
+  resolvePlayMediaType,
 } from "../../../core/question-media-index"
 import { QuestionLoadingFeather } from "../../../components/question-loading-feather"
 import {
@@ -70,6 +72,9 @@ export const QuestionComponent = () => {
   const isPairPractice = game?.game_type === 'pair_practice'
   const isSpeciesPractice = game?.game_type === 'species_practice'
   const isPracticeGame = isPairPractice || isSpeciesPractice
+  const isFlockChallenge =
+    !!getFlockPlayContext() || game?.game_type === 'flock_challenge'
+  const showPlayScores = !isFlockChallenge
 
   const practiceAnswers = useMemo(
     () =>
@@ -141,14 +146,14 @@ export const QuestionComponent = () => {
     }
   }, [answer])
 
-  const gameMedia = normalizeGameMedia(game?.media ?? 'images')
+  const gameMedia = resolvePlayMediaType(question, game?.media ?? 'images')
   const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0
   const currentMediaIndex =
     mediaIndex ??
     (question ? mediaSlotIndexFromQuestion(question, mediaLength) : 0)
-  const currentImage = currentPlayMediaItem(question?.images, question)
-  const currentVideo = currentPlayMediaItem(question?.videos, question)
-  const currentSound = currentPlayMediaItem(question?.sounds, question)
+  const currentImage = gameMedia === 'images' ? currentPlayMediaItem(question?.images, question) : undefined
+  const currentVideo = gameMedia === 'video' ? currentPlayMediaItem(question?.videos, question) : undefined
+  const currentSound = gameMedia === 'audio' ? currentPlayMediaItem(question?.sounds, question) : undefined
 
   useEffect(() => {
     mediaPostedKey.current = null
@@ -278,11 +283,11 @@ export const QuestionComponent = () => {
   }
 
 
-  const flag = (
+  const flag = !isFlockChallenge ? (
     <Link onClick={flagMedia} fontSize={'sm'} color={'error.700'}>
       🚩 <FormattedMessage id={"this seems wrong"} defaultMessage={"This seems wrong"}/>
     </Link>
-  )
+  ) : null
 
   const nextButton = (
     <Box>
@@ -323,32 +328,34 @@ export const QuestionComponent = () => {
   return (
     <>
       <SpeciesModal species={showSpecies} onClose={onSpeciesClose} isOpen={isSpeciesOpen}/>
-      <FlagMedia
-        isOpen={isOpen}
-        onClose={() => {
-          setFlagMediaInfo(null)
-          onClose()
-        }}
-        media={flagMediaInfo}
-        useMediaReview
-        onSuccess={async () => {
-          if (!question?.id || !player?.token) return
-          const excludedId = flagMediaInfo?.id
-          try {
-            const patch = await postQuestionNextMedia(
-              question.id,
-              player.token,
-              excludedId
-            )
-            patchQuestionMedia(patch)
-            setMediaIndex(null)
-            mediaPostedKey.current = null
-            setMediaReady(false)
-          } catch {
-            // No alternate media or request failed — keep current question state
-          }
-        }}
-      />
+      {!isFlockChallenge ? (
+        <FlagMedia
+          isOpen={isOpen}
+          onClose={() => {
+            setFlagMediaInfo(null)
+            onClose()
+          }}
+          media={flagMediaInfo}
+          useMediaReview
+          onSuccess={async () => {
+            if (!question?.id || !player?.token) return
+            const excludedId = flagMediaInfo?.id
+            try {
+              const patch = await postQuestionNextMedia(
+                question.id,
+                player.token,
+                excludedId
+              )
+              patchQuestionMedia(patch)
+              setMediaIndex(null)
+              mediaPostedKey.current = null
+              setMediaReady(false)
+            } catch {
+              // No alternate media or request failed — keep current question state
+            }
+          }}
+        />
+      ) : null}
       {isPracticeGame ? (
         <Box mb={3}>
           <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
@@ -573,7 +580,7 @@ export const QuestionComponent = () => {
               <ListRoot gap={4}>
                 {players && players.map((player, index) => (
                   <ListItem key={index}>
-                    <PlayerItem showRanking={false} player={player}/>
+                    <PlayerItem showRanking={false} showScore={showPlayScores} player={player}/>
                   </ListItem>
                 ))}
               </ListRoot>

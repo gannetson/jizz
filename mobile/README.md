@@ -140,7 +140,7 @@ Ship new versions to **TestFlight / App Store Connect** and **Google Play** with
    Also link a Play Console service account JSON for submit (Expo dashboard → project → credentials / `eas submit` prompts).
 
 4. **Bump the release** in `mobile/app.json` before shipping:
-   - `expo.version` (e.g. `1.83.0`)
+   - `expo.version` (e.g. `1.84.0`)
    - `expo.buildNumber` (must increase each store upload)
    - `expo.releaseCodename` (optional display name)
 

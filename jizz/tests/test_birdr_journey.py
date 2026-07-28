@@ -392,6 +392,14 @@ class BirdrJourneyApiTestCase(TestCase):
         self.assertEqual(len(response.data), 2)
         codes = {item['country']['code'] for item in response.data}
         self.assertEqual(codes, {'NL', 'BE'})
+        # List payload is lite: no nested game / step graph.
+        for item in response.data:
+            self.assertIn('current_level', item)
+            self.assertIn('is_champion', item)
+            self.assertNotIn('current_game', item)
+            self.assertNotIn('active_step', item)
+            self.assertNotIn('next_level', item)
+            self.assertEqual(item['current_level']['steps'], [])
 
     def test_delete_journey(self):
         _player_auth(self.client, self.player)

@@ -2,8 +2,43 @@
  * Question media selection (aligned with web `question-media-index.ts`).
  *
  * Backend `Question.number` is the 0-based index into the species media arrays.
- * `Question.sequence` is the Nth question in the game — do not use for media.
+ * Live play payloads rotate so the active item is at array index 0 and serialize
+ * `number` as 0. `Question.sequence` is the Nth question in the game — never use for media.
+ *
+ * Mixed-media games (flock Club Mix) lock type per question. Prefer `question.media`
+ * (or infer from which array has items) over `game.media`, which may stay `images`.
  */
+
+import { normalizeGameMedia } from '../game/mediaAnswerGate';
+
+export type PlayMediaQuestion = {
+  media?: string | null;
+  number?: number | string | null;
+  images?: unknown[];
+  videos?: unknown[];
+  sounds?: unknown[];
+  game?: { media?: string | null } | null;
+};
+
+/** Effective play media for this question (`images` | `video` | `audio`). */
+export function resolvePlayMediaType(
+  question: PlayMediaQuestion | null | undefined,
+  gameMedia?: string | null
+): 'images' | 'video' | 'audio' {
+  if (question?.media) {
+    return normalizeGameMedia(question.media);
+  }
+  if (question?.game?.media) {
+    return normalizeGameMedia(question.game.media);
+  }
+  const hasImages = (question?.images?.length ?? 0) > 0;
+  const hasVideos = (question?.videos?.length ?? 0) > 0;
+  const hasSounds = (question?.sounds?.length ?? 0) > 0;
+  if (hasSounds && !hasImages && !hasVideos) return 'audio';
+  if (hasVideos && !hasImages) return 'video';
+  if (hasImages) return 'images';
+  return normalizeGameMedia(gameMedia);
+}
 
 export function mediaArrayLengthForQuestion(
   question: { images?: unknown[]; videos?: unknown[]; sounds?: unknown[] },

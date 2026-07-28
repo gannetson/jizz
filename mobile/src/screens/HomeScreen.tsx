@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, ActivityIndicator, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,16 +11,20 @@ import { UpdateListItemCard } from '../components/UpdateListItemCard';
 import {
   findInProgressBirdrJourney,
   getStoredBirdrJourneyCountryCode,
-  type BirdrJourney,
-  type JourneyLevel,
+  type BirdrJourneyListItem,
 } from '../api/birdrJourney';
-import { fetchChecklist, type ChecklistProgress } from '../api/checklist';
+import { listFlocks, pickMainFlock, setStoredMainFlockSlug, type Flock } from '../api/flocks';
 import { BirdrLevelImage } from '../components/BirdrLevelImage';
-import { ProgressRing } from '../components/ProgressRing';
 import { colors } from '../theme';
 import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
+import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
 import { FeedbackForm } from '../components/FeedbackForm';
 import { useSoftUpdateAvailable } from '../hooks/useSoftUpdateAvailable';
+import { resolveMediaUrl } from '../api/config';
+import {
+  formatChallengeCountdown,
+  getChallengeTimeRemaining,
+} from '../utils/challengeCountdown';
 
 function countryCodeToFlag(code: string): string {
   if (!code || code.length !== 2) return '';
@@ -31,17 +35,14 @@ function countryCodeToFlag(code: string): string {
   return String.fromCodePoint(base + c1, base + c2);
 }
 
-function levelTitle(level: JourneyLevel | null | undefined, locale: string): string {
+function levelTitle(
+  level: { title: string; title_nl?: string } | null | undefined,
+  locale: string
+): string {
   if (!level) return '';
   if (locale === 'nl' && level.title_nl?.trim()) return level.title_nl;
   return level.title;
 }
-
-type ChecklistSummary = {
-  countryCode: string;
-  countryName: string;
-  progress: ChecklistProgress;
-};
 
 type RootStackParamList = {
   Home: undefined;
@@ -49,6 +50,9 @@ type RootStackParamList = {
   Scores: undefined;
   BirdrJourneyIntro: undefined;
   BirdrJourneyProgress: { countryCode: string };
+  FlockIntro: undefined;
+  FlockList: { openCreate?: boolean } | undefined;
+  FlockDetail: { slug: string };
   Updates: undefined;
   UpdateDetail: { updateId: number };
   Help: undefined;
@@ -62,40 +66,29 @@ export function HomeScreen() {
   const { profile, ready: profileReady } = useProfile();
   const softUpdate = useSoftUpdateAvailable();
   const [updates, setUpdates] = useState<UpdateListItem[]>([]);
-  const [activeJourney, setActiveJourney] = useState<BirdrJourney | null>(null);
+  const [activeJourney, setActiveJourney] = useState<BirdrJourneyListItem | null>(null);
   const [journeyLoading, setJourneyLoading] = useState(true);
-  const [checklistSummary, setChecklistSummary] = useState<ChecklistSummary | null>(null);
-  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [mainFlock, setMainFlock] = useState<Flock | null>(null);
+  const [flocksLoading, setFlocksLoading] = useState(false);
+  const [flocksReady, setFlocksReady] = useState(false);
 
-  const loadChecklistSummary = useCallback(async () => {
-    if (!isAuthenticated || !profileReady) {
-      setChecklistSummary(null);
+  const loadFlockSummary = useCallback(async () => {
+    if (!isAuthenticated) {
+      setMainFlock(null);
+      setFlocksReady(true);
       return;
     }
-    const code = profile?.country_code?.trim();
-    if (!code) {
-      setChecklistSummary(null);
-      return;
-    }
-    setChecklistLoading(true);
+    setFlocksLoading(true);
     try {
-      const data = await fetchChecklist({
-        country_code: code,
-        page_size: 1,
-        page: 1,
-        language: locale,
-      });
-      setChecklistSummary({
-        countryCode: data.country.code,
-        countryName: getCountryDisplayName(data.country, locale),
-        progress: data.progress,
-      });
+      const flocks = await listFlocks();
+      setMainFlock(await pickMainFlock(flocks));
     } catch {
-      setChecklistSummary(null);
+      setMainFlock(null);
     } finally {
-      setChecklistLoading(false);
+      setFlocksLoading(false);
+      setFlocksReady(true);
     }
-  }, [isAuthenticated, profileReady, profile?.country_code, locale]);
+  }, [isAuthenticated]);
 
   const loadActiveJourney = useCallback(async () => {
     setJourneyLoading(true);
@@ -117,26 +110,38 @@ export function HomeScreen() {
     useCallback(() => {
       loadUpdates().then(setUpdates).catch(() => {});
       loadActiveJourney();
-      loadChecklistSummary();
-    }, [loadActiveJourney, loadChecklistSummary])
+      loadFlockSummary();
+    }, [loadActiveJourney, loadFlockSummary])
   );
 
   useEffect(() => {
     if (!isAuthenticated) {
       setActiveJourney(null);
-      setChecklistSummary(null);
+      setMainFlock(null);
+      setFlocksReady(true);
+    } else {
+      setFlocksReady(false);
     }
     if (profileReady || !isAuthenticated) {
       loadActiveJourney();
     }
-    if (isAuthenticated && profileReady) {
-      loadChecklistSummary();
+    if (isAuthenticated) {
+      loadFlockSummary();
     }
-  }, [isAuthenticated, profileReady, profile?.country_code, loadActiveJourney, loadChecklistSummary]);
+  }, [isAuthenticated, profileReady, profile?.country_code, loadActiveJourney, loadFlockSummary]);
 
   const goJourneyProgress = () => {
     if (!activeJourney?.country?.code) return;
     navigation.navigate('BirdrJourneyProgress', { countryCode: activeJourney.country.code });
+  };
+
+  const goFlocks = async () => {
+    if (mainFlock) {
+      await setStoredMainFlockSlug(mainFlock.slug);
+      navigation.navigate('FlockDetail', { slug: mainFlock.slug });
+      return;
+    }
+    navigation.navigate('FlockIntro');
   };
 
   const countryCode = activeJourney?.country?.code ?? '';
@@ -145,8 +150,37 @@ export function HomeScreen() {
     : '';
   const flag = countryCodeToFlag(countryCode);
   const currentLevelTitle = levelTitle(activeJourney?.current_level, locale);
-  const checklistPercent = Math.round(checklistSummary?.progress.percent ?? 0);
-  const checklistCountryFlag = countryCodeToFlag(checklistSummary?.countryCode ?? '');
+  const flockLogoUri = resolveMediaUrl(mainFlock?.logo_url);
+  const flockCountryFlag = countryCodeToFlag(mainFlock?.default_country.code ?? '');
+  const flockCountryLabel = mainFlock
+    ? getCountryDisplayName(mainFlock.default_country, locale)
+    : '';
+  const flockChallenge = mainFlock?.active_challenge;
+
+  const needsCountdown =
+    !!flockChallenge &&
+    flockChallenge.status === 'active' &&
+    !flockChallenge.my_completed;
+
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!needsCountdown) return undefined;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [needsCountdown, flockChallenge?.id, flockChallenge?.ends_at]);
+
+  const flockStatusLine = useMemo(() => {
+    if (!flockChallenge) return t('flocks_no_active_challenge_short');
+    if (flockChallenge.my_completed) {
+      if (flockChallenge.my_rank_label) {
+        return t('flocks_home_rank', { rank: flockChallenge.my_rank_label });
+      }
+      return t('flocks_home_completed');
+    }
+    const remaining = getChallengeTimeRemaining(flockChallenge.ends_at, new Date(nowTick));
+    if (!remaining) return t('flocks_home_challenge_ended');
+    return t('flocks_home_time_left', { time: formatChallengeCountdown(remaining) });
+  }, [flockChallenge, nowTick, t]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -233,59 +267,55 @@ export function HomeScreen() {
         </TouchableOpacity>
       )}
 
-      {isAuthenticated && (
-        checklistLoading && !checklistSummary ? (
-          <View style={styles.checklistLoadingWrap}>
-            <ActivityIndicator size="small" color={colors.primary[500]} />
+      {flocksLoading && !flocksReady ? (
+        <View style={styles.flocksLoadingWrap}>
+          <ActivityIndicator size="small" color={colors.primary[500]} />
+        </View>
+      ) : mainFlock ? (
+        <TouchableOpacity
+          style={styles.flocksHeroButton}
+          onPress={() => void goFlocks()}
+          testID="home.flocks"
+          accessibilityLabel={`${mainFlock.name}, ${flockCountryLabel}`}
+        >
+          {flockLogoUri ? (
+            <Image source={{ uri: flockLogoUri }} style={styles.flocksHeroLogo} resizeMode="cover" />
+          ) : (
+            <Image
+              source={BIRDR_FLOCK_IMAGES.leaderboard}
+              style={styles.flocksHeroImage}
+              resizeMode="contain"
+            />
+          )}
+          <View style={styles.flocksHeroText}>
+            <Text style={styles.flocksHeroTitle} numberOfLines={2}>
+              {mainFlock.name}
+            </Text>
+            <Text style={styles.flocksHeroHint} numberOfLines={1}>
+              {flockCountryFlag ? `${flockCountryFlag} ` : ''}
+              {flockCountryLabel}
+              {flockChallenge ? ` · ${flockChallenge.title}` : ''}
+            </Text>
+            <Text style={styles.flocksHeroContinue}>{flockStatusLine}</Text>
           </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.checklistHeroButton}
-            onPress={() => navigation.navigate('Checklist' as never)}
-            testID="home.checklist"
-            accessibilityLabel={
-              checklistSummary
-                ? `${t('checklist_title')}, ${checklistSummary.countryName}, ${checklistPercent}%`
-                : t('checklist_title')
-            }
-          >
-            {checklistSummary ? (
-              <>
-                <View style={styles.checklistRingWrap}>
-                  <ProgressRing
-                    percent={checklistSummary.progress.percent}
-                    size={80}
-                    stroke={12}
-                    trackColor={colors.primary[500]}
-                    progressColor={colors.primary[100]}
-                  />
-                  <Text style={styles.checklistRingPercent}>{checklistPercent}%</Text>
-                </View>
-                <View style={styles.checklistHeroText}>
-                  <Text style={styles.checklistHeroTitle}>{t('checklist_title')}</Text>
-                  <Text style={styles.checklistHeroCountry} numberOfLines={1}>
-                    {checklistCountryFlag ? `${checklistCountryFlag} ` : ''}
-                    {checklistSummary.countryName}
-                  </Text>
-                  <Text style={styles.checklistHeroProgress}>
-                    {t('checklist_progress', '{identified} / {total} birds identified')
-                      .replace('{identified}', String(checklistSummary.progress.identified_count))
-                      .replace('{total}', String(checklistSummary.progress.total_count))}
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.checklistHeroTextOnly}>
-                <Text style={styles.checklistHeroTitle}>{t('checklist_title')}</Text>
-                <Text style={styles.checklistHeroHint}>
-                  {profile?.country_code
-                    ? t('failed_load')
-                    : t('checklist_set_country')}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={styles.flocksHeroButton}
+          onPress={() => void goFlocks()}
+          testID="home.flocks"
+          accessibilityLabel={t('flocks_start')}
+        >
+          <Image
+            source={BIRDR_FLOCK_IMAGES.invite}
+            style={styles.flocksHeroImage}
+            resizeMode="contain"
+          />
+          <View style={styles.flocksHeroText}>
+            <Text style={styles.flocksHeroTitle}>{t('flocks_start')}</Text>
+            <Text style={styles.flocksHeroHint}>{t('flocks_home_start_cta')}</Text>
+          </View>
+        </TouchableOpacity>
       )}
       <FeedbackForm />
       {updates.length > 0 && (
@@ -424,12 +454,12 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
   },
-  checklistLoadingWrap: {
+  flocksLoadingWrap: {
     paddingVertical: 28,
     alignItems: 'center',
     marginBottom: 12,
   },
-  checklistHeroButton: {
+  flocksHeroButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
@@ -441,46 +471,36 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary[400],
   },
-  checklistRingWrap: {
-    width: 88,
-    height: 88,
-    justifyContent: 'center',
-    alignItems: 'center',
+  flocksHeroImage: {
+    width: 96,
+    height: 64,
   },
-  checklistRingPercent: {
-    position: 'absolute',
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.primary[50],
+  flocksHeroLogo: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
   },
-  checklistHeroText: {
+  flocksHeroText: {
     flex: 1,
     minWidth: 0,
   },
-  checklistHeroTextOnly: {
-    flex: 1,
-  },
-  checklistHeroTitle: {
+  flocksHeroTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.primary[50],
     marginBottom: 4,
   },
-  checklistHeroCountry: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.primary[100],
-    marginBottom: 4,
-  },
-  checklistHeroProgress: {
+  flocksHeroHint: {
     fontSize: 14,
+    fontWeight: '600',
     color: colors.primary[200],
     lineHeight: 20,
+    marginBottom: 4,
   },
-  checklistHeroHint: {
+  flocksHeroContinue: {
     fontSize: 14,
-    color: colors.primary[100],
-    lineHeight: 20,
+    fontWeight: '600',
+    color: colors.primary[300],
   },
   ghostButton: {
     paddingVertical: 14,

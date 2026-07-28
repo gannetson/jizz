@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Modal,
-  Pressable,
-  FlatList,
-  TextInput,
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -22,7 +18,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { getCountryDisplayName } from '../i18n/countryNames';
+import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 import { runBirdrJourneyPushOnboarding } from '../lib/notifications';
 
@@ -40,8 +36,6 @@ export function BirdrJourneyCountryScreen() {
   const [country, setCountry] = useState<Country | null>(null);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     loadCountries()
@@ -61,26 +55,6 @@ export function BirdrJourneyCountryScreen() {
       })
       .finally(() => setLoadingCountries(false));
   }, [profileReady, profile?.country_code, route.params?.resumeCountryCode]);
-
-  const sortedCountries = useMemo(
-    () =>
-      [...countries].sort((a, b) =>
-        getCountryDisplayName(a, locale).localeCompare(
-          getCountryDisplayName(b, locale),
-          undefined,
-          { sensitivity: 'base' }
-        )
-      ),
-    [countries, locale]
-  );
-
-  const filteredCountries = useMemo(() => {
-    if (!search.trim()) return sortedCountries;
-    const q = search.trim().toLowerCase();
-    return sortedCountries.filter((c) =>
-      getCountryDisplayName(c, locale).toLowerCase().includes(q)
-    );
-  }, [sortedCountries, search, locale]);
 
   const ensureAuth = async (): Promise<boolean> => {
     if (isAuthenticated) return true;
@@ -130,15 +104,14 @@ export function BirdrJourneyCountryScreen() {
       <Text style={styles.subtitle}>{t('birdr_journey_country_hint')}</Text>
 
       <Text style={styles.label}>{t('country')}</Text>
-      <TouchableOpacity
-        style={styles.selectButton}
-        onPress={() => setModalVisible(true)}
-        accessibilityLabel={t('select_country_dots')}
-      >
-        <Text style={styles.selectButtonText}>
-          {country ? getCountryDisplayName(country, locale) : t('select_country_dots')}
-        </Text>
-      </TouchableOpacity>
+      <CountrySelect
+        value={country}
+        onChange={setCountry}
+        countries={countries}
+        excludeRegionCodes={false}
+        style={styles.countrySelect}
+        testID="journey.selectCountry"
+      />
 
       {!isAuthenticated && (
         <Text style={styles.guestHint}>{t('birdr_journey_guest_save_hint')}</Text>
@@ -155,42 +128,6 @@ export function BirdrJourneyCountryScreen() {
           <Text style={styles.primaryButtonText}>{t('birdr_journey_begin')}</Text>
         )}
       </TouchableOpacity>
-
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{t('select_country_dots')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              value={search}
-              onChangeText={setSearch}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <FlatList
-              data={filteredCountries}
-              keyExtractor={(item) => item.code}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalRow}
-                  onPress={() => {
-                    setCountry(item);
-                    setModalVisible(false);
-                    setSearch('');
-                  }}
-                >
-                  <Text style={styles.modalRowText}>{getCountryDisplayName(item, locale)}</Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)}>
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </ScrollView>
   );
 }
@@ -217,15 +154,7 @@ const styles = StyleSheet.create({
     color: colors.primary[700],
     marginBottom: 8,
   },
-  selectButton: {
-    borderWidth: 1,
-    borderColor: colors.primary[300],
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  selectButtonText: { fontSize: 16, color: colors.primary[800] },
+  countrySelect: { marginBottom: 16 },
   guestHint: {
     fontSize: 14,
     color: colors.primary[600],
@@ -245,35 +174,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: '80%',
-    padding: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary[800],
-    marginBottom: 12,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: colors.primary[200],
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
-    fontSize: 16,
-  },
-  modalRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.primary[100] },
-  modalRowText: { fontSize: 16, color: colors.primary[800] },
-  modalClose: { paddingVertical: 16, alignItems: 'center' },
-  modalCloseText: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
 });

@@ -17,6 +17,7 @@ import { useTranslation } from '../i18n/TranslationContext';
 import {
   isCountryChallengeRoute,
 } from '../api/birdrJourney';
+import { isFlockRoute } from '../api/flocks';
 import { colors } from '../theme';
 import { getAppVersionDisplay } from '../utils/appVersion';
 
@@ -28,6 +29,7 @@ const MENU_ITEMS: { route: string; labelKey: string }[] = [
   { route: 'Start', labelKey: 'new_game' },
   { route: 'Scores', labelKey: 'high_scores' },
   { route: 'BirdrJourneyList', labelKey: 'country_challenges' },
+  { route: 'FlockList', labelKey: 'flocks' },
   { route: 'Updates', labelKey: 'updates' },
   { route: 'Help', labelKey: 'help' },
   { route: 'Privacy', labelKey: 'privacy' },
@@ -57,6 +59,10 @@ export function LeftMenuModal() {
     closeLeftMenu();
     if (routeName === 'BirdrJourneyList') {
       void openCountryChallenges();
+      return;
+    }
+    if (routeName === 'FlockList') {
+      (navigation as any).navigate('FlockList');
       return;
     }
     if (routeName === 'Privacy') {
@@ -105,7 +111,9 @@ export function LeftMenuModal() {
                 const isFocused =
                   item.route === 'BirdrJourneyList'
                     ? isCountryChallengeRoute(currentRoute)
-                    : currentRoute === item.route;
+                    : item.route === 'FlockList'
+                      ? isFlockRoute(currentRoute)
+                      : currentRoute === item.route;
                 const label = t(item.labelKey);
                 return (
                   <TouchableOpacity

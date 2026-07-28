@@ -1,5 +1,5 @@
-import { Box, Button, Flex, Heading, Image, Link, Spinner, Text } from '@chakra-ui/react';
-import { useContext, useEffect, useState, useCallback } from 'react';
+import { Button, Flex, Heading, Image, Link, Spinner, Text } from '@chakra-ui/react';
+import { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,17 +7,27 @@ import {
   findInProgressBirdrJourney,
   getStoredBirdrJourneyCountryCode,
   levelTitle,
-  type BirdrJourney,
+  type BirdrJourneyListItem,
 } from '../api/birdrJourney';
-import { fetchChecklist } from '../api/checklist';
+import {
+  getFlockDetailPath,
+  getFlocksIntroPath,
+  listFlocks,
+  pickMainFlock,
+  setStoredMainFlockSlug,
+  type Flock,
+} from '../api/flocks';
 import { authService } from '../api/services/auth.service';
 import { profileService, type UserProfile } from '../api/services/profile.service';
 import { BirdrLevelImage } from '../components/birdr-level-image';
-import { ProgressRing } from '../components/progress-ring';
 import { Feedback } from '../components/feedback';
 import { UpdateListItemCard } from '../components/updates/update-list-item';
 import { Loading } from '../components/loading';
 import AppContext from '../core/app-context';
+import {
+  formatChallengeCountdown,
+  getChallengeTimeRemaining,
+} from '../core/challenge-countdown';
 import { loadUpdates, type UpdateListItem } from '../core/updates';
 import { getCountryDisplayName } from '../data/country-names-nl';
 import { Page } from '../shared/components/layout';
@@ -27,21 +37,16 @@ const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=pro.birdr.
 const APP_STORE_BADGE = '/images/app-store.png';
 const PLAY_STORE_BADGE = '/images/google-play.png';
 
-type ChecklistSummary = {
-  countryCode: string;
-  countryName: string;
-  progress: { identified_count: number; total_count: number; percent: number };
-};
-
 const HomePage = () => {
   const { player, loading, language } = useContext(AppContext);
   const locale = language === 'nl' ? 'nl' : 'en';
   const navigate = useNavigate();
   const [updates, setUpdates] = useState<UpdateListItem[]>([]);
-  const [activeJourney, setActiveJourney] = useState<BirdrJourney | null>(null);
+  const [activeJourney, setActiveJourney] = useState<BirdrJourneyListItem | null>(null);
   const [journeyLoading, setJourneyLoading] = useState(true);
-  const [checklistSummary, setChecklistSummary] = useState<ChecklistSummary | null>(null);
-  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [mainFlock, setMainFlock] = useState<Flock | null>(null);
+  const [flocksLoading, setFlocksLoading] = useState(false);
+  const [flocksReady, setFlocksReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!authService.getAccessToken());
 
@@ -72,35 +77,23 @@ const HomePage = () => {
     }
   }, [profile?.country_code, isAuthenticated]);
 
-  const loadChecklistSummary = useCallback(async () => {
+  const loadFlockSummary = useCallback(async () => {
     if (!isAuthenticated) {
-      setChecklistSummary(null);
+      setMainFlock(null);
+      setFlocksReady(true);
       return;
     }
-    const code = profile?.country_code?.trim();
-    if (!code) {
-      setChecklistSummary(null);
-      return;
-    }
-    setChecklistLoading(true);
+    setFlocksLoading(true);
     try {
-      const data = await fetchChecklist({
-        country_code: code,
-        page_size: 1,
-        page: 1,
-        language: locale,
-      });
-      setChecklistSummary({
-        countryCode: data.country.code,
-        countryName: getCountryDisplayName(data.country, locale),
-        progress: data.progress,
-      });
+      const flocks = await listFlocks();
+      setMainFlock(pickMainFlock(flocks));
     } catch {
-      setChecklistSummary(null);
+      setMainFlock(null);
     } finally {
-      setChecklistLoading(false);
+      setFlocksLoading(false);
+      setFlocksReady(true);
     }
-  }, [isAuthenticated, profile?.country_code, locale]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     loadUpdates().then(setUpdates).catch(() => {});
@@ -117,15 +110,27 @@ const HomePage = () => {
   useEffect(() => {
     if (!isAuthenticated) {
       setActiveJourney(null);
-      setChecklistSummary(null);
+      setMainFlock(null);
+      setFlocksReady(true);
+    } else {
+      setFlocksReady(false);
     }
     loadActiveJourney();
-    loadChecklistSummary();
-  }, [loadActiveJourney, loadChecklistSummary, profile?.country_code, isAuthenticated]);
+    loadFlockSummary();
+  }, [loadActiveJourney, loadFlockSummary, profile?.country_code, isAuthenticated]);
 
   const goJourneyProgress = () => {
     if (!activeJourney?.country?.code) return;
     navigate(`/journey/${activeJourney.country.code}`);
+  };
+
+  const goFlocks = () => {
+    if (mainFlock) {
+      setStoredMainFlockSlug(mainFlock.slug);
+      navigate(getFlockDetailPath(mainFlock.slug));
+      return;
+    }
+    navigate(getFlocksIntroPath());
   };
 
   const countryCode = activeJourney?.country?.code ?? '';
@@ -134,8 +139,62 @@ const HomePage = () => {
     : '';
   const flag = countryCodeToFlag(countryCode);
   const currentLevelTitle = levelTitle(activeJourney?.current_level, locale);
-  const checklistPercent = Math.round(checklistSummary?.progress.percent ?? 0);
-  const checklistCountryFlag = countryCodeToFlag(checklistSummary?.countryCode ?? '');
+  const flockCountryFlag = countryCodeToFlag(mainFlock?.default_country.code ?? '');
+  const flockCountryLabel = mainFlock
+    ? getCountryDisplayName(mainFlock.default_country, locale)
+    : '';
+  const flockChallenge = mainFlock?.active_challenge;
+
+  const needsCountdown =
+    !!flockChallenge &&
+    flockChallenge.status === 'active' &&
+    !flockChallenge.my_completed;
+
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!needsCountdown) return undefined;
+    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [needsCountdown, flockChallenge?.id, flockChallenge?.ends_at]);
+
+  const flockStatusLine = useMemo(() => {
+    if (!flockChallenge) {
+      return (
+        <FormattedMessage
+          id="flocks_no_active_challenge_short"
+          defaultMessage="No active challenge"
+        />
+      );
+    }
+    if (flockChallenge.my_completed) {
+      const label = flockChallenge.my_rank_label;
+      if (label) {
+        return (
+          <FormattedMessage
+            id="flocks_home_rank"
+            defaultMessage="Rank {rank}"
+            values={{ rank: label }}
+          />
+        );
+      }
+      return (
+        <FormattedMessage id="flocks_home_completed" defaultMessage="Challenge completed" />
+      );
+    }
+    const remaining = getChallengeTimeRemaining(flockChallenge.ends_at, new Date(nowTick));
+    if (!remaining) {
+      return (
+        <FormattedMessage id="flocks_home_challenge_ended" defaultMessage="Challenge ended" />
+      );
+    }
+    return (
+      <FormattedMessage
+        id="flocks_home_time_left"
+        defaultMessage="{time} left"
+        values={{ time: formatChallengeCountdown(remaining) }}
+      />
+    );
+  }, [flockChallenge, nowTick]);
 
   return (
     <Page>
@@ -221,88 +280,81 @@ const HomePage = () => {
               </Button>
             )}
 
-            {isAuthenticated && (
-              checklistLoading && !checklistSummary ? (
-                <Flex justify="center" py={6}>
-                  <Spinner size="sm" color="primary.500" />
+            {flocksLoading && !flocksReady ? (
+              <Flex justify="center" py={6}>
+                <Spinner size="sm" color="primary.500" />
+              </Flex>
+            ) : mainFlock ? (
+              <Button
+                onClick={goFlocks}
+                colorPalette="primary"
+                height="auto"
+                py={4}
+                px={4}
+                bg="primary.600"
+                borderWidth="2px"
+                borderColor="primary.400"
+              >
+                <Flex align="center" gap={4} width="full" textAlign="left">
+                  <Image
+                    src={
+                      mainFlock.logo_url || '/images/birdr-leaderboard.png'
+                    }
+                    alt=""
+                    width="96px"
+                    height="64px"
+                    objectFit={mainFlock.logo_url ? 'cover' : 'contain'}
+                    borderRadius={mainFlock.logo_url ? 'md' : undefined}
+                    flexShrink={0}
+                  />
+                  <Flex direction="column" flex={1} minW={0}>
+                    <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
+                      {mainFlock.name}
+                    </Text>
+                    <Text fontSize="sm" fontWeight="600" color="primary.100" truncate>
+                      {flockCountryFlag ? `${flockCountryFlag} ` : ''}
+                      {flockCountryLabel}
+                      {flockChallenge ? ` · ${flockChallenge.title}` : ''}
+                    </Text>
+                    <Text fontSize="sm" fontWeight="600" color="primary.300">
+                      {flockStatusLine}
+                    </Text>
+                  </Flex>
                 </Flex>
-              ) : (
-                <Button
-                  onClick={() => navigate('/checklist')}
-                  colorPalette="primary"
-                  height="auto"
-                  py={4}
-                  px={4}
-                  bg="primary.600"
-                  borderWidth="2px"
-                  borderColor="primary.400"
-                >
-                  {checklistSummary ? (
-                    <Flex align="center" gap={4} width="full" textAlign="left">
-                      <Box position="relative" width="80px" height="80px" flexShrink={0}>
-                        <ProgressRing
-                          percent={checklistSummary.progress.percent}
-                          size={80}
-                          stroke={12}
-                          trackColor="var(--chakra-colors-primary-500)"
-                          progressColor="var(--chakra-colors-primary-100)"
-                        />
-                        <Flex
-                          position="absolute"
-                          inset={0}
-                          align="center"
-                          justify="center"
-                          pointerEvents="none"
-                        >
-                          <Text
-                            fontSize="lg"
-                            fontWeight="800"
-                            color="primary.50"
-                            lineHeight="1"
-                          >
-                            {checklistPercent}%
-                          </Text>
-                        </Flex>
-                      </Box>
-                      <Flex direction="column" flex={1} minW={0}>
-                        <Text fontSize="xl" fontWeight="700" color="primary.50">
-                          <FormattedMessage id="checklist_title" defaultMessage="My Checklist" />
-                        </Text>
-                        <Text fontSize="sm" fontWeight="600" color="primary.100" truncate>
-                          {checklistCountryFlag ? `${checklistCountryFlag} ` : ''}
-                          {checklistSummary.countryName}
-                        </Text>
-                        <Text fontSize="sm" color="primary.200">
-                          <FormattedMessage
-                            id="checklist_progress"
-                            defaultMessage="{identified} / {total} birds identified"
-                            values={{
-                              identified: checklistSummary.progress.identified_count,
-                              total: checklistSummary.progress.total_count,
-                            }}
-                          />
-                        </Text>
-                      </Flex>
-                    </Flex>
-                  ) : (
-                    <Flex direction="column" align="flex-start" width="full">
-                      <Text fontSize="xl" fontWeight="700" color="primary.50">
-                        <FormattedMessage id="checklist_title" defaultMessage="My Checklist" />
-                      </Text>
-                      <Text fontSize="sm" color="primary.100">
-                        {profile?.country_code ? (
-                          <FormattedMessage id="error" defaultMessage="Error" />
-                        ) : (
-                          <FormattedMessage
-                            id="checklist_set_country"
-                            defaultMessage="Set your preferred country in Profile to use the checklist."
-                          />
-                        )}
-                      </Text>
-                    </Flex>
-                  )}
-                </Button>
-              )
+              </Button>
+            ) : (
+              <Button
+                onClick={goFlocks}
+                colorPalette="primary"
+                height="auto"
+                py={4}
+                px={4}
+                bg="primary.600"
+                borderWidth="2px"
+                borderColor="primary.400"
+              >
+                <Flex align="center" gap={4} width="full" textAlign="left">
+                  <Image
+                    src="/images/birdr-flock-invite.png"
+                    alt=""
+                    width="96px"
+                    height="64px"
+                    objectFit="contain"
+                    flexShrink={0}
+                  />
+                  <Flex direction="column" flex={1} minW={0}>
+                    <Text fontSize="xl" fontWeight="700" color="primary.50">
+                      <FormattedMessage id="flocks_start" defaultMessage="Start flock" />
+                    </Text>
+                    <Text fontSize="sm" fontWeight="600" color="primary.200">
+                      <FormattedMessage
+                        id="flocks_home_start_cta"
+                        defaultMessage="Start a club and compete with friends"
+                      />
+                    </Text>
+                  </Flex>
+                </Flex>
+              </Button>
             )}
 
             <Button variant="ghost" colorPalette="primary" onClick={() => navigate('/scores')}>

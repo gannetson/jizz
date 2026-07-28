@@ -13,16 +13,18 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
   countryCodeToFlag,
   fetchCountryChallengeLeaderboard,
   type CountryChallengeLeaderboardRow,
 } from '../../api/birdrJourney';
 import { BirdrLevelImage } from '../../components/birdr-level-image';
+import CountryCombobox from '../../components/country-combobox';
 import { Page } from '../../shared/components/layout';
 import AppContext from '../../core/app-context';
 import { getCountryDisplayName } from '../../data/country-names-nl';
+import { UseCountries, type Country } from '../../user/use-countries';
 
 function leaderboardLevelTitle(row: CountryChallengeLeaderboardRow, locale: string): string {
   if (locale === 'nl' && row.level_title_nl?.trim()) return row.level_title_nl;
@@ -37,8 +39,12 @@ function stepLabel(row: CountryChallengeLeaderboardRow): string {
 }
 
 export function CountryChallengeLeaderboardPage() {
+  const intl = useIntl();
   const { language } = useContext(AppContext);
   const locale = language === 'nl' ? 'nl' : 'en';
+  const { countries } = UseCountries();
+  const countriesList = Array.isArray(countries) ? countries : [];
+  const [country, setCountry] = useState<Country | null>(null);
   const [rows, setRows] = useState<CountryChallengeLeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +53,14 @@ export function CountryChallengeLeaderboardPage() {
     setError(null);
     try {
       setLoading(true);
-      setRows(await fetchCountryChallengeLeaderboard());
+      setRows(await fetchCountryChallengeLeaderboard(100, country?.code || undefined));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load');
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [country?.code]);
 
   useEffect(() => {
     void load();
@@ -75,6 +81,16 @@ export function CountryChallengeLeaderboardPage() {
             defaultMessage="Highest level reached per player and quiz country. A player can appear multiple times for different countries."
           />
         </Text>
+
+        <Box maxW="320px">
+          <CountryCombobox
+            countries={countriesList}
+            value={country}
+            onChange={setCountry}
+            allowEmpty
+            emptyLabel={intl.formatMessage({ id: 'all countries', defaultMessage: 'All countries' })}
+          />
+        </Box>
 
         {loading && (
           <Flex justify="center" py={8}>

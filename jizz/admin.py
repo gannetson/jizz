@@ -28,7 +28,7 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent,
-                         IpGeoCache,
+                         IpGeoCache, Flock, FlockChallenge,
                          MailSettings, UpdateEmailDelivery, UpdateEmailRecipient, UpdateThumbsUp)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
@@ -1378,6 +1378,20 @@ class DailyChallengeAdmin(admin.ModelAdmin):
     search_fields = ['creator__username', 'token']
     raw_id_fields = ['creator', 'country']
     inlines = [DailyChallengeParticipantInline, DailyChallengeInviteInline, DailyChallengeRoundInline]
+
+
+@admin.register(Flock)
+class FlockAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'owner', 'default_country', 'is_private', 'created']
+    search_fields = ['name', 'slug', 'owner__username']
+    raw_id_fields = ['owner', 'default_country']
+
+
+@admin.register(FlockChallenge)
+class FlockChallengeAdmin(admin.ModelAdmin):
+    list_display = ['title', 'flock', 'country', 'status', 'starts_at', 'ends_at', 'length']
+    list_filter = ['status', 'preset']
+    raw_id_fields = ['flock', 'country', 'created_by']
 
 
 @admin.register(DeviceToken)

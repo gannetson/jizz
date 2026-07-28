@@ -77,6 +77,23 @@ from jizz.daily_challenge_views import (
     DeviceTokenDeleteView,
 )
 from jizz.mobile_push.views import PushRegisterView
+from jizz.flock_views import (
+    FlockListCreateView,
+    FlockDetailView,
+    FlockMembersView,
+    FlockInviteRotateView,
+    FlockInvitePreviewView,
+    FlockInviteJoinView,
+    FlockChallengeCreateView,
+    FlockChallengeDetailView,
+    FlockChallengeStartView,
+    FlockChallengeCompleteView,
+    FlockChallengeLeaderboardView,
+    FlockPublicResultView,
+    flock_result_page,
+    flock_challenge_share_page,
+    flock_challenge_og_image,
+)
 
 router = routers.DefaultRouter()
 router.register(r'countries', CountryViewSet, 'countries')
@@ -109,6 +126,20 @@ def join_challenge_redirect(request, token):
     fallback_url = request.build_absolute_uri(f'/join/challenge/{token}/web/')
     return render(request, 'jizz/join_redirect.html', {
         'deep_link': f'birdr://join/challenge/{token}',
+        'fallback_url': fallback_url,
+    })
+
+
+def join_flock_redirect(request, token):
+    """Prefer web for new players; try the app deep link only on mobile browsers."""
+    from jizz.usage_analytics import parse_device_type
+
+    fallback_url = request.build_absolute_uri(f'/join/flock/{token}/web/')
+    device = parse_device_type(request.META.get('HTTP_USER_AGENT', ''))
+    if device == 'desktop':
+        return HttpResponseRedirect(fallback_url)
+    return render(request, 'jizz/join_redirect.html', {
+        'deep_link': f'birdr://join/flock/{token}',
         'fallback_url': fallback_url,
     })
 
@@ -164,7 +195,19 @@ urlpatterns = [
     path('.well-known/assetlinks.json', android_asset_links),
 
     path('join/challenge/<str:token>/', join_challenge_redirect, name='join-challenge'),
+    path('join/flock/<str:token>/', join_flock_redirect, name='join-flock'),
     path('join/<str:token>/', join_game_redirect, name='join-game'),
+    path('flocks/results/<str:result_token>/', flock_result_page, name='flock-result-page'),
+    path(
+        'flocks/c/<str:public_token>/',
+        flock_challenge_share_page,
+        name='flock-challenge-share',
+    ),
+    path(
+        'flocks/c/<str:public_token>/og.png',
+        flock_challenge_og_image,
+        name='flock-challenge-og',
+    ),
     path('open/update/<int:pk>/', open_update_redirect, name='open-update'),
     path('open/app/', open_app_redirect, name='open-app'),
 
@@ -321,6 +364,36 @@ urlpatterns = [
     path('api/daily-challenges/<int:pk>/decline/', DailyChallengeDeclineView.as_view(), name='daily-challenge-decline'),
     path('api/daily-challenges/<int:pk>/start/', DailyChallengeStartView.as_view(), name='daily-challenge-start'),
     path('api/daily-challenges/<int:pk>/rounds/<int:day>/', DailyChallengeRoundView.as_view(), name='daily-challenge-round'),
+
+    # Flocks (Phase 1)
+    path('api/flocks/', FlockListCreateView.as_view(), name='flock-list-create'),
+    path('api/flocks/join/', FlockInviteJoinView.as_view(), name='flock-join'),
+    path('api/flocks/invite/<str:token>/', FlockInvitePreviewView.as_view(), name='flock-invite-preview'),
+    path('api/flocks/results/<str:result_token>/', FlockPublicResultView.as_view(), name='flock-public-result'),
+    path('api/flocks/<slug:slug>/', FlockDetailView.as_view(), name='flock-detail'),
+    path('api/flocks/<slug:slug>/members/', FlockMembersView.as_view(), name='flock-members'),
+    path('api/flocks/<slug:slug>/invite/', FlockInviteRotateView.as_view(), name='flock-invite-rotate'),
+    path('api/flocks/<slug:slug>/challenges/', FlockChallengeCreateView.as_view(), name='flock-challenge-create'),
+    path(
+        'api/flocks/<slug:slug>/challenges/<int:challenge_id>/',
+        FlockChallengeDetailView.as_view(),
+        name='flock-challenge-detail',
+    ),
+    path(
+        'api/flocks/<slug:slug>/challenges/<int:challenge_id>/start/',
+        FlockChallengeStartView.as_view(),
+        name='flock-challenge-start',
+    ),
+    path(
+        'api/flocks/<slug:slug>/challenges/<int:challenge_id>/complete/',
+        FlockChallengeCompleteView.as_view(),
+        name='flock-challenge-complete',
+    ),
+    path(
+        'api/flocks/<slug:slug>/challenges/<int:challenge_id>/leaderboard/',
+        FlockChallengeLeaderboardView.as_view(),
+        name='flock-challenge-leaderboard',
+    ),
 
     # Device tokens (push)
     path('api/device-tokens/', DeviceTokenCreateView.as_view(), name='device-token-create'),

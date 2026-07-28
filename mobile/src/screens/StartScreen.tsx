@@ -24,8 +24,8 @@ import { loadLanguages } from '../api/languages';
 import { updateProfile } from '../api/profile';
 import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
-import { getCountryDisplayName } from '../i18n/countryNames';
 import { getLanguageDisplayName } from '../i18n/languageNames';
+import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 import {
   loadTaxOrders,
@@ -89,9 +89,7 @@ export function StartScreen() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [countriesLoaded, setCountriesLoaded] = useState(false);
-  const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
   const [languageSearch, setLanguageSearch] = useState('');
   const [taxOrders, setTaxOrders] = useState<TaxOrderRow[]>([]);
   const [taxFamilies, setTaxFamilies] = useState<TaxFamilyRow[]>([]);
@@ -132,16 +130,6 @@ export function StartScreen() {
     loadLanguages().then(setLanguages);
     loadStoredPlayer();
   }, []);
-
-  const sortedCountries = React.useMemo(
-    () => [...countries].sort((a, b) => getCountryDisplayName(a, locale).localeCompare(getCountryDisplayName(b, locale), undefined, { sensitivity: 'base' })),
-    [countries, locale]
-  );
-  const filteredCountries = React.useMemo(() => {
-    if (!countrySearch.trim()) return sortedCountries;
-    const q = countrySearch.trim().toLowerCase();
-    return sortedCountries.filter((c) => getCountryDisplayName(c, locale).toLowerCase().includes(q));
-  }, [sortedCountries, countrySearch, locale]);
 
   const sortedLanguages = React.useMemo(
     () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
@@ -278,38 +266,16 @@ export function StartScreen() {
       />
 
       <Text style={styles.label}>{t('select_country')}</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)} testID="start.selectCountry" accessibilityLabel={t('select_country')}>
-        <Text style={styles.selectButtonText}>{country ? getCountryDisplayName(country, locale) : t('select_country_dots')}</Text>
-      </TouchableOpacity>
-      <Modal visible={countryModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle} testID="start.modal.countryTitle">{t('select_country')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              placeholderTextColor={colors.primary[400]}
-              value={countrySearch}
-              onChangeText={setCountrySearch}
-            />
-            <FlatList
-              data={filteredCountries}
-              keyExtractor={(c) => c.code}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, country?.code === item.code && styles.modalItemSelected]}
-                  onPress={() => { setCountry(item); setCountryModalVisible(false); setCountrySearch(''); }}
-                >
-                  <Text style={[styles.modalItemText, country?.code === item.code && styles.modalItemTextSelected]}>{getCountryDisplayName(item, locale)}</Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity style={styles.modalClose} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }} testID="start.modal.closeCountry" accessibilityLabel={t('close')}>
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <CountrySelect
+        value={country ?? null}
+        onChange={(c) => {
+          if (c) setCountry(c);
+        }}
+        countries={countries}
+        excludeRegionCodes={false}
+        style={styles.countrySelect}
+        testID="start.selectCountry"
+      />
 
       <Text style={styles.label}>{t('language_species_names')}</Text>
       <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="start.selectLanguage" accessibilityLabel={t('select_language')}>
@@ -702,6 +668,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fff',
   },
+  countrySelect: { marginBottom: 16 },
   selectButtonText: { fontSize: 16, color: colors.primary[800] },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },

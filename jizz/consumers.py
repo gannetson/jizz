@@ -205,22 +205,18 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
         def prepare_start():
             game = Game.objects.get(token=self.game_token)
-            # Idempotent: duplicate start_game (e.g. queued WebSocket actions) must not
-            # call add_question twice or rounds are skipped with no answers.
-            if game.questions.exists():
-                return False
-            return True
+            return game.can_accept_start_game()
 
         should_run = await database_sync_to_async(prepare_start)()
         if not should_run:
             logger.info(
-                "Ignoring duplicate start_game for game %s (questions already exist)",
+                "Ignoring duplicate start_game for game %s",
                 self.game_token,
             )
             return
 
-        # Create the first question before game_started so joiners and HTTP catch-up
-        # see an active round (game_started handlers call _send_current_question_to_self).
+        # Create/activate the first question before game_started so joiners and HTTP
+        # catch-up see an active round (game_started handlers call _send_current_question_to_self).
         await self._run_next_question()
         await self.send(text_data=json.dumps({"action": "game_started"}))
         await self.channel_layer.group_send(

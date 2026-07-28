@@ -25,8 +25,8 @@ import { setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference
 import { getProfile, updateProfile, updateProfileAvatar, getAvatarUrl, deleteAccount, type UserProfile } from '../api/profile';
 import { loadCountries, type Country } from '../api/countries';
 import { loadLanguages, type Language } from '../api/languages';
-import { getCountryDisplayName } from '../i18n/countryNames';
 import { getLanguageDisplayName } from '../i18n/languageNames';
+import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 
 export function ProfileScreen() {
@@ -42,13 +42,11 @@ export function ProfileScreen() {
   const [username, setUsername] = useState('');
   const [language, setLanguage] = useState('');
   const [timezone, setTimezone] = useState('Europe/Amsterdam');
-  const [countryCode, setCountryCode] = useState<string | null>(null);
+  const [country, setCountry] = useState<Country | null>(null);
   const [receiveUpdates, setReceiveUpdates] = useState(true);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
-  const [countryModalVisible, setCountryModalVisible] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
   const [languageSearch, setLanguageSearch] = useState('');
   const [avatarPreviewUri, setAvatarPreviewUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -69,7 +67,11 @@ export function ProfileScreen() {
         setLanguage(p.language || 'en');
       }
       setTimezone(p.timezone || 'Europe/Amsterdam');
-      setCountryCode(p.country_code ?? null);
+      setCountry(
+        p.country_code
+          ? { code: p.country_code, name: p.country_code }
+          : null
+      );
       setReceiveUpdates(p.receive_updates ?? true);
       if (p.avatar_url) setAvatarPreviewUri(null);
     } catch (e: any) {
@@ -101,6 +103,12 @@ export function ProfileScreen() {
     loadLanguages().then(setLanguages);
     loadCountries().then((list) => setCountries(list.filter((c) => !c.code.includes('NL-NH'))));
   }, []);
+
+  useEffect(() => {
+    if (!country?.code || countries.length === 0) return;
+    const match = countries.find((c) => c.code === country.code);
+    if (match && match.name !== country.name) setCountry(match);
+  }, [countries, country]);
 
   useEffect(() => {
     if (!saveToast) return;
@@ -193,7 +201,7 @@ export function ProfileScreen() {
         username: username.trim() || undefined,
         language: language || undefined,
         timezone: timezone?.trim() || undefined,
-        country_code: countryCode ?? undefined,
+        country_code: country?.code ?? undefined,
         receive_updates: receiveUpdates,
       });
       const speciesCode = (language || 'en').trim();
@@ -202,7 +210,14 @@ export function ProfileScreen() {
       setUsername(updated.username);
       setLanguage(updated.language || 'en');
       setTimezone(updated.timezone ?? 'Europe/Amsterdam');
-      setCountryCode(updated.country_code ?? null);
+      setCountry(
+        updated.country_code
+          ? countries.find((c) => c.code === updated.country_code) ?? {
+              code: updated.country_code,
+              name: updated.country_code,
+            }
+          : null
+      );
       speciesLanguageDirtyRef.current = false;
       refreshProfile();
       setSaveToast(t('profile_saved'));
@@ -217,17 +232,6 @@ export function ProfileScreen() {
   };
 
   // All hooks must run on every render (before any early return).
-  const countryOptions = React.useMemo(() => {
-    const withDisplay = countries.map((c) => ({ ...c, displayName: getCountryDisplayName(c, locale) }));
-    withDisplay.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }));
-    return [{ code: '', name: t('none'), displayName: t('none') }, ...withDisplay];
-  }, [countries, locale, t]);
-  const filteredCountryOptions = React.useMemo(() => {
-    if (!countrySearch.trim()) return countryOptions;
-    const q = countrySearch.trim().toLowerCase();
-    return countryOptions.filter((o) => (o.displayName ?? o.name).toLowerCase().includes(q));
-  }, [countryOptions, countrySearch]);
-
   const sortedLanguages = React.useMemo(
     () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
     [languages, locale]
@@ -258,8 +262,6 @@ export function ProfileScreen() {
 
   const selectedLanguage = languages.find((l) => l.code === language);
   const languageLabel = selectedLanguage ? getLanguageDisplayName(selectedLanguage, locale) : language;
-  const selectedCountry = countryCode ? countries.find((c) => c.code === countryCode) : null;
-  const countryLabel = selectedCountry ? getCountryDisplayName(selectedCountry, locale) : t('none');
   const displayName = username || profile?.email || '';
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
@@ -323,9 +325,14 @@ export function ProfileScreen() {
         <Text style={styles.selectButtonText}>{languageLabel}</Text>
       </TouchableOpacity>
       <Text style={styles.label}>{t('country_optional')}</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setCountryModalVisible(true)}>
-        <Text style={styles.selectButtonText}>{countryLabel}</Text>
-      </TouchableOpacity>
+      <CountrySelect
+        value={country}
+        onChange={setCountry}
+        countries={countries}
+        allowEmpty
+        emptyLabel={t('none')}
+        title={t('select_country')}
+      />
       <View style={styles.switchRow}>
         <View style={styles.switchCopy}>
           <Text style={styles.label}>{t('receive_updates')}</Text>
@@ -402,39 +409,6 @@ export function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      <Modal visible={countryModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{t('select_country')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              placeholderTextColor={colors.primary[400]}
-              value={countrySearch}
-              onChangeText={setCountrySearch}
-            />
-            <FlatList
-              data={filteredCountryOptions}
-              keyExtractor={(c) => c.code || '_none'}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, (item.code ? countryCode === item.code : !countryCode) && styles.modalItemSelected]}
-                  onPress={() => {
-                    setCountryCode(item.code || null);
-                    setCountryModalVisible(false);
-                    setCountrySearch('');
-                  }}
-                >
-                  <Text style={[styles.modalItemText, (item.code ? countryCode === item.code : !countryCode) && styles.modalItemTextSelected]}>{(item as { displayName?: string }).displayName ?? item.name}</Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity style={styles.modalClose} onPress={() => { setCountryModalVisible(false); setCountrySearch(''); }}>
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </ScrollView>
     {saveToast != null ? (
       <View

@@ -305,36 +305,31 @@ class FlockApiTests(TestCase):
         self.assertTrue(game_a.questions_pregenerated)
         self.assertTrue(game_b.questions_pregenerated)
 
-        def fingerprint(game):
+        def content_rows(game):
+            """Species + media + option set (order-independent)."""
             rows = []
             for q in game.questions.order_by('sequence'):
-                opts = tuple(
-                    QuestionOption.objects.filter(question=q)
-                    .order_by('order')
-                    .values_list('species_id', flat=True)
+                opts = frozenset(
+                    QuestionOption.objects.filter(question=q).values_list('species_id', flat=True)
                 )
                 rows.append((q.sequence, q.species_id, q.media_id, opts))
             return rows
 
-        self.assertEqual(fingerprint(game_a), fingerprint(game_b))
+        self.assertEqual(content_rows(game_a), content_rows(game_b))
         # Same play order for every participant
         seq_a = list(game_a.questions.order_by('sequence').values_list('species_id', flat=True))
         seq_b = list(game_b.questions.order_by('sequence').values_list('species_id', flat=True))
         self.assertEqual(seq_a, seq_b)
-        # Option button order is identical
+        # Option *sets* match; button order is reshuffled per attempt on purpose
         opts_a = [
-            list(
-                QuestionOption.objects.filter(question=q)
-                .order_by('order')
-                .values_list('species_id', flat=True)
+            frozenset(
+                QuestionOption.objects.filter(question=q).values_list('species_id', flat=True)
             )
             for q in game_a.questions.order_by('sequence')
         ]
         opts_b = [
-            list(
-                QuestionOption.objects.filter(question=q)
-                .order_by('order')
-                .values_list('species_id', flat=True)
+            frozenset(
+                QuestionOption.objects.filter(question=q).values_list('species_id', flat=True)
             )
             for q in game_b.questions.order_by('sequence')
         ]
@@ -343,10 +338,10 @@ class FlockApiTests(TestCase):
         for q, item in zip(
             game_a.questions.order_by('sequence'),
             snapshot,
-            strict=True,
         ):
             self.assertEqual(q.media_id, item.media_id)
             self.assertEqual(q.species_id, item.species_id)
+        self.assertEqual(game_a.questions.count(), len(snapshot))
 
     def test_second_start_rejected_after_ranked_complete(self):
         flock = self._create_flock()

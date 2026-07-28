@@ -63,6 +63,11 @@ react {
     cliFile = expoCliFile
     bundleCommand = "export:embed"
 
+    // CI instrumented tests have no Metro; embed the JS bundle in debug APKs.
+    if (System.getenv("CI") == "true") {
+        debuggableVariants = []
+    }
+
     /* Folders */
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
@@ -151,6 +156,7 @@ android {
         versionCode releaseVersionCode
         versionName releaseCodename
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
         debug {
@@ -240,6 +246,12 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    androidTestImplementation "androidx.test:core:1.6.1"
+    androidTestImplementation "androidx.test:rules:1.6.1"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
 }
 
 // RN New Architecture: externalNativeBuildClean* re-runs CMake, which includes autolinking paths

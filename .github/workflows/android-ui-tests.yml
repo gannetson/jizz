@@ -69,5 +69,5 @@ jobs:
             -no-snapshot
             -camera-back none
           disable-animations: true
-          working-directory: ./mobile/android
-          script: ./gradlew connectedDebugAndroidTest --no-daemon --stacktrace
+          working-directory: ./mobile
+          script: bash scripts/run-android-ui-tests.sh

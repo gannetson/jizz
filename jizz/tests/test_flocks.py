@@ -521,6 +521,134 @@ class FlockApiTests(TestCase):
         blocked = self.client.get(f"/api/flocks/{flock['slug']}/members/")
         self.assertIn(blocked.status_code, (403, 404))
 
+    def test_leave_and_remove_members(self):
+        flock = self._create_flock()
+        slug = flock['slug']
+        invite = flock['invite']
+        self.assertTrue(flock['is_owner'])
+
+        _auth(self.client, self.member)
+        joined = self.client.post('/api/flocks/join/', {'code': invite['code']}, format='json')
+        self.assertEqual(joined.status_code, 200)
+
+        members = self.client.get(f'/api/flocks/{slug}/members/')
+        self.assertEqual(members.status_code, 200)
+        self.assertTrue(members.data['can_leave'])
+        self.assertFalse(members.data['is_owner'])
+        self.assertEqual(members.data['viewer_user_id'], self.member.id)
+        self.assertEqual(members.data['member_count'], 2)
+
+        # Non-admin cannot remove another member
+        remove_forbidden = self.client.delete(f'/api/flocks/{slug}/members/{self.admin.id}/')
+        self.assertEqual(remove_forbidden.status_code, 403)
+
+        # Owner cannot leave while sole admin
+        _auth(self.client, self.admin)
+        owner_leave = self.client.post(f'/api/flocks/{slug}/leave/', {}, format='json')
+        self.assertEqual(owner_leave.status_code, 400)
+
+        # Owner cannot remove themselves via remove endpoint
+        self_remove = self.client.delete(f'/api/flocks/{slug}/members/{self.admin.id}/')
+        self.assertEqual(self_remove.status_code, 400)
+
+        # Owner removes member
+        removed = self.client.delete(f'/api/flocks/{slug}/members/{self.member.id}/')
+        self.assertEqual(removed.status_code, 204)
+        self.assertFalse(
+            FlockMembership.objects.filter(flock__slug=slug, user=self.member).exists()
+        )
+
+        # Member rejoins then leaves
+        _auth(self.client, self.member)
+        again = self.client.post('/api/flocks/join/', {'code': invite['code']}, format='json')
+        self.assertTrue(again.data['joined'] or again.data.get('already_member'))
+        left = self.client.post(f'/api/flocks/{slug}/leave/', {}, format='json')
+        self.assertEqual(left.status_code, 200)
+        self.assertTrue(left.data['left'])
+        self.assertFalse(
+            FlockMembership.objects.filter(flock__slug=slug, user=self.member).exists()
+        )
+
+        # Outsider cannot leave
+        _auth(self.client, self.outsider)
+        outsider_leave = self.client.post(f'/api/flocks/{slug}/leave/', {}, format='json')
+        self.assertEqual(outsider_leave.status_code, 403)
+
+    def test_make_admin_and_admin_leave_requires_peer(self):
+        flock = self._create_flock()
+        slug = flock['slug']
+        invite = flock['invite']
+
+        _auth(self.client, self.member)
+        self.assertEqual(
+            self.client.post('/api/flocks/join/', {'code': invite['code']}, format='json').status_code,
+            200,
+        )
+
+        # Non-admin cannot promote
+        promote_forbidden = self.client.patch(
+            f'/api/flocks/{slug}/members/{self.member.id}/',
+            {'role': 'admin'},
+            format='json',
+        )
+        self.assertEqual(promote_forbidden.status_code, 403)
+
+        # Sole admin (owner) cannot leave
+        _auth(self.client, self.admin)
+        members = self.client.get(f'/api/flocks/{slug}/members/')
+        self.assertFalse(members.data['can_leave'])
+        sole_leave = self.client.post(f'/api/flocks/{slug}/leave/', {}, format='json')
+        self.assertEqual(sole_leave.status_code, 400)
+
+        # Promote member to admin
+        promoted = self.client.patch(
+            f'/api/flocks/{slug}/members/{self.member.id}/',
+            {'role': 'admin'},
+            format='json',
+        )
+        self.assertEqual(promoted.status_code, 200, promoted.data)
+        self.assertEqual(promoted.data['role'], 'admin')
+
+        # Owner can now leave; ownership transfers to the other admin
+        members = self.client.get(f'/api/flocks/{slug}/members/')
+        self.assertTrue(members.data['can_leave'])
+        left = self.client.post(f'/api/flocks/{slug}/leave/', {}, format='json')
+        self.assertEqual(left.status_code, 200)
+        flock_obj = Flock.objects.get(slug=slug)
+        self.assertEqual(flock_obj.owner_id, self.member.id)
+        self.assertFalse(
+            FlockMembership.objects.filter(flock=flock_obj, user=self.admin).exists()
+        )
+        self.assertEqual(
+            FlockMembership.objects.get(flock=flock_obj, user=self.member).role,
+            FlockMembership.ROLE_OWNER,
+        )
+
+        # New sole owner/admin cannot leave
+        _auth(self.client, self.member)
+        members = self.client.get(f'/api/flocks/{slug}/members/')
+        self.assertFalse(members.data['can_leave'])
+        blocked = self.client.post(f'/api/flocks/{slug}/leave/', {}, format='json')
+        self.assertEqual(blocked.status_code, 400)
+
+        # Former owner rejoins; promote then demote
+        _auth(self.client, self.admin)
+        rejoined = self.client.post('/api/flocks/join/', {'code': invite['code']}, format='json')
+        self.assertEqual(rejoined.status_code, 200)
+        _auth(self.client, self.member)
+        self.client.patch(
+            f'/api/flocks/{slug}/members/{self.admin.id}/',
+            {'role': 'admin'},
+            format='json',
+        )
+        demoted = self.client.patch(
+            f'/api/flocks/{slug}/members/{self.admin.id}/',
+            {'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(demoted.status_code, 200)
+        self.assertEqual(demoted.data['role'], 'member')
+
     def test_private_flock_hidden_from_non_members(self):
         flock = self._create_flock()
         slug = flock['slug']
@@ -560,6 +688,12 @@ class FlockApiTests(TestCase):
         html = Client().get(f'/flocks/results/{token}/')
         self.assertEqual(html.status_code, 200)
         self.assertContains(html, 'og:title')
+        # CTA must deep-link into joining this flock, not the generic flocks list.
+        flock = FlockChallenge.objects.get(pk=challenge_id).flock
+        invite = FlockInvite.objects.filter(flock=flock, is_active=True).first()
+        self.assertIsNotNone(invite)
+        self.assertContains(html, f'/join/flock/{invite.token}/')
+        self.assertNotContains(html, 'href="/flocks/"')
 
     def test_club_mix_excludes_vagrants(self):
         # Mark most as common; add vagrants that must not be selected as targets preferentially

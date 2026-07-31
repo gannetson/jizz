@@ -28,7 +28,7 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent,
-                         IpGeoCache, Flock, FlockChallenge,
+                         IpGeoCache, Flock, FlockChallenge, FlockInvite,
                          MailSettings, UpdateEmailDelivery, UpdateEmailRecipient, UpdateThumbsUp)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
@@ -1380,18 +1380,85 @@ class DailyChallengeAdmin(admin.ModelAdmin):
     inlines = [DailyChallengeParticipantInline, DailyChallengeInviteInline, DailyChallengeRoundInline]
 
 
+def _admin_site_url(path: str) -> str:
+    base = (getattr(settings, 'SITE_URL', None) or '').rstrip('/')
+    return f'{base}{path}' if base else path
+
+
+class FlockInviteInline(admin.TabularInline):
+    model = FlockInvite
+    extra = 0
+    fields = ['code', 'is_active', 'magic_link', 'created_at', 'revoked_at']
+    readonly_fields = ['code', 'magic_link', 'created_at', 'revoked_at']
+    can_delete = False
+    show_change_link = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def magic_link(self, obj):
+        if not obj or not obj.token:
+            return '—'
+        url = _admin_site_url(f'/join/flock/{obj.token}/')
+        return format_html('<a href="{0}" target="_blank">{0}</a>', url)
+
+    magic_link.short_description = 'Magic link'
+
+
+class FlockChallengeInline(admin.TabularInline):
+    model = FlockChallenge
+    extra = 0
+    fields = [
+        'title', 'status', 'country', 'length', 'starts_at', 'ends_at', 'magic_link',
+    ]
+    readonly_fields = ['magic_link']
+    raw_id_fields = ['country']
+    show_change_link = True
+    ordering = ['-starts_at']
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def magic_link(self, obj):
+        if not obj or not obj.public_token:
+            return '—'
+        url = _admin_site_url(f'/flocks/c/{obj.public_token}/')
+        return format_html('<a href="{0}" target="_blank">{0}</a>', url)
+
+    magic_link.short_description = 'Magic link'
+
+
 @admin.register(Flock)
 class FlockAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'owner', 'default_country', 'is_private', 'created']
+    list_display = ['name', 'slug', 'join_code', 'owner', 'default_country', 'is_private', 'created']
     search_fields = ['name', 'slug', 'owner__username']
     raw_id_fields = ['owner', 'default_country']
+    readonly_fields = ['join_code']
+    inlines = [FlockInviteInline, FlockChallengeInline]
+
+    def join_code(self, obj):
+        if not obj or not obj.pk:
+            return '—'
+        invite = obj.invites.filter(is_active=True).order_by('-created_at').first()
+        return invite.code if invite else '—'
+
+    join_code.short_description = 'Join code'
 
 
 @admin.register(FlockChallenge)
 class FlockChallengeAdmin(admin.ModelAdmin):
-    list_display = ['title', 'flock', 'country', 'status', 'starts_at', 'ends_at', 'length']
+    list_display = ['title', 'flock', 'country', 'status', 'starts_at', 'ends_at', 'length', 'magic_link']
     list_filter = ['status', 'preset']
     raw_id_fields = ['flock', 'country', 'created_by']
+    readonly_fields = ['public_token', 'magic_link', 'created_at']
+
+    def magic_link(self, obj):
+        if not obj or not obj.public_token:
+            return '—'
+        url = _admin_site_url(f'/flocks/c/{obj.public_token}/')
+        return format_html('<a href="{0}" target="_blank">{0}</a>', url)
+
+    magic_link.short_description = 'Magic link'
 
 
 @admin.register(DeviceToken)

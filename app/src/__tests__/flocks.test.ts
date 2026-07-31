@@ -15,6 +15,8 @@ import {
   getFlockPlayContext,
   getFlockResultPath,
   getFlocksIntroPath,
+  getFlocksCreatePath,
+  getFlocksJoinPath,
   getFlocksPath,
   setFlockPlayContext,
 } from '../api/flocks';
@@ -79,6 +81,8 @@ describe('flocks share helpers', () => {
   it('builds web paths and absolute URLs', () => {
     expect(getFlocksPath()).toBe('/flocks');
     expect(getFlocksIntroPath()).toBe('/flocks/intro');
+    expect(getFlocksCreatePath()).toBe('/flocks/create');
+    expect(getFlocksJoinPath()).toBe('/flocks/join');
     expect(getFlockDetailPath('my-club')).toBe('/flocks/my-club');
     expect(getFlockMembersPath('my-club')).toBe('/flocks/my-club/members');
     expect(getFlockInvitePath('my-club')).toBe('/flocks/my-club/invite');

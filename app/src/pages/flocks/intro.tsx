@@ -3,6 +3,7 @@ import { FormattedMessage } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import { Page } from '../../shared/components/layout';
 import { authService } from '../../api/services/auth.service';
+import { getFlocksCreatePath, getFlocksJoinPath } from '../../api/flocks';
 
 export function FlocksIntroPage() {
   const navigate = useNavigate();
@@ -10,10 +11,18 @@ export function FlocksIntroPage() {
 
   const goCreate = () => {
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/flocks/intro' } });
+      navigate('/login', { state: { from: getFlocksCreatePath() } });
       return;
     }
-    navigate('/flocks?create=1');
+    navigate(getFlocksCreatePath());
+  };
+
+  const goJoin = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: getFlocksJoinPath() } });
+      return;
+    }
+    navigate(getFlocksJoinPath());
   };
 
   return (
@@ -88,12 +97,7 @@ export function FlocksIntroPage() {
           <FormattedMessage id="flocks_intro_cta" defaultMessage="Create your flock" />
         </Button>
 
-        <Button
-          variant="ghost"
-          colorPalette="primary"
-          width="full"
-          onClick={() => navigate('/flocks?create=1')}
-        >
+        <Button variant="ghost" colorPalette="primary" width="full" onClick={goJoin}>
           <FormattedMessage id="flocks_intro_join_instead" defaultMessage="I already have an invite" />
         </Button>
       </Page.Body>

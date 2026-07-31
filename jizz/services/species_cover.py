@@ -20,18 +20,27 @@ def absolute_media_url(url: str, request=None) -> str:
     """Turn a FileField .url (often /media/...) into an absolute HTTPS URL for clients."""
     if not url:
         return url
+
+    site = (getattr(settings, 'SITE_URL', None) or '').rstrip('/')
+    force_https = (not getattr(settings, 'DEBUG', True)) or site.startswith('https://')
+
+    def _upgrade(u: str) -> str:
+        if force_https and u.startswith('http://'):
+            return 'https://' + u[7:]
+        return u
+
     if url.startswith('http://') or url.startswith('https://'):
-        if not getattr(settings, 'DEBUG', True) and url.startswith('http://'):
-            return 'https://' + url[7:]
-        return url
+        return _upgrade(url)
+
+    if site and url.startswith('/'):
+        return _upgrade(site + url)
+
     if request:
-        built = request.build_absolute_uri(url)
-        if not getattr(settings, 'DEBUG', True) and built.startswith('http://'):
-            return 'https://' + built[7:]
-        return built
-    site = getattr(settings, 'SITE_URL', 'https://birdr.pro').rstrip('/')
+        return _upgrade(request.build_absolute_uri(url))
+
     if url.startswith('/'):
-        return site + url
+        fallback = (site or 'https://birdr.pro').rstrip('/')
+        return _upgrade(fallback + url)
     return url
 
 

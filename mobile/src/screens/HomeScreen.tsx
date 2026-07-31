@@ -51,7 +51,7 @@ type RootStackParamList = {
   BirdrJourneyIntro: undefined;
   BirdrJourneyProgress: { countryCode: string };
   FlockIntro: undefined;
-  FlockList: { openCreate?: boolean } | undefined;
+  FlockList: undefined;
   FlockDetail: { slug: string };
   Updates: undefined;
   UpdateDetail: { updateId: number };

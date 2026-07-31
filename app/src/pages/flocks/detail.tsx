@@ -25,6 +25,8 @@ import {
   getFlockLeaderboardPath,
   getFlockMembersPath,
   getFlockResultPath,
+  getFlocksPath,
+  leaveFlock,
   setFlockPlayContext,
   setStoredMainFlockSlug,
   startFlockChallenge,
@@ -51,6 +53,7 @@ export function FlockDetailPage() {
   const [creatingChallenge, setCreatingChallenge] = useState(false);
   const [startingPlay, setStartingPlay] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!slug || !authService.getAccessToken()) {
@@ -156,6 +159,22 @@ export function FlockDetailPage() {
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!slug) return;
+    if (!window.confirm('Leave this flock? You can rejoin later with an invite.')) {
+      return;
+    }
+    setLeaving(true);
+    setError(null);
+    try {
+      await leaveFlock(slug);
+      navigate(getFlocksPath());
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to leave flock');
+      setLeaving(false);
     }
   };
 
@@ -268,12 +287,6 @@ export function FlockDetailPage() {
 
           <Text fontSize="sm" color="gray.600" mb={2}>
             {getCountryDisplayName(flock.default_country, locale)}
-            {flock.is_private ? (
-              <>
-                {' · '}
-                <FormattedMessage id="flocks_private" defaultMessage="Private flock" />
-              </>
-            ) : null}
           </Text>
 
           {flock.is_admin ? (
@@ -465,6 +478,18 @@ export function FlockDetailPage() {
               ) : null}
             </Box>
           )}
+
+          {flock.is_member && !flock.is_owner ? (
+            <Button
+              variant="ghost"
+              colorPalette="red"
+              mt={6}
+              loading={leaving}
+              onClick={() => void handleLeave()}
+            >
+              <FormattedMessage id="flocks_leave" defaultMessage="Leave flock" />
+            </Button>
+          ) : null}
         </Container>
       </Page.Body>
     </Page>

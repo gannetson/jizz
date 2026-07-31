@@ -16,7 +16,8 @@ import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
 
 type NavParams = {
   FlockIntro: undefined;
-  FlockList: { openCreate?: boolean } | undefined;
+  FlockCreate: undefined;
+  FlockJoin: undefined;
   Login: undefined;
 };
 
@@ -25,12 +26,12 @@ export function FlockIntroScreen() {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
 
-  const goCreate = () => {
+  const requireAuth = (then: () => void) => {
     if (!isAuthenticated) {
       navigation.navigate('Login');
       return;
     }
-    navigation.navigate('FlockList', { openCreate: true });
+    then();
   };
 
   return (
@@ -49,7 +50,7 @@ export function FlockIntroScreen() {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={goCreate}
+        onPress={() => requireAuth(() => navigation.navigate('FlockCreate'))}
         testID="flocks.intro.cta"
       >
         <Text style={styles.primaryButtonText}>{t('flocks_intro_cta')}</Text>
@@ -57,7 +58,8 @@ export function FlockIntroScreen() {
 
       <TouchableOpacity
         style={styles.ghostButton}
-        onPress={() => navigation.navigate('FlockList', { openCreate: true })}
+        onPress={() => requireAuth(() => navigation.navigate('FlockJoin'))}
+        testID="flocks.intro.join"
       >
         <Text style={styles.ghostButtonText}>{t('flocks_intro_join_instead')}</Text>
       </TouchableOpacity>

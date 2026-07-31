@@ -36,6 +36,8 @@ import { ChecklistScreen } from '../screens/ChecklistScreen';
 import { TroubleSpotsScreen } from '../screens/TroubleSpotsScreen';
 import { FlockListScreen } from '../screens/FlockListScreen';
 import { FlockIntroScreen } from '../screens/FlockIntroScreen';
+import { FlockCreateScreen } from '../screens/FlockCreateScreen';
+import { FlockJoinScreen } from '../screens/FlockJoinScreen';
 import { FlockDetailScreen } from '../screens/FlockDetailScreen';
 import { FlockMembersScreen } from '../screens/FlockMembersScreen';
 import { FlockInviteScreen } from '../screens/FlockInviteScreen';
@@ -63,6 +65,8 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'DailyChallengeCreate', titleKey: 'new_daily_challenge', component: DailyChallengeCreateScreen },
   { name: 'FlockIntro', titleKey: 'flocks_start', component: FlockIntroScreen },
   { name: 'FlockList', titleKey: 'flocks', component: FlockListScreen },
+  { name: 'FlockCreate', titleKey: 'create_flock', component: FlockCreateScreen },
+  { name: 'FlockJoin', titleKey: 'flock_join', component: FlockJoinScreen },
   { name: 'FlockDetail', titleKey: 'flocks', component: FlockDetailScreen },
   { name: 'FlockMembers', titleKey: 'flock_members', component: FlockMembersScreen },
   { name: 'FlockInvite', titleKey: 'flock_invite_members', component: FlockInviteScreen },

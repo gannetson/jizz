@@ -45,6 +45,8 @@ import UpdateDetailPage from "./pages/update-detail"
 import { AnalyticsTracker } from "./components/analytics-tracker"
 import { FlocksListPage } from "./pages/flocks/list"
 import { FlocksIntroPage } from "./pages/flocks/intro"
+import { FlocksCreatePage } from "./pages/flocks/create"
+import { FlocksJoinPage } from "./pages/flocks/join"
 import { FlockDetailPage } from "./pages/flocks/detail"
 import { FlockMembersPage } from "./pages/flocks/members"
 import { FlockInvitePage } from "./pages/flocks/invite"
@@ -83,6 +85,8 @@ export const MainContent = () => {
             <Route path="/checklist" element={<ChecklistPage />} />
             <Route path="/trouble-spots" element={<TroubleSpotsPage />} />
             <Route path="/flocks/intro" element={<FlocksIntroPage />} />
+            <Route path="/flocks/create" element={<FlocksCreatePage />} />
+            <Route path="/flocks/join" element={<FlocksJoinPage />} />
             <Route path="/flocks" element={<FlocksListPage />} />
             <Route path="/flocks/results/:token" element={<FlockResultPage />} />
             <Route path="/flocks/:slug/members" element={<FlockMembersPage />} />

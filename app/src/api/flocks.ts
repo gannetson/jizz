@@ -39,7 +39,9 @@ export type Flock = {
   logo_url: string | null;
   member_count: number;
   is_admin: boolean;
+  is_owner?: boolean;
   is_member: boolean;
+  can_leave?: boolean;
   active_challenge: FlockChallengeSummary | null;
   invite?: FlockInvite | null;
 };
@@ -163,6 +165,10 @@ export type FlockMembersResponse = {
   flock_slug: string;
   member_count: number;
   members: FlockMember[];
+  is_admin: boolean;
+  is_owner: boolean;
+  viewer_user_id: number;
+  can_leave: boolean;
 };
 
 function parseError(data: Record<string, unknown>, fallback: string): string {
@@ -310,6 +316,14 @@ export function getFlocksIntroPath(): string {
   return '/flocks/intro';
 }
 
+export function getFlocksCreatePath(): string {
+  return '/flocks/create';
+}
+
+export function getFlocksJoinPath(): string {
+  return '/flocks/join';
+}
+
 export function getFlockDetailPath(slug: string): string {
   return `/flocks/${slug}`;
 }
@@ -403,7 +417,6 @@ export async function listFlocks(): Promise<Flock[]> {
 export async function createFlock(payload: {
   name: string;
   country_code: string;
-  is_private?: boolean;
 }): Promise<Flock> {
   const response = await flockRequest(apiUrl('/api/flocks/'), {
     method: 'POST',
@@ -434,9 +447,53 @@ export async function listFlockMembers(slug: string): Promise<FlockMembersRespon
   return data as FlockMembersResponse;
 }
 
+/** Leave a flock (non-owners only). */
+export async function leaveFlock(slug: string): Promise<void> {
+  const response = await flockRequest(apiUrl(`/api/flocks/${slug}/leave/`), {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to leave flock'));
+  }
+  if (getStoredMainFlockSlug() === slug) {
+    clearStoredMainFlockSlug();
+  }
+}
+
+/** Remove a member from a flock (admin/owner only). */
+export async function removeFlockMember(slug: string, userId: number): Promise<void> {
+  const response = await flockRequest(apiUrl(`/api/flocks/${slug}/members/${userId}/`), {
+    method: 'DELETE',
+  });
+  if (response.status === 204) return;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to remove member'));
+  }
+}
+
+/** Set a member's role to admin or member (admin/owner only). */
+export async function updateFlockMemberRole(
+  slug: string,
+  userId: number,
+  role: 'admin' | 'member'
+): Promise<FlockMember> {
+  const response = await flockRequest(apiUrl(`/api/flocks/${slug}/members/${userId}/`), {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to update member role'));
+  }
+  return data as FlockMember;
+}
+
 export async function updateFlock(
   slug: string,
-  patch: Partial<{ name: string; country_code: string; is_private: boolean }>
+  patch: Partial<{ name: string; country_code: string }>
 ): Promise<Flock> {
   const response = await flockRequest(apiUrl(`/api/flocks/${slug}/`), {
     method: 'PATCH',

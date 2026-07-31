@@ -41,7 +41,9 @@ export type Flock = {
   logo_url: string | null;
   member_count: number;
   is_admin: boolean;
+  is_owner?: boolean;
   is_member: boolean;
+  can_leave?: boolean;
   active_challenge: FlockChallengeSummary | null;
   invite?: FlockInvite | null;
 };
@@ -164,6 +166,10 @@ export type FlockMembersResponse = {
   flock_slug: string;
   member_count: number;
   members: FlockMember[];
+  is_admin: boolean;
+  is_owner: boolean;
+  viewer_user_id: number;
+  can_leave: boolean;
 };
 
 const FLOCK_ROUTE_NAMES = new Set([
@@ -247,7 +253,6 @@ export async function listFlocks(): Promise<Flock[]> {
 export async function createFlock(params: {
   name: string;
   country_code: string;
-  is_private?: boolean;
 }): Promise<Flock> {
   const response = await flockRequest(apiUrl('/api/flocks/'), {
     method: 'POST',
@@ -281,10 +286,57 @@ export async function listFlockMembers(slug: string): Promise<FlockMembersRespon
   return data as FlockMembersResponse;
 }
 
+/** Leave a flock (non-owners only). */
+export async function leaveFlock(slug: string): Promise<void> {
+  const response = await flockRequest(apiUrl(`/api/flocks/${slug}/leave/`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to leave flock'));
+  }
+  const stored = await getStoredMainFlockSlug();
+  if (stored === slug) {
+    await clearStoredMainFlockSlug();
+  }
+}
+
+/** Remove a member from a flock (admin/owner only). */
+export async function removeFlockMember(slug: string, userId: number): Promise<void> {
+  const response = await flockRequest(apiUrl(`/api/flocks/${slug}/members/${userId}/`), {
+    method: 'DELETE',
+  });
+  if (response.status === 204) return;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to remove member'));
+  }
+}
+
+/** Set a member's role to admin or member (admin/owner only). */
+export async function updateFlockMemberRole(
+  slug: string,
+  userId: number,
+  role: 'admin' | 'member'
+): Promise<FlockMember> {
+  const response = await flockRequest(apiUrl(`/api/flocks/${slug}/members/${userId}/`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(data, 'Failed to update member role'));
+  }
+  return data as FlockMember;
+}
+
 /** Update flock settings (admin only). */
 export async function updateFlock(
   slug: string,
-  patch: { name?: string; country_code?: string; is_private?: boolean }
+  patch: { name?: string; country_code?: string }
 ): Promise<Flock> {
   const response = await flockRequest(apiUrl(`/api/flocks/${slug}/`), {
     method: 'PATCH',
@@ -473,11 +525,15 @@ export async function getFlockPublicResult(resultToken: string): Promise<FlockPu
   return data as FlockPublicResult;
 }
 
-/** Resolve invite URL for sharing (prefer server value). */
+/** Resolve invite URL for sharing (prefer server value; force https). */
 export function flockInviteUrl(invite: FlockInvite | null | undefined): string {
-  if (invite?.invite_url) return invite.invite_url;
-  if (invite?.token) return apiUrl(`/join/flock/${invite.token}/`);
-  return '';
+  const raw = invite?.invite_url
+    ? invite.invite_url
+    : invite?.token
+      ? apiUrl(`/join/flock/${invite.token}/`)
+      : '';
+  if (raw.startsWith('http://')) return `https://${raw.slice(7)}`;
+  return raw;
 }
 
 /** Localized WhatsApp share text for flock invites. */
@@ -516,9 +572,13 @@ export function buildFlockResultShareMessage(
 export function flockChallengeShareUrl(
   challenge: Pick<FlockChallengeSummary, 'public_token' | 'share_url'> | null | undefined
 ): string {
-  if (challenge?.share_url) return challenge.share_url;
-  if (challenge?.public_token) return apiUrl(`/flocks/c/${challenge.public_token}/`);
-  return '';
+  const raw = challenge?.share_url
+    ? challenge.share_url
+    : challenge?.public_token
+      ? apiUrl(`/flocks/c/${challenge.public_token}/`)
+      : '';
+  if (raw.startsWith('http://')) return `https://${raw.slice(7)}`;
+  return raw;
 }
 
 /** Localized share text for the public challenge leaderboard link. */

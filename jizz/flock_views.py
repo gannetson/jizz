@@ -39,6 +39,7 @@ from jizz.models import (
     FlockMembership,
     PlayerScore,
 )
+from jizz.services.species_cover import absolute_media_url
 from jizz.user_names import player_name_for_user
 from jizz.notifications import send_push_to_user
 
@@ -49,6 +50,11 @@ def _public_token(nbytes: int = 8) -> str:
 
 def _result_token() -> str:
     return secrets.token_urlsafe(12)[:24]
+
+
+def _absolute_url(request, path: str) -> str:
+    """Public absolute URL (invite/share); prefers SITE_URL and forces https in prod."""
+    return absolute_media_url(path, request)
 
 
 def _notify_flock_challenge(flock: Flock, challenge: FlockChallenge, exclude_user_id: int | None = None):
@@ -94,6 +100,44 @@ def _require_member(flock: Flock, user) -> None:
         raise PermissionDenied('Flock membership required.')
 
 
+def _admin_user_ids(flock: Flock) -> set[int]:
+    ids = set(
+        flock.memberships.filter(
+            role__in=(FlockMembership.ROLE_OWNER, FlockMembership.ROLE_ADMIN)
+        ).values_list('user_id', flat=True)
+    )
+    if flock.owner_id:
+        ids.add(flock.owner_id)
+    return ids
+
+
+def _can_leave_flock(flock: Flock, user) -> bool:
+    """Members can leave; admins (incl. owner) only if another admin remains."""
+    if not user or not flock.is_member(user):
+        return False
+    if flock.is_admin(user):
+        return bool(_admin_user_ids(flock) - {user.id})
+    return True
+
+
+def _pick_successor_admin(flock: Flock, excluding_user_id: int) -> FlockMembership | None:
+    other_ids = _admin_user_ids(flock) - {excluding_user_id}
+    if not other_ids:
+        return None
+    return (
+        FlockMembership.objects.filter(
+            flock=flock,
+            user_id__in=other_ids,
+            role=FlockMembership.ROLE_ADMIN,
+        )
+        .order_by('joined_at', 'id')
+        .first()
+        or FlockMembership.objects.filter(flock=flock, user_id__in=other_ids)
+        .order_by('joined_at', 'id')
+        .first()
+    )
+
+
 def _display_name(user) -> str:
     return player_name_for_user(user)
 
@@ -101,10 +145,7 @@ def _display_name(user) -> str:
 def _logo_url(flock: Flock, request) -> str | None:
     if not flock.logo:
         return None
-    url = flock.logo.url
-    if request:
-        return request.build_absolute_uri(url)
-    return url
+    return absolute_media_url(flock.logo.url, request)
 
 
 def _challenge_status(challenge: FlockChallenge) -> str:
@@ -136,7 +177,9 @@ def _serialize_flock(flock: Flock, request, *, include_invite: bool = False) -> 
         'logo_url': _logo_url(flock, request),
         'member_count': flock.member_count(),
         'is_admin': bool(user and flock.is_admin(user)),
+        'is_owner': bool(user and flock.owner_id == getattr(user, 'id', None)),
         'is_member': bool(user and flock.is_member(user)),
+        'can_leave': bool(user and _can_leave_flock(flock, user)),
         'active_challenge': _serialize_challenge_summary(active, request) if active else None,
     }
     if include_invite and user and flock.is_member(user):
@@ -147,7 +190,7 @@ def _serialize_flock(flock: Flock, request, *, include_invite: bool = False) -> 
 
 def _serialize_invite(invite: FlockInvite, request, flock: Flock) -> dict:
     path = f'/join/flock/{invite.token}/'
-    absolute = request.build_absolute_uri(path) if request else path
+    absolute = _absolute_url(request, path) if request else path
     return {
         'code': invite.code,
         'token': invite.token,
@@ -164,7 +207,7 @@ def _serialize_invite(invite: FlockInvite, request, flock: Flock) -> dict:
 
 def _serialize_challenge_summary(challenge: FlockChallenge, request) -> dict:
     share_path = f'/flocks/c/{challenge.public_token}/'
-    share_url = request.build_absolute_uri(share_path) if request else share_path
+    share_url = _absolute_url(request, share_path) if request else share_path
     data = {
         'id': challenge.id,
         'title': challenge.title,
@@ -287,7 +330,6 @@ class FlockListCreateView(APIView):
     def post(self, request):
         name = (request.data.get('name') or '').strip()
         country_code = (request.data.get('country_code') or '').strip().upper()
-        is_private = request.data.get('is_private', True)
         if not name:
             raise ValidationError({'name': 'Required.'})
         if not country_code:
@@ -300,7 +342,7 @@ class FlockListCreateView(APIView):
                 slug=slug,
                 owner=request.user,
                 default_country=country,
-                is_private=bool(is_private),
+                is_private=True,
             )
             _ensure_owner_membership(flock, request.user)
             code = generate_invite_code()
@@ -342,8 +384,8 @@ class FlockDetailView(APIView):
         if 'country_code' in request.data:
             code = (request.data.get('country_code') or '').strip().upper()
             flock.default_country = get_object_or_404(Country, pk=code)
-        if 'is_private' in request.data:
-            flock.is_private = bool(request.data.get('is_private'))
+        # Flocks are invite-only; ignore any is_private client field.
+        flock.is_private = True
         if 'logo' in request.data:
             logo = request.data.get('logo')
             if logo in (None, '', 'null'):
@@ -386,7 +428,104 @@ class FlockMembersView(APIView):
             'flock_slug': flock.slug,
             'member_count': len(members),
             'members': members,
+            'is_admin': flock.is_admin(request.user),
+            'is_owner': flock.owner_id == request.user.id,
+            'viewer_user_id': request.user.id,
+            'can_leave': _can_leave_flock(flock, request.user),
         })
+
+
+class FlockLeaveView(APIView):
+    """Leave a flock. Admins (incl. owner) only if another admin remains."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, slug):
+        flock = get_object_or_404(Flock, slug=slug)
+        _require_member(flock, request.user)
+        if flock.is_admin(request.user) and not (_admin_user_ids(flock) - {request.user.id}):
+            raise ValidationError(
+                {
+                    'detail': (
+                        'You are the only admin. Make someone else an admin before leaving.'
+                    )
+                }
+            )
+        with transaction.atomic():
+            if flock.owner_id == request.user.id:
+                successor = _pick_successor_admin(flock, request.user.id)
+                if not successor:
+                    raise ValidationError(
+                        {
+                            'detail': (
+                                'You are the only admin. Make someone else an admin '
+                                'before leaving.'
+                            )
+                        }
+                    )
+                flock.owner = successor.user
+                flock.save(update_fields=['owner', 'updated'])
+                successor.role = FlockMembership.ROLE_OWNER
+                successor.save(update_fields=['role'])
+            deleted, _ = FlockMembership.objects.filter(
+                flock=flock, user=request.user
+            ).delete()
+        if not deleted:
+            raise PermissionDenied('Flock membership required.')
+        return Response({'left': True, 'flock_slug': flock.slug})
+
+
+class FlockMemberDetailView(APIView):
+    """Update member role or remove a member (admin/owner only)."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, slug, user_id: int):
+        flock = get_object_or_404(Flock, slug=slug)
+        _require_admin(flock, request.user)
+        role = (request.data.get('role') or '').strip().lower()
+        if role not in (FlockMembership.ROLE_ADMIN, FlockMembership.ROLE_MEMBER):
+            raise ValidationError({'role': 'Must be "admin" or "member".'})
+        if user_id == flock.owner_id:
+            raise ValidationError({'detail': 'Cannot change the flock owner role.'})
+        membership = FlockMembership.objects.filter(flock=flock, user_id=user_id).first()
+        if not membership:
+            raise NotFound('Member not found.')
+        if membership.role == FlockMembership.ROLE_OWNER:
+            raise ValidationError({'detail': 'Cannot change the flock owner role.'})
+        if (
+            membership.role == FlockMembership.ROLE_ADMIN
+            and role == FlockMembership.ROLE_MEMBER
+            and not (_admin_user_ids(flock) - {user_id})
+        ):
+            raise ValidationError(
+                {'detail': 'Cannot demote the only remaining admin.'}
+            )
+        membership.role = role
+        membership.save(update_fields=['role'])
+        return Response({
+            'user_id': membership.user_id,
+            'display_name': _display_name(membership.user),
+            'role': membership.role,
+            'joined_at': membership.joined_at.isoformat() if membership.joined_at else None,
+        })
+
+    def delete(self, request, slug, user_id: int):
+        flock = get_object_or_404(Flock, slug=slug)
+        _require_admin(flock, request.user)
+        if user_id == request.user.id:
+            raise ValidationError({'detail': 'Use leave to remove yourself from the flock.'})
+        if user_id == flock.owner_id:
+            raise ValidationError({'detail': 'Cannot remove the flock owner.'})
+        membership = FlockMembership.objects.filter(flock=flock, user_id=user_id).first()
+        if not membership:
+            raise NotFound('Member not found.')
+        if membership.role == FlockMembership.ROLE_OWNER:
+            raise ValidationError({'detail': 'Cannot remove the flock owner.'})
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class FlockInviteRotateView(APIView):
@@ -778,7 +917,7 @@ class FlockChallengeCompleteView(APIView):
         me = board.get('me')
         flock = attempt.challenge.flock
         result_path = f'/flocks/results/{attempt.result_token}/'
-        result_url = request.build_absolute_uri(result_path)
+        result_url = _absolute_url(request, result_path)
         rank_label = f"#{me['rank']} of {board['total_participants']}" if me else None
         return {
             'attempt_id': attempt.id,
@@ -883,7 +1022,7 @@ def flock_result_page(request, result_token: str):
         + (f' ({rank_label})' if rank_label else '')
         + f' in the {flock.name} Birdr Challenge. Can you beat them?'
     )
-    absolute = request.build_absolute_uri(request.path)
+    absolute = _absolute_url(request, request.path)
     return render(
         request,
         'jizz/flock_result.html',
@@ -896,7 +1035,8 @@ def flock_result_page(request, result_token: str):
             'display_name': _display_name(attempt.user),
             'description': description,
             'canonical_url': absolute,
-            'og_image': request.build_absolute_uri('/images/birdr-leaderboard.png'),
+            'og_image': _absolute_url(request, '/images/birdr-leaderboard.png'),
+            'join_url': _share_join_url(request, flock),
         },
     )
 
@@ -921,7 +1061,7 @@ def _share_join_url(request, flock: Flock) -> str | None:
     invite = _active_invite(flock)
     if not invite:
         return None
-    return request.build_absolute_uri(f'/join/flock/{invite.token}/')
+    return _absolute_url(request, f'/join/flock/{invite.token}/')
 
 
 def flock_challenge_share_page(request, public_token: str):
@@ -938,8 +1078,8 @@ def flock_challenge_share_page(request, public_token: str):
     top = _share_top_entries(challenge, 5)
     participant_count = len(_leaderboard_rows(challenge))
     join_url = _share_join_url(request, flock)
-    canonical = request.build_absolute_uri(f'/flocks/c/{challenge.public_token}/')
-    og_image = request.build_absolute_uri(f'/flocks/c/{challenge.public_token}/og.png')
+    canonical = _absolute_url(request, f'/flocks/c/{challenge.public_token}/')
+    og_image = _absolute_url(request, f'/flocks/c/{challenge.public_token}/og.png')
     status_label = _challenge_status(challenge)
     description = (
         f'{flock.name} flock challenge on Birdr. '

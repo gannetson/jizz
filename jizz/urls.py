@@ -81,6 +81,8 @@ from jizz.flock_views import (
     FlockListCreateView,
     FlockDetailView,
     FlockMembersView,
+    FlockLeaveView,
+    FlockMemberDetailView,
     FlockInviteRotateView,
     FlockInvitePreviewView,
     FlockInviteJoinView,
@@ -123,7 +125,9 @@ def android_asset_links(request):
 
 def join_challenge_redirect(request, token):
     """Try app deep link, then fall back to web app at /join/challenge/<token>/web/."""
-    fallback_url = request.build_absolute_uri(f'/join/challenge/{token}/web/')
+    from jizz.services.species_cover import absolute_media_url
+
+    fallback_url = absolute_media_url(f'/join/challenge/{token}/web/', request)
     return render(request, 'jizz/join_redirect.html', {
         'deep_link': f'birdr://join/challenge/{token}',
         'fallback_url': fallback_url,
@@ -132,9 +136,10 @@ def join_challenge_redirect(request, token):
 
 def join_flock_redirect(request, token):
     """Prefer web for new players; try the app deep link only on mobile browsers."""
+    from jizz.services.species_cover import absolute_media_url
     from jizz.usage_analytics import parse_device_type
 
-    fallback_url = request.build_absolute_uri(f'/join/flock/{token}/web/')
+    fallback_url = absolute_media_url(f'/join/flock/{token}/web/', request)
     device = parse_device_type(request.META.get('HTTP_USER_AGENT', ''))
     if device == 'desktop':
         return HttpResponseRedirect(fallback_url)
@@ -146,7 +151,9 @@ def join_flock_redirect(request, token):
 
 def join_game_redirect(request, token):
     """Try app deep link, then fall back to web app at /join/<token>/web/."""
-    fallback_url = request.build_absolute_uri(f'/join/{token}/web/')
+    from jizz.services.species_cover import absolute_media_url
+
+    fallback_url = absolute_media_url(f'/join/{token}/web/', request)
     return render(request, 'jizz/join_redirect.html', {
         'deep_link': f'birdr://join/{token}',
         'fallback_url': fallback_url,
@@ -155,9 +162,10 @@ def join_game_redirect(request, token):
 
 def open_update_redirect(request, pk):
     """Open update in the app on mobile; go straight to the website on desktop."""
+    from jizz.services.species_cover import absolute_media_url
     from jizz.usage_analytics import parse_device_type
 
-    fallback_url = request.build_absolute_uri(f'/updates/{pk}')
+    fallback_url = absolute_media_url(f'/updates/{pk}', request)
     device = parse_device_type(request.META.get('HTTP_USER_AGENT', ''))
     if device == 'desktop':
         return HttpResponseRedirect(fallback_url)
@@ -171,13 +179,14 @@ def open_app_redirect(request):
     """Open Birdr home (or a mapped path) in the app on mobile; stay on web on desktop."""
     import re
 
+    from jizz.services.species_cover import absolute_media_url
     from jizz.usage_analytics import parse_device_type
 
     path = (request.GET.get('path') or '/').split('?')[0]
     if not path.startswith('/'):
         path = f'/{path}'
 
-    fallback_url = request.build_absolute_uri(path)
+    fallback_url = absolute_media_url(path, request)
     device = parse_device_type(request.META.get('HTTP_USER_AGENT', ''))
     if device == 'desktop':
         return HttpResponseRedirect(fallback_url)
@@ -372,6 +381,12 @@ urlpatterns = [
     path('api/flocks/results/<str:result_token>/', FlockPublicResultView.as_view(), name='flock-public-result'),
     path('api/flocks/<slug:slug>/', FlockDetailView.as_view(), name='flock-detail'),
     path('api/flocks/<slug:slug>/members/', FlockMembersView.as_view(), name='flock-members'),
+    path(
+        'api/flocks/<slug:slug>/members/<int:user_id>/',
+        FlockMemberDetailView.as_view(),
+        name='flock-member-detail',
+    ),
+    path('api/flocks/<slug:slug>/leave/', FlockLeaveView.as_view(), name='flock-leave'),
     path('api/flocks/<slug:slug>/invite/', FlockInviteRotateView.as_view(), name='flock-invite-rotate'),
     path('api/flocks/<slug:slug>/challenges/', FlockChallengeCreateView.as_view(), name='flock-challenge-create'),
     path(

@@ -124,7 +124,11 @@
       <div class="score">{{ score_label }}</div>
       {% if rank_label %}<div class="rank">{{ rank_label }}</div>{% endif %}
       <p>{{ display_name }} · Can you beat this score?</p>
+      {% if join_url %}
+      <a class="cta" href="{{ join_url }}">Play on Birdr</a>
+      {% else %}
       <a class="cta" href="/flocks/">Play on Birdr</a>
+      {% endif %}
     {% endif %}
   </main>
 </body>

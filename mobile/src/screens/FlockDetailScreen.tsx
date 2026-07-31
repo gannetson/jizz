@@ -22,6 +22,7 @@ import {
   startFlockChallenge,
   setStoredMainFlockSlug,
   updateFlockLogo,
+  leaveFlock,
   flockChallengeShareUrl,
   buildFlockLeaderboardShareMessage,
   type Flock,
@@ -44,6 +45,7 @@ export function FlockDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!slug) return;
@@ -225,6 +227,30 @@ export function FlockDetailScreen() {
     );
   }, [flock?.is_admin, flock?.logo_url, pickLogo, slug, t]);
 
+  const handleLeave = useCallback(() => {
+    if (!slug) return;
+    Alert.alert(t('flocks_leave'), t('flocks_leave_confirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('flocks_leave'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setLeaving(true);
+            setError(null);
+            try {
+              await leaveFlock(slug);
+              (navigation as any).navigate('FlockList');
+            } catch (e: unknown) {
+              setError(e instanceof Error ? e.message : t('flocks_leave_failed'));
+              setLeaving(false);
+            }
+          })();
+        },
+      },
+    ]);
+  }, [navigation, slug, t]);
+
   if (!slug) {
     return (
       <View style={styles.centered}>
@@ -285,7 +311,6 @@ export function FlockDetailScreen() {
       </View>
       <Text style={styles.meta}>
         {getCountryDisplayName(flock.default_country, locale)}
-        {flock.is_private ? ` · ${t('private_flock')}` : ''}
       </Text>
 
       {error ? (
@@ -389,6 +414,19 @@ export function FlockDetailScreen() {
         </View>
       )}
 
+      {flock.is_member && !flock.is_owner ? (
+        <TouchableOpacity
+          style={styles.dangerButton}
+          onPress={handleLeave}
+          disabled={leaving}
+        >
+          {leaving ? (
+            <ActivityIndicator size="small" color={colors.error[500]} />
+          ) : (
+            <Text style={styles.dangerButtonText}>{t('flocks_leave')}</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 }
@@ -482,6 +520,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   secondaryButtonText: { color: colors.primary[700], fontSize: 16, fontWeight: '600' },
+  dangerButton: {
+    borderWidth: 1,
+    borderColor: colors.error[500],
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 24,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  dangerButtonText: { color: colors.error[500], fontSize: 16, fontWeight: '600' },
   linkText: { color: colors.primary[500], fontSize: 15, fontWeight: '600', marginTop: 4 },
   muted: { fontSize: 14, color: colors.primary[600], marginBottom: 12 },
   errorBox: { backgroundColor: colors.error[50], padding: 12, borderRadius: 8, marginBottom: 16 },

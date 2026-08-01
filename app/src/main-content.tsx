@@ -97,6 +97,7 @@ export const MainContent = () => {
             />
             <Route path="/flocks/:slug" element={<FlockDetailPage />} />
             <Route path="/join/flock/:token/web" element={<FlockInviteLandingPage />} />
+            <Route path="/join/flock/:token" element={<FlockInviteLandingPage />} />
             <Route path="/journey" element={<BirdrJourneyListPage />} />
             <Route path="/journey/leaderboard" element={<CountryChallengeLeaderboardPage />} />
             <Route path="/journey/intro" element={<BirdrJourneyIntroPage />} />

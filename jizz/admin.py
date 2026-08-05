@@ -28,7 +28,8 @@ from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          Update, Language, SpeciesName, UserProfile,
                          Friendship, DailyChallenge, DailyChallengeParticipant,
                          DailyChallengeInvite, DailyChallengeRound, DeviceToken, PushDevice, UsageEvent,
-                         IpGeoCache, Flock, FlockChallenge, FlockInvite,
+                         IpGeoCache, Flock, FlockChallenge, FlockChallengeAttempt,
+                         FlockInvite, FlockMembership,
                          MailSettings, UpdateEmailDelivery, UpdateEmailRecipient, UpdateThumbsUp)
 from jizz.notifications import send_welcome_email
 from jizz.utils import (get_country_images, get_images, get_media_citation,
@@ -1385,6 +1386,16 @@ def _admin_site_url(path: str) -> str:
     return f'{base}{path}' if base else path
 
 
+class FlockMembershipInline(admin.TabularInline):
+    model = FlockMembership
+    extra = 0
+    fields = ['user', 'role', 'joined_at']
+    readonly_fields = ['joined_at']
+    raw_id_fields = ['user']
+    ordering = ['role', 'joined_at']
+    show_change_link = False
+
+
 class FlockInviteInline(admin.TabularInline):
     model = FlockInvite
     extra = 0
@@ -1428,13 +1439,70 @@ class FlockChallengeInline(admin.TabularInline):
     magic_link.short_description = 'Magic link'
 
 
+class FlockChallengeAttemptInline(admin.TabularInline):
+    model = FlockChallengeAttempt
+    extra = 0
+    fields = [
+        'user', 'is_ranked', 'is_practice', 'progress', 'correct_count',
+        'birdr_score', 'completed_at', 'created_at',
+    ]
+    readonly_fields = [
+        'user', 'is_ranked', 'is_practice', 'progress', 'correct_count',
+        'birdr_score', 'completed_at', 'created_at',
+    ]
+    ordering = ['-completed_at', '-created_at']
+    show_change_link = True
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related('user', 'player', 'game', 'challenge')
+        )
+
+    def progress(self, obj):
+        if not obj or not obj.pk:
+            return '—'
+        length = obj.challenge.length
+        if obj.completed_at:
+            answered = length
+        else:
+            answered = Answer.objects.filter(
+                player_score__player_id=obj.player_id,
+                player_score__game_id=obj.game_id,
+            ).count()
+        return f'{answered} / {length}'
+
+    progress.short_description = 'Progress'
+
+
 @admin.register(Flock)
 class FlockAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'join_code', 'owner', 'default_country', 'is_private', 'created']
+    list_display = [
+        'name', 'slug', 'members', 'join_code', 'owner', 'default_country',
+        'is_private', 'created',
+    ]
     search_fields = ['name', 'slug', 'owner__username']
     raw_id_fields = ['owner', 'default_country']
     readonly_fields = ['join_code']
-    inlines = [FlockInviteInline, FlockChallengeInline]
+    inlines = [FlockMembershipInline, FlockInviteInline, FlockChallengeInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _member_count=Count('memberships', distinct=True),
+        )
+
+    def members(self, obj):
+        if obj is None:
+            return 0
+        return getattr(obj, '_member_count', obj.member_count())
+
+    members.short_description = 'Members'
+    members.admin_order_field = '_member_count'
 
     def join_code(self, obj):
         if not obj or not obj.pk:
@@ -1447,10 +1515,27 @@ class FlockAdmin(admin.ModelAdmin):
 
 @admin.register(FlockChallenge)
 class FlockChallengeAdmin(admin.ModelAdmin):
-    list_display = ['title', 'flock', 'country', 'status', 'starts_at', 'ends_at', 'length', 'magic_link']
+    list_display = [
+        'title', 'flock', 'members', 'country', 'status', 'starts_at', 'ends_at',
+        'length', 'magic_link',
+    ]
     list_filter = ['status', 'preset']
     raw_id_fields = ['flock', 'country', 'created_by']
     readonly_fields = ['public_token', 'magic_link', 'created_at']
+    inlines = [FlockChallengeAttemptInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _member_count=Count('attempts__user', distinct=True),
+        )
+
+    def members(self, obj):
+        if obj is None:
+            return 0
+        return getattr(obj, '_member_count', obj.attempts.values('user').distinct().count())
+
+    members.short_description = 'Members'
+    members.admin_order_field = '_member_count'
 
     def magic_link(self, obj):
         if not obj or not obj.public_token:

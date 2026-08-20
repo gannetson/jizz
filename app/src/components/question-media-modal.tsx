@@ -11,7 +11,7 @@ import {
   Text,
   Heading,
 } from "@chakra-ui/react";
-import { BsBoxArrowRight } from "react-icons/all";
+import { BsBoxArrowRight } from "react-icons/bs";
 import { FormattedMessage } from "react-intl";
 import { QuestionWithAnswer } from "../api/services/games.service";
 

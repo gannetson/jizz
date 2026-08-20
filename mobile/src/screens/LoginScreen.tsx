@@ -16,6 +16,7 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { getSocialLoginUrl } from '../api/auth';
 import { OAuthWebViewModal } from '../components/OAuthWebViewModal';
 import { colors } from '../theme';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 export function LoginScreen() {
   const { t } = useTranslation();
@@ -210,7 +211,7 @@ export function LoginScreen() {
             <ActivityIndicator color="#000" />
           ) : (
             <>
-              <Text style={[styles.socialIcon, styles.appleIcon]}></Text>
+              <FontAwesome5 name="apple" brand size={20} color="#000" style={styles.appleIcon} />
               <Text style={[styles.socialButtonText, styles.appleButtonText]}>{t('continue_with_apple')}</Text>
             </>
           )}
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   googleButton: { backgroundColor: '#4285F4' },
   appleButton: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#000' },
   socialIcon: { fontSize: 20, fontWeight: '700', color: '#fff', marginRight: 10 },
-  appleIcon: { color: '#000' },
+  appleIcon: { marginRight: 10 },
   socialButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   appleButtonText: { color: '#000' },
 });

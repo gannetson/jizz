@@ -13,6 +13,7 @@ import { ScoresScreen } from '../screens/ScoresScreen';
 import { LobbyScreen } from '../screens/LobbyScreen';
 import { GamePlayScreen } from '../screens/GamePlayScreen';
 import { GameResultsScreen } from '../screens/GameResultsScreen';
+import { SharedGameResultScreen } from '../screens/SharedGameResultScreen';
 import { MediaReviewScreen } from '../screens/MediaReviewScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
@@ -91,6 +92,7 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'Lobby', titleKey: 'game_lobby', component: LobbyScreen },
   { name: 'GamePlay', titleKey: 'game', component: GamePlayScreen },
   { name: 'GameResults', titleKey: 'results', component: GameResultsScreen },
+  { name: 'SharedGameResult', titleKey: 'game_result_title', component: SharedGameResultScreen },
 ];
 
 export default function AppNavigator() {

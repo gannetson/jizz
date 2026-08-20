@@ -90,6 +90,26 @@ location ~ ^/join/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+# Public share pages (Open Graph previews for WhatsApp / socials)
+location ^~ /flocks/results/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /flocks/c/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /g/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
 ```
 
 Then keep your existing `location /` (SPA) and other blocks. Reload nginx: `sudo nginx -t && sudo systemctl reload nginx`.

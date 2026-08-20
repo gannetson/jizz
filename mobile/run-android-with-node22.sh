@@ -26,11 +26,32 @@ if [ -n "$MAJOR" ] && [ "$MAJOR" -lt 18 ]; then
   exit 1
 fi
 
-# Stop Gradle daemon so it does not use an old Node from a previous run
+export NODE_BINARY="$(command -v node)"
+
+# ANDROID_HOME + JDK 17 (Android Studio's JBR 25 breaks Gradle)
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/scripts/ensure-android-env.sh"
+
+# Stop Gradle daemon so it does not keep an old Node or JDK 25
 if [ -d "android" ] && [ -f "android/gradlew" ]; then
   (cd android && ./gradlew --stop 2>/dev/null) || true
 fi
 
-export NODE_BINARY="$(command -v node)"
+if ! command -v adb >/dev/null 2>&1; then
+  echo "Error: adb not found. Install Android Studio's SDK (platform-tools) and set ANDROID_HOME to it." >&2
+  echo "  Typical macOS path: $HOME/Library/Android/sdk" >&2
+  exit 1
+fi
+
+if ! adb devices 2>/dev/null | awk 'NR>1 && $2=="device" {found=1} END {exit !found}'; then
+  AVDS="$(emulator -list-avds 2>/dev/null || true)"
+  if [ -z "$AVDS" ]; then
+    echo "Error: no Android device or emulator is running, and no AVDs were found." >&2
+    echo "Create one in Android Studio: Device Manager → Create Virtual Device." >&2
+    exit 1
+  fi
+  echo "No emulator is running. Expo will try to start: $(echo "$AVDS" | tr '\n' ' ')"
+  echo "If that fails, open Android Studio → Device Manager → Play, wait for the home screen, then re-run."
+fi
 
 exec npx expo run:android "$@"

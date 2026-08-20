@@ -1,5 +1,5 @@
 import { Button, useDisclosure } from "@chakra-ui/react";
-import { BsImages } from "react-icons/all";
+import { BsImages } from "react-icons/bs";
 import AppContext, { Species } from "../core/app-context";
 import { useContext } from "react";
 import { SpeciesModal } from "./species-modal";

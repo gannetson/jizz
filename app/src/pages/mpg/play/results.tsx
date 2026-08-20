@@ -18,6 +18,12 @@ import { buildHiscoresPath } from "../../../core/hiscores-link"
 import { ResultsTopScoreConfetti } from "../../../components/results-top-score-confetti"
 import { BirdrMoodHero } from "../../../components/birdr-mood-hero"
 import { PracticeSpeciesLinks } from "../../../components/practice-species-links"
+import { FlockShareBlock } from "../../../components/flocks/share-block"
+import {
+  buildGameShareUrl,
+  canShareGameResult,
+  formatGameResultShareMessage,
+} from "../../../api/gameShare"
 
 const PRACTICE_PASS_CORRECT = 18;
 
@@ -97,6 +103,28 @@ export const ResultsComponent = () => {
   )
 
   const showTopScoreCelebration = currentPlayerResult?.ranking === 1
+
+  const shareable = canShareGameResult(game)
+  const shareUrl = game?.token ? buildGameShareUrl(game.token) : ''
+  const shareScoreLabel =
+    currentPlayerResult?.score != null
+      ? `${currentPlayerResult.score} pts`
+      : displayGame?.user_score != null
+        ? `${displayGame.user_score} pts`
+        : 'a score'
+  const shareSubtitle = [
+    game?.level ? game.level.replace(/_/g, ' ') : '',
+    game?.media === 'images' ? 'Pictures' : game?.media === 'audio' ? 'Sounds' : game?.media === 'video' ? 'Videos' : game?.media,
+    game?.length ? `${game.length} birds` : '',
+  ].filter(Boolean).join(' · ')
+  const shareMessage = shareUrl
+    ? formatGameResultShareMessage(
+        shareScoreLabel,
+        game?.country?.name || 'Birdr',
+        shareUrl,
+        shareSubtitle
+      )
+    : ''
 
   const isPairPractice = game?.game_type === 'pair_practice'
   const isSpeciesPractice = game?.game_type === 'species_practice'
@@ -393,6 +421,18 @@ export const ResultsComponent = () => {
               )
             })}
           </ListRoot>
+          {shareable && shareUrl ? (
+            <FlockShareBlock
+              titleId="game_result_share"
+              titleDefault="Share result"
+              shareUrl={shareUrl}
+              shareMessage={shareMessage}
+              hintId="game_result_share_hint"
+              hintDefault="Share this result so friends can play or install Birdr."
+              qrCaptionId="scan_game_result"
+              qrCaptionDefault="Scan this QR code to view the result"
+            />
+          ) : null}
           <Flex direction={'column'} gap={4}>
             {rematchInvitation && (
               <Button onClick={handleJoinRematch} colorPalette="primary">

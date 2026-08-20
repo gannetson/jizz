@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { useContext, useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Link as RouterLink, useParams } from 'react-router-dom';
-import { QuillContentViewer } from '../components/quill-content-viewer';
+import { CmsRichText } from '../components/cms-rich-text';
 import { Loading } from '../components/loading';
 import { UpdateThumbsUpButton } from '../components/updates/update-list-item';
 import AppContext from '../core/app-context';
@@ -73,7 +73,7 @@ export default function UpdateDetailPage() {
               <Text>{update.user.first_name || update.user.username}</Text>
               <Text fontStyle="italic">{format(new Date(update.created), 'PP')}</Text>
             </Flex>
-            <QuillContentViewer content={update.body} />
+            <CmsRichText content={update.body} />
             <UpdateThumbsUpButton
               updateId={update.id}
               active={update.user_has_thumbs_up}

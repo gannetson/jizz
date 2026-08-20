@@ -208,8 +208,37 @@ const HomePage = () => {
           <Loading />
         ) : (
           <Flex direction="column" gap={4}>
-            <Button onClick={() => navigate('/start')} colorPalette="primary">
-              <FormattedMessage id="start game" defaultMessage="Start a new game" />
+            <Button
+              onClick={() => navigate('/start')}
+              colorPalette="primary"
+              height="auto"
+              py={4}
+              px={4}
+              bg="primary.500"
+              borderWidth="2px"
+              borderColor="primary.400"
+            >
+              <Flex align="center" gap={4} width="full" textAlign="left">
+                <Image
+                  src="/images/birdr-start-game.png"
+                  alt=""
+                  width="88px"
+                  height="88px"
+                  objectFit="contain"
+                  flexShrink={0}
+                />
+                <Flex direction="column" flex={1} minW={0}>
+                  <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
+                    <FormattedMessage id="start game" defaultMessage="Start a new game" />
+                  </Text>
+                  <Text fontSize="sm" fontWeight="600" color="primary.100">
+                    <FormattedMessage
+                      id="start_game_home_hint"
+                      defaultMessage="Just one quick game"
+                    />
+                  </Text>
+                </Flex>
+              </Flex>
             </Button>
 
             {journeyLoading ? (
@@ -273,7 +302,7 @@ const HomePage = () => {
                       <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
                     </Text>
                     <Text fontSize="sm" fontWeight="600" color="primary.300">
-                      <FormattedMessage id="country_challenge_new_improved" defaultMessage="New and improved!" />
+                      <FormattedMessage id="country_challenge_new_improved" defaultMessage="Multiple levels, from easy to hard" />
                     </Text>
                   </Flex>
                 </Flex>

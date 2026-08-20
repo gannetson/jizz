@@ -30,12 +30,36 @@ export function getWebSocketUrl(path: string): string {
   return `${wsBase}${p}`;
 }
 
-/** Resolve API media paths (/media/...) or upgrade http→https for journey icons, avatars, etc. */
+function isLocalHostname(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname === '10.0.2.2' ||
+    hostname.endsWith('.local') ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+  );
+}
+
+/** Resolve API media paths (/media/...). Keep http for local Django; upgrade other http to https. */
 export function resolveMediaUrl(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
   const trimmed = url.trim();
-  if (trimmed.startsWith('https://')) return trimmed;
-  if (trimmed.startsWith('http://')) return `https://${trimmed.slice(7)}`;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmed);
+      if (isLocalHostname(parsed.hostname)) {
+        if (parsed.protocol === 'https:') parsed.protocol = 'http:';
+        return parsed.toString();
+      }
+    } catch {
+      // fall through
+    }
+    if (trimmed.startsWith('http://')) return `https://${trimmed.slice(7)}`;
+    return trimmed;
+  }
   if (trimmed.startsWith('/')) return apiUrl(trimmed);
   return trimmed;
 }

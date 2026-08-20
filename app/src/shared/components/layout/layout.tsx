@@ -17,7 +17,7 @@ import {
   Avatar,
   HStack, ListItem, List, ListRoot
 } from "@chakra-ui/react";
-import {GiHamburgerMenu} from "react-icons/all";
+import {GiHamburgerMenu} from "react-icons/gi";
 import {FaUserCircle} from "react-icons/fa";
 import {FormattedMessage} from "react-intl";
 import {useState, useEffect} from "react";

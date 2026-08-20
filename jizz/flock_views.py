@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Q
 from django.http import HttpResponse
@@ -1035,10 +1036,41 @@ def flock_result_page(request, result_token: str):
             'display_name': _display_name(attempt.user),
             'description': description,
             'canonical_url': absolute,
-            'og_image': _absolute_url(request, '/images/birdr-leaderboard.png'),
+            'og_image': _absolute_url(request, f'/flocks/results/{result_token}/og.png'),
             'join_url': _share_join_url(request, flock),
+            'start_url': '/start/',
+            'app_store_url': getattr(settings, 'APP_STORE_URL', ''),
+            'play_store_url': getattr(settings, 'PLAY_STORE_URL', ''),
         },
     )
+
+
+def flock_result_og_image(request, result_token: str):
+    """Generated 1200×630 PNG for a shared flock challenge result."""
+    from jizz.flock_share import render_flock_result_og_image
+
+    attempt = (
+        FlockChallengeAttempt.objects.select_related(
+            'challenge', 'challenge__flock', 'user'
+        )
+        .filter(result_token=result_token, completed_at__isnull=False)
+        .first()
+    )
+    if not attempt:
+        return HttpResponse(status=404)
+    rows = _leaderboard_rows(attempt.challenge)
+    rank = next((i for i, a in enumerate(rows, start=1) if a.id == attempt.id), None)
+    score_label = f'{attempt.correct_count}/{attempt.challenge.length}'
+    rank_label = f'#{rank} of {len(rows)}' if rank else ''
+    png = render_flock_result_og_image(
+        flock=attempt.challenge.flock,
+        display_name=_display_name(attempt.user),
+        score_label=score_label,
+        rank_label=rank_label,
+    )
+    response = HttpResponse(png, content_type='image/png')
+    response['Cache-Control'] = 'public, max-age=600'
+    return response
 
 
 def _challenge_by_public_token(public_token: str) -> FlockChallenge | None:

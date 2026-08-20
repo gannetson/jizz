@@ -1,6 +1,6 @@
 import {ReactElement, ReactNode} from "react";
 import {Flex, Button, HStack, Avatar, Text} from "@chakra-ui/react";
-import {GiHamburgerMenu} from "react-icons/all";
+import {GiHamburgerMenu} from "react-icons/gi";
 import {FaUserCircle} from "react-icons/fa";
 import {useMenu} from "./menu-context";
 import {useState, useEffect} from "react";

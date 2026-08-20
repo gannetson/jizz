@@ -294,7 +294,7 @@ export const translations: Record<string, Record<string, string>> = {
     // Challenge / game
     country_challenge: 'Country challenge',
     country_challenges: 'Country challenges',
-    country_challenge_new_improved: 'New and improved!',
+    country_challenge_new_improved: 'Multiple levels, from easy to hard',
     country_challenges_overview_hint:
       'You can play one challenge per country. Continue an existing one or start a new country.',
     my_country_challenges: 'My country challenges',
@@ -444,6 +444,7 @@ export const translations: Record<string, Record<string, string>> = {
     close_modal_language: 'Close language modal',
     loading_challenge: 'Loading challenge…',
     start_new_game: 'Start a new game',
+    start_game_home_hint: 'Just one quick game',
     more_updates: 'More updates',
     missing_name: 'Missing name',
     whats_your_name: "What's your name? You can pick any name you want.",
@@ -578,6 +579,14 @@ export const translations: Record<string, Record<string, string>> = {
     flock_result_share_message:
       'I scored {score}{rank_part} in the {name} Birdr Challenge. Can you beat me? {link}',
     you: 'You',
+    share_result: 'Share result',
+    game_result_title: 'Game result',
+    game_result_not_found: 'Result not found.',
+    game_result_share_message:
+      'I scored {score} in a Birdr quiz ({where}). Can you beat me? {link}',
+    game_result_beat_me: 'Can you beat this score?',
+    start_a_game: 'Start a game',
+    birdr_home: 'Birdr home',
   },
   nl: {
     cancel: 'Annuleren',
@@ -862,7 +871,7 @@ export const translations: Record<string, Record<string, string>> = {
     request_failed: 'Verzoek mislukt',
     country_challenge: 'Landenuitdaging',
     country_challenges: 'Landenuitdagingen',
-    country_challenge_new_improved: 'Nieuw en verbeterd!',
+    country_challenge_new_improved: 'Meerdere levels, van makkelijk naar lastig',
     country_challenges_overview_hint:
       'Je kunt één uitdaging per land spelen. Ga verder met een bestaande of start een nieuw land.',
     my_country_challenges: 'Mijn landenuitdagingen',
@@ -1008,6 +1017,7 @@ export const translations: Record<string, Record<string, string>> = {
     close_modal_language: 'Taalmodaal sluiten',
     loading_challenge: 'Uitdaging laden…',
     start_new_game: 'Start een nieuw spel',
+    start_game_home_hint: 'Gewoon één kort spel',
     more_updates: 'Meer updates',
     missing_name: 'Naam ontbreekt',
     whats_your_name: 'Hoe heet je? Je mag elke naam kiezen.',
@@ -1143,6 +1153,14 @@ export const translations: Record<string, Record<string, string>> = {
     flock_result_share_message:
       'Ik scoorde {score}{rank_part} in de {name} Birdr-uitdaging. Kun jij me verslaan? {link}',
     you: 'Jij',
+    share_result: 'Resultaat delen',
+    game_result_title: 'Spelresultaat',
+    game_result_not_found: 'Resultaat niet gevonden.',
+    game_result_share_message:
+      'Ik scoorde {score} in een Birdr-quiz ({where}). Kun jij me verslaan? {link}',
+    game_result_beat_me: 'Kun jij deze score verslaan?',
+    start_a_game: 'Start een spel',
+    birdr_home: 'Birdr-home',
   },
 };
 

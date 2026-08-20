@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, InteractionManager, Share } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
@@ -13,6 +13,7 @@ import { hiscoresParamsFromGame } from '../game/hiscoresLink';
 import { MegaConfetti } from '../components/MegaConfetti';
 import { BirdrMoodHero } from '../components/BirdrMoodHero';
 import { PracticeSpeciesLinks } from '../components/PracticeSpeciesLinks';
+import { canShareGameResult, gameShareUrl, buildGameResultShareMessage } from '../api/gameShare';
 
 const PRACTICE_PASS_CORRECT = 18;
 
@@ -58,7 +59,7 @@ function getMpgResultsStats(game: Game, player: Player | null, players: MultiPla
 }
 
 export function GameResultsScreen() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const dailyChallengeId = (route.params as { dailyChallengeId?: number })?.dailyChallengeId;
@@ -204,6 +205,34 @@ export function GameResultsScreen() {
     if (!game) return null;
     return getMpgResultsStats(game, player, players || []);
   }, [game, player, players]);
+
+  const handleShareResult = useCallback(async () => {
+    if (!game?.token) return;
+    const shareUrl = gameShareUrl(game.token);
+    const myScore = currentPlayerResult?.score ?? resultsStats?.userScore;
+    const scoreLabel = myScore != null ? `${myScore} pts` : t('final_results');
+    const subtitle = [
+      getLevelLabel(game.level),
+      getMediaLabel(game.media),
+      game.length ? `${game.length} birds` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    const message = buildGameResultShareMessage(
+      {
+        scoreLabel,
+        countryName: game.country?.name || 'Birdr',
+        subtitle,
+        shareUrl,
+      },
+      locale
+    );
+    try {
+      await Share.share({ message, url: shareUrl });
+    } catch {
+      // cancelled
+    }
+  }, [game, currentPlayerResult, resultsStats, locale, t]);
 
   const isPairPractice = game?.game_type === 'pair_practice';
   const isSpeciesPractice = game?.game_type === 'species_practice';
@@ -368,6 +397,15 @@ export function GameResultsScreen() {
           })
         )}
       </View>
+      {canShareGameResult(game) ? (
+        <TouchableOpacity
+          style={[styles.outlineButton, styles.shareButton]}
+          onPress={() => void handleShareResult()}
+          testID="gameResults.share"
+        >
+          <Text style={styles.outlineButtonText}>{t('share_result')}</Text>
+        </TouchableOpacity>
+      ) : null}
       {(rematchError || rematchTimeoutMessage) ? (
           <Text style={styles.errorText} testID="gameResults.rematchError">{rematchError || rematchTimeoutMessage}</Text>
         ) : null}
@@ -594,6 +632,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary[500],
   },
   outlineButtonText: { fontSize: 16, fontWeight: '600', color: colors.primary[500] },
+  shareButton: { marginBottom: 16 },
   buttonDisabled: { opacity: 0.7 },
   buttonSpinner: { marginRight: 8 },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },

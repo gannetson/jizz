@@ -53,6 +53,7 @@ import { FlockInvitePage } from "./pages/flocks/invite"
 import { FlockLeaderboardPage } from "./pages/flocks/leaderboard"
 import { FlockInviteLandingPage } from "./pages/flocks/invite-landing"
 import { FlockResultPage } from "./pages/flocks/result"
+import { GameShareResultPage } from "./pages/game-share-result"
 export const MainContent = () => {
   useEffect(() => {
     document.title = "Birdr"
@@ -89,6 +90,7 @@ export const MainContent = () => {
             <Route path="/flocks/join" element={<FlocksJoinPage />} />
             <Route path="/flocks" element={<FlocksListPage />} />
             <Route path="/flocks/results/:token" element={<FlockResultPage />} />
+            <Route path="/g/:token" element={<GameShareResultPage />} />
             <Route path="/flocks/:slug/members" element={<FlockMembersPage />} />
             <Route path="/flocks/:slug/invite" element={<FlockInvitePage />} />
             <Route

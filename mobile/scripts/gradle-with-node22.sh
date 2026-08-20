@@ -29,10 +29,14 @@ if [ -n "$MAJOR" ] && [ "$MAJOR" -lt 18 ]; then
   exit 1
 fi
 
-# Daemon may have been started with an older Node on PATH; refresh so autolinking sees the right runtime
-(cd android && ./gradlew --stop 2>/dev/null) || true
-
 export NODE_BINARY="$(command -v node)"
+
+# ANDROID_HOME + JDK 17 (Android Studio's JBR 25 breaks Gradle)
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/ensure-android-env.sh"
+
+# Daemon may have been started with an older Node or JDK 25
+(cd android && ./gradlew --stop 2>/dev/null) || true
 
 cd "$MOBILE_DIR/android"
 exec ./gradlew "$@"

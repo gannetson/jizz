@@ -688,12 +688,17 @@ class FlockApiTests(TestCase):
         html = Client().get(f'/flocks/results/{token}/')
         self.assertEqual(html.status_code, 200)
         self.assertContains(html, 'og:title')
+        self.assertContains(html, f'/flocks/results/{token}/og.png')
         # CTA must deep-link into joining this flock, not the generic flocks list.
         flock = FlockChallenge.objects.get(pk=challenge_id).flock
         invite = FlockInvite.objects.filter(flock=flock, is_active=True).first()
         self.assertIsNotNone(invite)
         self.assertContains(html, f'/join/flock/{invite.token}/')
         self.assertNotContains(html, 'href="/flocks/"')
+        og = Client().get(f'/flocks/results/{token}/og.png')
+        self.assertEqual(og.status_code, 200)
+        self.assertEqual(og['Content-Type'], 'image/png')
+        self.assertTrue(og.content.startswith(b'\x89PNG'))
 
     def test_club_mix_excludes_vagrants(self):
         # Mark most as common; add vagrants that must not be selected as targets preferentially

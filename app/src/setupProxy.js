@@ -26,7 +26,7 @@ module.exports = function (app) {
   };
 
   app.use(
-    ['/api', '/admin', '/token', '/django', '/auth'],
+    ['/api', '/admin', '/token', '/django', '/auth', '/media', '/g', '/flocks/results', '/flocks/c'],
     createProxyMiddleware({
       ...proxyOptions,
       changeOrigin: true,

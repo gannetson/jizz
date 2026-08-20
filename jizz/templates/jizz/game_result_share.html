@@ -6,10 +6,10 @@
   {% if missing %}
   <title>Result not found · Birdr</title>
   {% else %}
-  <title>{{ score_label }} in {{ flock_name }} · Birdr</title>
+  <title>{{ og_title }} · Birdr</title>
   <meta name="description" content="{{ description }}">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="{{ score_label }} — {{ challenge_title }}">
+  <meta property="og:title" content="{{ og_title }}">
   <meta property="og:description" content="{{ description }}">
   <meta property="og:url" content="{{ canonical_url }}">
   <meta property="og:site_name" content="Birdr">
@@ -17,7 +17,7 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{{ score_label }} — {{ challenge_title }}">
+  <meta name="twitter:title" content="{{ og_title }}">
   <meta name="twitter:description" content="{{ description }}">
   <meta name="twitter:image" content="{{ og_image }}">
   <link rel="canonical" href="{{ canonical_url }}">
@@ -28,6 +28,7 @@
       --birdr-50: #f5ede0;
       --birdr-100: #e8d4b8;
       --birdr-200: #d4b88a;
+      --birdr-300: #c09c5c;
       --birdr-500: #8b6419;
       --birdr-600: #6d4e14;
       --birdr-800: #31220a;
@@ -46,14 +47,13 @@
       padding: 24px;
     }
     .card {
-      max-width: 420px;
+      max-width: 440px;
       width: 100%;
       background: #fff;
       border: 2px solid var(--birdr-200);
       border-radius: 16px;
       padding: 28px 24px 24px;
       box-shadow: 0 12px 28px rgba(49, 34, 10, 0.12);
-      text-align: center;
     }
     .brand {
       letter-spacing: 0.14em;
@@ -61,45 +61,62 @@
       font-size: 0.75rem;
       font-weight: 700;
       color: var(--birdr-500);
+      text-align: center;
     }
     .hero {
       display: block;
       width: min(220px, 70%);
       height: auto;
-      margin: 16px auto 12px;
+      margin: 16px auto 8px;
       object-fit: contain;
     }
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.55rem;
       margin: 8px 0 4px;
       font-weight: 700;
       color: var(--birdr-800);
+      text-align: center;
     }
-    .challenge {
+    .subtitle {
       color: var(--birdr-600);
-      margin: 0 0 12px;
+      margin: 0 0 16px;
       font-size: 0.95rem;
+      text-align: center;
     }
-    .score {
-      font-size: 2.4rem;
-      margin: 8px 0 4px;
-      font-weight: 800;
-      color: var(--birdr-500);
+    .board {
+      list-style: none;
+      margin: 0 0 20px;
+      padding: 0;
+      border: 1px solid var(--birdr-100);
+      border-radius: 12px;
+      overflow: hidden;
     }
-    .rank {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--birdr-800);
-      margin-bottom: 12px;
+    .board li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--birdr-100);
     }
+    .board li:last-child { border-bottom: 0; }
+    .rank { font-weight: 700; color: var(--birdr-500); min-width: 2rem; }
+    .name { flex: 1; font-weight: 600; }
+    .score { font-weight: 800; color: var(--birdr-500); }
+    .correct { font-size: 0.8rem; color: var(--birdr-600); margin-left: 6px; font-weight: 500; }
     p {
       line-height: 1.45;
       color: var(--birdr-600);
       margin: 0 0 16px;
+      text-align: center;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     .cta {
-      display: inline-block;
-      margin-top: 4px;
+      display: block;
+      text-align: center;
       padding: 12px 18px;
       border-radius: 10px;
       background: var(--birdr-500);
@@ -112,43 +129,61 @@
       background: transparent;
       color: var(--birdr-600);
       border: 2px solid var(--birdr-200);
-      margin-left: 6px;
+    }
+    .cta.secondary:hover {
+      border-color: var(--birdr-300);
+      color: var(--birdr-800);
     }
     .stores {
-      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .stores a {
+      color: var(--birdr-500);
+      font-weight: 700;
       font-size: 0.9rem;
     }
-    .stores a { color: var(--birdr-500); font-weight: 700; }
   </style>
 </head>
 <body>
   <main class="card">
     {% if missing %}
       <div class="brand">Birdr</div>
-      <img class="hero" src="/images/birdr-leaderboard.png" alt="">
+      <img class="hero" src="/images/birdr-success.png" alt="">
       <h1>Result not found</h1>
-      <p>This shared result link is invalid or no longer available.</p>
-      <a class="cta" href="/">Go to Birdr</a>
+      <p>This shared game result is invalid or no longer available.</p>
+      <div class="actions">
+        <a class="cta" href="/start/">Start a game</a>
+        <a class="cta secondary" href="/">Birdr home</a>
+      </div>
     {% else %}
       <div class="brand">Birdr</div>
-      <img class="hero" src="/images/birdr-leaderboard.png" alt="">
-      <h1>{{ flock_name }}</h1>
-      <p class="challenge">{{ challenge_title }}</p>
-      <div class="score">{{ score_label }}</div>
-      {% if rank_label %}<div class="rank">{{ rank_label }}</div>{% endif %}
-      <p>{{ display_name }} · Can you beat this score?</p>
-      {% if join_url %}
-      <a class="cta" href="{{ join_url }}">Play on Birdr</a>
+      <img class="hero" src="/images/birdr-success.png" alt="">
+      <h1>{{ country.name }}</h1>
+      <p class="subtitle">{{ subtitle }}</p>
+      {% if players %}
+        <ol class="board">
+          {% for player in players %}
+            <li>
+              <span class="rank">#{{ player.rank }}</span>
+              <span class="name">{{ player.name }}</span>
+              <span class="score">{{ player.score_label }}{% if player.correct_label %}<span class="correct">{{ player.correct_label }}</span>{% endif %}</span>
+            </li>
+          {% endfor %}
+        </ol>
       {% endif %}
-      <a class="cta{% if join_url %} secondary{% endif %}" href="/start/">Start a game</a>
-      {% if app_store_url or play_store_url %}
-      <p class="stores">
-        Get the app:
-        {% if app_store_url %}<a href="{{ app_store_url }}">App Store</a>{% endif %}
-        {% if app_store_url and play_store_url %} · {% endif %}
-        {% if play_store_url %}<a href="{{ play_store_url }}">Google Play</a>{% endif %}
-      </p>
-      {% endif %}
+      <p>Can you beat this score?</p>
+      <div class="actions">
+        <a class="cta" href="/start/">Start a game</a>
+        <a class="cta secondary" href="/">Birdr home</a>
+        <div class="stores">
+          <a href="{{ app_store_url }}">App Store</a>
+          <a href="{{ play_store_url }}">Google Play</a>
+        </div>
+      </div>
     {% endif %}
   </main>
 </body>

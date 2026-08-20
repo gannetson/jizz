@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Flex, Heading, Link, TagRoot, Text, VStack } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Link, TagRoot, Text, VStack } from '@chakra-ui/react';
 import { FormattedMessage } from 'react-intl';
 import copy from 'copy-to-clipboard';
 import { QRCodeSVG } from 'qrcode.react';
@@ -12,6 +12,8 @@ type FlockShareBlockProps = {
   shareMessage: string;
   hintId?: string;
   hintDefault?: string;
+  qrCaptionId?: string;
+  qrCaptionDefault?: string;
 };
 
 export function FlockShareBlock({
@@ -21,6 +23,8 @@ export function FlockShareBlock({
   shareMessage,
   hintId = 'flocks_share_hint',
   hintDefault = 'Share this link so others can join or view your result.',
+  qrCaptionId = 'scan to join',
+  qrCaptionDefault = 'Scan this QR code to join the game',
 }: FlockShareBlockProps) {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
@@ -38,6 +42,16 @@ export function FlockShareBlock({
   };
 
   const whatsAppUrl = buildWhatsAppShareUrl(shareMessage);
+  const canNativeShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const nativeShare = async () => {
+    try {
+      await navigator.share({ title: 'Birdr', text: shareMessage, url: shareUrl });
+    } catch {
+      // user cancelled
+    }
+  };
 
   return (
     <Box borderWidth="1px" borderColor="gray.200" borderRadius="lg" p={4} bg="white">
@@ -48,6 +62,11 @@ export function FlockShareBlock({
         <FormattedMessage id={hintId} defaultMessage={hintDefault} />
       </Text>
 
+      {canNativeShare ? (
+        <Button colorPalette="primary" mb={4} onClick={() => void nativeShare()}>
+          <FormattedMessage id="share" defaultMessage="Share" />
+        </Button>
+      ) : null}
       <Flex gap={4} align="center" flexWrap="wrap" mb={4}>
         <FormattedMessage id="link" defaultMessage="Link" />
         <TagRoot onClick={copyLink} fontSize="md" cursor="pointer">
@@ -91,7 +110,7 @@ export function FlockShareBlock({
           />
         </Box>
         <Text fontSize="sm" color="gray.600">
-          <FormattedMessage id="scan to join" defaultMessage="Scan this QR code to join the game" />
+          <FormattedMessage id={qrCaptionId} defaultMessage={qrCaptionDefault} />
         </Text>
       </VStack>
     </Box>

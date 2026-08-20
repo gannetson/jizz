@@ -216,12 +216,20 @@ export function HomeScreen() {
         </View>
       )}
       <TouchableOpacity
-        style={styles.primaryButton}
+        style={styles.startHeroButton}
         onPress={() => navigation.navigate('Start')}
         testID="home.startNewGame"
         accessibilityLabel={t('start_new_game')}
       >
-        <Text style={styles.primaryButtonText}>{t('start_new_game')}</Text>
+        <Image
+          source={require('../../assets/birdr-start-game.png')}
+          style={styles.startHeroImage}
+          resizeMode="contain"
+        />
+        <View style={styles.startHeroText}>
+          <Text style={styles.startHeroTitle}>{t('start_new_game')}</Text>
+          <Text style={styles.startHeroHint}>{t('start_game_home_hint')}</Text>
+        </View>
       </TouchableOpacity>
 
       {journeyLoading ? (
@@ -410,6 +418,39 @@ const styles = StyleSheet.create({
     color: colors.primary[50],
     fontSize: 16,
     fontWeight: '600',
+  },
+  startHeroButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: colors.primary[500],
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: colors.primary[400],
+  },
+  startHeroImage: {
+    width: 88,
+    height: 88,
+  },
+  startHeroText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  startHeroTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primary[50],
+    lineHeight: 28,
+    marginBottom: 4,
+  },
+  startHeroHint: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[100],
+    lineHeight: 20,
   },
   journeyLoadingWrap: {
     paddingVertical: 28,

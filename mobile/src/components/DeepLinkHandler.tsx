@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 import { API_BASE_URL } from '../api/config';
 import { parseFlockJoinUrl } from '../api/flocks';
+import { parseGameShareUrl } from '../api/gameShare';
 
 /**
  * Handles deep links:
@@ -13,7 +14,7 @@ import { parseFlockJoinUrl } from '../api/flocks';
  * - Daily challenge invite: birdr://join/challenge/{invite_token} or https://birdr.pro/join/challenge/{invite_token}
  * - Flock invite: birdr://join/flock/{token} or https://birdr.pro/join/flock/{token}/
  * - Update: birdr://updates/{id} or https://birdr.pro/open/update/{id}/
- * - App home: birdr://home or https://birdr.pro/open/app/
+ * - Game result share: https://birdr.pro/g/{token} or birdr://g/{token}
  */
 export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
   const { handleOAuthRedirect, isAuthenticated } = useAuth();
@@ -88,6 +89,13 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
           // fall through
         }
         navigation.navigate('Home');
+        return;
+      }
+
+      const gameShareToken = parseGameShareUrl(url);
+      if (gameShareToken) {
+        handled.current = url;
+        navigation.navigate('SharedGameResult', { token: gameShareToken });
         return;
       }
 

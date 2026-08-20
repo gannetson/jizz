@@ -73,6 +73,11 @@
               "scheme": "https",
               "host": "birdr.pro",
               "pathPrefix": "/join/flock/"
+            },
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/g/"
             }
           ],
           "category": [

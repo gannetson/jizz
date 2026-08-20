@@ -93,8 +93,14 @@ from jizz.flock_views import (
     FlockChallengeLeaderboardView,
     FlockPublicResultView,
     flock_result_page,
+    flock_result_og_image,
     flock_challenge_share_page,
     flock_challenge_og_image,
+)
+from jizz.game_share_views import (
+    GamePublicShareView,
+    game_result_og_image,
+    game_result_share_page,
 )
 
 router = routers.DefaultRouter()
@@ -208,6 +214,11 @@ urlpatterns = [
     path('join/<str:token>/', join_game_redirect, name='join-game'),
     path('flocks/results/<str:result_token>/', flock_result_page, name='flock-result-page'),
     path(
+        'flocks/results/<str:result_token>/og.png',
+        flock_result_og_image,
+        name='flock-result-og',
+    ),
+    path(
         'flocks/c/<str:public_token>/',
         flock_challenge_share_page,
         name='flock-challenge-share',
@@ -217,6 +228,8 @@ urlpatterns = [
         flock_challenge_og_image,
         name='flock-challenge-og',
     ),
+    path('g/<str:token>/', game_result_share_page, name='game-result-share'),
+    path('g/<str:token>/og.png', game_result_og_image, name='game-result-og'),
     path('open/update/<int:pk>/', open_update_redirect, name='open-update'),
     path('open/app/', open_app_redirect, name='open-app'),
 
@@ -280,6 +293,11 @@ urlpatterns = [
     re_path(r"^api/species/(?P<pk>\w+)/$", SpeciesDetailView.as_view(), name="species-detail"),
 
     re_path(r"^api/games/$", GameListView.as_view(), name="game-list"),
+    re_path(
+        r"^api/games/(?P<token>[\w-]+)/share/$",
+        GamePublicShareView.as_view(),
+        name="game-public-share",
+    ),
     re_path(
         r"^api/games/(?P<token>[\w-]+)/with-answers/$",
         GameDetailWithAnswersByPlayerTokenView.as_view(),

@@ -199,6 +199,16 @@ class LanguageListView(ListAPIView):
     queryset = Language.objects.all()
     pagination_class = None
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        data = [
+            row
+            for row in self.get_serializer(queryset, many=True).data
+            if row.get('code') != 'la'
+        ]
+        data.sort(key=lambda row: (row.get('name') or '').lower())
+        return Response([{'code': 'la', 'name': 'Scientific'}, *data])
+
 
 class PageListView(ListAPIView):
     """List help pages (show=True only)."""

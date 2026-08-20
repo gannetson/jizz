@@ -24,7 +24,7 @@ import { loadLanguages } from '../api/languages';
 import { updateProfile } from '../api/profile';
 import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
-import { getLanguageDisplayName } from '../i18n/languageNames';
+import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
 import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 import {
@@ -132,7 +132,7 @@ export function StartScreen() {
   }, []);
 
   const sortedLanguages = React.useMemo(
-    () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    () => [...languages].sort((a, b) => compareSpeciesLanguages(a, b, locale)),
     [languages, locale]
   );
   const filteredLanguages = React.useMemo(() => {

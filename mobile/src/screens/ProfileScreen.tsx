@@ -25,7 +25,7 @@ import { setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference
 import { getProfile, updateProfile, updateProfileAvatar, getAvatarUrl, deleteAccount, type UserProfile } from '../api/profile';
 import { loadCountries, type Country } from '../api/countries';
 import { loadLanguages, type Language } from '../api/languages';
-import { getLanguageDisplayName } from '../i18n/languageNames';
+import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
 import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 
@@ -233,7 +233,7 @@ export function ProfileScreen() {
 
   // All hooks must run on every render (before any early return).
   const sortedLanguages = React.useMemo(
-    () => [...languages].sort((a, b) => getLanguageDisplayName(a, locale).localeCompare(getLanguageDisplayName(b, locale), undefined, { sensitivity: 'base' })),
+    () => [...languages].sort((a, b) => compareSpeciesLanguages(a, b, locale)),
     [languages, locale]
   );
   const filteredLanguages = React.useMemo(() => {

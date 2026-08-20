@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useServices } from '../contexts/services.context';
 import { Language } from '../api/types';
+import { withScientificLanguage } from '../data/language-names-nl';
 
 export function useLanguages() {
   const { language: languageService } = useServices();
@@ -17,7 +18,7 @@ export function useLanguages() {
       .getLanguages()
       .then((data) => {
         if (!cancelled) {
-          setLanguages(data);
+          setLanguages(withScientificLanguage(Array.isArray(data) ? data : []));
           setLoading(false);
         }
       })

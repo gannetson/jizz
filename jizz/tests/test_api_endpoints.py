@@ -71,6 +71,8 @@ class ApiLanguagesTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, list)
         self.assertGreaterEqual(len(response.data), 1)
+        self.assertEqual(response.data[0], {'code': 'la', 'name': 'Scientific'})
+        self.assertEqual(sum(1 for row in response.data if row['code'] == 'la'), 1)
 
 
 class ApiPlayerTestCase(TestCase):

@@ -131,10 +131,20 @@ def build_play_serializer_context(question: Question) -> dict:
     lang = game.language
     names: dict[tuple[int, str], str] = {}
     if lang:
-        for sn in SpeciesName.objects.filter(
-            species_id__in=species_ids, language_id=lang
-        ):
-            names[(sn.species_id, lang)] = sn.name
+        if str(lang).lower().split('-')[0].split('_')[0] == 'la':
+            by_id = {}
+            if question.species_id and getattr(question, 'species', None):
+                by_id[question.species_id] = question.species
+            for opt in question.options.all():
+                if opt.species_id and opt.species:
+                    by_id[opt.species_id] = opt.species
+            for sid, species in by_id.items():
+                names[(sid, lang)] = species.name_latin or species.name
+        else:
+            for sn in SpeciesName.objects.filter(
+                species_id__in=species_ids, language_id=lang
+            ):
+                names[(sn.species_id, lang)] = sn.name
 
     return {
         'play_mode': True,

@@ -54,14 +54,38 @@ export const languageNamesNl: Record<string, string> = {
   mr: 'Marathi',
   sw: 'Swahili',
   af: 'Afrikaans',
+  la: 'Wetenschappelijk',
 };
 
 export type LanguageLike = { code: string; name: string };
 
+export function withScientificLanguage<T extends LanguageLike>(languages: T[]): T[] {
+  const rest = languages.filter((l) => l.code !== 'la');
+  return [{ code: 'la', name: 'Scientific' } as T, ...rest];
+}
+
 export function getLanguageDisplayName(lang: LanguageLike | null | undefined, locale: string): string {
   if (!lang) return '';
+  if (lang.code === 'la') {
+    return locale === 'nl' ? 'Wetenschappelijk' : 'Scientific';
+  }
   if (locale === 'nl' && languageNamesNl[lang.code]) {
     return languageNamesNl[lang.code];
   }
   return lang.name;
+}
+
+/** Scientific (`la`) stays first; remaining languages sort A–Z by display name. */
+export function compareSpeciesLanguages(
+  a: LanguageLike,
+  b: LanguageLike,
+  locale: string
+): number {
+  if (a.code === 'la' && b.code !== 'la') return -1;
+  if (b.code === 'la' && a.code !== 'la') return 1;
+  return getLanguageDisplayName(a, locale).localeCompare(
+    getLanguageDisplayName(b, locale),
+    undefined,
+    { sensitivity: 'base' }
+  );
 }

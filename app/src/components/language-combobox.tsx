@@ -49,7 +49,13 @@ export const LanguageCombobox = ({
       value: l.code,
       original: l,
     }));
-    withLabels.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+    withLabels.sort((a, b) =>
+      a.value === "la" && b.value !== "la"
+        ? -1
+        : b.value === "la" && a.value !== "la"
+          ? 1
+          : a.label.localeCompare(b.label, undefined, { sensitivity: "base" })
+    );
     return withLabels;
   }, [languages, locale]);
 

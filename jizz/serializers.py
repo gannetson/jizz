@@ -12,6 +12,19 @@ from media.models import Media, MediaReview, FlagMedia
 from media.wikimedia_urls import wikimedia_display_url
 
 
+def _species_name_for_language(species, language: str | None) -> str:
+    """Common / translated name, or scientific name when language is `la`."""
+    lang = (language or '').strip().lower().split('-')[0].split('_')[0]
+    if lang == 'la':
+        return species.name_latin or species.name
+    if language:
+        try:
+            return SpeciesName.objects.get(species=species, language_id=language).name
+        except SpeciesName.DoesNotExist:
+            pass
+    return species.name
+
+
 class CountrySerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
@@ -64,16 +77,7 @@ class MediaSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request:
             language = request.query_params.get('language')
-        if language:
-            try:
-                species_name = SpeciesName.objects.get(
-                    species=obj.species,
-                    language_id=language
-                )
-                return species_name.name
-            except SpeciesName.DoesNotExist:
-                pass
-        return obj.species.name
+        return _species_name_for_language(obj.species, language)
 
     def get_review_status(self, obj):
         """When level=thorough, return { approved, rejected, dont_know } counts for this media."""
@@ -103,14 +107,9 @@ class SpeciesListSerializer(serializers.ModelSerializer):
     tax_family_en = serializers.CharField(read_only=True)
 
     def get_name_translated(self, obj):
-        try:
-            species_name = SpeciesName.objects.get(
-                species=obj,
-                language=self.context['request'].query_params.get('language')
-            )
-            return species_name.name
-        except SpeciesName.DoesNotExist:
-            return obj.name
+        request = self.context.get('request')
+        language = request.query_params.get('language') if request else None
+        return _species_name_for_language(obj, language)
 
     class Meta:
         model = Species
@@ -130,13 +129,7 @@ class SpeciesReviewStatsSerializer(serializers.Serializer):
     def get_name(self, obj):
         request = self.context.get('request')
         language = request and request.query_params.get('language')
-        if language:
-            try:
-                sn = SpeciesName.objects.get(species=obj, language_id=language)
-                return sn.name
-            except SpeciesName.DoesNotExist:
-                pass
-        return obj.name
+        return _species_name_for_language(obj, language)
 
     def get_unreviewed(self, obj):
         return obj.total_media - obj.media_with_review
@@ -199,14 +192,7 @@ class SpeciesWithMediaReviewSerializer(serializers.Serializer):
     def get_name(self, obj):
         request = self.context.get('request')
         language = request and request.query_params.get('language')
-        species = obj['species']
-        if language:
-            try:
-                sn = SpeciesName.objects.get(species=species, language_id=language)
-                return sn.name
-            except SpeciesName.DoesNotExist:
-                pass
-        return species.name
+        return _species_name_for_language(obj['species'], language)
 
     def get_media(self, obj):
         return MediaForReviewSerializer(
@@ -276,18 +262,8 @@ class SpeciesDetailSerializer(serializers.ModelSerializer):
                 language = query_params.get('language')
             else:
                 language = request.GET.get('language')
-        
-        if language:
-            try:
-                species_name = SpeciesName.objects.get(
-                    species=obj,
-                    language=language
-                )
-                return species_name.name
-            except SpeciesName.DoesNotExist:
-                pass
 
-        return obj.name
+        return _species_name_for_language(obj, language)
 
     class Meta:
         model = Species
@@ -318,7 +294,7 @@ class QuestionOptionPlaySerializer(serializers.ModelSerializer):
         lang = self.context.get('play_language')
         if lang and (obj.id, lang) in names:
             return names[(obj.id, lang)]
-        return obj.name
+        return _species_name_for_language(obj, lang)
 
     class Meta:
         model = Species

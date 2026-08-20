@@ -48,8 +48,8 @@ class GameShareTestCase(TestCase):
         self.assertContains(page, '450 pts')
         self.assertContains(page, 'Netherlands')
         self.assertContains(page, 'href="/start/"')
-        self.assertContains(page, 'App Store')
-        self.assertContains(page, 'Google Play')
+        self.assertContains(page, '/images/app-store.png')
+        self.assertContains(page, '/images/google-play.png')
         self.assertNotContains(page, self.player.token)
         self.assertNotContains(page, 'email')
 

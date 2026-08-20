@@ -20,6 +20,9 @@
       "color": "#2D5A3D"
     },
     "ios": {
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
       "supportsTablet": true,
       "bundleIdentifier": "pro.birdr.app",
       "usesAppleSignIn": true,

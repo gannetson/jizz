@@ -182,36 +182,34 @@ export function GameShareResultPage() {
             </Flex>
 
             <Flex gap={2} justify="center" align="center" flexWrap="wrap">
-              <Box asChild>
-                <a
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Download on the App Store"
-                >
-                  <Image
-                    src={APP_STORE_BADGE}
-                    alt="Download on the App Store"
-                    height="36px"
-                    style={{ display: 'block' }}
-                  />
-                </a>
-              </Box>
-              <Box asChild>
-                <a
-                  href={PLAY_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Get it on Google Play"
-                >
-                  <Image
-                    src={PLAY_STORE_BADGE}
-                    alt="Get it on Google Play"
-                    height="36px"
-                    style={{ display: 'block' }}
-                  />
-                </a>
-              </Box>
+              <Link
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                display="inline-block"
+                aria-label="Download on the App Store"
+              >
+                <Image
+                  src={APP_STORE_BADGE}
+                  alt="Download on the App Store"
+                  height="36px"
+                  style={{ display: 'block' }}
+                />
+              </Link>
+              <Link
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                display="inline-block"
+                aria-label="Get it on Google Play"
+              >
+                <Image
+                  src={PLAY_STORE_BADGE}
+                  alt="Get it on Google Play"
+                  height="36px"
+                  style={{ display: 'block' }}
+                />
+              </Link>
             </Flex>
           </VStack>
         </Container>

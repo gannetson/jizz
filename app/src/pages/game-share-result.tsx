@@ -10,6 +10,7 @@ import {
   Flex,
   Heading,
   Image,
+  Link,
   Spinner,
   Text,
   VStack,
@@ -24,7 +25,11 @@ import {
 } from '../api/gameShare';
 import { FlockShareBlock } from '../components/flocks/share-block';
 import { Page } from '../shared/components/layout';
-import AppStoreBanner from '../components/app-store-banner';
+
+const APP_STORE_URL = 'https://apps.apple.com/us/app/birdr/id6745144189';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=pro.birdr.app';
+const APP_STORE_BADGE = '/images/app-store.png';
+const PLAY_STORE_BADGE = '/images/google-play.png';
 
 export function GameShareResultPage() {
   const { token = '' } = useParams<{ token: string }>();
@@ -176,7 +181,38 @@ export function GameShareResultPage() {
               </Button>
             </Flex>
 
-            <AppStoreBanner />
+            <Flex gap={2} justify="center" align="center" flexWrap="wrap">
+              <Box asChild>
+                <a
+                  href={APP_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Download on the App Store"
+                >
+                  <Image
+                    src={APP_STORE_BADGE}
+                    alt="Download on the App Store"
+                    height="36px"
+                    style={{ display: 'block' }}
+                  />
+                </a>
+              </Box>
+              <Box asChild>
+                <a
+                  href={PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Get it on Google Play"
+                >
+                  <Image
+                    src={PLAY_STORE_BADGE}
+                    alt="Get it on Google Play"
+                    height="36px"
+                    style={{ display: 'block' }}
+                  />
+                </a>
+              </Box>
+            </Flex>
           </VStack>
         </Container>
       </Page.Body>

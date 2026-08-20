@@ -137,14 +137,19 @@
     .stores {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
       justify-content: center;
-      margin-top: 4px;
+      align-items: center;
+      margin-top: 8px;
     }
     .stores a {
-      color: var(--birdr-500);
-      font-weight: 700;
-      font-size: 0.9rem;
+      display: inline-block;
+      line-height: 0;
+    }
+    .stores img {
+      height: 36px;
+      width: auto;
+      display: block;
     }
   </style>
 </head>
@@ -180,8 +185,12 @@
         <a class="cta" href="/start/">Start a game</a>
         <a class="cta secondary" href="/">Birdr home</a>
         <div class="stores">
-          <a href="{{ app_store_url }}">App Store</a>
-          <a href="{{ play_store_url }}">Google Play</a>
+          <a href="{{ app_store_url }}" target="_blank" rel="noopener noreferrer">
+            <img src="/images/app-store.png" alt="Download on the App Store">
+          </a>
+          <a href="{{ play_store_url }}" target="_blank" rel="noopener noreferrer">
+            <img src="/images/google-play.png" alt="Get it on Google Play">
+          </a>
         </div>
       </div>
     {% endif %}

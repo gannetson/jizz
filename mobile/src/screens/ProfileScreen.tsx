@@ -27,6 +27,7 @@ import { loadCountries, type Country } from '../api/countries';
 import { loadLanguages, type Language } from '../api/languages';
 import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
 import { CountrySelect } from '../components/CountrySelect';
+import { SpeciesLanguageLabel } from '../components/SpeciesLanguageLabel';
 import { colors } from '../theme';
 
 export function ProfileScreen() {
@@ -322,7 +323,7 @@ export function ProfileScreen() {
       />
       <Text style={styles.label}>{t('species_language_names')}</Text>
       <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)}>
-        <Text style={styles.selectButtonText}>{languageLabel}</Text>
+        <SpeciesLanguageLabel code={language} label={languageLabel} />
       </TouchableOpacity>
       <Text style={styles.label}>{t('country_optional')}</Text>
       <CountrySelect
@@ -398,7 +399,12 @@ export function ProfileScreen() {
                     })();
                   }}
                 >
-                  <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{getLanguageDisplayName(item, locale)}</Text>
+                  <SpeciesLanguageLabel
+                    code={item.code}
+                    label={getLanguageDisplayName(item, locale)}
+                    selected={language === item.code}
+                    textStyle={language === item.code ? styles.modalItemTextSelected : styles.modalItemText}
+                  />
                 </TouchableOpacity>
               )}
             />

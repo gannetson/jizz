@@ -1,4 +1,5 @@
 import { Box, Text } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { FloatingFeather } from './floating-feather';
 
@@ -16,6 +17,12 @@ export function QuestionLoadingFeather({
   showLabel = true,
 }: Props) {
   const stageHeight = height ?? minHeight;
+  const [showSlowHint, setShowSlowHint] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowSlowHint(true), 2500);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <Box
@@ -34,8 +41,16 @@ export function QuestionLoadingFeather({
     >
       <FloatingFeather />
       {showLabel ? (
-        <Text fontSize="sm" color="primary.700">
+        <Text fontSize="sm" color="primary.700" textAlign="center">
           <FormattedMessage id="loading question" defaultMessage="Loading question..." />
+        </Text>
+      ) : null}
+      {showSlowHint ? (
+        <Text fontSize="sm" color="primary.500" textAlign="center" px={4}>
+          <FormattedMessage
+            id="loading taking long"
+            defaultMessage="This is taking longer than usual. Your connection may be slow."
+          />
         </Text>
       ) : null}
     </Box>

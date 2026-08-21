@@ -11,20 +11,24 @@ export const languageNamesNl: Record<string, string> = {
   ms: 'Maleis', th: 'Thais', vi: 'Vietnamees', ko: 'Koreaans', ca: 'Catalaans', eu: 'Baskisch',
   ga: 'Iers', cy: 'Welsh', lt: 'Litouws', lv: 'Letlands', et: 'Estlands', sl: 'Sloveens',
   mk: 'Macedonisch', sq: 'Albanees', hi: 'Hindi', bn: 'Bengalees', ta: 'Tamil', te: 'Telugu',
-  mr: 'Marathi', sw: 'Swahili', af: 'Afrikaans', la: 'Wetenschappelijk',
+  mr: 'Marathi', sw: 'Swahili', af: 'Afrikaans', la: 'Wetenschappelijk (Latijn)',
 };
 
 export type LanguageLike = { code: string; name: string };
 
+export const SCIENTIFIC_LANGUAGE_CODE = 'la';
+export const SCIENTIFIC_LANGUAGE_NAME_EN = 'Scientific (Latin)';
+export const SCIENTIFIC_LANGUAGE_NAME_NL = 'Wetenschappelijk (Latijn)';
+
 export function withScientificLanguage<T extends LanguageLike>(languages: T[]): T[] {
   const rest = languages.filter((l) => l.code !== 'la');
-  return [{ code: 'la', name: 'Scientific' } as T, ...rest];
+  return [{ code: 'la', name: SCIENTIFIC_LANGUAGE_NAME_EN } as T, ...rest];
 }
 
 export function getLanguageDisplayName(lang: LanguageLike | null | undefined, locale: string): string {
   if (!lang) return '';
   if (lang.code === 'la') {
-    return locale === 'nl' ? 'Wetenschappelijk' : 'Scientific';
+    return locale === 'nl' ? SCIENTIFIC_LANGUAGE_NAME_NL : SCIENTIFIC_LANGUAGE_NAME_EN;
   }
   if (locale === 'nl' && languageNamesNl[lang.code]) {
     return languageNamesNl[lang.code];

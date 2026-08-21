@@ -105,12 +105,16 @@ export async function loadGame(token: string): Promise<Game | null> {
  * Get the current (active) question for an MPG game.
  * Used when we receive game_started so we can show the first question even if new_question was missed.
  */
-export async function getCurrentQuestion(gameToken: string): Promise<Question | null> {
+export async function getCurrentQuestion(
+  gameToken: string,
+  options?: { signal?: AbortSignal }
+): Promise<Question | null> {
   const response = await fetch(
     apiUrl(`/api/games/${encodeURIComponent(gameToken)}/question?t=${Date.now()}`),
     {
       method: 'GET',
       cache: 'no-store',
+      signal: options?.signal,
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     }
   );

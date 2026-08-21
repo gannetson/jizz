@@ -30,6 +30,7 @@ const defaultStyles: StylesConfig<OptionType, false> = {
     "&:hover": { borderColor: "var(--chakra-colors-primary-500)" },
   }),
   input: (provided) => ({ ...provided, padding: "0" }),
+  menu: (provided) => ({ ...provided, zIndex: 9999 }),
   menuPortal: (provided) => ({ ...provided, zIndex: 9999 }),
 };
 
@@ -75,6 +76,8 @@ export const LanguageCombobox = ({
         value={selectedOption}
         onChange={handleChange}
         isSearchable
+        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+        menuPosition="fixed"
         placeholder={
           placeholder ??
           intl.formatMessage({ id: "select language placeholder", defaultMessage: "Select language..." })
@@ -82,6 +85,11 @@ export const LanguageCombobox = ({
         noOptionsMessage={() =>
           intl.formatMessage({ id: "no options found", defaultMessage: "No options found" })
         }
+        formatOptionLabel={(option) => (
+          <span style={option.value === "la" ? { fontStyle: "italic" } : undefined}>
+            {option.label}
+          </span>
+        )}
         styles={defaultStyles}
       />
     </Box>

@@ -34,6 +34,8 @@ import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal
 import { QuestionMediaView } from '../components/QuestionMediaView';
 import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
 import { SpeedChallengeTimer } from '../components/SpeedChallengeTimer';
+import { isStalePlayQuestion } from '../game/applyIncomingQuestion';
+import { useDelayedFlag } from '../hooks/useDelayedFlag';
 import {
   questionMediaBlockHeight,
   questionMediaStageHeight,
@@ -113,6 +115,10 @@ export function ChallengePlayScreen() {
   const [journeyStepFailed, setJourneyStepFailed] = useState(false);
   const [timerExpired, setTimerExpired] = useState(false);
   const submittingRef = useRef(false);
+  const questionFetchGenRef = useRef(0);
+  const questionRef = useRef<ChallengeQuestion | null>(null);
+  questionRef.current = question;
+  const showSlowQuestionLoad = useDelayedFlag(loading && !question, 2500);
 
   const getPlayPlayerToken = useCallback(async () => {
     const stored = await resolveBirdrJourneyPlayerToken();
@@ -143,17 +149,21 @@ export function ChallengePlayScreen() {
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
+    const generation = ++questionFetchGenRef.current;
     setLoading(true);
     setQuestionLoadError(null);
     try {
       const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
+      if (generation !== questionFetchGenRef.current) return;
+      if (q && isStalePlayQuestion(questionRef.current, q)) return;
       setQuestion(q);
     } catch (e) {
+      if (generation !== questionFetchGenRef.current) return;
       setQuestion(null);
       setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
     } finally {
-      setLoading(false);
+      if (generation === questionFetchGenRef.current) setLoading(false);
     }
   }, [gameToken, getPlayPlayerToken, t]);
 
@@ -181,13 +191,19 @@ export function ChallengePlayScreen() {
   const fetchNextQuestion = useCallback(async () => {
     if (!gameToken || fetchingNextRef.current) return;
     fetchingNextRef.current = true;
+    const generation = ++questionFetchGenRef.current;
     setLoadingNextQuestion(true);
     try {
       const token = await getPlayPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
+      if (generation !== questionFetchGenRef.current) return;
       if (!q) {
         setLoadingNextQuestion(false);
         navigateJourneyResults();
+        return;
+      }
+      if (isStalePlayQuestion(questionRef.current, q)) {
+        setLoadingNextQuestion(false);
         return;
       }
       setAnswerResult(null);
@@ -197,10 +213,14 @@ export function ChallengePlayScreen() {
       setQuestion(q);
       await loadJourneyGame();
     } catch (e) {
+      if (generation !== questionFetchGenRef.current) return;
       setQuestionLoadError(e instanceof Error ? e.message : t('error_loading_question'));
       setLoadingNextQuestion(false);
     } finally {
       fetchingNextRef.current = false;
+      if (generation === questionFetchGenRef.current) {
+        setLoadingNextQuestion(false);
+      }
     }
   }, [gameToken, getPlayPlayerToken, loadJourneyGame, navigateJourneyResults, t]);
 
@@ -460,6 +480,9 @@ export function ChallengePlayScreen() {
       <View style={styles.centered} testID="challengePlay.loading">
         <ActivityIndicator size="large" color={colors.primary[500]} />
         <Text style={styles.muted}>{t('loading_question')}</Text>
+        {showSlowQuestionLoad ? (
+          <Text style={styles.muted}>{t('loading_taking_long')}</Text>
+        ) : null}
       </View>
     );
   }

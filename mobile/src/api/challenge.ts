@@ -94,7 +94,7 @@ export async function createChallengePlayer(
 export async function getChallengeQuestion(
   gameToken: string,
   playerToken?: string | null,
-  options?: { cacheBust?: boolean; timeoutMs?: number }
+  options?: { cacheBust?: boolean; timeoutMs?: number; signal?: AbortSignal }
 ): Promise<ChallengeQuestion | null> {
   const headers: HeadersInit = { Accept: 'application/json' };
   if (playerToken) {
@@ -106,6 +106,8 @@ export async function getChallengeQuestion(
   const timeoutMs = options?.timeoutMs ?? 25_000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  options?.signal?.addEventListener('abort', onExternalAbort);
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -127,6 +129,7 @@ export async function getChallengeQuestion(
     return question;
   } finally {
     clearTimeout(timeoutId);
+    options?.signal?.removeEventListener('abort', onExternalAbort);
   }
 }
 

@@ -33,6 +33,7 @@ import SpeciesCombobox from '../../components/species-combobox';
 import { ZoomablePlayImage } from '../../components/zoomable-play-image';
 import { SpeedChallengeTimer } from '../../components/speed-challenge-timer';
 import AppContext, { Answer, Question, Species } from '../../core/app-context';
+import { isStalePlayQuestion } from '../../core/apply-incoming-question';
 import {
   currentPlayMediaItem,
   mediaArrayLengthForQuestion,
@@ -80,6 +81,9 @@ export function BirdrJourneyPlayPage() {
   const mediaPostedForQuestionId = useRef<number | null>(null);
   const playerTokenRef = useRef<string | null>(null);
   const submittingRef = useRef(false);
+  const questionFetchGenRef = useRef(0);
+  const questionRef = useRef<Question | null>(null);
+  questionRef.current = question;
 
   const navigateResults = useCallback(() => {
     navigate(`/journey/${countryCode}/results?gameToken=${gameToken}`, { replace: true });
@@ -99,16 +103,20 @@ export function BirdrJourneyPlayPage() {
 
   const loadQuestion = useCallback(async () => {
     if (!gameToken) return;
+    const generation = ++questionFetchGenRef.current;
     setLoading(true);
     try {
       const token = await resolveBirdrJourneyPlayerToken();
       playerTokenRef.current = token;
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
+      if (generation !== questionFetchGenRef.current) return;
+      if (q && isStalePlayQuestion(questionRef.current, q)) return;
       setQuestion(q);
     } catch {
+      if (generation !== questionFetchGenRef.current) return;
       setQuestion(null);
     } finally {
-      setLoading(false);
+      if (generation === questionFetchGenRef.current) setLoading(false);
     }
   }, [gameToken]);
 
@@ -235,11 +243,13 @@ export function BirdrJourneyPlayPage() {
     }
     setResponse(null);
     setLevelEnded(false);
-    setQuestion(null);
     setLoadingNextQuestion(true);
+    const generation = ++questionFetchGenRef.current;
     try {
       const token = await resolveBirdrJourneyPlayerToken();
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
+      if (generation !== questionFetchGenRef.current) return;
+      if (q && isStalePlayQuestion(questionRef.current, q)) return;
       setQuestion(q);
       if (!q) {
         const journey = await getBirdrJourney(countryCode);
@@ -251,7 +261,7 @@ export function BirdrJourneyPlayPage() {
       }
       await loadJourneyGame();
     } finally {
-      setLoadingNextQuestion(false);
+      if (generation === questionFetchGenRef.current) setLoadingNextQuestion(false);
     }
   };
 

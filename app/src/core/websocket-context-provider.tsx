@@ -4,6 +4,7 @@ import WebsocketContext from "./websocket-context"
 import { toaster } from "@/components/ui/toaster"
 import { validateQuestionForGame } from './game-token-validator'
 import { getWebSocketUrl } from '../api/baseUrl'
+import { isStalePlayQuestion } from './apply-incoming-question'
 
 type Props = {
   children: ReactNode;
@@ -25,6 +26,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
   const questionGameTokenRef = useRef<string | undefined>(undefined);
   const pendingActionsRef = useRef<{}[]>([]);
   const currentQuestionIdRef = useRef<number | undefined>(undefined);
+  const currentQuestionSeqRef = useRef<number | undefined>(undefined);
 
   const {game, setGame, player, language} = useContext(AppContext)
 
@@ -75,10 +77,11 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     }
   }, [question?.game?.token])
 
-  // Track current question id so we don't clear answer when we receive the same question on reconnect
+  // Track current question so we don't clear answer when we receive the same question on reconnect
   useEffect(() => {
     currentQuestionIdRef.current = question?.id
-  }, [question?.id])
+    currentQuestionSeqRef.current = question?.sequence
+  }, [question?.id, question?.sequence])
 
   const markGameStarted = useCallback(() => {
     setGameStarted(true)
@@ -117,6 +120,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setQuestion(undefined)
       setAnswer(undefined)
       setGameStarted(false)
+      currentQuestionIdRef.current = undefined
+      currentQuestionSeqRef.current = undefined
     }
 
     const socketUrl = getWebSocketUrl(`/mpg/${game.token}`);
@@ -169,23 +174,29 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
         case 'new_question':
           // Only clear answer when advancing to a genuinely new question.
           // On reconnect we get the same question again; don't wipe answer_checked we may receive after.
-          const incomingQuestionId = message.question?.id
-          if (incomingQuestionId !== currentQuestionIdRef.current) {
-            setAnswer(undefined)
-          }
-          const question: Question = message.question
-          // Trust the socket's game only. React context/localStorage can lag behind the WS connection
-          // (stale closure in this handler), which used to drop valid new_question for guests.
-          if (validateQuestionForGame(question, socketGameToken)) {
-            console.log('Setting question for game:', socketGameToken)
-            setQuestion(question)
-            setGameStarted(true)
-          } else {
+          const incomingQuestion = message.question as Question
+          if (!validateQuestionForGame(incomingQuestion, socketGameToken)) {
             console.log('Ignoring new_question - validation failed:', {
-              questionToken: question.game?.token,
+              questionToken: incomingQuestion?.game?.token,
               socketToken: socketGameToken,
             })
+            break
           }
+          if (
+            isStalePlayQuestion(
+              { id: currentQuestionIdRef.current, sequence: currentQuestionSeqRef.current },
+              incomingQuestion
+            )
+          ) {
+            break
+          }
+          if (incomingQuestion?.id !== currentQuestionIdRef.current) {
+            setAnswer(undefined)
+          }
+          setQuestion(incomingQuestion)
+          currentQuestionIdRef.current = incomingQuestion?.id
+          currentQuestionSeqRef.current = incomingQuestion?.sequence
+          setGameStarted(true)
           break
         case 'game_started':
           setGameStarted(true)
@@ -208,10 +219,21 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
             setGame(endedGame)
             setQuestion(undefined)
             setAnswer(undefined)
+            currentQuestionIdRef.current = undefined
+            currentQuestionSeqRef.current = undefined
           }
           break
         case 'answer_checked':
-          setAnswer(message.answer as Answer)
+          const checked = message.answer as Answer
+          const checkedQuestionId = checked?.question?.id
+          if (
+            checkedQuestionId != null &&
+            currentQuestionIdRef.current != null &&
+            checkedQuestionId !== currentQuestionIdRef.current
+          ) {
+            break
+          }
+          setAnswer(checked)
           break
         case 'rematch_invitation':
           // Rematch invitation is handled in ResultsComponent
@@ -314,6 +336,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     setQuestion(undefined)
     setAnswer(undefined)
     setGameStarted(false)
+    currentQuestionIdRef.current = undefined
+    currentQuestionSeqRef.current = undefined
     
     // Mark as connecting
     isConnectingRef.current = true
@@ -342,6 +366,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     setQuestion(undefined)
     setAnswer(undefined)
     setGameStarted(false)
+    currentQuestionIdRef.current = undefined
+    currentQuestionSeqRef.current = undefined
   }
 
   useEffect(() => {
@@ -369,6 +395,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setAnswer(undefined)
       setPlayers([])
       setGameStarted(false)
+      currentQuestionIdRef.current = undefined
+      currentQuestionSeqRef.current = undefined
       isConnectingRef.current = false
       retries.current = 0
       
@@ -385,6 +413,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setAnswer(undefined)
       setPlayers([])
       setGameStarted(false)
+      currentQuestionIdRef.current = undefined
+      currentQuestionSeqRef.current = undefined
       isConnectingRef.current = false
       retries.current = 0
       prevGameTokenRef.current = undefined

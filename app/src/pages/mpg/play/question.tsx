@@ -126,6 +126,16 @@ export const QuestionComponent = () => {
     endGameSession()
   }
   const isHost = player?.name === game?.host?.name
+  const waitingForHost = !isHost && !done && resultsReadyForCurrentQuestion
+  const [showSlowHostWait, setShowSlowHostWait] = useState(false)
+  useEffect(() => {
+    if (!waitingForHost) {
+      setShowSlowHostWait(false)
+      return
+    }
+    const timer = window.setTimeout(() => setShowSlowHostWait(true), 4000)
+    return () => window.clearTimeout(timer)
+  }, [waitingForHost])
   const viewSpecies = (species: Species) => {
     setShowSpecies(species)
     onSpeciesOpen()
@@ -314,10 +324,20 @@ export const QuestionComponent = () => {
             </Button>
           )
         ) : (
-          <FormattedMessage
-            defaultMessage={'Waiting for {host} to continue to the next question'}
-            id={'waiting for host to click next question'}
-            values={{host: game?.host?.name || 'host'}}/>
+          <Box>
+            <FormattedMessage
+              defaultMessage={'Waiting for {host} to continue to the next question'}
+              id={'waiting for host to click next question'}
+              values={{host: game?.host?.name || 'host'}}/>
+            {showSlowHostWait ? (
+              <Text fontSize="sm" color="primary.500" mt={2}>
+                <FormattedMessage
+                  id="loading taking long"
+                  defaultMessage="This is taking longer than usual. Your connection may be slow."
+                />
+              </Text>
+            ) : null}
+          </Box>
         )
 
       )}

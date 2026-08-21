@@ -22,6 +22,7 @@ import { MediaCredits } from '../components/MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
 import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
+import { useDelayedFlag } from '../hooks/useDelayedFlag';
 import {
   questionMediaBlockHeight,
   questionMediaStageHeight,
@@ -116,17 +117,34 @@ export function GamePlayScreen() {
     }, [game?.token, player?.token, joinGame, setGame])
   );
 
+  const questionIdRef = useRef(question?.id);
+  questionIdRef.current = question?.id;
+  const connectedRef = useRef(connected);
+  connectedRef.current = connected;
+  const gameRefForPoll = useRef(game);
+  const playerRefForPoll = useRef(player);
+  gameRefForPoll.current = game;
+  playerRefForPoll.current = player;
+
   useEffect(() => {
     if (!game?.token || !player?.token) return;
-    void refreshGameState({ force: true });
+    if (!questionIdRef.current) {
+      void refreshGameState({ force: true });
+    }
     const interval = setInterval(() => {
-      if (!connected) {
-        joinGame(game, player, setGame, { force: true });
+      const gameNow = gameRefForPoll.current;
+      const playerNow = playerRefForPoll.current;
+      if (!gameNow?.token || !playerNow?.token) return;
+      if (!connectedRef.current) {
+        joinGame(gameNow, playerNow, setGame, { force: true });
+        return;
       }
-      void refreshGameState({ resyncWs: true, force: true });
-    }, 5000);
+      if (!questionIdRef.current) {
+        void refreshGameState({ resyncWs: true, force: true });
+      }
+    }, 8000);
     return () => clearInterval(interval);
-  }, [connected, game, player, joinGame, setGame, refreshGameState]);
+  }, [game?.token, player?.token, joinGame, setGame, refreshGameState]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -349,6 +367,21 @@ export function GamePlayScreen() {
       );
     })();
 
+  const isHost =
+    !!player &&
+    !!game &&
+    (player.name === (game.host as any)?.name || player.id === (game.host as any)?.id);
+  const gameLength =
+    typeof game?.length === 'number' ? game.length : parseInt(String(game?.length ?? ''), 10) || 10;
+  const done = gameLength <= (question?.sequence ?? 0);
+  const waitingForHost = !isHost && !done && resultsReadyForCurrentQuestion;
+  const showSlowQuestionLoad = useDelayedFlag(!question, 2500);
+  const showSlowMediaLoad = useDelayedFlag(
+    Boolean(question) && !advancingQuestion && !mediaReady && mediaType !== 'audio',
+    4000
+  );
+  const showSlowHostWait = useDelayedFlag(waitingForHost, 4000);
+
   useEffect(() => {
     if (!isPracticeGame || !resultsReadyForCurrentQuestion || !answer || answer.correct) return;
     const wrongBefore = countWrongAnswers(practiceAnswers);
@@ -386,12 +419,6 @@ export function GamePlayScreen() {
       </View>
     );
   }
-
-  const gameLength = typeof game.length === 'number' ? game.length : parseInt(String(game.length), 10) || 10;
-  const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
-  const done = gameLength <= (question?.sequence ?? 0);
-
-  const waitingForHost = !isHost && !done && resultsReadyForCurrentQuestion;
 
   const handleEndGame = () => {
     if (!resultsReadyForCurrentQuestion) return;
@@ -493,6 +520,9 @@ export function GamePlayScreen() {
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
         <Text style={styles.muted}>{t('loading_question')}</Text>
+        {showSlowQuestionLoad ? (
+          <Text style={styles.refreshQuestionHint}>{t('loading_taking_long')}</Text>
+        ) : null}
         <TouchableOpacity
           style={styles.refreshQuestionButton}
           onPress={() => void handleRefreshQuestion()}
@@ -611,6 +641,11 @@ export function GamePlayScreen() {
         }}
       />
       )}
+      {showSlowMediaLoad ? (
+        <Text style={styles.mediaSlowHint} testID="gamePlay.slowMediaHint">
+          {t('loading_taking_long')}
+        </Text>
+      ) : null}
       </View>
 
       <View style={styles.nextSection}>
@@ -623,22 +658,27 @@ export function GamePlayScreen() {
             <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
           </TouchableOpacity>
         ) : waitingForHost ? (
-          <View style={styles.waitForHostRow}>
-            <Text style={styles.waitForHostText}>{t('waiting_for_host')}</Text>
-            <TouchableOpacity
-              style={styles.waitForHostRefreshButton}
-              onPress={() => void handleRefreshQuestion()}
-              disabled={refreshingQuestion}
-              testID="gamePlay.waitForHostRefresh"
-              accessibilityRole="button"
-              accessibilityLabel={t('refresh')}
-            >
-              {refreshingQuestion ? (
-                <ActivityIndicator size="small" color={colors.primary[700]} />
-              ) : (
-                <FontAwesome5 name="sync" size={16} color={colors.primary[700]} />
-              )}
-            </TouchableOpacity>
+          <View>
+            <View style={styles.waitForHostRow}>
+              <Text style={styles.waitForHostText}>{t('waiting_for_host')}</Text>
+              <TouchableOpacity
+                style={styles.waitForHostRefreshButton}
+                onPress={() => void handleRefreshQuestion()}
+                disabled={refreshingQuestion}
+                testID="gamePlay.waitForHostRefresh"
+                accessibilityRole="button"
+                accessibilityLabel={t('refresh')}
+              >
+                {refreshingQuestion ? (
+                  <ActivityIndicator size="small" color={colors.primary[700]} />
+                ) : (
+                  <FontAwesome5 name="sync" size={16} color={colors.primary[700]} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {showSlowHostWait ? (
+              <Text style={styles.refreshQuestionHint}>{t('loading_taking_long')}</Text>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -927,6 +967,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: { color: colors.primary[50], fontSize: 16, fontWeight: '600' },
   mediaWrap: { marginBottom: 12, width: '100%' },
+  mediaSlowHint: {
+    fontSize: 13,
+    color: colors.primary[500],
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    lineHeight: 18,
+  },
   mediaInner: { marginBottom: 0 },
   mediaCreditsSpacer: { height: QUESTION_MEDIA_CREDITS_HEIGHT },
   creditsRow: {

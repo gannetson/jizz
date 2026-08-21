@@ -54,20 +54,24 @@ export const languageNamesNl: Record<string, string> = {
   mr: 'Marathi',
   sw: 'Swahili',
   af: 'Afrikaans',
-  la: 'Wetenschappelijk',
+  la: 'Wetenschappelijk (Latijn)',
 };
 
 export type LanguageLike = { code: string; name: string };
 
+export const SCIENTIFIC_LANGUAGE_CODE = 'la';
+export const SCIENTIFIC_LANGUAGE_NAME_EN = 'Scientific (Latin)';
+export const SCIENTIFIC_LANGUAGE_NAME_NL = 'Wetenschappelijk (Latijn)';
+
 export function withScientificLanguage<T extends LanguageLike>(languages: T[]): T[] {
   const rest = languages.filter((l) => l.code !== 'la');
-  return [{ code: 'la', name: 'Scientific' } as T, ...rest];
+  return [{ code: 'la', name: SCIENTIFIC_LANGUAGE_NAME_EN } as T, ...rest];
 }
 
 export function getLanguageDisplayName(lang: LanguageLike | null | undefined, locale: string): string {
   if (!lang) return '';
   if (lang.code === 'la') {
-    return locale === 'nl' ? 'Wetenschappelijk' : 'Scientific';
+    return locale === 'nl' ? SCIENTIFIC_LANGUAGE_NAME_NL : SCIENTIFIC_LANGUAGE_NAME_EN;
   }
   if (locale === 'nl' && languageNamesNl[lang.code]) {
     return languageNamesNl[lang.code];

@@ -108,6 +108,7 @@
   "link": "Link",
   "loading more": "Loading more...",
   "loading question": "Loading question...",
+  "loading taking long": "This is taking longer than usual. Your connection may be slow.",
   "login": "Login",
   "login_to_save_progress": "Login to save your progress and compete on leaderboards",
   "login_with_apple": "Continue with Apple",

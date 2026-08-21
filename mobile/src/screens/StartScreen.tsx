@@ -26,6 +26,7 @@ import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
 import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
 import { CountrySelect } from '../components/CountrySelect';
+import { SpeciesLanguageLabel } from '../components/SpeciesLanguageLabel';
 import { colors } from '../theme';
 import {
   loadTaxOrders,
@@ -279,7 +280,10 @@ export function StartScreen() {
 
       <Text style={styles.label}>{t('language_species_names')}</Text>
       <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="start.selectLanguage" accessibilityLabel={t('select_language')}>
-        <Text style={styles.selectButtonText}>{getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language_dots')}</Text>
+        <SpeciesLanguageLabel
+          code={language}
+          label={getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language_dots')}
+        />
       </TouchableOpacity>
       <Modal visible={languageModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalBackdrop} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }}>
@@ -308,7 +312,12 @@ export function StartScreen() {
                     })();
                   }}
                 >
-                  <Text style={[styles.modalItemText, language === item.code && styles.modalItemTextSelected]}>{getLanguageDisplayName(item, locale)}</Text>
+                  <SpeciesLanguageLabel
+                    code={item.code}
+                    label={getLanguageDisplayName(item, locale)}
+                    selected={language === item.code}
+                    textStyle={language === item.code ? styles.modalItemTextSelected : styles.modalItemText}
+                  />
                 </TouchableOpacity>
               )}
             />

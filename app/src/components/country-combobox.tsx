@@ -113,7 +113,7 @@ export const CountryCombobox = ({
       : defaultStyles;
 
   return (
-    <Box position="relative" zIndex={1}>
+    <Box>
       <ReactSelect<OptionType>
         options={options}
         value={selectedOption}

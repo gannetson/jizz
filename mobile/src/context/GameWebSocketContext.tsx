@@ -12,6 +12,7 @@ import { getCurrentQuestion, type Game } from '../api/games';
 import type { Player } from '../api/player';
 import type { Question, Answer, MultiPlayer } from '../types/game';
 import { getWebSocketUrl } from '../api/config';
+import { isStalePlayQuestion } from '../game/applyIncomingQuestion';
 
 type GameWebSocketContextType = {
   players: MultiPlayer[];
@@ -80,11 +81,29 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const languageCodeRef = useRef<string>('en');
   const socketRef = useRef<WebSocket | undefined>(undefined);
   const currentQuestionIdRef = useRef<number | undefined>(undefined);
+  const currentQuestionSeqRef = useRef<number | undefined>(undefined);
+  const fetchGenerationRef = useRef(0);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const catchUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStartedRef = useRef(false);
   const pendingActionsRef = useRef<Record<string, unknown>[]>([]);
   const isConnectingRef = useRef(false);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleReconnectRef = useRef<(() => void) | null>(null);
+
+  const resetQuestionState = useCallback(() => {
+    fetchAbortRef.current?.abort();
+    fetchAbortRef.current = null;
+    fetchGenerationRef.current += 1;
+    if (catchUpTimerRef.current) {
+      clearTimeout(catchUpTimerRef.current);
+      catchUpTimerRef.current = null;
+    }
+    setQuestion(undefined);
+    setAnswer(undefined);
+    currentQuestionIdRef.current = undefined;
+    currentQuestionSeqRef.current = undefined;
+  }, []);
 
   useEffect(() => {
     socketRef.current = socket;
@@ -94,12 +113,10 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   const clearRematchError = useCallback(() => setRematchError(null), []);
 
   const clearQuestion = useCallback(() => {
-    setQuestion(undefined);
-    setAnswer(undefined);
-    currentQuestionIdRef.current = undefined;
+    resetQuestionState();
     setGameStarted(false);
     gameStartedRef.current = false;
-  }, []);
+  }, [resetQuestionState]);
 
   const markGameStarted = useCallback(() => {
     gameStartedRef.current = true;
@@ -108,23 +125,41 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
 
   const applyQuestion = useCallback((next: Question | null | undefined, gameToken: string) => {
     if (!next?.id || !questionBelongsToSocketGame(next, gameToken)) return;
+    if (
+      isStalePlayQuestion(
+        { id: currentQuestionIdRef.current, sequence: currentQuestionSeqRef.current },
+        next
+      )
+    ) {
+      return;
+    }
     if (next.id !== currentQuestionIdRef.current) {
       setAnswer(undefined);
     }
     setQuestion(next);
     currentQuestionIdRef.current = next.id;
+    currentQuestionSeqRef.current = next.sequence;
     gameStartedRef.current = true;
     setGameStarted(true);
+    if (catchUpTimerRef.current) {
+      clearTimeout(catchUpTimerRef.current);
+      catchUpTimerRef.current = null;
+    }
   }, []);
 
   const fetchCurrentQuestion = useCallback(
     async (gameToken: string, ws: WebSocket | undefined, connectionGameToken: string) => {
       if (ws && currentSocketRef.current !== ws) return;
+      fetchAbortRef.current?.abort();
+      const controller = new AbortController();
+      fetchAbortRef.current = controller;
+      const generation = ++fetchGenerationRef.current;
       try {
-        const q = await getCurrentQuestion(gameToken);
+        const q = await getCurrentQuestion(gameToken, { signal: controller.signal });
+        if (generation !== fetchGenerationRef.current) return;
         applyQuestion(q, connectionGameToken);
       } catch {
-        // ignore — UI keeps existing state
+        // ignore abort / network — UI keeps existing state
       }
     },
     [applyQuestion]
@@ -206,12 +241,17 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             case 'game_started':
               gameStartedRef.current = true;
               setGameStarted(true);
-              void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
-              [400, 1500, 3500].forEach((delay) => {
-                setTimeout(() => {
-                  void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
-                }, delay);
-              });
+              if (!currentQuestionIdRef.current) {
+                void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+                if (catchUpTimerRef.current) clearTimeout(catchUpTimerRef.current);
+                catchUpTimerRef.current = setTimeout(() => {
+                  catchUpTimerRef.current = null;
+                  if (currentSocketRef.current !== ws) return;
+                  if (!currentQuestionIdRef.current) {
+                    void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+                  }
+                }, 2000);
+              }
               break;
             case 'game_updated':
               if (tokensEqual(message.game?.token, connectionGameToken) && setGameRef.current) {
@@ -220,22 +260,32 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
                 gameRef.current = updatedGame;
                 if ((updatedGame.progress ?? 0) > 0) {
                   gameStartedRef.current = true;
-                  void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+                  if (!currentQuestionIdRef.current) {
+                    void fetchCurrentQuestion(connectionGameToken, ws, connectionGameToken);
+                  }
                 }
               }
               break;
             case 'game_ended':
               if (tokensEqual(message.game?.token, connectionGameToken) && setGameRef.current) {
                 setGameRef.current(message.game as Game);
-                setQuestion(undefined);
-                setAnswer(undefined);
-                currentQuestionIdRef.current = undefined;
+                resetQuestionState();
                 setRematchError(null);
               }
               break;
-            case 'answer_checked':
-              setAnswer(message.answer as Answer);
+            case 'answer_checked': {
+              const checked = message.answer as Answer;
+              const checkedQuestionId = checked?.question?.id;
+              if (
+                checkedQuestionId != null &&
+                currentQuestionIdRef.current != null &&
+                checkedQuestionId !== currentQuestionIdRef.current
+              ) {
+                break;
+              }
+              setAnswer(checked);
               break;
+            }
             case 'rematch_invitation':
               setRematchError(null);
               if (message.new_game_token && message.host_name != null) {
@@ -276,7 +326,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
 
       setSocket(ws);
     },
-    [applyQuestion, fetchCurrentQuestion, flushPendingActions]
+    [applyQuestion, fetchCurrentQuestion, flushPendingActions, resetQuestionState]
   );
 
   const ensureConnection = useCallback(() => {
@@ -418,10 +468,8 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         gameTokenRef.current = '';
         gameRef.current = null;
         playerRef.current = null;
-        setQuestion(undefined);
-        setAnswer(undefined);
+        resetQuestionState();
         setPlayers([]);
-        currentQuestionIdRef.current = undefined;
         gameStartedRef.current = false;
         setGameStarted(false);
         return;
@@ -436,17 +484,15 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
       }
 
       if (replaceSessionState) {
-        setQuestion(undefined);
-        setAnswer(undefined);
+        resetQuestionState();
         setPlayers([]);
-        currentQuestionIdRef.current = undefined;
         gameStartedRef.current = false;
         setGameStarted(false);
       }
 
       connectSocket(game, player, setGame);
     },
-    [closeSocket, connectSocket]
+    [closeSocket, connectSocket, resetQuestionState]
   );
 
   useEffect(() => {
@@ -481,6 +527,10 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
       }
+      if (catchUpTimerRef.current) {
+        clearTimeout(catchUpTimerRef.current);
+      }
+      fetchAbortRef.current?.abort();
     };
   }, []);
 

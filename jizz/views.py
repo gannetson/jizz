@@ -207,7 +207,7 @@ class LanguageListView(ListAPIView):
             if row.get('code') != 'la'
         ]
         data.sort(key=lambda row: (row.get('name') or '').lower())
-        return Response([{'code': 'la', 'name': 'Scientific'}, *data])
+        return Response([{'code': 'la', 'name': 'Scientific (Latin)'}, *data])
 
 
 class PageListView(ListAPIView):

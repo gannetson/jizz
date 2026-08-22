@@ -29,7 +29,8 @@ import { toaster } from '@/components/ui/toaster';
 import { BsCheckCircle, BsXCircle } from 'react-icons/bs';
 import { UseCountries } from '../user/use-countries';
 import CountryCombobox from '../components/country-combobox';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { fetchSpeciesDetail } from '../api/fetch-species-detail';
 import { FaArrowAltCircleRight, FaChevronDown, FaChevronRight, FaTrophy } from "react-icons/fa";
 import { FaQuestion } from "react-icons/fa";
 import Confetti from "react-confetti";
@@ -80,6 +81,11 @@ const glowKeyframes = keyframes`
 
 export const MediaReviewPage = () => {
   const { countryCode } = useParams<{ countryCode: string }>();
+  const [searchParams] = useSearchParams();
+  const urlSpeciesId = useMemo(() => {
+    const n = Number(searchParams.get('species'));
+    return Number.isInteger(n) && n > 0 ? n : null;
+  }, [searchParams]);
   const [speciesWithMedia, setSpeciesWithMedia] = useState<SpeciesWithMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -127,15 +133,23 @@ export const MediaReviewPage = () => {
     }
   }, []);
 
+  const [urlSpeciesReady, setUrlSpeciesReady] = useState(!urlSpeciesId);
+  const skipNextCountrySpeciesClear = useRef(true);
+
   // Preselect country from URL when param is set or changes (e.g. navigation to /media-review/NL)
   useEffect(() => {
     if (countryCode) {
-      setSelectedCountry(countryCode.toUpperCase());
+      const next = countryCode.toUpperCase();
+      setSelectedCountry((prev) => (prev === next ? prev : next));
     }
   }, [countryCode]);
 
-  // Clear species filter when country changes
+  // Clear species filter when country changes (but not on the initial render / URL preselect)
   useEffect(() => {
+    if (skipNextCountrySpeciesClear.current) {
+      skipNextCountrySpeciesClear.current = false;
+      return;
+    }
     setSelectedSpecies(null);
   }, [selectedCountry]);
 
@@ -143,6 +157,29 @@ export const MediaReviewPage = () => {
   const { player, speciesLanguage } = useContext(AppContext);
   const intl = useIntl();
   const languageParam = speciesLanguage === 'nl' ? 'nl' : speciesLanguage === 'la' ? 'la' : (speciesLanguage ?? 'en');
+
+  // Preselect species from ?species= (e.g. from a species page)
+  useEffect(() => {
+    if (!urlSpeciesId) {
+      setUrlSpeciesReady(true);
+      return;
+    }
+    let cancelled = false;
+    setUrlSpeciesReady(false);
+    fetchSpeciesDetail(urlSpeciesId, languageParam)
+      .then((species) => {
+        if (!cancelled) setSelectedSpecies(species);
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedSpecies(null);
+      })
+      .finally(() => {
+        if (!cancelled) setUrlSpeciesReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [urlSpeciesId, languageParam]);
 
   // Load species for selected country (for filter dropdown)
   useEffect(() => {
@@ -233,8 +270,9 @@ export const MediaReviewPage = () => {
   );
 
   useEffect(() => {
+    if (!urlSpeciesReady) return;
     loadSpecies(1, true, selectedCountry || undefined, selectedMediaType, selectedSpecies?.id, reviewLevel);
-  }, [selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam, loadSpecies]);
+  }, [urlSpeciesReady, selectedCountry, selectedMediaType, selectedSpecies?.id, reviewLevel, languageParam, loadSpecies]);
 
   useEffect(() => {
     let cancelled = false;
@@ -882,7 +920,7 @@ export const MediaReviewPage = () => {
                 allowEmpty
               />
             </Box>
-            {selectedCountry && (
+            {(selectedCountry || selectedSpecies) && (
               <Box minW="220px">
                 <SpeciesCombobox
                   species={speciesList}

@@ -354,6 +354,10 @@ SPECIES_ILLUSTRATION_SIZE = os.environ.get('SPECIES_ILLUSTRATION_SIZE', '1024x10
 SPECIES_ILLUSTRATION_QUALITY = os.environ.get('SPECIES_ILLUSTRATION_QUALITY', 'low')
 SPECIES_ILLUSTRATION_OUTPUT_FORMAT = os.environ.get('SPECIES_ILLUSTRATION_OUTPUT_FORMAT', 'png')
 
+# Species comparison text (OpenAI Chat Completions, cached on SpeciesComparison).
+COMPARISON_AI_MODEL = os.environ.get('COMPARISON_AI_MODEL', 'gpt-4o')
+COMPARISON_AI_PROMPT_VERSION = os.environ.get('COMPARISON_AI_PROMPT_VERSION', 'v2')
+
 # Native mobile app minimum semver (force-update gate in iOS/Android clients).
 APP_MIN_VERSION = os.environ.get('APP_MIN_VERSION', '1.79.0')
 # Latest public store release semver (soft-update prompt; beta builds ahead of this skip the banner).

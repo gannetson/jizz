@@ -10,6 +10,13 @@ from django.core.mail import EmailMessage
 
 def feedback_sender_label(feedback) -> str:
     parts = []
+    contact_name = (getattr(feedback, 'contact_name', '') or '').strip()
+    contact_email = (getattr(feedback, 'contact_email', '') or '').strip()
+    if contact_name or contact_email:
+        label = contact_name or 'Visitor'
+        if contact_email:
+            label = f'{label} ({contact_email})'
+        parts.append(label)
     if feedback.user_id:
         user = feedback.user
         label = (user.get_full_name() or '').strip() or user.username
@@ -23,6 +30,11 @@ def feedback_sender_label(feedback) -> str:
 
 def feedback_reply_to(feedback) -> str | None:
     """Reply-To address for the submitter, when an email is known."""
+    contact_email = (getattr(feedback, 'contact_email', '') or '').strip()
+    if contact_email:
+        name = (getattr(feedback, 'contact_name', '') or '').strip()
+        return formataddr((name, contact_email))
+
     user = feedback.user if feedback.user_id else None
     if not user and feedback.player_id and feedback.player.user_id:
         user = feedback.player.user

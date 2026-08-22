@@ -89,10 +89,10 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
     - correctly_answered / wrongly_answered: answers where the player picked this species.
     - error_rate: % wrong among picks of this species = wrong / (wrong + correct).
 
-    If country_code is set, only species on that country's checklist are included
-    (CountrySpecies excludes introduced / uncertain / unknown). Answer counts come from
-    all games worldwide, not only games played in that country. Uses a lower minimum
-    pick count than the global view (see min_times_shown_for_filter).
+    If country_code is set, only answers from games in that country are counted,
+    and only for species on that country's checklist (CountrySpecies excludes
+    introduced / uncertain / unknown). Uses a lower minimum pick count than the
+    global view (see min_times_shown_for_filter).
     """
     cc = normalize_country_filter(country_code)
     min_picks = min_times_shown_for_filter(country_code)
@@ -101,7 +101,10 @@ def get_species_mistake_rows(country_code: str | None = None) -> list[dict[str, 
         allowed = _allowed_species_ids_for_country(cc)
         if not allowed:
             return []
-        answers = answers.filter(answer_id__in=allowed)
+        answers = answers.filter(
+            question__game__country_id=cc,
+            answer_id__in=allowed,
+        )
 
     times_shown = {
         row["answer_id"]: row["c"]
@@ -185,7 +188,7 @@ def get_top_mistake_target_species_ids(
     """
     Species most often answered wrong when they were the question target.
 
-    Uses the same country checklist filter and global answers as get_species_mistake_rows,
+    Uses the same country game + checklist filter as get_species_mistake_rows,
     but counts misses (correct=False, question.species) rather than wrong picks (answer_id).
     Used for Game.dificult_species question selection.
     """
@@ -197,7 +200,10 @@ def get_top_mistake_target_species_ids(
         allowed = _allowed_species_ids_for_country(cc)
         if not allowed:
             return []
-        wrong_answers = wrong_answers.filter(question__species_id__in=allowed)
+        wrong_answers = wrong_answers.filter(
+            question__game__country_id=cc,
+            question__species_id__in=allowed,
+        )
 
     rows = list(
         wrong_answers.values("question__species_id")
@@ -565,9 +571,9 @@ def get_confusion_pair_rows(country_code: str | None = None) -> list[dict[str, A
 
     Directed columns: when the lower-ID species was the target vs when the higher-ID species was the target.
 
-    If country_code is set, only pairs where both species are on that country's checklist
-    (CountrySpecies excludes introduced / uncertain / unknown). Wrong answers are counted
-    from all games worldwide, not only games in that country.
+    If country_code is set, only pairs from games in that country are counted,
+    and only where both species are on that country's checklist
+    (CountrySpecies excludes introduced / uncertain / unknown).
     """
     cc = normalize_country_filter(country_code)
     pairs = Answer.objects.filter(correct=False).exclude(question__species_id=F("answer_id"))
@@ -576,6 +582,7 @@ def get_confusion_pair_rows(country_code: str | None = None) -> list[dict[str, A
         if not allowed:
             return []
         pairs = pairs.filter(
+            question__game__country_id=cc,
             question__species_id__in=allowed,
             answer_id__in=allowed,
         )
@@ -624,6 +631,68 @@ def get_confusion_pair_rows(country_code: str | None = None) -> list[dict[str, A
         )
 
     rows.sort(key=lambda r: r["total_wrong"], reverse=True)
+    return rows
+
+
+def get_confused_partners_for_species(
+    species_id: int,
+    *,
+    limit: int = 5,
+    country_code: str | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Other species most often mixed up with this one, in either direction.
+
+    Counts incorrect answers where this species was the question target or the
+    player's pick. Ordered by mix-up count descending.
+    """
+    if not species_id:
+        return []
+
+    cc = normalize_country_filter(country_code)
+    pairs = (
+        Answer.objects.filter(correct=False)
+        .exclude(question__species_id=F("answer_id"))
+        .filter(Q(question__species_id=species_id) | Q(answer_id=species_id))
+    )
+    if cc:
+        allowed = _allowed_species_ids_for_country(cc)
+        if not allowed:
+            return []
+        pairs = pairs.filter(
+            question__game__country_id=cc,
+            question__species_id__in=allowed,
+            answer_id__in=allowed,
+        )
+
+    directed = list(
+        pairs.values("question__species_id", "answer_id").annotate(c=Count("id"))
+    )
+    totals: dict[int, int] = defaultdict(int)
+    for row in directed:
+        target_id = row["question__species_id"]
+        pick_id = row["answer_id"]
+        other_id = pick_id if target_id == species_id else target_id
+        if not other_id or other_id == species_id:
+            continue
+        totals[other_id] += row["c"]
+
+    ranked = sorted(totals.items(), key=lambda item: (-item[1], item[0]))[:limit]
+    species_map = Species.objects.in_bulk([pk for pk, _ in ranked])
+    rows: list[dict[str, Any]] = []
+    for other_id, total_wrong in ranked:
+        other = species_map.get(other_id)
+        if other is None:
+            continue
+        rows.append(
+            {
+                "species_id": other_id,
+                "name": other.name,
+                "name_latin": other.name_latin or "",
+                "slug": other.slug or "",
+                "total_wrong": total_wrong,
+            }
+        )
     return rows
 
 

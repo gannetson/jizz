@@ -223,6 +223,21 @@ def games_played_by_country(
     }
 
 
+def games_played_for_country(country_code: str) -> dict:
+    """All-time distinct games and players for one quiz country."""
+    row = PlayerScore.objects.filter(
+        game__isnull=False,
+        game__country_id=country_code,
+    ).aggregate(
+        games=Count('game_id', distinct=True),
+        players=Count('player_id', distinct=True),
+    )
+    return {
+        'games': row['games'] or 0,
+        'players': row['players'] or 0,
+    }
+
+
 def games_played_map_style() -> dict:
     """World map colours for jsVectorMap (Birdr browns; zero-data countries gray)."""
     return {

@@ -21,7 +21,7 @@ from django.utils.safestring import mark_safe
 
 from jizz.models import (Answer, BirdrJourney, BirdrJourneyGame, Country,
                          CountrySpecies, CountrySpeciesFrequency, Feedback, FlagQuestion, Game, JourneyLevel,
-                         JourneyStep, Page, Player,
+                         JourneyStep, MarketingPage, Page, Player,
                          PlayerScore, Question, QuestionOption, Reaction,
                          Species, SpeciesIllustration, SpeciesImage, SpeciesSound, SpeciesVideo,
                          TaxonomicOrder, TaxonomicFamily, TaxonomicGenus,
@@ -639,105 +639,29 @@ class SpeciesAdmin(admin.ModelAdmin):
         
         species_1, species_2 = queryset[0], queryset[1]
         
-        # Check if comparison already exists
-        from compare.models import SpeciesComparison
-        existing = SpeciesComparison.objects.filter(
-            comparison_type='species',
-            species_1=species_1,
-            species_2=species_2
-        ).first()
-        
-        if existing:
-            # Redirect to existing comparison
-            comparison_url = reverse('admin:compare_speciescomparison_change', args=(existing.pk,))
-            messages.add_message(request, messages.INFO, 'Comparison already exists.')
-            return HttpResponseRedirect(comparison_url)
-        
-        # Generate new comparison
-        from compare.ai_service import AIComparisonService
-        from compare.models import SpeciesTrait
-        
-        # Get traits for both species
-        traits_1 = {}
-        traits_2 = {}
-        
-        for trait in SpeciesTrait.objects.filter(species=species_1):
-            if trait.category not in traits_1:
-                traits_1[trait.category] = []
-            traits_1[trait.category].append({
-                'title': trait.title,
-                'content': trait.content
-            })
-        
-        for trait in SpeciesTrait.objects.filter(species=species_2):
-            if trait.category not in traits_2:
-                traits_2[trait.category] = []
-            traits_2[trait.category].append({
-                'title': trait.title,
-                'content': trait.content
-            })
-        
-        # Format traits for AI service
-        def format_traits(traits_dict):
-            formatted = {}
-            for category, trait_list in traits_dict.items():
-                formatted[category] = {
-                    'title': category.replace('_', ' ').title(),
-                    'content': '\n\n'.join([t['content'] for t in trait_list])
-                }
-            return formatted
-        
-        traits_1_formatted = format_traits(traits_1)
-        traits_2_formatted = format_traits(traits_2)
-        
-        if not traits_1_formatted:
-            self.message_user(
-                request,
-                f'No traits found for {species_1.name}. Please scrape traits first.',
-                messages.ERROR
-            )
-            return
-        
-        if not traits_2_formatted:
-            self.message_user(
-                request,
-                f'No traits found for {species_2.name}. Please scrape traits first.',
-                messages.ERROR
-            )
-            return
-        
-        # Generate comparison
+        from compare.generation import get_or_create_species_comparison
+
         try:
-            ai_service = AIComparisonService()
-            # Add scientific names to traits for better name matching
-            traits_1_formatted['name_latin'] = species_1.name_latin
-            traits_2_formatted['name_latin'] = species_2.name_latin
-            comparison_data = ai_service.generate_species_comparison(
-                traits_1_formatted, traits_2_formatted, species_1.name, species_2.name
-            )
-            
-            # Create comparison object
-            comparison = SpeciesComparison.objects.create(
-                comparison_type='species',
-                species_1=species_1,
-                species_2=species_2,
-                **comparison_data
-            )
-            
-            # Redirect to the new comparison
+            comparison = get_or_create_species_comparison(species_1, species_2)
+            if comparison is None:
+                self.message_user(
+                    request,
+                    f'Could not generate a comparison between {species_1.name} and {species_2.name}.',
+                    messages.ERROR,
+                )
+                return
             comparison_url = reverse('admin:compare_speciescomparison_change', args=(comparison.pk,))
             messages.add_message(
                 request,
                 messages.SUCCESS,
-                f'Successfully generated comparison between {species_1.name} and {species_2.name}.'
+                f'Comparison ready for {species_1.name} and {species_2.name}.',
             )
             return HttpResponseRedirect(comparison_url)
-            
         except Exception as e:
             self.message_user(
                 request,
                 f'Error generating comparison: {str(e)}',
-                messages.ERROR
+                messages.ERROR,
             )
     generate_comparison.short_description = 'Generate comparison between two selected species'
 
@@ -795,6 +719,18 @@ class PageAdmin(admin.ModelAdmin):
     list_editable = ['show']
     prepopulated_fields = {'slug': ('title',)}
     fields = ['title', 'slug', 'content', 'show']
+
+
+@register(MarketingPage)
+class MarketingPageAdmin(admin.ModelAdmin):
+    list_display = ['title', 'slug', 'published', 'show_in_nav', 'nav_order', 'updated_at']
+    list_editable = ['published', 'show_in_nav', 'nav_order']
+    prepopulated_fields = {'slug': ('title',)}
+    search_fields = ['title', 'slug', 'body']
+    fields = [
+        'title', 'slug', 'meta_description', 'body',
+        'published', 'show_in_nav', 'nav_label', 'nav_order',
+    ]
 
 
 @register(SpeciesName)
@@ -988,8 +924,10 @@ class CountrySpeciesFrequencyAdmin(admin.ModelAdmin):
 
 @register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
-    readonly_fields = ['user', 'player', 'comment', 'rating', 'created']
-    list_display = ['created', 'user', 'player', 'comment', 'rating']
+    readonly_fields = [
+        'user', 'player', 'comment', 'rating', 'contact_name', 'contact_email', 'created',
+    ]
+    list_display = ['created', 'user', 'player', 'contact_name', 'contact_email', 'comment', 'rating']
 
 
 class ReactionAdminInline(admin.StackedInline):

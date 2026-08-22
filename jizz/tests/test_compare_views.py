@@ -204,6 +204,26 @@ class ComparisonRequestViewTestCase(TestCase):
         self.assertEqual(response.data['id'], comp.id)
         self.assertEqual(response.data['summary'], 'Existing.')
 
+    def test_request_post_returns_existing_reverse_species_order(self):
+        comp = SpeciesComparison.objects.create(
+            comparison_type='species',
+            species_1=self.species1,
+            species_2=self.species2,
+            summary='Existing reverse.',
+            detailed_comparison='Already generated.',
+        )
+        response = self.client.post(
+            '/api/compare/request/',
+            {
+                'comparison_type': 'species',
+                'species_1_id': self.species2.id,
+                'species_2_id': self.species1.id,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], comp.id)
+
     @patch('compare.views.ComparisonRequestView._generate_comparison')
     def test_request_post_family_creates_new_comparison(self, mock_generate):
         # Create comparison only when the view calls _generate_comparison (after existing check)

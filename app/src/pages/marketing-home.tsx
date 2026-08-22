@@ -117,10 +117,11 @@ export function MarketingHomePage() {
               Birdr
             </Link>
             <Flex gap={4} wrap="wrap" fontWeight="600" fontSize="sm" align="center">
-              <Link href="/how-it-works/">How it works</Link>
-              <Link href="/bird-identification-quiz/">Quizzes</Link>
-              <Link href="/bird-quiz-by-country/">Countries</Link>
-              <Link href="/flocks/">Flocks</Link>
+              <Link href="/site/how-it-works/">How it works</Link>
+              <Link href="/site/bird-identification-quiz/">Quizzes</Link>
+              <Link href="/site/birds/">Species</Link>
+              <Link href="/site/bird-quiz-by-country/">Countries</Link>
+              <Link href="/site/flocks/">Flocks</Link>
               <Link
                 href="#get-the-app"
                 bg="primary.600"
@@ -149,7 +150,7 @@ export function MarketingHomePage() {
             <Text fontSize="xl" mb={6} maxW="38rem">
               Free photo quizzes, personalised practice and country challenges for birders worldwide.
             </Text>
-            <Box id="get-the-app">
+            <Box id="get-the-app" scrollMarginTop="7.5rem">
               <StoreBadges />
             </Box>
             <Link href="/play" mt={3} display="inline-block" fontWeight="600">
@@ -199,7 +200,7 @@ export function MarketingHomePage() {
             </Box>
           ))}
         </Grid>
-        <Link href="/how-it-works/" fontWeight="600">
+        <Link href="/site/how-it-works/" fontWeight="600">
           See how it works
         </Link>
 
@@ -208,10 +209,11 @@ export function MarketingHomePage() {
         </Heading>
         <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
           {[
-            ['Photo quizzes', 'One quick game, or a longer session. Choose a country, a level and photos, video or sound.', '/bird-identification-quiz/'],
-            ['Country Challenges', 'Structured levels for the birds of a country—from the Netherlands to Japan to Colombia.', '/bird-quiz-by-country/'],
-            ['My Tricky Birds', 'Focused drills on the species and confusing pairs you actually mix up.', '/my-tricky-birds/'],
-            ['Flocks', 'Club quizzes and a private leaderboard for your group—not a global anonymous ladder.', '/flocks/'],
+            ['Photo quizzes', 'One quick game, or a longer session. Choose a country, a level and photos, video or sound.', '/site/bird-identification-quiz/'],
+            ['Species', 'Look up a bird, see what people miss most, and open comparisons for lookalikes.', '/site/birds/'],
+            ['Country Challenges', 'Structured levels for the birds of a country—from the Netherlands to Japan to Colombia.', '/site/bird-quiz-by-country/'],
+            ['My Tricky Birds', 'Focused drills on the species and confusing pairs you actually mix up.', '/site/my-tricky-birds/'],
+            ['Flocks', 'Club quizzes and a private leaderboard for your group—not a global anonymous ladder.', '/site/flocks/'],
           ].map(([title, body, href]) => (
             <Box key={href} {...cardProps}>
               <Heading as="h3" size="md" mb={2}>
@@ -282,10 +284,11 @@ export function MarketingHomePage() {
                 Learn
               </Text>
               <Flex direction="column" gap={1}>
-                <Link href="/how-it-works/">How it works</Link>
-                <Link href="/bird-identification-quiz/">Photo quizzes</Link>
-                <Link href="/my-tricky-birds/">My Tricky Birds</Link>
-                <Link href="/bird-quiz-by-country/">Quizzes by country</Link>
+                <Link href="/site/how-it-works/">How it works</Link>
+                <Link href="/site/bird-identification-quiz/">Photo quizzes</Link>
+                <Link href="/site/birds/">Species</Link>
+                <Link href="/site/my-tricky-birds/">My Tricky Birds</Link>
+                <Link href="/site/bird-quiz-by-country/">Quizzes by country</Link>
               </Flex>
             </Box>
             <Box>
@@ -293,10 +296,10 @@ export function MarketingHomePage() {
                 Birdr
               </Text>
               <Flex direction="column" gap={1}>
-                <Link href="/birding-app/">The app</Link>
-                <Link href="/flocks/">Flocks for clubs</Link>
-                <Link href="/about/">About</Link>
-                <Link href="/privacy/">Privacy</Link>
+                <Link href="/site/birding-app/">The app</Link>
+                <Link href="/site/flocks/">Flocks for clubs</Link>
+                <Link href="/site/page/about/">About</Link>
+                <Link href="/site/page/privacy/">Privacy</Link>
                 <Link href="mailto:info@goedloek.nl">Contact</Link>
               </Flex>
             </Box>

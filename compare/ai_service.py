@@ -1,175 +1,229 @@
 """
-AI service for generating species comparisons using OpenAI or other AI providers.
+AI service for generating species comparisons using OpenAI.
 """
-import os
+from __future__ import annotations
+
+import json
+import logging
 import re
-from typing import Dict, Optional, List
+from typing import Any, Dict, List, Optional
+
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+PROMPT_VERSION = 'v2'
+DEFAULT_MODEL = 'gpt-4o'
+
+# First tokens that match too many unrelated passages in Birds of the World text.
+_GENERIC_NAME_TOKENS = frozenset({
+    'american', 'arctic', 'atlantic', 'black', 'blue', 'brown', 'common',
+    'desert', 'eastern', 'eurasian', 'european', 'great', 'greater', 'green',
+    'grey', 'gray', 'house', 'indian', 'lesser', 'little', 'long', 'marsh',
+    'northern', 'pacific', 'red', 'reed', 'rock', 'sand', 'sea', 'short',
+    'southern', 'steppe', 'tree', 'water', 'western', 'white', 'wood',
+    'yellow',
+})
+
+_TRAIT_ORDER = (
+    'identification',
+    'similar_species',
+    'measurements',
+    'size',
+    'plumage',
+    'vocalization',
+    'habitat',
+    'behavior',
+    'diet',
+    'distribution',
+    'other',
+    'taxonomy',
+)
+
+_TRAIT_CHAR_LIMITS = {
+    'similar_species': 2200,
+    'identification': 2200,
+    'measurements': 1400,
+    'plumage': 1400,
+    'vocalization': 1400,
+    'size': 1000,
+    'habitat': 1000,
+    'behavior': 1000,
+    'diet': 800,
+    'distribution': 800,
+    'other': 800,
+    'taxonomy': 400,
+}
+
+_JSON_KEYS = (
+    'summary',
+    'size_comparison',
+    'plumage_comparison',
+    'behavior_comparison',
+    'habitat_comparison',
+    'vocalization_comparison',
+    'identification_tips',
+)
+
+SYSTEM_PROMPT = (
+    'You are a field-guide editor for Birdr, writing for birdwatchers who need '
+    'to tell two similar species apart in the field. Be precise, practical and '
+    'honest about uncertainty. Prefer diagnostic, observable differences over '
+    'encyclopedic lists. Do not invent measurements, ranges or voice details. '
+    'If sources conflict, prefer Birds of the World similar-species passages. '
+    'Reply with a JSON object only.'
+)
+
+
+def comparison_model_name() -> str:
+    return (getattr(settings, 'COMPARISON_AI_MODEL', None) or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+
+
+def name_search_terms(name: str, latin_name: str | None = None) -> list[str]:
+    """Tokens worth searching for in Birds of the World text."""
+    terms: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str | None):
+        token = (value or '').strip()
+        if not token:
+            return
+        key = token.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        terms.append(token)
+
+    add(name)
+    parts = [p for p in (name or '').split() if p]
+    if len(parts) >= 2:
+        add(' '.join(parts[:2]))
+    if parts:
+        first = re.sub(r"[^\w']", '', parts[0]).lower()
+        if first and first not in _GENERIC_NAME_TOKENS and len(first) >= 5:
+            add(parts[0])
+
+    if latin_name:
+        add(latin_name)
+        latin_parts = latin_name.split()
+        if latin_parts:
+            genus = latin_parts[0]
+            add(genus)
+            if len(latin_parts) > 1:
+                epithet = latin_parts[1]
+                add(epithet)
+                initial = genus[0]
+                add(f'{initial}. {epithet}')
+                add(f'{initial} {epithet}')
+
+    return terms
+
+
+def _clip(text: str, limit: int) -> str:
+    value = (text or '').strip()
+    if len(value) <= limit:
+        return value
+    return value[: limit - 1].rsplit(' ', 1)[0] + '…'
+
+
+def _trait_content(section_data) -> str:
+    if isinstance(section_data, dict):
+        return section_data.get('content') or ''
+    if isinstance(section_data, str):
+        return section_data
+    return ''
 
 
 class AIComparisonService:
-    """
-    Service for generating comparison texts using AI.
-    Supports OpenAI GPT models by default, but can be extended for other providers.
-    """
-    
-    def __init__(self, api_key: Optional[str] = None, model: str = 'gpt-4o-mini'):
-        """
-        Initialize the AI service.
-        
-        Args:
-            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
-            model: Model to use (defaults to 'gpt-4o-mini')
-        """
-        self.api_key = settings.OPENAI_API_KEY
-        self.model = model
-        
+    """Generate structured comparison texts with OpenAI."""
+
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+        self.api_key = (api_key or getattr(settings, 'OPENAI_API_KEY', None) or '').strip()
+        self.model = model or comparison_model_name()
+        self.prompt_version = getattr(settings, 'COMPARISON_AI_PROMPT_VERSION', None) or PROMPT_VERSION
         if not self.api_key:
-            print("Warning: OPENAI_API_KEY not set. AI comparisons will not work.")
-    
-    def _call_openai(self, prompt: str, max_tokens: int = 2000) -> Optional[str]:
-        """
-        Call OpenAI API with a prompt.
-        
-        Args:
-            prompt: The prompt to send
-            max_tokens: Maximum tokens in response
-        
-        Returns:
-            Generated text or None if error
-        """
+            logger.warning('OPENAI_API_KEY is not set; species comparisons cannot be generated')
+
+    def _call_openai(self, prompt: str, max_tokens: int = 2000, *, json_object: bool = False) -> Optional[str]:
         if not self.api_key:
             return None
-        
+
         try:
             from openai import OpenAI
-            import openai
-            import os
-            
-            # Check OpenAI library version for compatibility
-            try:
-                openai_version = openai.__version__
-                version_parts = [int(x) for x in openai_version.split('.')[:2]]
-                if version_parts[0] < 1 or (version_parts[0] == 1 and version_parts[1] < 12):
-                    print(f"Warning: OpenAI library version {openai_version} may be incompatible. Recommended: >=1.12.0")
-            except (AttributeError, ValueError):
-                pass  # Version check failed, continue anyway
-            
-            # Temporarily remove proxy environment variables if they exist
-            # Some versions of the OpenAI library try to use these and pass them incorrectly
-            original_proxy_vars = {}
-            proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
-            for var in proxy_vars:
-                if var in os.environ:
-                    original_proxy_vars[var] = os.environ[var]
-                    del os.environ[var]
-            
-            try:
-                # Try to use httpx directly to avoid proxy issues
-                try:
-                    import httpx
-                    # Create an httpx client without any proxy configuration
-                    # httpx doesn't use proxies parameter in Client constructor
-                    http_client = httpx.Client(timeout=60.0)
-                    client = OpenAI(api_key=self.api_key, http_client=http_client)
-                except ImportError:
-                    # httpx not available, fall back to standard initialization
-                    # Initialize client with only the api_key parameter
-                    # Explicitly avoid passing proxies or other parameters that might cause issues
-                    client = OpenAI(api_key=self.api_key)
-            finally:
-                # Restore proxy environment variables
-                for var, value in original_proxy_vars.items():
-                    os.environ[var] = value
-            
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert ornithologist helping birdwatchers identify and compare bird species. Provide detailed, accurate, and helpful comparisons."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=max_tokens,
-                temperature=0.7
-            )
-            
-            return response.choices[0].message.content.strip()
         except ImportError:
-            print("Error: openai package not installed. Install with: pip install openai")
+            logger.exception('openai package is not installed')
             return None
-        except TypeError as e:
-            # Handle case where proxies or other unsupported arguments are being passed
-            error_msg = str(e)
-            if 'proxies' in error_msg or '__init__' in error_msg:
-                import traceback
-                print(f"Error: OpenAI client initialization failed. This may be due to an incompatible library version or configuration.")
-                print(f"Details: {error_msg}")
-                print(f"Full traceback:")
-                traceback.print_exc()
-                print("\nTroubleshooting:")
-                print("1. Check OpenAI library version: pip show openai")
-                print("2. Upgrade if needed: pip install --upgrade 'openai>=1.12.0'")
-                print("3. Check for proxy environment variables: echo $HTTP_PROXY $HTTPS_PROXY")
-                print("4. If proxies are set, they may need to be unset for OpenAI API calls")
-                return None
-            else:
-                print(f"TypeError calling OpenAI API: {e}")
-                import traceback
-                traceback.print_exc()
-                return None
-        except Exception as e:
-            print(f"Error calling OpenAI API: {e}")
+
+        try:
+            client = OpenAI(api_key=self.api_key, timeout=90.0)
+            kwargs: Dict[str, Any] = {
+                'model': self.model,
+                'messages': [
+                    {'role': 'system', 'content': SYSTEM_PROMPT},
+                    {'role': 'user', 'content': prompt},
+                ],
+                'temperature': 0.3,
+                'max_tokens': max_tokens,
+            }
+            if json_object:
+                kwargs['response_format'] = {'type': 'json_object'}
+            response = client.chat.completions.create(**kwargs)
+            content = response.choices[0].message.content or ''
+            return content.strip() or None
+        except Exception:
+            logger.exception('OpenAI comparison request failed (model=%s)', self.model)
             return None
-    
+
     def generate_species_comparison(
         self,
         species_1_traits: Dict,
         species_2_traits: Dict,
         species_1_name: str,
-        species_2_name: str
+        species_2_name: str,
+        species_1_latin: str | None = None,
+        species_2_latin: str | None = None,
     ) -> Dict[str, str]:
-        """
-        Generate a comprehensive comparison between two species.
-        
-        Args:
-            species_1_traits: Dictionary of traits for first species
-            species_2_traits: Dictionary of traits for second species
-            species_1_name: Name of first species
-            species_2_name: Name of second species
-        
-        Returns:
-            Dictionary with comparison sections
-        """
-        # Check for Similar Species mentions from Birds of the World
-        # Try to get scientific names from traits if available
-        species_1_latin = species_1_traits.get('name_latin') or None
-        species_2_latin = species_2_traits.get('name_latin') or None
-        
+        latin_1 = species_1_latin or species_1_traits.get('name_latin') or None
+        latin_2 = species_2_latin or species_2_traits.get('name_latin') or None
+
         similar_species_info = self._extract_similar_species_mentions(
-            species_1_traits, species_2_traits, species_1_name, species_2_name,
-            species_1_latin, species_2_latin
+            species_1_traits,
+            species_2_traits,
+            species_1_name,
+            species_2_name,
+            latin_1,
+            latin_2,
         )
-        
-        # Build prompt
         prompt = self._build_comparison_prompt(
-            species_1_traits, species_2_traits, species_1_name, species_2_name, similar_species_info
+            species_1_traits,
+            species_2_traits,
+            species_1_name,
+            species_2_name,
+            similar_species_info,
+            latin_1,
+            latin_2,
         )
-        print("Prompt:")
-        print("###--------------------------------")
-        print(prompt)
-        print("###--------------------------------")
-        
-        # Generate comparison
-        full_comparison = self._call_openai(prompt, max_tokens=3000)
-        
-        if not full_comparison:
-            return {
-                'summary': 'Unable to generate comparison. AI service unavailable.',
-                'detailed_comparison': '',
-            }
-        
-        # Parse and structure the response
-        return self._parse_comparison_response(full_comparison, species_1_name, species_2_name)
-    
+        logger.info(
+            'Generating %s vs %s comparison (%s, prompt %s chars)',
+            species_1_name,
+            species_2_name,
+            self.model,
+            len(prompt),
+        )
+
+        raw = self._call_openai(prompt, max_tokens=3500, json_object=True)
+        if not raw:
+            return {}
+
+        parsed = self._parse_json_response(raw)
+        if not parsed.get('summary'):
+            parsed = self._parse_comparison_response(raw, species_1_name, species_2_name)
+        if not parsed.get('summary'):
+            return {}
+
+        parsed['detailed_comparison'] = self._assemble_detailed(parsed)
+        return parsed
+
     def _extract_similar_species_mentions(
         self,
         species_1_traits: Dict,
@@ -177,354 +231,199 @@ class AIComparisonService:
         species_1_name: str,
         species_2_name: str,
         species_1_latin: str = None,
-        species_2_latin: str = None
+        species_2_latin: str = None,
     ) -> Dict[str, List]:
-        """
-        Extract mentions of one species in the other species' text from ALL sections.
-        Searches through all trait sections (Identification, Plumage, Behavior, Habitat, etc.),
-        not just "Similar Species".
-        Returns dict with lists of mentions found in each section.
-        """
         result = {
-            'species_1_mentions_species_2': [],  # List of mentions found in species_1's text
-            'species_2_mentions_species_1': []  # List of mentions found in species_2's text
+            'species_1_mentions_species_2': [],
+            'species_2_mentions_species_1': [],
         }
-        
-        def build_name_variations(name, latin_name=None):
-            """Build various name variations to search for, including Latin abbreviations."""
-            variations = set()
-            
-            def add_variation(value):
-                if value:
-                    variations.add(value.strip())
-            
-            add_variation(name)
-            
-            # Add first word and first two words from common name
-            if name and ' ' in name:
-                parts = name.split()
-                add_variation(parts[0])
-                if len(parts) > 1:
-                    add_variation(' '.join(parts[:2]))
-            
-            if latin_name:
-                add_variation(latin_name)
-                latin_parts = latin_name.split()
-                if latin_parts:
-                    genus = latin_parts[0]
-                    add_variation(genus)
-                    if len(latin_parts) > 1:
-                        species_epithet = latin_parts[1]
-                        add_variation(species_epithet)
-                        
-                        # Add genus initial formats e.g., P. modularis / P modularis
-                        genus_initial = genus[0]
-                        add_variation(f"{genus_initial}. {species_epithet}")
-                        add_variation(f"{genus_initial} {species_epithet}")
-                        add_variation(f"{genus[:2]}. {species_epithet}")
-            
-            # Return list preserving insertion order
-            return list(variations)
-        
-        def search_content_for_mentions(content, variations, section_name):
-            """Search content for any of the name variations and return matches."""
+
+        def search_content(content, variations, section_name):
             mentions = []
             if not content:
                 return mentions
-            
             content_str = content if isinstance(content, str) else str(content)
-            
             for variation in variations:
-                # Escape special regex characters but allow flexible spacing and periods
-                escaped = re.escape(variation).replace(r'\ ', r'[\s\.]+')
-                # Word boundary pattern that also handles periods (for "P. modularis")
+                escaped = re.escape(variation).replace(r'\ ', r'[\s.]+')
                 pattern = r'(?<!\w)' + escaped + r'(?!\w)'
-                matches = re.finditer(pattern, content_str, re.IGNORECASE)
-                for match in matches:
-                    # Extract context around the match (100 chars before and after)
-                    start = max(0, match.start() - 100)
-                    end = min(len(content_str), match.end() + 100)
-                    context = content_str[start:end].strip()
-                    mentions.append({
-                        'section': section_name,
-                        'matched_variation': variation,
-                        'context': context,
-                        'full_content': content_str
-                    })
-                    break  # Only need one match per variation per section
-            
+                match = re.search(pattern, content_str, re.IGNORECASE)
+                if not match:
+                    continue
+                start = max(0, match.start() - 280)
+                end = min(len(content_str), match.end() + 280)
+                mentions.append({
+                    'section': section_name,
+                    'matched_variation': variation,
+                    'context': content_str[start:end].strip(),
+                })
+                break
             return mentions
-        
-        # Build name variations for both species
-        species_2_variations = build_name_variations(species_2_name, species_2_latin)
-        species_1_variations = build_name_variations(species_1_name, species_1_latin)
-        
-        # Search through ALL sections of species_1's traits for mentions of species_2
+
+        terms_2 = name_search_terms(species_2_name, species_2_latin)
+        terms_1 = name_search_terms(species_1_name, species_1_latin)
+
         for section_name, section_data in species_1_traits.items():
-            if section_name == 'name_latin':  # Skip metadata fields
+            if section_name == 'name_latin':
                 continue
-            
-            content = None
-            if isinstance(section_data, dict):
-                content = section_data.get('content', '')
-            elif isinstance(section_data, str):
-                content = section_data
-            
+            content = _trait_content(section_data)
             if content:
-                mentions = search_content_for_mentions(content, species_2_variations, section_name)
-                result['species_1_mentions_species_2'].extend(mentions)
-        
-        # Search through ALL sections of species_2's traits for mentions of species_1
+                result['species_1_mentions_species_2'].extend(
+                    search_content(content, terms_2, section_name)
+                )
+
         for section_name, section_data in species_2_traits.items():
-            if section_name == 'name_latin':  # Skip metadata fields
+            if section_name == 'name_latin':
                 continue
-            
-            content = None
-            if isinstance(section_data, dict):
-                content = section_data.get('content', '')
-            elif isinstance(section_data, str):
-                content = section_data
-            
+            content = _trait_content(section_data)
             if content:
-                mentions = search_content_for_mentions(content, species_1_variations, section_name)
-                result['species_2_mentions_species_1'].extend(mentions)
-        
+                result['species_2_mentions_species_1'].extend(
+                    search_content(content, terms_1, section_name)
+                )
+
         return result
-    
+
+    def _format_traits(self, traits_dict: Dict) -> str:
+        chunks = []
+        seen = set()
+        keys = [key for key in _TRAIT_ORDER if key in traits_dict]
+        keys.extend(key for key in traits_dict if key not in seen and key not in _TRAIT_ORDER and key != 'name_latin')
+        for category in keys:
+            if category in seen or category == 'name_latin':
+                continue
+            seen.add(category)
+            content = _clip(_trait_content(traits_dict.get(category)), _TRAIT_CHAR_LIMITS.get(category, 900))
+            if not content:
+                continue
+            chunks.append(f'{category.upper().replace("_", " ")}:\n{content}')
+        return '\n\n'.join(chunks) if chunks else '(No extracted handbook notes for this species.)'
+
     def _build_comparison_prompt(
         self,
         species_1_traits: Dict,
         species_2_traits: Dict,
         species_1_name: str,
         species_2_name: str,
-        similar_species_info: Dict = None
+        similar_species_info: Dict = None,
+        species_1_latin: str | None = None,
+        species_2_latin: str | None = None,
     ) -> str:
-        """Build the prompt for AI comparison."""
-        
-        # Format traits for prompt (excluding similar_species as we handle it separately)
-        def format_traits(traits_dict, exclude_category=None):
-            formatted = []
-            for category, trait_data in traits_dict.items():
-                if exclude_category and category == exclude_category:
-                    continue  # Skip similar_species, we'll add it separately
-                if isinstance(trait_data, dict) and 'content' in trait_data:
-                    formatted.append(f"{category.upper()}:\n{trait_data['content']}")
-                elif isinstance(trait_data, str):
-                    formatted.append(f"{category.upper()}:\n{trait_data}")
-            return '\n\n'.join(formatted)
-        
-        species_1_text = format_traits(species_1_traits, exclude_category='similar_species')
-        species_2_text = format_traits(species_2_traits, exclude_category='similar_species')
-        
-        # Build the mentions section with high priority - includes all sections, not just Similar Species
-        mentions_section = ""
-        expert_diagnostics = []
-        
-        if similar_species_info:
-            # Process mentions found in species_1's text about species_2
-            if similar_species_info.get('species_1_mentions_species_2'):
-                mentions = similar_species_info['species_1_mentions_species_2']
-                for mention in mentions:
-                    section = mention.get('section', 'Unknown')
-                    match_token = mention.get('matched_variation', '')
-                    content = mention.get('full_content', mention.get('context', ''))
-                    expert_diagnostics.append(
-                        f"{species_1_name} - {section.upper()} section (Birds of the World) mentions {species_2_name} (matched on '{match_token}'):\n{content}"
-                    )
-            
-            # Process mentions found in species_2's text about species_1
-            if similar_species_info.get('species_2_mentions_species_1'):
-                mentions = similar_species_info['species_2_mentions_species_1']
-                for mention in mentions:
-                    section = mention.get('section', 'Unknown')
-                    match_token = mention.get('matched_variation', '')
-                    content = mention.get('full_content', mention.get('context', ''))
-                    expert_diagnostics.append(
-                        f"{species_2_name} - {section.upper()} section (Birds of the World) mentions {species_1_name} (matched on '{match_token}'):\n{content}"
-                    )
-        
-        if expert_diagnostics:
-            mentions_section = "\n\n⚠️ IMPORTANT - EXPERT SOURCE FROM BIRDS OF THE WORLD:\n" + "\n\n---\n\n".join(expert_diagnostics)
-        
-        prompt = f"""Compare the following two bird species and provide a detailed comparison focusing on key differences that would help birdwatchers distinguish between them.
+        label_1 = species_1_name + (f' ({species_1_latin})' if species_1_latin else '')
+        label_2 = species_2_name + (f' ({species_2_latin})' if species_2_latin else '')
+        species_1_text = self._format_traits(species_1_traits)
+        species_2_text = self._format_traits(species_2_traits)
 
-SPECIES 1: {species_1_name}
+        expert_bits = []
+        seen_expert = set()
+        if similar_species_info:
+            for source_name, mentions, other_name in (
+                (species_1_name, similar_species_info.get('species_1_mentions_species_2') or [], species_2_name),
+                (species_2_name, similar_species_info.get('species_2_mentions_species_1') or [], species_1_name),
+            ):
+                for mention in mentions:
+                    section = mention.get('section') or 'Unknown'
+                    key = (source_name, section, mention.get('matched_variation') or '')
+                    if key in seen_expert:
+                        continue
+                    seen_expert.add(key)
+                    expert_bits.append(
+                        f'{source_name} · {section.replace("_", " ")} mentions {other_name} '
+                        f'(matched “{mention.get("matched_variation") or ""}”):\n'
+                        f'{mention.get("context") or ""}'
+                    )
+
+        expert_block = ''
+        if expert_bits:
+            expert_block = (
+                '\n\nEXPERT CROSS-MENTIONS FROM BIRDS OF THE WORLD (highest priority):\n'
+                + '\n\n---\n\n'.join(expert_bits)
+            )
+
+        return f"""Compare these two species for a birdwatcher who has just mixed them up in a quiz.
+
+SPECIES A: {label_1}
 {species_1_text}
 
-SPECIES 2: {species_2_name}
+SPECIES B: {label_2}
 {species_2_text}
-{mentions_section}
+{expert_block}
 
-⚠️ CRITICAL INSTRUCTION: If there are mentions above from Birds of the World (from any section: Similar Species, Identification, Plumage, Behavior, Habitat, etc.), this is EXPERT-REVIEWED information and should be given HIGHEST PRIORITY. Use this information as the foundation for your comparison, especially in the "Identification Tips" section. These direct mentions from Birds of the World are more authoritative than general trait comparisons.
+Write for someone with binoculars, not a monograph. Lead with the most reliable field mark in the summary. If the two species are close relatives, compare structure first (bill, primary projection / wing formula, tail length, supercilium shape) before colour tone — colour is often the least reliable mark. Then cover song and call when they differ. If a feature is similar, say so in one clause and move on. Do not invent measurements, songs or ranges that are not in the notes. If notes are thin, use well-established field knowledge of these taxa and say when you are unsure.
 
-In the **Identification Tips** section you MUST:
-1. Begin with a subsection titled "Birds of the World Similar-Species Diagnostics" summarizing the literal expert references (do not paraphrase away the evidence). Cite which species' Similar Species section the quote came from.
-2. Follow with a subsection titled "AI Field Diagnostics" for any additional insights you infer from the other trait data. Make it clear these points are AI-generated suggestions rather than expert quotes.
+Identification tips should be ordered checks (most reliable first), including season, age or sex pitfalls when the sources mention them. You may cite Birds of the World once when using those expert passages. Do not use headings like "AI Field Diagnostics".
 
-Please provide a comprehensive comparison in the following format:
+Return a JSON object with these string keys (markdown allowed inside strings: bold field marks, short lists):
+- summary: 2–3 sentences
+- size_comparison
+- plumage_comparison
+- behavior_comparison
+- habitat_comparison
+- vocalization_comparison
+- identification_tips
+Use empty strings only when the sources truly have nothing useful."""
 
-## SUMMARY
-[A brief 2-3 sentence summary of the key differences]
+    def _parse_json_response(self, response: str) -> Dict[str, str]:
+        text = (response or '').strip()
+        if text.startswith('```'):
+            text = re.sub(r'^```(?:json)?\s*', '', text)
+            text = re.sub(r'\s*```$', '', text)
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if not match:
+                return {}
+            try:
+                data = json.loads(match.group(0))
+            except json.JSONDecodeError:
+                return {}
+        if not isinstance(data, dict):
+            return {}
+        parsed = {key: '' for key in _JSON_KEYS}
+        for key in _JSON_KEYS:
+            value = data.get(key)
+            if isinstance(value, str):
+                parsed[key] = value.strip()
+        return parsed
 
-## DETAILED COMPARISON
-[Detailed comparison covering:]
+    def _assemble_detailed(self, parsed: Dict[str, str]) -> str:
+        parts = []
+        if parsed.get('summary'):
+            parts.append(f"## SUMMARY\n{parsed['summary']}")
+        for heading, key in (
+            ('Size', 'size_comparison'),
+            ('Plumage', 'plumage_comparison'),
+            ('Behavior', 'behavior_comparison'),
+            ('Habitat', 'habitat_comparison'),
+            ('Vocalization', 'vocalization_comparison'),
+            ('Identification Tips', 'identification_tips'),
+        ):
+            if parsed.get(key):
+                parts.append(f'### {heading}\n{parsed[key]}')
+        return '\n\n'.join(parts)
 
-### Size
-[Compare sizes, measurements, body proportions]
-
-### Plumage
-[Compare plumage patterns, colors, distinctive markings]
-
-### Behavior
-[Compare behaviors, foraging patterns, flight style]
-
-### Habitat
-[Compare habitat preferences and distribution]
-
-### Vocalization
-[Compare calls and songs if information is available]
-
-### Identification Tips
-[CRITICAL: This section MUST be filled with practical identification tips. Structure as follows:
-
-1. **Birds of the World Similar-Species Diagnostics** (if available from the Similar Species sections above):
-   - Start with the expert-reviewed information from Birds of the World's Similar Species sections
-   - Quote or paraphrase the specific diagnostic features mentioned
-   - This is the most authoritative source
-
-2. **AI Field Diagnostics**:
-   - Provide additional practical tips based on the trait comparisons
-   - Focus on field-identifiable differences: size, shape, plumage patterns, behavior, habitat
-   - Include what to look for and common confusion points
-   - Make it actionable for birdwatchers
-
-If no Similar Species information is available, provide comprehensive AI-generated identification tips covering all key distinguishing features.]
-
-Focus on practical, field-identifiable differences that would help a birdwatcher tell these species apart. The Identification Tips section is critical and must be comprehensive."""
-        
-        return prompt
-    
     def _parse_comparison_response(self, response: str, species_1_name: str, species_2_name: str) -> Dict[str, str]:
-        """
-        Parse the AI response into structured sections.
-        
-        Args:
-            response: The full AI response text
-            species_1_name: Name of first species
-            species_2_name: Name of second species
-        
-        Returns:
-            Dictionary with parsed sections
-        """
-        result = {
-            'summary': '',
-            'detailed_comparison': response,
-            'size_comparison': '',
-            'plumage_comparison': '',
-            'behavior_comparison': '',
-            'habitat_comparison': '',
-            'vocalization_comparison': '',
-            'identification_tips': '',
-        }
-        
-        # Try to extract sections
+        """Fallback parser for markdown-shaped replies."""
+        result = {key: '' for key in _JSON_KEYS}
+        result['detailed_comparison'] = response or ''
         sections = {
             'summary': r'## SUMMARY\s*\n(.*?)(?=##|$)',
-            'size': r'### Size\s*\n(.*?)(?=###|##|$)',
-            'plumage': r'### Plumage\s*\n(.*?)(?=###|##|$)',
-            'behavior': r'### Behavior\s*\n(.*?)(?=###|##|$)',
-            'habitat': r'### Habitat\s*\n(.*?)(?=###|##|$)',
-            'vocalization': r'### Vocalization\s*\n(.*?)(?=###|##|$)',
+            'size_comparison': r'### Size\s*\n(.*?)(?=###|##|$)',
+            'plumage_comparison': r'### Plumage\s*\n(.*?)(?=###|##|$)',
+            'behavior_comparison': r'### Behavior\s*\n(.*?)(?=###|##|$)',
+            'habitat_comparison': r'### Habitat\s*\n(.*?)(?=###|##|$)',
+            'vocalization_comparison': r'### Vocalization\s*\n(.*?)(?=###|##|$)',
             'identification_tips': r'### Identification Tips\s*\n(.*?)(?=###|##|$)',
         }
-        
-        import re
         for key, pattern in sections.items():
-            match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
+            match = re.search(pattern, response or '', re.DOTALL | re.IGNORECASE)
             if match:
-                text = match.group(1).strip()
-                if key == 'summary':
-                    result['summary'] = text
-                elif key == 'size':
-                    result['size_comparison'] = text
-                elif key == 'plumage':
-                    result['plumage_comparison'] = text
-                elif key == 'behavior':
-                    result['behavior_comparison'] = text
-                elif key == 'habitat':
-                    result['habitat_comparison'] = text
-                elif key == 'vocalization':
-                    result['vocalization_comparison'] = text
-                elif key == 'identification_tips':
-                    result['identification_tips'] = text
-        
-        # If summary wasn't extracted, use first paragraph
+                result[key] = match.group(1).strip()
         if not result['summary']:
-            first_para = response.split('\n\n')[0] if response else ''
-            result['summary'] = first_para[:500]  # Limit to 500 chars
-        
-        # Ensure identification_tips is filled - if not extracted, try to find it in the response
-        if not result['identification_tips']:
-            # Look for "Identification Tips" or "Identification" anywhere in the response
-            import re
-            # Try various patterns
-            patterns = [
-                r'(?:Identification Tips|Identification|ID Tips|Distinguishing Features)[:\s]*\n(.*?)(?=\n##|\n###|$)',
-                r'## Identification Tips\s*\n(.*?)(?=##|$)',
-                r'### Identification Tips\s*\n(.*?)(?=###|##|$)',
-            ]
-            for pattern in patterns:
-                match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
-                if match:
-                    result['identification_tips'] = match.group(1).strip()
-                    break
-            
-            # If still not found, use the last section or a portion of detailed_comparison
-            if not result['identification_tips']:
-                # Try to extract from detailed_comparison if it exists
-                if result['detailed_comparison']:
-                    # Look for any section that might contain identification info
-                    lines = result['detailed_comparison'].split('\n')
-                    # Find lines that might be identification-related
-                    id_lines = []
-                    for i, line in enumerate(lines):
-                        if any(keyword in line.lower() for keyword in ['identif', 'distinguish', 'field', 'look for', 'note']):
-                            # Take this line and following lines until next heading
-                            for j in range(i, min(i + 10, len(lines))):
-                                if lines[j].startswith('#'):
-                                    break
-                                id_lines.append(lines[j])
-                            break
-                    if id_lines:
-                        result['identification_tips'] = '\n'.join(id_lines).strip()
-        
-        # Final fallback: if identification_tips is still empty, create a basic one from available info
-        if not result['identification_tips']:
-            tips_parts = []
-            if result['size_comparison']:
-                tips_parts.append(f"**Size:** {result['size_comparison'][:200]}")
-            if result['plumage_comparison']:
-                tips_parts.append(f"**Plumage:** {result['plumage_comparison'][:200]}")
-            if tips_parts:
-                result['identification_tips'] = '\n\n'.join(tips_parts)
-            else:
-                result['identification_tips'] = "Compare size, plumage patterns, and behavior to distinguish these species."
-        
+            first_para = (response or '').split('\n\n')[0]
+            result['summary'] = first_para[:500]
         return result
-    
+
     def generate_family_comparison(self, family_1: str, family_2: str, species_list_1: List, species_list_2: List) -> Dict[str, str]:
-        """
-        Generate a comparison between two families.
-        
-        Args:
-            family_1: Name of first family
-            family_2: Name of second family
-            species_list_1: List of species in first family
-            species_list_2: List of species in second family
-        
-        Returns:
-            Dictionary with comparison sections
-        """
         prompt = f"""Compare the following two bird families and describe their key differences:
 
 FAMILY 1: {family_1}
@@ -533,24 +432,20 @@ Representative species: {', '.join(species_list_1[:10])}
 FAMILY 2: {family_2}
 Representative species: {', '.join(species_list_2[:10])}
 
-Provide a comparison covering:
-- General characteristics and morphology
-- Typical behaviors
-- Habitat preferences
-- Key distinguishing features
-- Notable species differences
-
-Format as:
-## SUMMARY
-[Brief summary]
-
-## DETAILED COMPARISON
-[Detailed comparison]"""
-        
-        full_comparison = self._call_openai(prompt, max_tokens=2000)
-        
+Return JSON with keys summary and detailed_comparison."""
+        full_comparison = self._call_openai(prompt, max_tokens=2000, json_object=True)
+        if not full_comparison:
+            return {'summary': '', 'detailed_comparison': ''}
+        try:
+            data = json.loads(full_comparison)
+        except json.JSONDecodeError:
+            return {
+                'summary': full_comparison.split('\n\n')[0],
+                'detailed_comparison': full_comparison,
+            }
+        if not isinstance(data, dict):
+            return {'summary': full_comparison, 'detailed_comparison': full_comparison}
         return {
-            'summary': full_comparison.split('\n\n')[0] if full_comparison else '',
-            'detailed_comparison': full_comparison or '',
+            'summary': (data.get('summary') or '').strip(),
+            'detailed_comparison': (data.get('detailed_comparison') or data.get('summary') or '').strip(),
         }
-

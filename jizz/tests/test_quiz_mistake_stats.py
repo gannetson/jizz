@@ -14,6 +14,7 @@ from jizz.models import (
 )
 from jizz.quiz_mistake_stats import (
     MIN_TIMES_SHOWN_COUNTRY,
+    get_confused_partners_for_species,
     get_confusion_pair_rows,
     get_species_mistake_rows,
     get_top_mistake_species_ids,
@@ -128,6 +129,39 @@ class QuizMistakeStatsTests(TestCase):
             self.assertEqual(pair["when_low_was_target"], 10)
             self.assertEqual(pair["when_high_was_target"], 10)
 
+    def test_confused_partners_for_species_both_directions(self):
+        rows = get_confused_partners_for_species(self.sp_a.id)
+        self.assertEqual([r["species_id"] for r in rows], [self.sp_b.id])
+        self.assertEqual(rows[0]["total_wrong"], 20)
+        self.assertEqual(rows[0]["name"], "Beta")
+
+        reverse_rows = get_confused_partners_for_species(self.sp_b.id)
+        self.assertEqual([r["species_id"] for r in reverse_rows], [self.sp_a.id])
+        self.assertEqual(reverse_rows[0]["total_wrong"], 20)
+        self.assertEqual(get_confused_partners_for_species(self.sp_c.id), [])
+
+        q3 = Question.objects.create(game=self.game, species=self.sp_a, number=3, sequence=3)
+        for i in range(2):
+            player = Player.objects.create(name=f"Cmix-{i}", language="en")
+            score = PlayerScore.objects.create(player=player, game=self.game)
+            Answer.objects.create(
+                player_score=score,
+                question=q3,
+                answer=self.sp_c,
+                correct=False,
+            )
+
+        ranked = get_confused_partners_for_species(self.sp_a.id, limit=5)
+        self.assertEqual([r["species_id"] for r in ranked], [self.sp_b.id, self.sp_c.id])
+        self.assertEqual(ranked[1]["total_wrong"], 2)
+        self.assertEqual(
+            [r["species_id"] for r in get_confused_partners_for_species(self.sp_a.id, limit=1)],
+            [self.sp_b.id],
+        )
+        from_c = get_confused_partners_for_species(self.sp_c.id)
+        self.assertEqual([r["species_id"] for r in from_c], [self.sp_a.id])
+        self.assertEqual(from_c[0]["total_wrong"], 2)
+
     def test_sort_species_rows_error_rate(self):
         rows = get_species_mistake_rows()
         sorted_rows = sort_species_rows(rows, "error_rate", descending=True)
@@ -172,24 +206,40 @@ class QuizMistakeStatsTests(TestCase):
         self.assertEqual(len(get_confusion_pair_rows("OT")), 0)
         self.assertGreater(len(get_confusion_pair_rows("QM")), 0)
 
-    def test_country_filter_uses_global_answers_for_checklist_species(self):
-        """A country with no local games still gets stats from answers elsewhere."""
+    def test_country_filter_uses_only_games_in_that_country(self):
+        """A country with the same checklist but no local games has no stats."""
         neighbour = Country.objects.get_or_create(code="NB", defaults={"name": "Neighbour land"})[0]
         for sp in (self.sp_a, self.sp_b, self.sp_c):
             CountrySpecies.objects.create(country=neighbour, species=sp, status="native")
 
+        self.assertEqual(get_species_mistake_rows("NB"), [])
+        self.assertEqual(get_confusion_pair_rows("NB"), [])
+        self.assertGreater(len(get_species_mistake_rows("QM")), 0)
+        self.assertGreater(len(get_confusion_pair_rows("QM")), 0)
+
+        other_game = Game.objects.create(
+            country=neighbour,
+            level="beginner",
+            length=5,
+            media="images",
+            multiplayer=False,
+        )
+        q = Question.objects.create(game=other_game, species=self.sp_a, number=1, sequence=1)
+        for i in range(MIN_TIMES_SHOWN_COUNTRY):
+            p = Player.objects.create(name=f"Nb-{i}", language="en")
+            sc = PlayerScore.objects.create(player=p, game=other_game)
+            Answer.objects.create(
+                player_score=sc,
+                question=q,
+                answer=self.sp_b,
+                correct=False,
+            )
+
         rows_nb = {r["species_id"]: r for r in get_species_mistake_rows("NB")}
         rows_qm = {r["species_id"]: r for r in get_species_mistake_rows("QM")}
-
-        self.assertEqual(rows_nb[self.sp_b.id]["times_shown"], rows_qm[self.sp_b.id]["times_shown"])
-        self.assertEqual(
-            rows_nb[self.sp_a.id]["wrongly_answered"],
-            rows_qm[self.sp_a.id]["wrongly_answered"],
-        )
-        pair_nb = get_confusion_pair_rows("NB")
-        pair_qm = get_confusion_pair_rows("QM")
-        self.assertEqual(len(pair_nb), len(pair_qm))
-        self.assertEqual(pair_nb[0]["total_wrong"], pair_qm[0]["total_wrong"])
+        self.assertEqual(rows_nb[self.sp_b.id]["times_shown"], MIN_TIMES_SHOWN_COUNTRY)
+        self.assertGreater(rows_qm[self.sp_b.id]["times_shown"], rows_nb[self.sp_b.id]["times_shown"])
+        self.assertEqual(len(get_confusion_pair_rows("NB")), 1)
 
     def test_normalize_country_filter(self):
         self.assertIsNone(normalize_country_filter(""))

@@ -48,9 +48,14 @@ def sitemap_index(request):
 
 def sitemap_pages(request):
     origin = canonical_origin(request)
-    urls = [origin + '/']
+    urls = [origin + '/site/', origin + '/site/birds/']
     for slug in INTENT_PAGES:
-        urls.append(f'{origin}/{slug}/')
+        urls.append(f'{origin}/site/{slug}/')
+    from jizz.models import MarketingPage
+    urls.extend(
+        origin + page.get_absolute_url()
+        for page in MarketingPage.objects.filter(published=True)
+    )
     return _xml(_urlset(urls))
 
 

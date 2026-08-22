@@ -1,24 +1,66 @@
 <section id="help">
   <h2>How can I help?</h2>
   <p>
-    Birdr is a small project. If you use it, two things help more than anything else:
-    honest feedback, and a few minutes checking that quiz photos show the right bird.
+    Birdr is a small project, and many quiz pictures still need a human check.
+    Two things help most: honest feedback, and spotting the wrong bird.
+  </p>
+  <p>
+    During a quiz, tap <strong>Flag</strong> if the photo, video or sound is not
+    the species shown—or is otherwise unusable. That skips the clip in your game
+    and reports it so we can take it out of the set.
+  </p>
+  <p>
+    A large part of the picture library is still waiting for review. If you know
+    a country’s birds, open <a href="#review-photos">Review photos</a> below and
+    approve or reject images a few at a time.
   </p>
   <div class="grid">
     <article class="card">
       <h3>Send feedback</h3>
+      {% if request.GET.sent == '1' %}
+      <p class="form-note">Thank you. We read every message.</p>
+      {% else %}
       <p>
-        Found a bug, a missing species, or something that worked well? There is a
-        feedback box on the app home screen, or write to
-        <a href="mailto:info@birdr.pro">info@birdr.pro</a>.
+        Found a bug, a missing species, or something that worked well? Tell us here,
+        or write to <a href="mailto:info@birdr.pro">info@birdr.pro</a>.
       </p>
-      <p><a class="btn secondary" href="/play">Open the app home</a></p>
+      {% if request.GET.sent == 'missing' %}
+      <p class="form-error">Please write a short message.</p>
+      {% elif request.GET.sent == 'email' %}
+      <p class="form-error">That email address does not look valid.</p>
+      {% endif %}
+      <form class="feedback-form" method="post" action="{% url 'marketing-feedback' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <input type="hidden" name="started" value="{{ feedback_started }}">
+        <p class="hp-field">
+          <label for="feedback-website">Website</label>
+          <input id="feedback-website" type="text" name="website" tabindex="-1" autocomplete="off">
+        </p>
+        <p>
+          <label for="feedback-comment">Message</label>
+          <textarea id="feedback-comment" name="comment" rows="5" required maxlength="5000" placeholder="Your feedback…"></textarea>
+        </p>
+        <p>
+          <label for="feedback-name">Name <span>(optional)</span></label>
+          <input id="feedback-name" type="text" name="name" maxlength="120" autocomplete="name">
+        </p>
+        <p>
+          <label for="feedback-email">Email <span>(optional)</span></label>
+          <input id="feedback-email" type="email" name="email" maxlength="254" autocomplete="email">
+        </p>
+        <p>
+          <button class="btn secondary" type="submit">Send feedback</button>
+        </p>
+      </form>
+      {% endif %}
     </article>
-    <article class="card">
+    <article class="card" id="review-photos">
       <h3>Review photos</h3>
       <p>
-        Quizzes are only as good as the pictures. Help by approving or rejecting
-        photos—start with any country, or review the birds you know best.
+        Quizzes are only as good as the pictures, and many still have not been
+        checked. Help by approving good photos and rejecting the wrong bird—start
+        with any country, or the birds you know best.
       </p>
       {% if country %}
       <p>

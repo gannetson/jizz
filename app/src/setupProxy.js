@@ -36,6 +36,8 @@ module.exports = function (app) {
   // Public marketing HTML from Django (do not proxy `/` — CRA needs it for the app).
   app.use(
     [
+      '/site',
+      '/data',
       '/how-it-works',
       '/bird-identification-quiz',
       '/learn-bird-identification',
@@ -45,6 +47,7 @@ module.exports = function (app) {
       '/countries',
       '/birds',
       '/compare',
+      '/page',
       '/sitemap.xml',
       '/sitemap-pages.xml',
       '/sitemap-countries.xml',

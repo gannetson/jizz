@@ -13,40 +13,52 @@
   </div>
 </section>
 <section class="photos">
-  {% for photo in left_photos %}
   <figure>
-    <img src="{{ photo.url }}" width="280" height="210" alt="{{ photo.alt }}">
-    <figcaption>{{ left.name }}</figcaption>
+    <a class="photos-link" href="{% if left.slug %}/site/birds/{{ left.slug }}/{% else %}#all-media{% endif %}" data-open-species-media data-species-id="{{ left.id }}" data-species-name="{{ left.name }}" data-species-url="/api/species/{{ left.id }}/" aria-haspopup="dialog" aria-controls="all-media">
+      {% for photo in left_photos %}
+      <img src="{{ photo.url }}" height="210" alt="{{ photo.alt }}">
+      {% endfor %}
+      <span class="photos-name">{{ left.name }}</span>
+    </a>
   </figure>
-  {% endfor %}
-  {% for photo in right_photos %}
   <figure>
-    <img src="{{ photo.url }}" width="280" height="210" alt="{{ photo.alt }}" loading="lazy">
-    <figcaption>{{ right.name }}</figcaption>
+    <a class="photos-link" href="{% if right.slug %}/site/birds/{{ right.slug }}/{% else %}#all-media{% endif %}" data-open-species-media data-species-id="{{ right.id }}" data-species-name="{{ right.name }}" data-species-url="/api/species/{{ right.id }}/" aria-haspopup="dialog" aria-controls="all-media">
+      {% for photo in right_photos %}
+      <img src="{{ photo.url }}" height="210" alt="{{ photo.alt }}" loading="lazy">
+      {% endfor %}
+      <span class="photos-name">{{ right.name }}</span>
+    </a>
   </figure>
-  {% endfor %}
 </section>
-{% if summary %}
-<section>
+{% include "marketing/_species_media.html" %}
+{% if summary_html %}
+<section class="prose">
   <h2>In short</h2>
-  <p>{{ summary }}</p>
+  {{ summary_html|safe }}
+</section>
+{% else %}
+<section>
+  <p class="lead">
+    These two are often mixed up in quizzes. Look at the photos, then practise the
+    pair until the field marks stick.
+  </p>
 </section>
 {% endif %}
-{% for label, text in sections %}
-<section>
+{% for label, html in sections %}
+<section class="prose">
   <h2>{{ label }}</h2>
-  <p>{{ text }}</p>
+  {{ html|safe }}
 </section>
 {% endfor %}
-{% if detailed and not sections %}
-<section>
+{% if detailed_html and not sections %}
+<section class="prose">
   <h2>Comparison</h2>
-  <p>{{ detailed }}</p>
+  {{ detailed_html|safe }}
 </section>
 {% endif %}
 <p>
-  {% if left.slug %}<a href="/birds/{{ left.slug }}/">{{ left.name }}</a> · {% endif %}
-  {% if right.slug %}<a href="/birds/{{ right.slug }}/">{{ right.name }}</a> · {% endif %}
-  <a href="/my-tricky-birds/">My Tricky Birds</a>
+  {% if left.slug %}<a href="/site/birds/{{ left.slug }}/">{{ left.name }}</a> · {% endif %}
+  {% if right.slug %}<a href="/site/birds/{{ right.slug }}/">{{ right.name }}</a> · {% endif %}
+  <a href="/site/my-tricky-birds/">My Tricky Birds</a>
 </p>
 {% endblock %}

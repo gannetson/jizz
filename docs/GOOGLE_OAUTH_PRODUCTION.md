@@ -112,7 +112,8 @@ location ^~ /g/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
-# Public marketing HTML (Django) — exact / and SEO prefixes BEFORE the SPA catch-all.
+# Public marketing HTML (Django) — /site/ is the marketing tree (landing, SEO pages, CMS).
+# Exact / and old SEO prefixes stay on Django so they can 301 to /site/.
 # Do not use `location ^~ /flocks/` here: /flocks/create and /flocks/:slug stay on the SPA.
 location = / {
     proxy_pass http://jizz;
@@ -199,6 +200,24 @@ location ^~ /birds/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 location ^~ /compare/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /page/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /data/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /site/ {
     proxy_pass http://jizz;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

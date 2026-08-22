@@ -56,15 +56,19 @@ export const SpeciesCombobox = ({
   const defaultLoadingMessage = intl.formatMessage({ id: defaultLoadingMessageKey, defaultMessage: "Loading..." })
   
   const options = useMemo(() => {
-    return speciesArray.map((speciesItem) => {
-      const label = speciesItem.name_translated
+    const list = [...speciesArray]
+    if (value && !list.some((item) => item.id === value.id)) {
+      list.unshift(value)
+    }
+    return list.map((speciesItem) => {
+      const label = speciesItem.name_translated || speciesItem.name
       return {
         label,
         value: String(speciesItem.id ?? speciesItem.name),
         original: speciesItem,
       }
     })
-  }, [speciesArray, playerLanguage])
+  }, [speciesArray, playerLanguage, value])
 
   const selectedOption = useMemo(() => {
     if (!value) return null

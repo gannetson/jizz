@@ -292,6 +292,33 @@ class Page(models.Model):
         return self.title
 
 
+class MarketingPage(models.Model):
+    """Public marketing CMS page at /site/page/<slug>/, editable by staff on the site."""
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    meta_description = models.CharField(max_length=320, blank=True)
+    body = models.TextField(blank=True, help_text='HTML body shown on the public marketing site.')
+    published = models.BooleanField(default=True)
+    show_in_nav = models.BooleanField(default=False)
+    nav_label = models.CharField(max_length=80, blank=True)
+    nav_order = models.PositiveSmallIntegerField(default=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['nav_order', 'title']
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        from jizz.marketing.pages import cms_path
+        return cms_path(self.slug)
+
+    def nav_text(self):
+        return self.nav_label or self.title
+
+
 class SpeciesName(models.Model):
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
     language = models.ForeignKey(Language, on_delete=models.CASCADE)
@@ -1068,6 +1095,8 @@ class Feedback(models.Model):
     )
     comment = models.TextField(default='', null=True, blank=True)
     rating = models.IntegerField(default=0)
+    contact_name = models.CharField(max_length=120, blank=True, default='')
+    contact_email = models.EmailField(blank=True, default='')
     created = models.DateTimeField(auto_now_add=True)
 
 

@@ -4,17 +4,23 @@ from django.contrib import admin
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path, re_path, include
+from django.views.generic import RedirectView
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
 from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 from jizz.marketing.views import (
     bird_page,
+    birds_index,
+    cms_index,
+    cms_page,
     compare_page,
     country_page,
     intent_page,
     landing,
     robots_txt,
+    site_feedback,
 )
+from jizz.marketing.api import MarketingPageDetailView, MarketingPageListCreateView
 from jizz.marketing import sitemaps as marketing_sitemaps
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesCoverView, GameListView, \
@@ -215,48 +221,82 @@ def open_app_redirect(request):
 
 
 urlpatterns = [
-    path('', landing, name='marketing-landing'),
     path('robots.txt', robots_txt, name='marketing-robots'),
     path('sitemap.xml', marketing_sitemaps.sitemap_index, name='marketing-sitemap'),
     path('sitemap-pages.xml', marketing_sitemaps.sitemap_pages, name='marketing-sitemap-pages'),
     path('sitemap-countries.xml', marketing_sitemaps.sitemap_countries, name='marketing-sitemap-countries'),
     path('sitemap-birds.xml', marketing_sitemaps.sitemap_birds, name='marketing-sitemap-birds'),
     path('sitemap-compare.xml', marketing_sitemaps.sitemap_compare, name='marketing-sitemap-compare'),
+    path('site/', landing, name='marketing-landing'),
     path(
-        'how-it-works/',
+        'site/how-it-works/',
         intent_page,
         {'slug': 'how-it-works'},
         name='marketing-how-it-works',
     ),
     path(
-        'bird-identification-quiz/',
+        'site/bird-identification-quiz/',
         intent_page,
         {'slug': 'bird-identification-quiz'},
         name='marketing-bird-identification-quiz',
     ),
     path(
-        'learn-bird-identification/',
+        'site/learn-bird-identification/',
         intent_page,
         {'slug': 'learn-bird-identification'},
         name='marketing-learn-bird-identification',
     ),
     path(
-        'bird-quiz-by-country/',
+        'site/bird-quiz-by-country/',
         intent_page,
         {'slug': 'bird-quiz-by-country'},
         name='marketing-bird-quiz-by-country',
     ),
-    path('birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
-    path('flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
+    path('site/birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
+    path('site/flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
     path(
-        'my-tricky-birds/',
+        'site/my-tricky-birds/',
         intent_page,
         {'slug': 'my-tricky-birds'},
         name='marketing-my-tricky-birds',
     ),
-    path('countries/<slug:slug>/', country_page, name='marketing-country'),
-    path('birds/<slug:slug>/', bird_page, name='marketing-bird'),
-    path('compare/<slug:pair>/', compare_page, name='marketing-compare'),
+    path('site/countries/<slug:slug>/', country_page, name='marketing-country'),
+    path('site/birds/', birds_index, name='marketing-birds'),
+    path('site/birds/<slug:slug>/', bird_page, name='marketing-bird'),
+    path('site/compare/<slug:pair>/', compare_page, name='marketing-compare'),
+    path('site/page/', cms_index, name='marketing-cms-index'),
+    path('site/page/<slug:slug>/', cms_page, name='marketing-cms-page'),
+    path('site/feedback/', site_feedback, name='marketing-feedback'),
+    path('site/<slug:slug>/', RedirectView.as_view(url='/site/page/%(slug)s/', permanent=True)),
+    path('', RedirectView.as_view(url='/site/', permanent=True)),
+    path('how-it-works/', RedirectView.as_view(url='/site/how-it-works/', permanent=True)),
+    path(
+        'bird-identification-quiz/',
+        RedirectView.as_view(url='/site/bird-identification-quiz/', permanent=True),
+    ),
+    path(
+        'learn-bird-identification/',
+        RedirectView.as_view(url='/site/learn-bird-identification/', permanent=True),
+    ),
+    path(
+        'bird-quiz-by-country/',
+        RedirectView.as_view(url='/site/bird-quiz-by-country/', permanent=True),
+    ),
+    path('birding-app/', RedirectView.as_view(url='/site/birding-app/', permanent=True)),
+    path('flocks/', RedirectView.as_view(url='/site/flocks/', permanent=True)),
+    path('my-tricky-birds/', RedirectView.as_view(url='/site/my-tricky-birds/', permanent=True)),
+    path(
+        'countries/<slug:slug>/',
+        RedirectView.as_view(url='/site/countries/%(slug)s/', permanent=True),
+    ),
+    path('birds/', RedirectView.as_view(url='/site/birds/', permanent=True)),
+    path('birds/<slug:slug>/', RedirectView.as_view(url='/site/birds/%(slug)s/', permanent=True)),
+    path(
+        'compare/<slug:pair>/',
+        RedirectView.as_view(url='/site/compare/%(pair)s/', permanent=True),
+    ),
+    path('page/', RedirectView.as_view(url='/site/page/', permanent=True)),
+    path('page/<slug:slug>/', RedirectView.as_view(url='/site/page/%(slug)s/', permanent=True)),
 
     path('.well-known/apple-app-site-association', apple_app_site_association),
     path('.well-known/assetlinks.json', android_asset_links),
@@ -374,6 +414,8 @@ urlpatterns = [
     re_path(r"^api/species-review-stats/$", SpeciesReviewStatsView.as_view(), name="species-review-stats"),
     path('api/pages/', PageListView.as_view(), name='page-list'),
     path('api/pages/<slug:slug>/', PageDetailView.as_view(), name='page-detail'),
+    path('api/marketing-pages/', MarketingPageListCreateView.as_view(), name='marketing-page-list'),
+    path('api/marketing-pages/<slug:slug>/', MarketingPageDetailView.as_view(), name='marketing-page-detail'),
 
     re_path(r"^api/questions/(?P<pk>\d+)/next-media/$", QuestionNextMediaView.as_view(), name="question-next-media"),
     re_path(r"^api/questions/(?P<pk>\d+)/media-ready/$", QuestionMediaReadyView.as_view(), name="question-media-ready"),

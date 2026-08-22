@@ -37,6 +37,9 @@
       --birdr-800: #31220a;
       --ink: #1c1408;
       --card: #fffdf8;
+      --shadow-menu: 0 10px 28px rgba(49, 34, 10, 0.14);
+      --shadow-bar: 0 -10px 32px rgba(49, 34, 10, 0.28);
+      --shadow-card: 0 12px 32px rgba(49, 34, 10, 0.12);
       --font: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
       --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
@@ -56,9 +59,18 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      border-bottom: 1px solid var(--birdr-200);
-      background: rgba(255, 253, 248, 0.92);
+      border-bottom: 1px solid rgba(212, 184, 138, 0.55);
+      background: rgba(255, 253, 248, 0.94);
       backdrop-filter: blur(10px);
+      box-shadow: var(--shadow-menu);
+    }
+    html {
+      scroll-padding-top: 7.5rem;
+    }
+    #get-the-app,
+    #help,
+    #download {
+      scroll-margin-top: 7.5rem;
     }
     header.site .wrap {
       display: flex;
@@ -123,6 +135,10 @@
       font-weight: 700;
       padding: 12px 18px;
       border-radius: 999px;
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
     }
     .btn:hover { background: var(--birdr-800); color: #fff; }
     .btn.secondary {
@@ -143,13 +159,162 @@
     .store-badges img { display: block; }
     .hero-art {
       background: #fff;
-      border: 2px solid var(--birdr-200);
+      border: 1px solid var(--birdr-200);
       border-radius: 28px;
       padding: 18px;
       text-align: center;
+      box-shadow: var(--shadow-card);
     }
     .hero-art img { width: min(360px, 100%); }
     .hero-art figcaption { color: var(--birdr-600); font-size: 0.9rem; margin-top: 8px; }
+    .species-hero { padding-bottom: 12px; }
+    .species-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .species-copy { flex: 1 1 12rem; min-width: 0; }
+    .species-hero h1 { margin-bottom: 8px; }
+    .species-hero .latin { margin: 0 0 8px; }
+    .species-ext-links { margin: 0 0 8px; }
+    .species-ext-links a { font-weight: 600; }
+    .species-thumb {
+      flex: 0 0 auto;
+      margin: 0;
+      width: 112px;
+    }
+    .species-thumb a,
+    .species-thumb .species-thumb-frame {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 112px;
+      height: 112px;
+      background: #fff;
+      border: 1px solid var(--birdr-200);
+      border-radius: 16px;
+      padding: 8px;
+      box-shadow: var(--shadow-card);
+      text-decoration: none;
+    }
+    .species-thumb img {
+      display: block;
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+    }
+    .media-all-link {
+      display: inline-block;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+    .review-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      font-weight: 700;
+    }
+    .review-status.is-ok { color: #1f7a3a; }
+    .review-status.is-needed { color: #b42318; }
+    .review-check {
+      flex-shrink: 0;
+      width: 1.15em;
+      height: 1.15em;
+    }
+    .review-needed-note {
+      max-width: 36rem;
+      margin: 0 0 10px;
+    }
+    .species-media-dialog {
+      width: min(720px, calc(100vw - 32px));
+      max-height: calc(100vh - 48px);
+      border: 1px solid var(--birdr-200);
+      border-radius: 18px;
+      padding: 0;
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: var(--shadow-menu);
+    }
+    .species-media-dialog::backdrop {
+      background: rgba(49, 34, 10, 0.45);
+    }
+    .species-media-panel { padding: 20px 22px 22px; }
+    .species-media-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 14px;
+    }
+    .species-media-head h2 {
+      font-size: 1.35rem;
+      margin: 0;
+    }
+    .species-media-close {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      color: var(--birdr-800);
+      cursor: pointer;
+      font-size: 1.6rem;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .species-media-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--birdr-200);
+    }
+    .species-media-tabs button {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      border-radius: 999px;
+      color: var(--birdr-800);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 6px 12px;
+    }
+    .species-media-tabs button[aria-selected="true"] {
+      background: var(--birdr-600);
+      color: #fff;
+    }
+    .species-media-body {
+      max-height: min(62vh, 520px);
+      overflow: auto;
+    }
+    .species-media-item { margin: 0 0 18px; }
+    .species-media-item img,
+    .species-media-item video {
+      display: block;
+      width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 12px;
+    }
+    .species-media-item iframe {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      border-radius: 12px;
+      background: #000;
+    }
+    .species-media-item audio { width: 100%; }
+    .species-media-item .credit {
+      color: var(--birdr-600);
+      font-size: 0.85rem;
+      margin: 6px 0 0;
+    }
+    .species-media-empty { color: var(--birdr-600); margin: 8px 0; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -158,12 +323,59 @@
     }
     .card {
       background: var(--card);
-      border: 1px solid var(--birdr-200);
+      border: 1px solid rgba(212, 184, 138, 0.55);
       border-radius: 18px;
       padding: 20px;
+      box-shadow: var(--shadow-card);
     }
     .card h3 { font-family: var(--font); margin: 0 0 8px; font-size: 1.25rem; }
     .card p { margin: 0 0 10px; }
+    .card-alt { background: #f0e2c4; }
+    .stat-figure {
+      font-family: var(--font);
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin: 0 0 8px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .stats-grid + .stats-grid { margin-top: 16px; }
+    @media (max-width: 700px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+    table.stats {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    table.stats th, table.stats td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--birdr-200);
+      vertical-align: top;
+    }
+    table.stats th { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--birdr-500); }
+    table.stats .num { text-align: right; font-variant-numeric: tabular-nums; }
+    table.stats .latin { display: block; font-size: 0.82rem; color: #6a5633; font-style: italic; }
+    .level-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .level-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid var(--birdr-200);
+      background: #fff;
+    }
+    .more-link { margin: 10px 0 0; font-weight: 600; }
     section { margin: 48px 0; }
     h2 { font-family: var(--font); font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 16px; }
     .steps {
@@ -190,10 +402,11 @@
     }
     .quote {
       background: #fff;
-      border: 1px solid var(--birdr-200);
+      border: 1px solid rgba(212, 184, 138, 0.55);
       border-radius: 16px;
       padding: 18px;
       margin: 0;
+      box-shadow: var(--shadow-card);
     }
     .quote p { margin: 0 0 10px; font-family: var(--font); font-size: 1.05rem; }
     .quote footer { color: var(--birdr-600); font-size: 0.88rem; font-weight: 600; }
@@ -205,6 +418,7 @@
       color: var(--birdr-50);
       border-radius: 24px;
       padding: 32px 28px;
+      box-shadow: var(--shadow-card);
     }
     .band h2, .band p { color: #fff; }
     .band a.web-link { color: var(--birdr-100); }
@@ -227,35 +441,110 @@
     footer.site ul { list-style: none; padding: 0; margin: 0; }
     footer.site li { margin: 0 0 6px; }
     details { margin: 8px 0; background: #fff; border-radius: 12px; padding: 12px 16px; border: 1px solid var(--birdr-200); }
+    .feedback-form p { margin: 0 0 12px; }
+    .feedback-form label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0 0 4px; }
+    .feedback-form label span { font-weight: 500; color: var(--birdr-500); }
+    .feedback-form input,
+    .feedback-form textarea {
+      width: 100%;
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid var(--birdr-200);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+    .feedback-form textarea { min-height: 7rem; resize: vertical; }
+    .feedback-form .hp-field {
+      position: absolute;
+      left: -10000px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    .form-note { font-weight: 600; color: var(--birdr-600); }
+    .form-error { font-weight: 600; color: #8a2b2b; }
+    .search-form { margin: 16px 0 0; }
+    .search-label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0 0 8px; }
+    .search-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+    .search-row input[type="search"],
+    .search-row select {
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid var(--birdr-200);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+    .search-row input[type="search"] { flex: 1 1 16rem; min-width: 0; }
+    .search-row select { flex: 0 1 14rem; }
+    .species-results { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 32px; }
+    .species-results li { margin: 0 0 10px; break-inside: avoid; }
+    .species-results .latin { display: block; font-size: 0.9rem; }
+    @media (max-width: 640px) { .species-results { columns: 1; } }
     details summary { font-weight: 700; cursor: pointer; }
     .latin { font-style: italic; color: var(--birdr-600); }
-    .photos { display: flex; gap: 12px; flex-wrap: wrap; }
-    .photos img { width: 280px; height: 210px; object-fit: cover; border-radius: 10px; }
+    .photos { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+    .photos figure { margin: 0; max-width: 100%; }
+    .photos-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .photos img {
+      height: 210px;
+      width: auto;
+      max-width: 100%;
+      display: block;
+      border-radius: 10px;
+      box-shadow: var(--shadow-card);
+    }
+    .photos-name { font-weight: 600; }
+    .photos-link:hover .photos-name { text-decoration: underline; }
+    .prose p { margin: 0 0 12px; }
+    .prose p:last-child { margin-bottom: 0; }
+    .prose ul, .prose ol { margin: 0 0 12px; padding-left: 1.2rem; }
+    .prose li { margin: 0 0 6px; }
+    .prose strong { font-weight: 700; }
     ul.plain { padding-left: 1.2rem; columns: 2; column-gap: 32px; }
     @media (max-width: 640px) { ul.plain { columns: 1; } }
     .country-pills { display: flex; flex-wrap: wrap; gap: 8px; }
     .country-pills a {
       text-decoration: none;
       background: #fff;
-      border: 1px solid var(--birdr-200);
+      border: 1px solid rgba(212, 184, 138, 0.55);
       border-radius: 999px;
       padding: 6px 12px;
       font-weight: 600;
       font-size: 0.9rem;
+      box-shadow: 0 4px 14px rgba(49, 34, 10, 0.08);
     }
   </style>
 </head>
 <body>
   <header class="site">
     <div class="wrap">
-      <a class="brand" href="/">Birdr</a>
+      <a class="brand" href="{{ home_url }}">Birdr</a>
       <nav class="site" aria-label="Primary">
-        <a href="/how-it-works/">How it works</a>
-        <a href="/bird-identification-quiz/">Quizzes</a>
-        <a href="/bird-quiz-by-country/">Countries</a>
-        <a href="/flocks/">Flocks</a>
-        <a href="/#help">Help</a>
-        <a class="nav-cta" href="/#get-the-app">Get the app</a>
+        <a href="/site/how-it-works/">How it works</a>
+        <a href="/site/bird-identification-quiz/">Quizzes</a>
+        <a href="/site/birds/">Species</a>
+        <a href="/site/bird-quiz-by-country/">Countries</a>
+        <a href="/site/flocks/">Flocks</a>
+        {% for page in cms_nav_pages %}
+        <a href="{{ page.get_absolute_url }}">{{ page.nav_text }}</a>
+        {% endfor %}
+        <a href="{{ home_url }}#help">Help</a>
+        <a class="nav-cta" href="{{ home_url }}#get-the-app">Get the app</a>
       </nav>
     </div>
   </header>
@@ -274,7 +563,7 @@
   <footer class="site">
     <div class="wrap footer-grid">
       <div>
-        <a class="brand" href="/">Birdr</a>
+        <a class="brand" href="{{ home_url }}">Birdr</a>
         <p>Learn to identify birds yourself. Free on iPhone, Android and the web.</p>
         {% include "marketing/_store_badges.html" %}
         <p><a class="web-link" href="/play">Play in the browser</a></p>
@@ -282,25 +571,29 @@
       <div>
         <h3>Learn</h3>
         <ul>
-          <li><a href="/how-it-works/">How it works</a></li>
-          <li><a href="/bird-identification-quiz/">Photo quizzes</a></li>
-          <li><a href="/learn-bird-identification/">Learn bird identification</a></li>
-          <li><a href="/my-tricky-birds/">My Tricky Birds</a></li>
-          <li><a href="/bird-quiz-by-country/">Quizzes by country</a></li>
+          <li><a href="/site/how-it-works/">How it works</a></li>
+          <li><a href="/site/bird-identification-quiz/">Photo quizzes</a></li>
+          <li><a href="/site/birds/">Species</a></li>
+          <li><a href="/site/learn-bird-identification/">Learn bird identification</a></li>
+          <li><a href="/site/my-tricky-birds/">My Tricky Birds</a></li>
+          <li><a href="/site/bird-quiz-by-country/">Quizzes by country</a></li>
         </ul>
       </div>
       <div>
         <h3>Birdr</h3>
         <ul>
-          <li><a href="/birding-app/">The app</a></li>
-          <li><a href="/flocks/">Flocks for clubs</a></li>
-          <li><a href="/about/">About</a></li>
-          <li><a href="/#help">How can I help?</a></li>
-          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/site/birding-app/">The app</a></li>
+          <li><a href="/site/flocks/">Flocks for clubs</a></li>
+          {% for page in cms_nav_pages %}
+          <li><a href="{{ page.get_absolute_url }}">{{ page.nav_text }}</a></li>
+          {% endfor %}
+          <li><a href="{{ cms_index_url }}">All pages</a></li>
+          <li><a href="{{ home_url }}#help">How can I help?</a></li>
           <li><a href="mailto:info@birdr.pro">Contact</a></li>
         </ul>
       </div>
     </div>
   </footer>
+  {% include "marketing/_cms_editor.html" %}
 </body>
 </html>

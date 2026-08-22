@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
-from django.db import transaction
 
 from .models import SpeciesTrait, SpeciesComparison, ComparisonRequest
 from .serializers import (
@@ -91,11 +90,18 @@ class ComparisonRequestView(APIView):
         # Check if comparison already exists
         existing_comparison = None
         if comparison_type == 'species':
-            existing_comparison = SpeciesComparison.objects.filter(
-                comparison_type='species',
-                species_1_id=data['species_1_id'],
-                species_2_id=data['species_2_id']
-            ).first()
+            existing_comparison = (
+                SpeciesComparison.objects.filter(
+                    comparison_type='species',
+                    species_1_id=data['species_1_id'],
+                    species_2_id=data['species_2_id'],
+                ).first()
+                or SpeciesComparison.objects.filter(
+                    comparison_type='species',
+                    species_1_id=data['species_2_id'],
+                    species_2_id=data['species_1_id'],
+                ).first()
+            )
         elif comparison_type == 'family':
             existing_comparison = SpeciesComparison.objects.filter(
                 comparison_type='family',
@@ -152,87 +158,16 @@ class ComparisonRequestView(APIView):
     
     def _generate_comparison(self, data: dict, comparison_type: str) -> SpeciesComparison:
         """Generate a comparison using AI."""
-        from compare.scraper import BirdsOfTheWorldScraper
-        from compare.models import SpeciesTrait
-        from django.db import transaction
-        
         ai_service = AIComparisonService()
-        scraper = BirdsOfTheWorldScraper()
-        
+
         if comparison_type == 'species':
+            from compare.generation import get_or_create_species_comparison
+
             species_1 = get_object_or_404(Species, id=data['species_1_id'])
             species_2 = get_object_or_404(Species, id=data['species_2_id'])
-            
-            # Get traits for both species, scrape if needed
-            traits_1 = self._get_species_traits(species_1)
-            if not traits_1:
-                # Scrape species 1
-                scraped_data = scraper.scrape_species(
-                    species_1.code,
-                    species_name=species_1.name,
-                    scientific_name=species_1.name_latin
-                )
-                if scraped_data and 'traits' in scraped_data:
-                    with transaction.atomic():
-                        for category, trait_data in scraped_data['traits'].items():
-                            SpeciesTrait.objects.get_or_create(
-                                species=species_1,
-                                category=category,
-                                title=trait_data['title'],
-                                defaults={
-                                    'content': trait_data['content'],
-                                    'source_url': scraped_data.get('source_url'),
-                                    'section': trait_data.get('section')
-                                }
-                            )
-                    traits_1 = self._get_species_traits(species_1)
-            
-            traits_2 = self._get_species_traits(species_2)
-            if not traits_2:
-                # Scrape species 2
-                scraped_data = scraper.scrape_species(
-                    species_2.code,
-                    species_name=species_2.name,
-                    scientific_name=species_2.name_latin
-                )
-                if scraped_data and 'traits' in scraped_data:
-                    with transaction.atomic():
-                        for category, trait_data in scraped_data['traits'].items():
-                            SpeciesTrait.objects.get_or_create(
-                                species=species_2,
-                                category=category,
-                                title=trait_data['title'],
-                                defaults={
-                                    'content': trait_data['content'],
-                                    'source_url': scraped_data.get('source_url'),
-                                    'section': trait_data.get('section')
-                                }
-                            )
-                    traits_2 = self._get_species_traits(species_2)
-            
-            # Check if we have traits after scraping
-            if not traits_1:
-                raise ValueError(f"No traits found for {species_1.name} even after scraping")
-            if not traits_2:
-                raise ValueError(f"No traits found for {species_2.name} even after scraping")
-            
-            # Add scientific names for better name matching in Similar Species section
-            traits_1['name_latin'] = species_1.name_latin
-            traits_2['name_latin'] = species_2.name_latin
-            
-            # Generate comparison
-            comparison_data = ai_service.generate_species_comparison(
-                traits_1, traits_2, species_1.name, species_2.name
-            )
-            
-            # Create comparison object
-            comparison = SpeciesComparison.objects.create(
-                comparison_type='species',
-                species_1=species_1,
-                species_2=species_2,
-                **comparison_data
-            )
-            
+            comparison = get_or_create_species_comparison(species_1, species_2)
+            if comparison is None:
+                raise ValueError(f'No comparison generated for {species_1.name} vs {species_2.name}')
             return comparison
         
         elif comparison_type == 'family':
@@ -253,29 +188,6 @@ class ComparisonRequestView(APIView):
         
         else:
             raise ValueError(f"Unsupported comparison type: {comparison_type}")
-    
-    def _get_species_traits(self, species: Species) -> dict:
-        """Get traits for a species, organized by category."""
-        traits = SpeciesTrait.objects.filter(species=species)
-        
-        result = {}
-        for trait in traits:
-            if trait.category not in result:
-                result[trait.category] = []
-            result[trait.category].append({
-                'title': trait.title,
-                'content': trait.content
-            })
-        
-        # Convert to format expected by AI service
-        formatted = {}
-        for category, trait_list in result.items():
-            formatted[category] = {
-                'title': category.replace('_', ' ').title(),
-                'content': '\n\n'.join([t['content'] for t in trait_list])
-            }
-        
-        return formatted
     
     def get(self, request):
         """List comparison requests."""

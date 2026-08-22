@@ -5,15 +5,36 @@ from __future__ import annotations
 import json
 
 from django.conf import settings
+from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
 
 from jizz.marketing.slugs import country_is_indexable
 from jizz.marketing.testimonials import FAQ, TESTIMONIALS
-from jizz.models import Country, Species
+from jizz.models import Country, MarketingPage, Species
 
 SITE_NAME = 'Birdr'
+SITE_HOME = '/site/'
+CMS_INDEX = '/site/page/'
 DEFAULT_TITLE = 'Birdr – Free Bird Identification Quiz & Training App'
+# Species media is treated as reviewed once this many images are accepted.
+MEDIA_REVIEWED_APPROVED_COUNT = 10
+
+
+def site_path(*parts: str) -> str:
+    """Public marketing URL under /site/."""
+    if not parts:
+        return SITE_HOME
+    return SITE_HOME + '/'.join(part.strip('/') for part in parts) + '/'
+
+
+def cms_path(slug: str | None = None) -> str:
+    """Staff-editable CMS page under /site/page/."""
+    if not slug:
+        return CMS_INDEX
+    return site_path('page', slug)
+
+
 DEFAULT_DESCRIPTION = (
     'Learn to identify birds through photo quizzes, country challenges and '
     'personalised training. Birdr is free on iPhone, Android and the web.'
@@ -54,10 +75,10 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/bird-identification-quiz/', 'Photo quizzes'),
-            ('/my-tricky-birds/', 'My Tricky Birds'),
-            ('/bird-quiz-by-country/', 'Country Challenges'),
-            ('/birding-app/', 'Get the app'),
+            ('/site/bird-identification-quiz/', 'Photo quizzes'),
+            ('/site/my-tricky-birds/', 'My Tricky Birds'),
+            ('/site/bird-quiz-by-country/', 'Country Challenges'),
+            ('/site/birding-app/', 'Get the app'),
         ],
     },
     'bird-identification-quiz': {
@@ -80,14 +101,19 @@ INTENT_PAGES = {
                 'species; higher levels mix in lookalikes.'
             ),
             (
+                'Play on your own, or start a live quiz and compete in real time against '
+                'each other on the same birds. Speed is important: you get more points '
+                'when you answer fast.'
+            ),
+            (
                 'When you miss a bird, Birdr can send you back to My Tricky Birds so those '
                 'species show up again until they stick. That is training, not a one-off score.'
             ),
         ],
         'links': [
-            ('/learn-bird-identification/', 'Learn bird identification'),
-            ('/bird-quiz-by-country/', 'Quizzes by country'),
-            ('/my-tricky-birds/', 'My Tricky Birds'),
+            ('/site/learn-bird-identification/', 'Learn bird identification'),
+            ('/site/bird-quiz-by-country/', 'Quizzes by country'),
+            ('/site/my-tricky-birds/', 'My Tricky Birds'),
         ],
     },
     'learn-bird-identification': {
@@ -114,9 +140,9 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/bird-identification-quiz/', 'Bird identification quiz'),
-            ('/birding-app/', 'Birding training app'),
-            ('/my-tricky-birds/', 'Practise difficult birds'),
+            ('/site/bird-identification-quiz/', 'Bird identification quiz'),
+            ('/site/birding-app/', 'Birding training app'),
+            ('/site/my-tricky-birds/', 'Practise difficult birds'),
         ],
     },
     'bird-quiz-by-country': {
@@ -144,9 +170,9 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/bird-identification-quiz/', 'Photo quizzes'),
-            ('/birding-app/', 'The Birdr app'),
-            ('/flocks/', 'Flocks for clubs'),
+            ('/site/bird-identification-quiz/', 'Photo quizzes'),
+            ('/site/birding-app/', 'The Birdr app'),
+            ('/site/flocks/', 'Flocks for clubs'),
         ],
         'show_countries': True,
     },
@@ -174,9 +200,9 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/bird-identification-quiz/', 'Photo quizzes'),
-            ('/flocks/', 'Flocks'),
-            ('/learn-bird-identification/', 'How Birdr teaches'),
+            ('/site/bird-identification-quiz/', 'Photo quizzes'),
+            ('/site/flocks/', 'Flocks'),
+            ('/site/learn-bird-identification/', 'How Birdr teaches'),
         ],
     },
     'flocks': {
@@ -203,8 +229,8 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/bird-identification-quiz/', 'Photo quizzes'),
-            ('/bird-quiz-by-country/', 'Country quizzes'),
+            ('/site/bird-identification-quiz/', 'Photo quizzes'),
+            ('/site/bird-quiz-by-country/', 'Country quizzes'),
             ('/play', 'Open the app'),
         ],
     },
@@ -233,8 +259,8 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/learn-bird-identification/', 'Learn bird identification'),
-            ('/bird-identification-quiz/', 'Photo quizzes'),
+            ('/site/learn-bird-identification/', 'Learn bird identification'),
+            ('/site/bird-identification-quiz/', 'Photo quizzes'),
             ('/play', 'Start a quiz'),
         ],
     },
@@ -282,6 +308,14 @@ def public_image_queryset(species):
     return species.media.filter(type='image', hide=False).exclude(reviews__review_type='rejected').order_by('id')
 
 
+def species_approved_image_count(species) -> int:
+    return (
+        species.media.filter(type='image', hide=False, reviews__review_type='approved')
+        .distinct()
+        .count()
+    )
+
+
 def application_json_ld(origin: str, app_store_url: str, play_store_url: str) -> list[dict]:
     offer = {'@type': 'Offer', 'price': '0', 'priceCurrency': 'USD'}
     return [
@@ -289,7 +323,7 @@ def application_json_ld(origin: str, app_store_url: str, play_store_url: str) ->
             '@context': 'https://schema.org',
             '@type': 'WebApplication',
             'name': SITE_NAME,
-            'url': origin + '/',
+            'url': origin + SITE_HOME,
             'applicationCategory': 'EducationalApplication',
             'operatingSystem': 'Web',
             'description': DEFAULT_DESCRIPTION,
@@ -382,5 +416,31 @@ def base_context(request, *, title: str, description: str, path: str, breadcrumb
         'bing_site_verification': getattr(settings, 'BING_SITE_VERIFICATION', '') or '',
         'testimonials': TESTIMONIALS,
         'faq': FAQ,
+        'home_url': SITE_HOME,
+        'cms_index_url': CMS_INDEX,
+        'cms_nav_pages': _cms_nav_pages(),
+        'feedback_started': _feedback_started_token(),
+        'can_edit': bool(
+            getattr(request, 'user', None)
+            and request.user.is_authenticated
+            and request.user.is_staff
+        ),
         **extra,
     }
+
+
+def _cms_nav_pages():
+    try:
+        return list(
+            MarketingPage.objects.filter(published=True, show_in_nav=True).order_by(
+                'nav_order', 'title'
+            )
+        )
+    except (OperationalError, ProgrammingError):
+        return []
+
+
+def _feedback_started_token():
+    from jizz.marketing.feedback import issue_started_token
+
+    return issue_started_token()

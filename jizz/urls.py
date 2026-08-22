@@ -7,6 +7,15 @@ from django.urls import path, re_path, include
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
 from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
+from jizz.marketing.views import (
+    bird_page,
+    compare_page,
+    country_page,
+    intent_page,
+    landing,
+    robots_txt,
+)
+from jizz.marketing import sitemaps as marketing_sitemaps
 
 from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesCoverView, GameListView, \
     GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, QuestionNextMediaView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
@@ -206,6 +215,49 @@ def open_app_redirect(request):
 
 
 urlpatterns = [
+    path('', landing, name='marketing-landing'),
+    path('robots.txt', robots_txt, name='marketing-robots'),
+    path('sitemap.xml', marketing_sitemaps.sitemap_index, name='marketing-sitemap'),
+    path('sitemap-pages.xml', marketing_sitemaps.sitemap_pages, name='marketing-sitemap-pages'),
+    path('sitemap-countries.xml', marketing_sitemaps.sitemap_countries, name='marketing-sitemap-countries'),
+    path('sitemap-birds.xml', marketing_sitemaps.sitemap_birds, name='marketing-sitemap-birds'),
+    path('sitemap-compare.xml', marketing_sitemaps.sitemap_compare, name='marketing-sitemap-compare'),
+    path(
+        'how-it-works/',
+        intent_page,
+        {'slug': 'how-it-works'},
+        name='marketing-how-it-works',
+    ),
+    path(
+        'bird-identification-quiz/',
+        intent_page,
+        {'slug': 'bird-identification-quiz'},
+        name='marketing-bird-identification-quiz',
+    ),
+    path(
+        'learn-bird-identification/',
+        intent_page,
+        {'slug': 'learn-bird-identification'},
+        name='marketing-learn-bird-identification',
+    ),
+    path(
+        'bird-quiz-by-country/',
+        intent_page,
+        {'slug': 'bird-quiz-by-country'},
+        name='marketing-bird-quiz-by-country',
+    ),
+    path('birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
+    path('flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
+    path(
+        'my-tricky-birds/',
+        intent_page,
+        {'slug': 'my-tricky-birds'},
+        name='marketing-my-tricky-birds',
+    ),
+    path('countries/<slug:slug>/', country_page, name='marketing-country'),
+    path('birds/<slug:slug>/', bird_page, name='marketing-bird'),
+    path('compare/<slug:pair>/', compare_page, name='marketing-compare'),
+
     path('.well-known/apple-app-site-association', apple_app_site_association),
     path('.well-known/assetlinks.json', android_asset_links),
 
@@ -436,6 +488,8 @@ urlpatterns = [
     # Compare app URLs
     path('api/compare/', include('compare.urls')),
 ]
+
+handler404 = 'jizz.marketing.views.marketing_404'
 
 urlpatterns += router.urls
 

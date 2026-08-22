@@ -4,8 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
-  Pressable,
   FlatList,
   TextInput,
   ActivityIndicator,
@@ -17,6 +15,7 @@ import { loadCountries, type Country } from '../api/countries';
 import { useTranslation } from '../i18n/TranslationContext';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
+import { AccessibleSheetModal } from './AccessibleSheetModal';
 
 export type CountrySelectProps = {
   value: Country | null;
@@ -151,8 +150,11 @@ export function CountrySelect({
           style={[styles.selectButton, buttonStyle]}
           onPress={() => setModalVisible(true)}
           testID={testID}
+          accessible
           accessibilityRole="button"
-          accessibilityLabel={title ?? t('select_country')}
+          accessibilityState={{ expanded: modalVisible }}
+          accessibilityLabel={`${title ?? t('select_country')}, ${displayLabel}`}
+          accessibilityHint={t('select_country_hint')}
         >
           {loading && !value ? (
             <ActivityIndicator size="small" color={colors.primary[500]} />
@@ -164,6 +166,7 @@ export function CountrySelect({
                 buttonTextStyle,
               ]}
               numberOfLines={1}
+              accessible={false}
             >
               {displayLabel}
             </Text>
@@ -171,61 +174,76 @@ export function CountrySelect({
         </TouchableOpacity>
       )}
 
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={closeModal}>
-        <Pressable style={styles.modalBackdrop} onPress={closeModal}>
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{title ?? t('select_country')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              placeholderTextColor={colors.primary[400]}
-              value={search}
-              onChangeText={setSearch}
-              autoCapitalize="none"
-              autoCorrect={false}
-              clearButtonMode="while-editing"
-            />
-            {loading && !countriesProp ? (
-              <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loader} />
-            ) : (
-              <FlatList
-                data={listData}
-                keyExtractor={(item) => item.code || '_empty'}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => {
-                  const selected = item.code
-                    ? value?.code === item.code
-                    : !value;
-                  const label = item.code
-                    ? getCountryDisplayName(item, locale)
-                    : item.name;
-                  return (
-                    <TouchableOpacity
-                      style={[styles.modalItem, selected && styles.modalItemSelected]}
-                      onPress={() => handleSelect(item)}
-                    >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          selected && styles.modalItemTextSelected,
-                        ]}
-                      >
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-                ListEmptyComponent={
-                  <Text style={styles.emptyText}>{t('no_options_found')}</Text>
-                }
-              />
-            )}
-            <TouchableOpacity style={styles.modalClose} onPress={closeModal}>
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <AccessibleSheetModal visible={modalVisible} onClose={closeModal}>
+        <Text style={styles.modalTitle} accessibilityRole="header">
+          {title ?? t('select_country')}
+        </Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('search')}
+          placeholderTextColor={colors.primary[400]}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+          accessibilityLabel={t('search')}
+          accessibilityRole="search"
+        />
+        {loading && !countriesProp ? (
+          <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loader} />
+        ) : (
+          <FlatList
+            data={listData}
+            keyExtractor={(item) => item.code || '_empty'}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const selected = item.code
+                ? value?.code === item.code
+                : !value;
+              const label = item.code
+                ? getCountryDisplayName(item, locale)
+                : item.name;
+              return (
+                <TouchableOpacity
+                  style={[styles.modalItem, selected && styles.modalItemSelected]}
+                  onPress={() => handleSelect(item)}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={
+                    selected ? `${label}, ${t('picker_item_selected')}` : label
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      selected && styles.modalItemTextSelected,
+                    ]}
+                    accessible={false}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>{t('no_options_found')}</Text>
+            }
+          />
+        )}
+        <TouchableOpacity
+          style={styles.modalClose}
+          onPress={closeModal}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
+        >
+          <Text style={styles.modalCloseText} accessible={false}>
+            {t('close')}
+          </Text>
+        </TouchableOpacity>
+      </AccessibleSheetModal>
     </View>
   );
 }
@@ -247,18 +265,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: colors.primary[500],
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: '80%',
-    padding: 16,
   },
   modalTitle: {
     fontSize: 18,

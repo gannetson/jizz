@@ -3,6 +3,7 @@ import {useContext, useEffect} from "react"
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import { Layout } from "./shared/components/layout";
 import HomePage from "./pages/home";
+import { MarketingHomePage } from "./pages/marketing-home";
 import Lobby from "./pages/mpg/lobby"
 import {AboutPage} from "./pages/about";
 import {IntlProvider} from "react-intl";
@@ -74,8 +75,9 @@ export const MainContent = () => {
       <BrowserRouter>
         <AnalyticsTracker />
         <Routes>
-          <Route path="/" element={<Layout/>}>
-            <Route index element={<HomePage/>}/>
+          <Route path="/" element={<MarketingHomePage />} />
+          <Route element={<Layout/>}>
+            <Route path="/play" element={<HomePage/>}/>
             <Route path="/login" element={<Login />} />
             <Route path="/login/:provider" element={<AuthCallback />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -88,7 +90,7 @@ export const MainContent = () => {
             <Route path="/flocks/intro" element={<FlocksIntroPage />} />
             <Route path="/flocks/create" element={<FlocksCreatePage />} />
             <Route path="/flocks/join" element={<FlocksJoinPage />} />
-            <Route path="/flocks" element={<FlocksListPage />} />
+            <Route path="/flocks/list" element={<FlocksListPage />} />
             <Route path="/flocks/results/:token" element={<FlockResultPage />} />
             <Route path="/g/:token" element={<GameShareResultPage />} />
             <Route path="/flocks/:slug/members" element={<FlockMembersPage />} />

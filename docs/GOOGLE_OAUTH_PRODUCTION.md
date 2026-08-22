@@ -34,7 +34,8 @@ location ~ ^/(token|auth|api|admin|country|stat|media)/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
-# SPA (React app) – only for non-API paths
+# SPA (React app) – only for non-API, non-marketing paths (/play, /start, /login, …)
+# Marketing `/` is an exact Django location (see below); do not send `/` to index.html.
 location / {
     root /var/www/jizz/app/build;   # or your build output
     try_files $uri $uri/ /index.html;
@@ -110,6 +111,106 @@ location ^~ /g/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+# Public marketing HTML (Django) — exact / and SEO prefixes BEFORE the SPA catch-all.
+# Do not use `location ^~ /flocks/` here: /flocks/create and /flocks/:slug stay on the SPA.
+location = / {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location = /flocks {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location = /flocks/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location = /robots.txt {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location = /sitemap.xml {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /sitemap- {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /how-it-works/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /bird-identification-quiz/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /learn-bird-identification/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /bird-quiz-by-country/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /birding-app/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /my-tricky-birds/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /countries/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /birds/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location ^~ /compare/ {
+    proxy_pass http://jizz;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# SPA (React app) – /play and other app routes. Must come AFTER the Django locations above.
+# location / {
+#     root /var/www/jizz/app/build;
+#     try_files $uri $uri/ /index.html;
+# }
+
 ```
 
 Then keep your existing `location /` (SPA) and other blocks. Reload nginx: `sudo nginx -t && sudo systemctl reload nginx`.
@@ -182,9 +283,20 @@ In production the app uses `REACT_APP_API_URL` so the “Continue with Google”
 
 (No trailing slash. The frontend will call `${REACT_APP_API_URL}/auth/login/google-oauth2/?redirect_uri=...`.)
 
+## 5. Search Console / Bing (marketing site)
+
+Accounts cannot be created in this repo. After deploy:
+
+1. Optionally set `GOOGLE_SITE_VERIFICATION` and `BING_SITE_VERIFICATION` so the tokens appear in the marketing `<head>`.
+2. In Google Search Console (and Bing Webmaster Tools), add `https://birdr.pro` and submit `https://birdr.pro/sitemap.xml`.
+3. Confirm `robots.txt` is served by Django (`Disallow: /admin/`, `/api/`, `/token/` plus a Sitemap line).
+
+Locally, Django on port 8050 serves `/`, intent pages, `/countries/`, `/birds/` and `/compare/`. The CRA app on port 3000 is the game (`/play`). `setupProxy.js` forwards those SEO prefixes to Django; it does not proxy `/` so the webpack dev server still works.
+
 ## Quick checklist
 
-- [ ] Nginx: API paths (`/token/`, `/auth/`, `/api/`, etc.) go to Django; only then SPA `try_files` for `/`. (Fixes 405 on POST /token/.)
+- [ ] Nginx: API paths (`/token/`, `/auth/`, `/api/`, etc.) go to Django; marketing `/`, `/countries/`, `/birds/`, `/compare/`, intent URLs, `robots.txt` and `sitemap.xml` go to Django; only then SPA `try_files` for `/play` and other app routes. (Fixes 405 on POST /token/.)
+- [ ] Search Console / Bing: set `GOOGLE_SITE_VERIFICATION` / `BING_SITE_VERIFICATION` if you have tokens, then submit `https://birdr.pro/sitemap.xml`.
 - [ ] Nginx: `proxy_set_header X-Forwarded-Proto $scheme;` and `proxy_set_header Host $host;` on the Django proxy.
 - [ ] Django production: `SECURE_PROXY_SSL_HEADER`, `USE_X_FORWARDED_HOST`, `SOCIAL_AUTH_LOGIN_REDIRECT_URL`, `SOCIAL_AUTH_REDIRECT_IS_HTTPS` (and Google key/secret).
 - [ ] Google Cloud: Authorized redirect URI = `https://<api-host>/auth/complete/google-oauth2/`; Authorized JavaScript origins = your frontend origin(s).

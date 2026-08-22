@@ -1,0 +1,28 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Birds of {{ country.name }}</h1>
+  <p class="lead">
+    Learn to identify the birds of {{ country.name }} yourself.
+    The Birdr list has {{ species_count }} species—photo quizzes and a Country Challenge
+    take you from distinctive beginners to harder lookalikes.
+  </p>
+  <div class="cta-row">
+    <a class="btn" href="{{ quiz_href }}">Start a quiz</a>
+    <a class="btn secondary" href="{{ challenge_href }}">Country Challenge</a>
+  </div>
+  <p>Best on the <a href="/#get-the-app">iPhone and Android apps</a>.</p>
+</section>
+<section>
+  <p>
+    A one-off quiz is a short session on this country’s list. A Country Challenge is
+    structured practice with levels, so you keep meeting new birds instead of repeating
+    only the easy ones.
+  </p>
+  <p>
+    <a href="/bird-quiz-by-country/">More country quizzes</a> ·
+    <a href="/play">Open Birdr</a>
+  </p>
+</section>
+{% include "marketing/_help.html" %}
+{% endblock %}

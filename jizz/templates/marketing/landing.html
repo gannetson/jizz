@@ -1,0 +1,111 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <p class="kicker">Free bird identification training</p>
+      <h1>{{ heading }}</h1>
+      <p class="lead">{{ supporting }}</p>
+      <div id="get-the-app" class="cta-row">
+        {% include "marketing/_store_badges.html" %}
+      </div>
+      <p><a class="web-link" href="/play">Or play a quiz in the browser</a></p>
+    </div>
+    <figure class="hero-art">
+      <img src="/images/birdr-start-game.png" width="512" height="512" alt="Birdr quiz screen with a bird illustration">
+      <figcaption>Short photo quizzes. Real birds. No auto-ID.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>How Birdr teaches</h2>
+  <div class="steps">
+    <article class="card">
+      <div class="step-num">1</div>
+      <h3>See a real bird</h3>
+      <p>Each round shows a wild photograph, not a cartoon. Pick the species from a short list.</p>
+    </article>
+    <article class="card">
+      <div class="step-num">2</div>
+      <h3>Learn what you missed</h3>
+      <p>Wrong answers become practice. My Tricky Birds keeps the lookalikes that will not stick.</p>
+    </article>
+    <article class="card">
+      <div class="step-num">3</div>
+      <h3>Work a country list</h3>
+      <p>Country Challenges take you from distinctive beginners to expert lookalikes.</p>
+    </article>
+  </div>
+  <p><a href="/how-it-works/">See how it works</a></p>
+</section>
+
+<section>
+  <h2>What you can play</h2>
+  <div class="grid">
+    <article class="card">
+      <h3>Photo quizzes</h3>
+      <p>One quick game, or a longer session. Choose a country, a level and photos, video or sound.</p>
+      <p><a href="/bird-identification-quiz/">Bird identification quiz</a></p>
+    </article>
+    <article class="card">
+      <h3>Country Challenges</h3>
+      <p>Structured levels for the birds of a country—from the Netherlands to Japan to Colombia.</p>
+      <p><a href="/bird-quiz-by-country/">Quizzes by country</a></p>
+    </article>
+    <article class="card">
+      <h3>My Tricky Birds</h3>
+      <p>Focused drills on the species and confusing pairs you actually mix up.</p>
+      <p><a href="/my-tricky-birds/">Practise difficult birds</a></p>
+    </article>
+    <article class="card">
+      <h3>Flocks</h3>
+      <p>Club quizzes and a private leaderboard for your group—not a global anonymous ladder.</p>
+      <p><a href="/flocks/">Flocks for clubs</a></p>
+    </article>
+  </div>
+</section>
+
+{% if countries %}
+<section>
+  <h2>Study a country list</h2>
+  <div class="country-pills">
+    {% for c in countries %}
+    <a href="{{ c.url }}">{{ c.name }}</a>
+    {% endfor %}
+  </div>
+  <p><a href="/bird-quiz-by-country/">All country quizzes</a></p>
+</section>
+{% endif %}
+
+<section>
+  <h2>What birders say</h2>
+  <div class="quotes">
+    {% for item in testimonials %}
+    <blockquote class="quote">
+      <p>“{{ item.quote }}”</p>
+      <footer>— {{ item.attribution }}</footer>
+    </blockquote>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>FAQ</h2>
+  {% for item in faq %}
+  <details>
+    <summary>{{ item.question }}</summary>
+    <p>{{ item.answer }}</p>
+  </details>
+  {% endfor %}
+</section>
+
+{% include "marketing/_help.html" %}
+
+<section class="band" id="download">
+  <h2>Get Birdr on your phone</h2>
+  <p>The apps are the best way to practise. The browser works too if you want to try a quiz first.</p>
+  {% include "marketing/_store_badges.html" %}
+  <p><a class="web-link" href="/play">Continue in the browser</a></p>
+</section>
+{% endblock %}

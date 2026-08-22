@@ -15,6 +15,7 @@ function isCapacitor(): boolean {
 export function shouldTryOpenInApp(pathname: string): boolean {
   if (typeof window === 'undefined') return false;
   if (isCapacitor()) return false;
+  if (pathname === '/' || pathname === '') return false;
   if (!getMobileOS()) return false;
   for (const prefix of SKIP_PREFIXES) {
     if (pathname.startsWith(prefix)) return false;

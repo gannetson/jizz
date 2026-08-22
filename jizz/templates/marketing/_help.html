@@ -1,0 +1,40 @@
+<section id="help">
+  <h2>How can I help?</h2>
+  <p>
+    Birdr is a small project. If you use it, two things help more than anything else:
+    honest feedback, and a few minutes checking that quiz photos show the right bird.
+  </p>
+  <div class="grid">
+    <article class="card">
+      <h3>Send feedback</h3>
+      <p>
+        Found a bug, a missing species, or something that worked well? There is a
+        feedback box on the app home screen, or write to
+        <a href="mailto:info@birdr.pro">info@birdr.pro</a>.
+      </p>
+      <p><a class="btn secondary" href="/play">Open the app home</a></p>
+    </article>
+    <article class="card">
+      <h3>Review photos</h3>
+      <p>
+        Quizzes are only as good as the pictures. Help by approving or rejecting
+        photos—start with any country, or review the birds you know best.
+      </p>
+      {% if country %}
+      <p>
+        <a class="btn" href="/media-review/{{ country.code }}">Review {{ country.name }} photos</a>
+      </p>
+      <p><a href="/media-review/">Review photos from any country</a></p>
+      {% else %}
+      <p><a class="btn" href="/media-review/">Review media</a></p>
+      {% if countries %}
+      <p>
+        {% for c in countries %}
+        <a href="/media-review/{{ c.code }}">{{ c.name }}</a>{% if not forloop.last %} · {% endif %}
+        {% endfor %}
+      </p>
+      {% endif %}
+      {% endif %}
+    </article>
+  </div>
+</section>

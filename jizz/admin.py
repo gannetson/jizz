@@ -358,9 +358,10 @@ class TaxonomicGenusAdmin(admin.ModelAdmin):
 @register(Species)
 class SpeciesAdmin(admin.ModelAdmin):
     inlines = [SpeciesIllustrationInline, MediaInline]
-    search_fields = ['name', 'name_nl', 'name_latin']
+    search_fields = ['name', 'name_nl', 'name_latin', 'slug']
     readonly_fields = ['sync_media', 'pic_count', 'infer_machine_predictions']
-    list_display = ['name', 'name_nl', 'taxonomic_genus', 'tax_ordering', 'pic_count']
+    list_display = ['name', 'name_nl', 'slug', 'taxonomic_genus', 'tax_ordering', 'pic_count']
+    prepopulated_fields = {'slug': ('name',)}
     list_filter = ['taxonomic_order', 'taxonomic_genus']
     actions = ['scrape_traits', 'generate_comparison']
 

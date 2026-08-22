@@ -1,0 +1,52 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>{{ left.name }} vs {{ right.name }}</h1>
+  <p class="lead">
+    <span class="latin">{{ left.name_latin }}</span>
+    versus
+    <span class="latin">{{ right.name_latin }}</span>
+  </p>
+  <div class="cta-row">
+    <a class="btn" href="{{ practise_href }}">Practise this pair</a>
+    <a class="btn secondary" href="/play">Start a quiz</a>
+  </div>
+</section>
+<section class="photos">
+  {% for photo in left_photos %}
+  <figure>
+    <img src="{{ photo.url }}" width="280" height="210" alt="{{ photo.alt }}">
+    <figcaption>{{ left.name }}</figcaption>
+  </figure>
+  {% endfor %}
+  {% for photo in right_photos %}
+  <figure>
+    <img src="{{ photo.url }}" width="280" height="210" alt="{{ photo.alt }}" loading="lazy">
+    <figcaption>{{ right.name }}</figcaption>
+  </figure>
+  {% endfor %}
+</section>
+{% if summary %}
+<section>
+  <h2>In short</h2>
+  <p>{{ summary }}</p>
+</section>
+{% endif %}
+{% for label, text in sections %}
+<section>
+  <h2>{{ label }}</h2>
+  <p>{{ text }}</p>
+</section>
+{% endfor %}
+{% if detailed and not sections %}
+<section>
+  <h2>Comparison</h2>
+  <p>{{ detailed }}</p>
+</section>
+{% endif %}
+<p>
+  {% if left.slug %}<a href="/birds/{{ left.slug }}/">{{ left.name }}</a> · {% endif %}
+  {% if right.slug %}<a href="/birds/{{ right.slug }}/">{{ right.name }}</a> · {% endif %}
+  <a href="/my-tricky-birds/">My Tricky Birds</a>
+</p>
+{% endblock %}

@@ -309,7 +309,7 @@ export function clearFlockPlayContext(): void {
 }
 
 export function getFlocksPath(): string {
-  return '/flocks';
+  return '/flocks/list';
 }
 
 export function getFlocksIntroPath(): string {

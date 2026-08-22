@@ -176,6 +176,7 @@ class Species(models.Model):
     )
     tax_ordering = models.FloatField(null=True, blank=True, db_index=True)
     code = models.CharField(max_length=10)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
 
     @property
     def tax_order(self):

@@ -1,0 +1,42 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="kicker">Birdr</p>
+  <h1>{{ heading }}</h1>
+  <p class="lead">{{ lead }}</p>
+  <div class="cta-row">
+    {% include "marketing/_store_badges.html" %}
+  </div>
+  <p>
+    <a class="btn" href="{{ cta_href }}">{{ cta_label }}</a>
+    <a class="web-link" href="/play">Play in the browser</a>
+  </p>
+</section>
+<section>
+  {% for p in body_paragraphs %}
+  <p>{{ p }}</p>
+  {% endfor %}
+  {% if related_links %}
+  <p>
+    {% for href, label in related_links %}
+    <a href="{{ href }}">{{ label }}</a>{% if not forloop.last %} · {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+</section>
+{% if countries %}
+<section>
+  <h2>Countries on Birdr</h2>
+  <div class="country-pills">
+    {% for c in countries %}
+    <a href="{{ c.url }}">{{ c.name }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+<section class="band">
+  <h2>Best on the app</h2>
+  <p>Install Birdr for quizzes on the go. Same account in the browser if you prefer.</p>
+  {% include "marketing/_store_badges.html" %}
+</section>
+{% endblock %}

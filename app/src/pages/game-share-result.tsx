@@ -176,7 +176,7 @@ export function GameShareResultPage() {
               <Button colorPalette="primary" onClick={() => navigate('/start/')}>
                 <FormattedMessage id="start_a_game" defaultMessage="Start a game" />
               </Button>
-              <Button variant="outline" onClick={() => navigate('/')}>
+              <Button variant="outline" onClick={() => navigate('/play')}>
                 <FormattedMessage id="birdr_home" defaultMessage="Birdr home" />
               </Button>
             </Flex>

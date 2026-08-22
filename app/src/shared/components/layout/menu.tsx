@@ -8,7 +8,7 @@ import { getFlocksPath } from "../../../api/flocks";
 export const BirdrMenu = () => {
     return (
         <Flex direction={'column'} gap={4} fontSize={'xl'}>
-            <Link href={'/'} textDecoration="none">
+            <Link href={'/play'} textDecoration="none">
               <FormattedMessage id={'home'} defaultMessage={'Home'}/>
             </Link>
             <Link href={'/start'} textDecoration="none">

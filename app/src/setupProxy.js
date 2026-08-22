@@ -32,4 +32,29 @@ module.exports = function (app) {
       changeOrigin: true,
     })
   );
+
+  // Public marketing HTML from Django (do not proxy `/` — CRA needs it for the app).
+  app.use(
+    [
+      '/how-it-works',
+      '/bird-identification-quiz',
+      '/learn-bird-identification',
+      '/bird-quiz-by-country',
+      '/birding-app',
+      '/my-tricky-birds',
+      '/countries',
+      '/birds',
+      '/compare',
+      '/sitemap.xml',
+      '/sitemap-pages.xml',
+      '/sitemap-countries.xml',
+      '/sitemap-birds.xml',
+      '/sitemap-compare.xml',
+      '/robots.txt',
+    ],
+    createProxyMiddleware({
+      ...proxyOptions,
+      changeOrigin: true,
+    })
+  );
 };

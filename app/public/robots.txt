@@ -1,3 +1,7 @@
-# https://www.robotstxt.org/robotstxt.html
+# Production robots.txt is served by Django at /robots.txt (see jizz.marketing.views.robots_txt).
+# This file is only used if the SPA is served without nginx routing /robots.txt to Django.
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /api/
+Disallow: /token/
+Sitemap: https://birdr.pro/sitemap.xml

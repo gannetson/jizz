@@ -367,6 +367,12 @@ PLAY_STORE_URL = os.environ.get(
     'https://play.google.com/store/apps/details?id=pro.birdr.app',
 )
 
+# Public site origin for canonical URLs, sitemaps and Open Graph.
+SITE_URL = os.environ.get('SITE_URL', 'https://birdr.pro')
+# Optional Search Console / Bing verification meta tags (leave empty until you have a token).
+GOOGLE_SITE_VERIFICATION = os.environ.get('GOOGLE_SITE_VERIFICATION', '')
+BING_SITE_VERIFICATION = os.environ.get('BING_SITE_VERIFICATION', '')
+
 # Optional MaxMind GeoLite2-Country.mmdb for offline IP geolocation (staff usage dashboard).
 # When unset, staff IP lookup falls back to ip-api.com for public addresses.
 GEOIP_COUNTRY_DB = os.environ.get('GEOIP_COUNTRY_DB', '')

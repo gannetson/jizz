@@ -79,7 +79,7 @@ describe('flocks share helpers', () => {
   });
 
   it('builds web paths and absolute URLs', () => {
-    expect(getFlocksPath()).toBe('/flocks');
+    expect(getFlocksPath()).toBe('/flocks/list');
     expect(getFlocksIntroPath()).toBe('/flocks/intro');
     expect(getFlocksCreatePath()).toBe('/flocks/create');
     expect(getFlocksJoinPath()).toBe('/flocks/join');

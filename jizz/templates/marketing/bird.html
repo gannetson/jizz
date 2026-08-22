@@ -1,0 +1,45 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>{{ species.name }}</h1>
+  <p class="latin">{{ species.name_latin }}</p>
+  {% if family_name or order_name %}
+  <p>
+    {% if family_name %}{{ family_name }}{% if family_latin %} (<span class="latin">{{ family_latin }}</span>){% endif %}{% endif %}
+    {% if family_name and order_name %} · {% endif %}
+    {% if order_name %}{{ order_name }}{% if order_latin %} (<span class="latin">{{ order_latin }}</span>){% endif %}{% endif %}
+  </p>
+  {% endif %}
+  <div class="cta-row">
+    <a class="btn" href="{{ quiz_href }}">Start a quiz</a>
+    <a class="btn secondary" href="{{ tricky_href }}">Practise tricky birds</a>
+  </div>
+</section>
+<section>
+  {% if cover_url %}
+  <p>
+    <img src="{{ cover_url }}" width="400" height="400" alt="{{ species.name }} illustration" style="max-width:280px;border-radius:12px;background:#fff;border:2px solid var(--birdr-200);">
+  </p>
+  {% endif %}
+  {% if photos %}
+  <div class="photos">
+    {% for photo in photos %}
+    <img src="{{ photo.url }}" width="280" height="210" alt="{{ photo.alt }}" {% if not forloop.first %}loading="lazy"{% endif %}>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% if family_blurb %}
+<section>
+  <h2>Family</h2>
+  <p>{{ family_blurb|truncatewords:80 }}</p>
+</section>
+{% endif %}
+{% if order_blurb %}
+<section>
+  <h2>Order</h2>
+  <p>{{ order_blurb|truncatewords:80 }}</p>
+</section>
+{% endif %}
+<p><a href="/learn-bird-identification/">How Birdr teaches identification</a></p>
+{% endblock %}

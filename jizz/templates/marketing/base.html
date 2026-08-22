@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ meta_description }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <link rel="icon" href="/logo192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ site_name }}">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ meta_description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title }}">
+  <meta name="twitter:description" content="{{ meta_description }}">
+  <meta name="twitter:image" content="{{ og_image }}">
+  {% if google_site_verification %}
+  <meta name="google-site-verification" content="{{ google_site_verification }}">
+  {% endif %}
+  {% if bing_site_verification %}
+  <meta name="msvalidate.01" content="{{ bing_site_verification }}">
+  {% endif %}
+  <script type="application/ld+json">{{ json_ld|safe }}</script>
+  <style>
+    :root {
+      color-scheme: light;
+      --birdr-50: #f7f1e6;
+      --birdr-100: #ead9bc;
+      --birdr-200: #d4b88a;
+      --birdr-500: #8b6419;
+      --birdr-600: #6d4e14;
+      --birdr-800: #31220a;
+      --ink: #1c1408;
+      --card: #fffdf8;
+      --font: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--ui);
+      background: var(--birdr-50);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    a { color: var(--birdr-600); }
+    a:hover { color: var(--birdr-800); }
+    img { max-width: 100%; height: auto; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+    header.site {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--birdr-200);
+      background: rgba(255, 253, 248, 0.92);
+      backdrop-filter: blur(10px);
+    }
+    header.site .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 20px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      font-family: var(--font);
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--birdr-600);
+      font-size: 1.1rem;
+    }
+    nav.site { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.92rem; align-items: center; }
+    nav.site a { text-decoration: none; font-weight: 600; color: var(--birdr-800); }
+    nav.site a.nav-cta {
+      background: var(--birdr-600);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 999px;
+    }
+    nav.site a.nav-cta:hover { background: var(--birdr-800); color: #fff; }
+    .hero {
+      padding: 56px 0 28px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 40px;
+      align-items: center;
+    }
+    @media (max-width: 800px) {
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+    h1 {
+      font-family: var(--font);
+      font-size: clamp(2.1rem, 5vw, 3.4rem);
+      line-height: 1.08;
+      margin: 0 0 16px;
+      letter-spacing: -0.02em;
+    }
+    .kicker {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--birdr-500);
+      margin: 0 0 10px;
+    }
+    .lead { font-size: 1.2rem; max-width: 38rem; margin: 0 0 22px; color: #3d2d14; }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 8px 0 16px; }
+    .btn {
+      display: inline-block;
+      background: var(--birdr-600);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-radius: 999px;
+    }
+    .btn:hover { background: var(--birdr-800); color: #fff; }
+    .btn.secondary {
+      background: transparent;
+      color: var(--birdr-800);
+      border: 2px solid var(--birdr-200);
+    }
+    .web-link {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .store-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .store-badges img { display: block; }
+    .hero-art {
+      background: #fff;
+      border: 2px solid var(--birdr-200);
+      border-radius: 28px;
+      padding: 18px;
+      text-align: center;
+    }
+    .hero-art img { width: min(360px, 100%); }
+    .hero-art figcaption { color: var(--birdr-600); font-size: 0.9rem; margin-top: 8px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+      margin: 24px 0 8px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--birdr-200);
+      border-radius: 18px;
+      padding: 20px;
+    }
+    .card h3 { font-family: var(--font); margin: 0 0 8px; font-size: 1.25rem; }
+    .card p { margin: 0 0 10px; }
+    section { margin: 48px 0; }
+    h2 { font-family: var(--font); font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 16px; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .step-num {
+      display: inline-flex;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--birdr-600);
+      color: #fff;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .quotes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .quote {
+      background: #fff;
+      border: 1px solid var(--birdr-200);
+      border-radius: 16px;
+      padding: 18px;
+      margin: 0;
+    }
+    .quote p { margin: 0 0 10px; font-family: var(--font); font-size: 1.05rem; }
+    .quote footer { color: var(--birdr-600); font-size: 0.88rem; font-weight: 600; }
+    .crumbs { font-size: 0.9rem; margin: 16px 0 0; }
+    .crumbs ol { list-style: none; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+    .crumbs li:not(:last-child)::after { content: " /"; color: var(--birdr-500); }
+    .band {
+      background: var(--birdr-800);
+      color: var(--birdr-50);
+      border-radius: 24px;
+      padding: 32px 28px;
+    }
+    .band h2, .band p { color: #fff; }
+    .band a.web-link { color: var(--birdr-100); }
+    footer.site {
+      border-top: 1px solid var(--birdr-200);
+      padding: 32px 0 48px;
+      margin-top: 56px;
+      background: #fff;
+      font-size: 0.95rem;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 700px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+    footer.site h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--birdr-500); }
+    footer.site ul { list-style: none; padding: 0; margin: 0; }
+    footer.site li { margin: 0 0 6px; }
+    details { margin: 8px 0; background: #fff; border-radius: 12px; padding: 12px 16px; border: 1px solid var(--birdr-200); }
+    details summary { font-weight: 700; cursor: pointer; }
+    .latin { font-style: italic; color: var(--birdr-600); }
+    .photos { display: flex; gap: 12px; flex-wrap: wrap; }
+    .photos img { width: 280px; height: 210px; object-fit: cover; border-radius: 10px; }
+    ul.plain { padding-left: 1.2rem; columns: 2; column-gap: 32px; }
+    @media (max-width: 640px) { ul.plain { columns: 1; } }
+    .country-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .country-pills a {
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid var(--birdr-200);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <a class="brand" href="/">Birdr</a>
+      <nav class="site" aria-label="Primary">
+        <a href="/how-it-works/">How it works</a>
+        <a href="/bird-identification-quiz/">Quizzes</a>
+        <a href="/bird-quiz-by-country/">Countries</a>
+        <a href="/flocks/">Flocks</a>
+        <a href="/#help">Help</a>
+        <a class="nav-cta" href="/#get-the-app">Get the app</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    {% if breadcrumbs %}
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        {% for name, href in breadcrumbs %}
+        <li>{% if href and not forloop.last %}<a href="{{ href }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</li>
+        {% endfor %}
+      </ol>
+    </nav>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site">
+    <div class="wrap footer-grid">
+      <div>
+        <a class="brand" href="/">Birdr</a>
+        <p>Learn to identify birds yourself. Free on iPhone, Android and the web.</p>
+        {% include "marketing/_store_badges.html" %}
+        <p><a class="web-link" href="/play">Play in the browser</a></p>
+      </div>
+      <div>
+        <h3>Learn</h3>
+        <ul>
+          <li><a href="/how-it-works/">How it works</a></li>
+          <li><a href="/bird-identification-quiz/">Photo quizzes</a></li>
+          <li><a href="/learn-bird-identification/">Learn bird identification</a></li>
+          <li><a href="/my-tricky-birds/">My Tricky Birds</a></li>
+          <li><a href="/bird-quiz-by-country/">Quizzes by country</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Birdr</h3>
+        <ul>
+          <li><a href="/birding-app/">The app</a></li>
+          <li><a href="/flocks/">Flocks for clubs</a></li>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/#help">How can I help?</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="mailto:info@birdr.pro">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

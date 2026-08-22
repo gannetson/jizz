@@ -8,9 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Modal,
   FlatList,
-  Pressable,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
@@ -26,6 +24,7 @@ import type { Country } from '../api/countries';
 import type { Language } from '../api/languages';
 import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
 import { CountrySelect } from '../components/CountrySelect';
+import { AccessibleSheetModal } from '../components/AccessibleSheetModal';
 import { SpeciesLanguageLabel } from '../components/SpeciesLanguageLabel';
 import { colors } from '../theme';
 import {
@@ -279,54 +278,92 @@ export function StartScreen() {
       />
 
       <Text style={styles.label}>{t('language_species_names')}</Text>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)} testID="start.selectLanguage" accessibilityLabel={t('select_language')}>
+      <TouchableOpacity
+        style={styles.selectButton}
+        onPress={() => setLanguageModalVisible(true)}
+        testID="start.selectLanguage"
+        accessible
+        accessibilityRole="button"
+        accessibilityState={{ expanded: languageModalVisible }}
+        accessibilityLabel={`${t('select_language')}, ${getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language')}`}
+        accessibilityHint={t('select_language_hint')}
+      >
         <SpeciesLanguageLabel
           code={language}
           label={getLanguageDisplayName(languages.find((l) => l.code === language) ?? null, locale) || t('select_language_dots')}
         />
       </TouchableOpacity>
-      <Modal visible={languageModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle} testID="start.modal.languageTitle">{t('select_language')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              placeholderTextColor={colors.primary[400]}
-              value={languageSearch}
-              onChangeText={setLanguageSearch}
-            />
-            <FlatList
-              data={filteredLanguages}
-              keyExtractor={(l) => l.code}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, language === item.code && styles.modalItemSelected]}
-                  onPress={() => {
-                    void (async () => {
-                      await setSpeciesLanguageIndependent(true);
-                      markSpeciesLanguageUserChosen();
-                      setLanguage(item.code);
-                      setLanguageModalVisible(false);
-                      setLanguageSearch('');
-                    })();
-                  }}
-                >
-                  <SpeciesLanguageLabel
-                    code={item.code}
-                    label={getLanguageDisplayName(item, locale)}
-                    selected={language === item.code}
-                    textStyle={language === item.code ? styles.modalItemTextSelected : styles.modalItemText}
-                  />
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity style={styles.modalClose} onPress={() => { setLanguageModalVisible(false); setLanguageSearch(''); }} testID="start.modal.closeLanguage" accessibilityLabel={t('close')}>
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <AccessibleSheetModal
+        visible={languageModalVisible}
+        onClose={() => {
+          setLanguageModalVisible(false);
+          setLanguageSearch('');
+        }}
+        backdropStyle={styles.modalBackdrop}
+        contentStyle={styles.modalContent}
+      >
+        <Text style={styles.modalTitle} testID="start.modal.languageTitle" accessibilityRole="header">
+          {t('select_language')}
+        </Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('search')}
+          placeholderTextColor={colors.primary[400]}
+          value={languageSearch}
+          onChangeText={setLanguageSearch}
+          accessibilityLabel={t('search')}
+          accessibilityRole="search"
+        />
+        <FlatList
+          data={filteredLanguages}
+          keyExtractor={(l) => l.code}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const selected = language === item.code;
+            const label = getLanguageDisplayName(item, locale);
+            return (
+              <TouchableOpacity
+                style={[styles.modalItem, selected && styles.modalItemSelected]}
+                onPress={() => {
+                  void (async () => {
+                    await setSpeciesLanguageIndependent(true);
+                    markSpeciesLanguageUserChosen();
+                    setLanguage(item.code);
+                    setLanguageModalVisible(false);
+                    setLanguageSearch('');
+                  })();
+                }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={selected ? `${label}, ${t('picker_item_selected')}` : label}
+              >
+                <SpeciesLanguageLabel
+                  code={item.code}
+                  label={label}
+                  selected={selected}
+                  textStyle={selected ? styles.modalItemTextSelected : styles.modalItemText}
+                />
+              </TouchableOpacity>
+            );
+          }}
+        />
+        <TouchableOpacity
+          style={styles.modalClose}
+          onPress={() => {
+            setLanguageModalVisible(false);
+            setLanguageSearch('');
+          }}
+          testID="start.modal.closeLanguage"
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
+        >
+          <Text style={styles.modalCloseText} accessible={false}>
+            {t('close')}
+          </Text>
+        </TouchableOpacity>
+      </AccessibleSheetModal>
 
       {differsFromProfile ? (
         <TouchableOpacity
@@ -345,119 +382,142 @@ export function StartScreen() {
         </TouchableOpacity>
       ) : null}
 
-      <Modal visible={orderModalVisible} transparent animationType="slide">
-        <Pressable
-          style={styles.modalBackdrop}
+      <AccessibleSheetModal
+        visible={orderModalVisible}
+        onClose={() => {
+          setOrderModalVisible(false);
+          setOrderSearch('');
+        }}
+        backdropStyle={styles.modalBackdrop}
+        contentStyle={styles.modalContent}
+      >
+        <Text style={styles.modalTitle} accessibilityRole="header">
+          {t('tax_order')}
+        </Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('search')}
+          placeholderTextColor={colors.primary[400]}
+          value={orderSearch}
+          onChangeText={setOrderSearch}
+          accessibilityLabel={t('search')}
+          accessibilityRole="search"
+        />
+        <FlatList
+          data={filteredTaxOrders}
+          keyExtractor={(item) => item.tax_order}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const selected = taxOrder?.tax_order === item.tax_order;
+            const label = `${item.tax_order} (${item.count})`;
+            return (
+              <TouchableOpacity
+                style={[styles.modalItem, selected && styles.modalItemSelected]}
+                onPress={() => {
+                  setTaxOrder(item);
+                  setTaxFamily(undefined);
+                  setOrderModalVisible(false);
+                  setOrderSearch('');
+                }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={selected ? `${label}, ${t('picker_item_selected')}` : label}
+              >
+                <Text
+                  style={[styles.modalItemText, selected && styles.modalItemTextSelected]}
+                  accessible={false}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+        <TouchableOpacity
+          style={styles.modalClose}
           onPress={() => {
             setOrderModalVisible(false);
             setOrderSearch('');
           }}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
         >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{t('tax_order')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              placeholderTextColor={colors.primary[400]}
-              value={orderSearch}
-              onChangeText={setOrderSearch}
-            />
-            <FlatList
-              data={filteredTaxOrders}
-              keyExtractor={(item) => item.tax_order}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, taxOrder?.tax_order === item.tax_order && styles.modalItemSelected]}
-                  onPress={() => {
-                    setTaxOrder(item);
-                    setTaxFamily(undefined);
-                    setOrderModalVisible(false);
-                    setOrderSearch('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.modalItemText,
-                      taxOrder?.tax_order === item.tax_order && styles.modalItemTextSelected,
-                    ]}
-                  >
-                    {item.tax_order} ({item.count})
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={() => {
-                setOrderModalVisible(false);
-                setOrderSearch('');
-              }}
-            >
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          <Text style={styles.modalCloseText} accessible={false}>
+            {t('close')}
+          </Text>
+        </TouchableOpacity>
+      </AccessibleSheetModal>
 
-      <Modal visible={familyModalVisible} transparent animationType="slide">
-        <Pressable
-          style={styles.modalBackdrop}
+      <AccessibleSheetModal
+        visible={familyModalVisible}
+        onClose={() => {
+          setFamilyModalVisible(false);
+          setFamilySearch('');
+        }}
+        backdropStyle={styles.modalBackdrop}
+        contentStyle={styles.modalContent}
+      >
+        <Text style={styles.modalTitle} accessibilityRole="header">
+          {t('tax_family')}
+        </Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('search')}
+          placeholderTextColor={colors.primary[400]}
+          value={familySearch}
+          onChangeText={setFamilySearch}
+          accessibilityLabel={t('search')}
+          accessibilityRole="search"
+        />
+        <FlatList
+          data={filteredTaxFamilies}
+          keyExtractor={(item) => item.tax_family}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const selected = taxFamily?.tax_family === item.tax_family;
+            const label = `${item.tax_family} - ${item.tax_family_en} (${item.count})`;
+            return (
+              <TouchableOpacity
+                style={[styles.modalItem, selected && styles.modalItemSelected]}
+                onPress={() => {
+                  setTaxFamily(item);
+                  setTaxOrder(undefined);
+                  setFamilyModalVisible(false);
+                  setFamilySearch('');
+                }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={selected ? `${label}, ${t('picker_item_selected')}` : label}
+              >
+                <Text
+                  style={[styles.modalItemText, selected && styles.modalItemTextSelected]}
+                  numberOfLines={2}
+                  accessible={false}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+        <TouchableOpacity
+          style={styles.modalClose}
           onPress={() => {
             setFamilyModalVisible(false);
             setFamilySearch('');
           }}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
         >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{t('tax_family')}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search')}
-              placeholderTextColor={colors.primary[400]}
-              value={familySearch}
-              onChangeText={setFamilySearch}
-            />
-            <FlatList
-              data={filteredTaxFamilies}
-              keyExtractor={(item) => item.tax_family}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.modalItem,
-                    taxFamily?.tax_family === item.tax_family && styles.modalItemSelected,
-                  ]}
-                  onPress={() => {
-                    setTaxFamily(item);
-                    setTaxOrder(undefined);
-                    setFamilyModalVisible(false);
-                    setFamilySearch('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.modalItemText,
-                      taxFamily?.tax_family === item.tax_family && styles.modalItemTextSelected,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {item.tax_family} - {item.tax_family_en} ({item.count})
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={() => {
-                setFamilyModalVisible(false);
-                setFamilySearch('');
-              }}
-            >
-              <Text style={styles.modalCloseText}>{t('close')}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          <Text style={styles.modalCloseText} accessible={false}>
+            {t('close')}
+          </Text>
+        </TouchableOpacity>
+      </AccessibleSheetModal>
 
       <TouchableOpacity
         style={[styles.startButton, (!country || !playerName.trim()) && styles.startButtonDisabled]}
@@ -680,7 +740,14 @@ const styles = StyleSheet.create({
   countrySelect: { marginBottom: 16 },
   selectButtonText: { fontSize: 16, color: colors.primary[800] },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modalContent: { backgroundColor: '#fff', borderRadius: 12, maxHeight: '70%', padding: 16 },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    maxHeight: '70%',
+    padding: 16,
+  },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.primary[800], marginBottom: 12 },
   searchInput: {
     borderWidth: 1,

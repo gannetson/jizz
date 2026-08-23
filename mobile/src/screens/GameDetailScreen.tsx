@@ -20,6 +20,7 @@ import * as playerApi from '../api/player';
 import { apiUrl } from '../api/config';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
+import { ComparisonButton } from '../components/ComparisonButton';
 import { useGame } from '../context/GameContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
@@ -261,6 +262,12 @@ export function GameDetailScreen() {
                           variant="primary"
                           viewLabel=""
                           disabled={practiceSpeciesId != null && practiceSpeciesId !== q.species.id}
+                        />
+                        <ComparisonButton
+                          species1Id={q.species.id}
+                          species2Id={q.user_answer.id}
+                          species1Name={speciesName}
+                          species2Name={getAnswerName(q.user_answer, game?.language)}
                         />
                       </>
                     )}

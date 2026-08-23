@@ -92,6 +92,7 @@ from jizz.serializers import (
     SpeciesCoverSerializer,
     SpeciesDetailSerializer,
     SpeciesListSerializer,
+    SpeciesSlugSerializer,
     UpdateSerializer,
     ReactionSerializer,
 )
@@ -174,6 +175,16 @@ class SpeciesDetailView(RetrieveAPIView):
     queryset = Species.objects.all()
     permission_classes = [AllowAny]
     authentication_classes = []  # No authentication required for public species data
+
+
+class SpeciesBySlugView(RetrieveAPIView):
+    """Public species lookup by marketing slug for practice start pages."""
+
+    serializer_class = SpeciesSlugSerializer
+    queryset = Species.objects.all()
+    lookup_field = 'slug'
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 
 class SpeciesCoverView(RetrieveAPIView):

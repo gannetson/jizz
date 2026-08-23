@@ -229,6 +229,7 @@
     }
     .lead { font-size: 1.2rem; max-width: 38rem; margin: 0 0 22px; color: #3d2d14; }
     .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 8px 0 16px; }
+    .cta-note { margin: -8px 0 16px; color: #3d2d14; max-width: 38rem; }
     .btn {
       display: inline-block;
       background: var(--birdr-600);
@@ -425,6 +426,39 @@
     }
     .level-grid {
       grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+    }
+    .start-setup {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(17rem, 0.85fr);
+      gap: 24px 32px;
+      align-items: start;
+      margin: 24px 0 8px;
+    }
+    .start-setup .grid { margin: 0; }
+    .start-setup-title {
+      font-family: var(--font);
+      font-size: 1.15rem;
+      margin: 0 0 12px;
+    }
+    .start-options {
+      background: var(--card);
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 18px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow-card);
+    }
+    .start-options dl { margin: 0; }
+    .start-options dt {
+      font-weight: 650;
+      margin: 14px 0 4px;
+    }
+    .start-options dt:first-of-type { margin-top: 0; }
+    .start-options dd {
+      margin: 0;
+      color: #3d2d14;
+    }
+    @media (max-width: 800px) {
+      .start-setup { grid-template-columns: 1fr; }
     }
     .card {
       background: var(--card);

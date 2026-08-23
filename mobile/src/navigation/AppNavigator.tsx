@@ -35,6 +35,7 @@ import { BirdrJourneyLevelCelebrationScreen } from '../screens/BirdrJourneyLevel
 import { CountryChallengeLeaderboardScreen } from '../screens/CountryChallengeLeaderboardScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
 import { TroubleSpotsScreen } from '../screens/TroubleSpotsScreen';
+import { PairPracticeScreen, SpeciesPracticeScreen } from '../screens/PracticeStartScreen';
 import { FlockListScreen } from '../screens/FlockListScreen';
 import { FlockIntroScreen } from '../screens/FlockIntroScreen';
 import { FlockCreateScreen } from '../screens/FlockCreateScreen';
@@ -82,6 +83,8 @@ const SCREENS: { name: string; titleKey: string; component: React.ComponentType<
   { name: 'MyGames', titleKey: 'my_games', component: MyGamesScreen },
   { name: 'Checklist', titleKey: 'checklist_title', component: ChecklistScreen },
   { name: 'TroubleSpots', titleKey: 'trouble_spots', component: TroubleSpotsScreen },
+  { name: 'SpeciesPractice', titleKey: 'practice', component: SpeciesPracticeScreen },
+  { name: 'PairPractice', titleKey: 'practice', component: PairPracticeScreen },
   { name: 'GameDetail', titleKey: 'game_details', component: GameDetailScreen },
   { name: 'Settings', titleKey: 'profile', component: ProfileScreen },
   { name: 'MediaReview', titleKey: 'review_media', component: MediaReviewScreen },

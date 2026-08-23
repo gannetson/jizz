@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     SpeciesTraitViewSet, SpeciesComparisonViewSet,
-    ComparisonRequestView, ScrapeSpeciesView
+    ComparisonRequestView, ScrapeSpeciesView, CommunityComparisonSubmitView
 )
 
 router = DefaultRouter()
@@ -13,5 +13,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('request/', ComparisonRequestView.as_view(), name='comparison-request'),
     path('scrape/', ScrapeSpeciesView.as_view(), name='scrape-species'),
+    path('community/', CommunityComparisonSubmitView.as_view(), name='comparison-community'),
 ]
 

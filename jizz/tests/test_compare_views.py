@@ -251,6 +251,25 @@ class ComparisonRequestViewTestCase(TestCase):
         mock_generate.assert_called_once()
 
     @patch('compare.views.ComparisonRequestView._generate_comparison')
+    def test_request_post_returns_503_when_generation_unavailable(self, mock_generate):
+        from compare.ai_service import ComparisonGenerationError
+
+        mock_generate.side_effect = ComparisonGenerationError(
+            'The AI comparison service is out of credits right now.'
+        )
+        response = self.client.post(
+            '/api/compare/request/',
+            {
+                'comparison_type': 'family',
+                'family_1': 'Turdidae',
+                'family_2': 'Passeridae',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('out of credits', response.data['error'])
+
+    @patch('compare.views.ComparisonRequestView._generate_comparison')
     def test_request_post_returns_500_when_generate_raises(self, mock_generate):
         mock_generate.side_effect = ValueError('AI service unavailable')
         response = self.client.post(
@@ -312,3 +331,68 @@ class ScrapeSpeciesViewTestCase(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class CommunityComparisonSubmitViewTestCase(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from compare.models import CommunityComparison
+
+        self.CommunityComparison = CommunityComparison
+        self.client = APIClient()
+        User = get_user_model()
+        self.user = User.objects.create_user('editor', password='x', first_name='Ada')
+        self.other = User.objects.create_user('other', password='x')
+        self.token = str(RefreshToken.for_user(self.user).access_token)
+        self.species1 = Species.objects.create(
+            name='Robin', name_latin='Erithacus', code='ROB01'
+        )
+        self.species2 = Species.objects.create(
+            name='Sparrow', name_latin='Passer', code='SPA01'
+        )
+
+    def test_requires_auth(self):
+        response = self.client.post(
+            '/api/compare/community/',
+            {
+                'species_1_id': self.species1.id,
+                'species_2_id': self.species2.id,
+                'summary': 'Look at the tail.',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_submit_and_block_other_user(self):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        created = self.client.post(
+            '/api/compare/community/',
+            {
+                'species_1_id': self.species1.id,
+                'species_2_id': self.species2.id,
+                'summary': 'Look at the tail.',
+            },
+            format='json',
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.CommunityComparison.objects.count(), 1)
+
+        other_token = str(RefreshToken.for_user(self.other).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {other_token}')
+        blocked = self.client.post(
+            '/api/compare/community/',
+            {
+                'species_1_id': self.species2.id,
+                'species_2_id': self.species1.id,
+                'summary': 'Other rewrite.',
+            },
+            format='json',
+        )
+        self.assertEqual(blocked.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.CommunityComparison.objects.get().summary,
+            'Look at the tail.',
+        )

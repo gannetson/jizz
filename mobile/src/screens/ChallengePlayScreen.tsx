@@ -29,6 +29,7 @@ import { answersEnabledForMedia } from '../game/mediaAnswerGate';
 import { resolvePlayMediaType } from '../utils/questionMediaIndex';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
+import { ComparisonButton } from '../components/ComparisonButton';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
@@ -707,6 +708,14 @@ export function ChallengePlayScreen() {
               </TouchableOpacity>
             ))
           )}
+          {answerResult && !answerResult.correct && answerResult.correctSpecies && answerResult.userAnswer ? (
+            <ComparisonButton
+              species1Id={answerResult.correctSpecies.id}
+              species2Id={answerResult.userAnswer.id}
+              species1Name={speciesDisplayName(answerResult.correctSpecies, lang)}
+              species2Name={speciesDisplayName(answerResult.userAnswer, lang)}
+            />
+          ) : null}
         </View>
       ) : isExpert ? (
         <View style={styles.expertSection}>
@@ -730,6 +739,14 @@ export function ChallengePlayScreen() {
                   accessibilityLabel={speciesDisplayName(answerResult.userAnswer, lang)}
                 />
               )}
+              {!answerResult.correct && answerResult.correctSpecies.id !== answerResult.userAnswer.id ? (
+                <ComparisonButton
+                  species1Id={answerResult.correctSpecies.id}
+                  species2Id={answerResult.userAnswer.id}
+                  species1Name={speciesDisplayName(answerResult.correctSpecies, lang)}
+                  species2Name={speciesDisplayName(answerResult.userAnswer, lang)}
+                />
+              ) : null}
             </>
           ) : (
             <>

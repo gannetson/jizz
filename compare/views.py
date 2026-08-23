@@ -2,15 +2,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 
-from .models import SpeciesTrait, SpeciesComparison, ComparisonRequest
+from .models import SpeciesTrait, SpeciesComparison, ComparisonRequest, CommunityComparison
+from .community import can_manage, cleaned_fields, display_name_for_user
 from .serializers import (
     SpeciesTraitSerializer, SpeciesComparisonSerializer,
     ComparisonRequestSerializer, CreateComparisonRequestSerializer
 )
-from .ai_service import AIComparisonService
+from .ai_service import AIComparisonService, ComparisonGenerationError
 from .scraper import BirdsOfTheWorldScraper
 from jizz.models import Species
 
@@ -146,6 +148,14 @@ class ComparisonRequestView(APIView):
                 SpeciesComparisonSerializer(comparison).data,
                 status=status.HTTP_201_CREATED
             )
+        except ComparisonGenerationError as e:
+            request_obj.status = 'failed'
+            request_obj.error_message = str(e)
+            request_obj.save()
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except Exception as e:
             request_obj.status = 'failed'
             request_obj.error_message = str(e)
@@ -267,4 +277,65 @@ class ScrapeSpeciesView(APIView):
             'traits_created': len(created_traits),
             'traits': SpeciesTraitSerializer(created_traits, many=True).data
         }, status=status.HTTP_201_CREATED)
+
+
+class CommunityComparisonSubmitView(APIView):
+    """Create or update a community comparison for a species pair (JWT required)."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            id1 = int(request.data.get('species_1_id'))
+            id2 = int(request.data.get('species_2_id'))
+        except (TypeError, ValueError):
+            return Response(
+                {'detail': 'species_1_id and species_2_id are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if id1 == id2:
+            return Response(
+                {'detail': 'Choose two different species.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        first = get_object_or_404(Species, id=id1)
+        second = get_object_or_404(Species, id=id2)
+        low, high = (first, second) if first.id < second.id else (second, first)
+        data, any_text = cleaned_fields(request.data)
+        if not any_text:
+            return Response(
+                {'detail': 'Write at least one section before publishing.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        community = CommunityComparison.objects.filter(
+            species_low=low, species_high=high
+        ).first()
+        if community:
+            if not can_manage(request.user, community):
+                return Response(
+                    {'detail': 'A community description is already published for this pair.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            for field, value in data.items():
+                setattr(community, field, value)
+            if community.author_id == request.user.id:
+                community.author_name = display_name_for_user(request.user)
+            community.published = True
+            community.save()
+            created = False
+        else:
+            community = CommunityComparison.objects.create(
+                species_low=low,
+                species_high=high,
+                author=request.user,
+                author_name=display_name_for_user(request.user),
+                published=True,
+                **data,
+            )
+            created = True
+        return Response(
+            {'id': community.id, 'created': created},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 

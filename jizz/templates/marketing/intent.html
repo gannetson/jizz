@@ -19,19 +19,34 @@
 </section>
 {% if levels %}
 <section>
-  <h2>Levels</h2>
+  <h2>Starting a quiz</h2>
   <p>
-    Every quiz has a level. Start with distinctive birds, then work up to rare
-    lookalikes and typing the name yourself.
+    Every quiz has a level, plus a few other settings. Start with distinctive
+    birds, then work up to rare lookalikes and typing the name yourself.
   </p>
-  <div class="grid level-grid">
-    {% for level in levels %}
-    <article class="card">
-      <p class="kicker">{{ forloop.counter }}</p>
-      <h3>{{ level.name }}</h3>
-      <p>{{ level.description }}</p>
-    </article>
-    {% endfor %}
+  <div class="start-setup">
+    <div>
+      <p class="start-setup-title">Levels</p>
+      <div class="grid level-grid">
+        {% for level in levels %}
+        <article class="card">
+          <h3>{{ level.name }}</h3>
+          <p>{{ level.description }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% if start_options %}
+    <aside class="start-options">
+      <h3 class="start-setup-title">Other settings</h3>
+      <dl>
+        {% for option in start_options %}
+        <dt>{{ option.name }}</dt>
+        <dd>{{ option.description }}</dd>
+        {% endfor %}
+      </dl>
+    </aside>
+    {% endif %}
   </div>
 </section>
 {% endif %}

@@ -234,6 +234,8 @@ def intent_page(request, slug: str):
     extra = {}
     if page.get('levels'):
         extra['levels'] = page['levels']
+    if page.get('start_options'):
+        extra['start_options'] = page['start_options']
     if page.get('show_countries'):
         extra['countries'] = _indexable_countries()
     if slug == 'my-tricky-birds':
@@ -386,8 +388,7 @@ def bird_page(request, slug: str):
         order_latin=order.name_latin if order else '',
         family_blurb=(family.description_en if family else '') or '',
         order_blurb=(order.description_en if order else '') or '',
-        quiz_href='/start/',
-        tricky_href='/trouble-spots',
+        practice_href=f'/practice/species/{species.slug}',
         confused_species=_confused_species_rows(species),
         ebird_url=_ebird_url(species),
         botw_url=_botw_url(species),
@@ -486,7 +487,7 @@ def _compare_page_response(
         summary_html=summary_html,
         detailed_html=detailed_html,
         sections=sections,
-        practise_href='/trouble-spots',
+        practise_href=f'/practice/pair/{pair}',
         showing_ai=show_ai,
         has_ai=has_comparison_text(comparison),
         community=community,

@@ -26,7 +26,7 @@ from jizz.marketing.views import (
 from jizz.marketing.api import MarketingPageDetailView, MarketingPageListCreateView
 from jizz.marketing import sitemaps as marketing_sitemaps
 
-from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesCoverView, GameListView, \
+from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, SpeciesDetailView, SpeciesBySlugView, SpeciesCoverView, GameListView, \
     GameDetailView, GameDetailWithAnswersByPlayerTokenView, QuestionDetailView, QuestionMediaReadyView, QuestionNextMediaView, PlayerCreateView, PlayerView, PlayerLinkView, AnswerView, AnswerDetail, \
     PlayerScoreListView, \
     PlayerStatsView, FeedbackListView, QuestionView, \
@@ -382,6 +382,7 @@ urlpatterns = [
     re_path(r"^api/player/(?P<token>[\w-]+)/stats/$", PlayerStatsView.as_view(), name="player-stats"),
 
     re_path(r"^api/species/$", SpeciesListView.as_view(), name="species-list"),
+    path('api/species/by-slug/<slug:slug>/', SpeciesBySlugView.as_view(), name='species-by-slug'),
     re_path(r"^api/species/(?P<pk>\w+)/cover/$", SpeciesCoverView.as_view(), name="species-cover"),
     re_path(r"^api/species/(?P<pk>\w+)/$", SpeciesDetailView.as_view(), name="species-detail"),
 

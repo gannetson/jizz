@@ -30,6 +30,8 @@ import TexelHiscorePage from "./pages/texel/hiscores"
 import { MyGamesPage } from "./pages/my-games"
 import ChecklistPage from "./pages/checklist"
 import TroubleSpotsPage from "./pages/trouble-spots"
+import SpeciesPracticePage from "./pages/practice-species"
+import PairPracticePage from "./pages/practice-pair"
 import { BirdrJourneyListPage } from "./pages/birdr-journey/list"
 import { CountryChallengeLeaderboardPage } from "./pages/birdr-journey/leaderboard"
 import { BirdrJourneyIntroPage } from "./pages/birdr-journey/intro"
@@ -87,6 +89,8 @@ export const MainContent = () => {
             <Route path="/my-games" element={<MyGamesPage />} />
             <Route path="/checklist" element={<ChecklistPage />} />
             <Route path="/trouble-spots" element={<TroubleSpotsPage />} />
+            <Route path="/practice/species/:slug" element={<SpeciesPracticePage />} />
+            <Route path="/practice/pair/:pair" element={<PairPracticePage />} />
             <Route path="/flocks/intro" element={<FlocksIntroPage />} />
             <Route path="/flocks/create" element={<FlocksCreatePage />} />
             <Route path="/flocks/join" element={<FlocksJoinPage />} />

@@ -29,9 +29,9 @@
     {% endif %}
   </div>
   <div class="cta-row">
-    <a class="btn" href="{{ quiz_href }}">Start a quiz</a>
-    <a class="btn secondary" href="{{ tricky_href }}">Practise tricky birds</a>
+    <a class="btn" href="{{ practice_href }}">Practice</a>
   </div>
+  <p class="cta-note">Play a quiz with {{ species.name }} and similar species</p>
   <p>
     <a class="media-all-link" href="#all-media" data-open-species-media data-species-id="{{ species.id }}" data-species-name="{{ species.name }}" data-species-url="/api/species/{{ species.id }}/" aria-haspopup="dialog" aria-controls="all-media">View all photos, video and sound</a>
   </p>

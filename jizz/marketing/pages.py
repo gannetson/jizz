@@ -111,6 +111,42 @@ INTENT_PAGES = {
                 ),
             },
         ],
+        'start_options': [
+            {
+                'name': 'Species language',
+                'description': (
+                    'The language used for bird names in the quiz. Other players in the same '
+                    'game can pick a different language for themselves.'
+                ),
+            },
+            {
+                'name': 'Country',
+                'description': (
+                    'Which country’s bird list the quiz draws from, so you practise species '
+                    'you can actually meet there.'
+                ),
+            },
+            {
+                'name': 'Number of questions',
+                'description': (
+                    'How long the quiz is: 10, 20, 50 or 100 questions.'
+                ),
+            },
+            {
+                'name': 'Media',
+                'description': (
+                    'Pictures, sounds or video. Sound quizzes can be limited to passerines '
+                    '(songbirds).'
+                ),
+            },
+            {
+                'name': 'Taxonomic order / family',
+                'description': (
+                    'Optional. Restrict the quiz to an order (for example ducks or passerines) '
+                    'or a family (warblers, gulls) instead of the whole country list.'
+                ),
+            },
+        ],
         'links': [
             ('/site/bird-identification-quiz/', 'Photo quizzes'),
             ('/site/my-tricky-birds/', 'My Tricky Birds'),

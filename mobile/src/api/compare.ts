@@ -1,4 +1,5 @@
 import { apiUrl } from './config';
+import { getAuthHeaders } from './auth';
 
 export type SpeciesComparison = {
   id: number;
@@ -54,4 +55,26 @@ export async function requestComparison(
     throw new Error(typeof msg === 'string' ? msg : 'Failed to generate comparison');
   }
   return data as SpeciesComparison;
+}
+
+export async function submitCommunityComparison(
+  species1Id: number,
+  species2Id: number,
+  summary: string,
+): Promise<void> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(apiUrl('/api/compare/community/'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      species_1_id: species1Id,
+      species_2_id: species2Id,
+      summary,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg = data.detail ?? data.error ?? data.message ?? 'Could not save your description';
+    throw new Error(typeof msg === 'string' ? msg : 'Could not save your description');
+  }
 }

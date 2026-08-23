@@ -7,7 +7,12 @@ import logging
 
 from django.db import transaction
 
-from compare.ai_service import AIComparisonService, PROMPT_VERSION, comparison_model_name
+from compare.ai_service import (
+    AIComparisonService,
+    ComparisonGenerationError,
+    PROMPT_VERSION,
+    comparison_model_name,
+)
 from compare.models import SpeciesComparison, SpeciesTrait
 from jizz.models import Species
 
@@ -145,7 +150,11 @@ def get_or_create_species_comparison(
     )
     if not comparison_data.get('summary'):
         logger.warning('No comparison generated for %s vs %s', low.name, high.name)
-        return existing
+        if existing:
+            return existing
+        raise ComparisonGenerationError(
+            f'No comparison generated for {low.name} vs {high.name}'
+        )
 
     defaults = {
         **comparison_data,

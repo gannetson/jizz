@@ -86,6 +86,11 @@
               "scheme": "https",
               "host": "birdr.pro",
               "pathPrefix": "/g/"
+            },
+            {
+              "scheme": "https",
+              "host": "birdr.pro",
+              "pathPrefix": "/practice/"
             }
           ],
           "category": [

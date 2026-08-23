@@ -12,6 +12,32 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+
+class ComparisonGenerationError(Exception):
+    """Raised when a comparison cannot be generated."""
+
+
+def _friendly_openai_error(exc: BaseException) -> str:
+    text = str(exc).lower()
+    if any(
+        token in text
+        for token in (
+            'insufficient_quota',
+            'credit_balance_exhausted',
+            'credit_balance_exhausted',
+            'no credits remaining',
+            'you have no credits remaining',
+            '429',
+        )
+    ):
+        return (
+            'The AI comparison service is out of credits right now. '
+            'You can still write a better description if you are logged in.'
+        )
+    if 'rate limit' in text or '429' in text:
+        return 'The AI comparison service is busy. Please try again in a moment.'
+    return 'Could not generate the comparison. Please try again.'
+
 PROMPT_VERSION = 'v2'
 DEFAULT_MODEL = 'gpt-4o'
 
@@ -146,13 +172,17 @@ class AIComparisonService:
 
     def _call_openai(self, prompt: str, max_tokens: int = 2000, *, json_object: bool = False) -> Optional[str]:
         if not self.api_key:
-            return None
+            raise ComparisonGenerationError(
+                'Comparisons cannot be generated because the AI service is not configured.'
+            )
 
         try:
             from openai import OpenAI
-        except ImportError:
+        except ImportError as exc:
             logger.exception('openai package is not installed')
-            return None
+            raise ComparisonGenerationError(
+                'Comparisons cannot be generated because the AI library is missing.'
+            ) from exc
 
         try:
             client = OpenAI(api_key=self.api_key, timeout=90.0)
@@ -170,9 +200,9 @@ class AIComparisonService:
             response = client.chat.completions.create(**kwargs)
             content = response.choices[0].message.content or ''
             return content.strip() or None
-        except Exception:
+        except Exception as exc:
             logger.exception('OpenAI comparison request failed (model=%s)', self.model)
-            return None
+            raise ComparisonGenerationError(_friendly_openai_error(exc)) from exc
 
     def generate_species_comparison(
         self,
@@ -213,13 +243,17 @@ class AIComparisonService:
 
         raw = self._call_openai(prompt, max_tokens=3500, json_object=True)
         if not raw:
-            return {}
+            raise ComparisonGenerationError(
+                'The comparison model returned an empty response. Please try again.'
+            )
 
         parsed = self._parse_json_response(raw)
         if not parsed.get('summary'):
             parsed = self._parse_comparison_response(raw, species_1_name, species_2_name)
         if not parsed.get('summary'):
-            return {}
+            raise ComparisonGenerationError(
+                'The comparison model returned an empty response. Please try again.'
+            )
 
         parsed['detailed_comparison'] = self._assemble_detailed(parsed)
         return parsed

@@ -46,6 +46,20 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const speciesPracticeSlug = parseSpeciesPracticeUrl(url);
+      if (speciesPracticeSlug) {
+        handled.current = url;
+        navigation.navigate('SpeciesPractice', { slug: speciesPracticeSlug });
+        return;
+      }
+
+      const pairPractice = parsePairPracticeUrl(url);
+      if (pairPractice) {
+        handled.current = url;
+        navigation.navigate('PairPractice', { pair: pairPractice });
+        return;
+      }
+
       const challengeInviteToken = parseChallengeInviteUrl(url);
       if (challengeInviteToken) {
         handled.current = url;
@@ -129,6 +143,28 @@ export function DeepLinkHandler({ children }: { children: React.ReactNode }) {
   }, [handleOAuthRedirect, loadGame, setGame, navigation, isAuthenticated]);
 
   return <>{children}</>;
+}
+
+function parsePracticePath(url: string, kind: 'species' | 'pair'): string | null {
+  const scheme = new RegExp(`^birdr://practice/${kind}/([^/?#]+)/?$`, 'i');
+  const schemeMatch = url.match(scheme);
+  if (schemeMatch) return decodeURIComponent(schemeMatch[1]);
+
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(new RegExp(`^/practice/${kind}/([^/]+)/?$`));
+    if (match) return decodeURIComponent(match[1]);
+  } catch {}
+
+  return null;
+}
+
+function parseSpeciesPracticeUrl(url: string): string | null {
+  return parsePracticePath(url, 'species');
+}
+
+function parsePairPracticeUrl(url: string): string | null {
+  return parsePracticePath(url, 'pair');
 }
 
 function parseAppHomeUrl(url: string): boolean {

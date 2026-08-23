@@ -34,7 +34,8 @@ axios.interceptors.request.use(
     // For endpoints that allow anonymous access, only add token if we have a valid refresh token
     // This allows anonymous users to use these endpoints, but still links authenticated users
     const anonymousEndpoints = ['/api/player/', '/api/compare/'];
-    const isAnonymousEndpoint = anonymousEndpoints.some(endpoint => config.url?.includes(endpoint));
+    const isCommunityCompare = config.url?.includes('/api/compare/community/');
+    const isAnonymousEndpoint = !isCommunityCompare && anonymousEndpoints.some(endpoint => config.url?.includes(endpoint));
     
     if (isAnonymousEndpoint && (config.method === 'post' || config.method === 'get')) {
       const refreshToken = authService.getRefreshToken();

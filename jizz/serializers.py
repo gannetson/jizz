@@ -241,6 +241,27 @@ class SpeciesCoverSerializer(serializers.ModelSerializer):
         fields = ('id', 'illustration_url', 'illustration_status')
 
 
+class SpeciesSlugSerializer(serializers.ModelSerializer):
+    """Public lookup by slug for practice start pages."""
+
+    name_translated = serializers.SerializerMethodField()
+
+    def get_name_translated(self, obj):
+        request = self.context.get('request') if isinstance(self.context, dict) else None
+        language = None
+        if request is not None:
+            query_params = getattr(request, 'query_params', None)
+            if query_params is not None:
+                language = query_params.get('language')
+            else:
+                language = request.GET.get('language')
+        return _species_name_for_language(obj, language)
+
+    class Meta:
+        model = Species
+        fields = ('id', 'name', 'name_latin', 'name_nl', 'name_translated', 'slug')
+
+
 class SpeciesDetailSerializer(serializers.ModelSerializer):
     images = QuestionMediaSerializer(many=True)
     videos = QuestionMediaSerializer(many=True)

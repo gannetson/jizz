@@ -70,6 +70,30 @@ class CompareService {
     }
   }
 
+  async submitCommunityComparison(
+    species1Id: number,
+    species2Id: number,
+    summary: string,
+  ): Promise<void> {
+    try {
+      await axios.post(
+        `${this.baseURL}/api/compare/community/`,
+        {
+          species_1_id: species1Id,
+          species_2_id: species2Id,
+          summary,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   private handleError(error: any): Error {
     if (axios.isAxiosError(error) && error.response) {
       const message = error.response.data?.error || 

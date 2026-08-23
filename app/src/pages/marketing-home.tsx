@@ -210,12 +210,16 @@ export function MarketingHomePage() {
         <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
           {[
             ['Photo quizzes', 'One quick game, or a longer session. Choose a country, a level and photos, video or sound.', '/site/bird-identification-quiz/'],
+            ['Sound quizzes', 'Hear a recording and pick the species. You can also play passerine sound quizzes in the browser.', '/play'],
+            ['Multiplayer', 'A live quiz for two or more players. Faster correct answers score more points.', '/play'],
+            ['High scores', 'See how you rank after a quiz.', '/scores/'],
+            ['My checklist', 'See which birds you named correctly in your country, and which ones you missed.', '/checklist'],
             ['Species', 'Look up a bird, see what people miss most, and open comparisons for lookalikes.', '/site/birds/'],
             ['Country Challenges', 'Structured levels for the birds of a country—from the Netherlands to Japan to Colombia.', '/site/bird-quiz-by-country/'],
             ['My Tricky Birds', 'Focused drills on the species and confusing pairs you actually mix up.', '/site/my-tricky-birds/'],
             ['Flocks', 'Club quizzes and a private leaderboard for your group—not a global anonymous ladder.', '/site/flocks/'],
           ].map(([title, body, href]) => (
-            <Box key={href} {...cardProps}>
+            <Box key={title} {...cardProps}>
               <Heading as="h3" size="md" mb={2}>
                 {title}
               </Heading>

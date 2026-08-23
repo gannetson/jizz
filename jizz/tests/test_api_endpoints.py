@@ -134,6 +134,18 @@ class ApiSpeciesTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'Test Bird')
 
+    def test_species_by_slug_returns_200(self):
+        self.species.refresh_from_db()
+        response = self.client.get(f'/api/species/by-slug/{self.species.slug}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.species.id)
+        self.assertEqual(response.data['name'], 'Test Bird')
+        self.assertEqual(response.data['slug'], self.species.slug)
+
+    def test_species_by_slug_unknown_returns_404(self):
+        response = self.client.get('/api/species/by-slug/no-such-bird/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
 
 class ApiFamiliesOrdersTestCase(TestCase):
     """GET /api/families/, GET /api/orders/."""

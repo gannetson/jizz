@@ -31,6 +31,7 @@ import {
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { PracticeSpeciesLinks } from '../components/PracticeSpeciesLinks';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
+import { ComparisonButton } from '../components/ComparisonButton';
 import { apiUrl } from '../api/config';
 import { getSpeciesForCountry } from '../api/species';
 import { postQuestionMediaReady } from '../api/games';
@@ -724,6 +725,14 @@ export function GamePlayScreen() {
             }
             return <React.Fragment key={i}>{optionContent}</React.Fragment>;
           })}
+          {answer && !answer.correct && answer.species && answer.answer ? (
+            <ComparisonButton
+              species1Id={answer.species.id}
+              species2Id={answer.answer.id}
+              species1Name={speciesDisplayName(answer.species, lang)}
+              species2Name={speciesDisplayName(answer.answer, lang)}
+            />
+          ) : null}
         </View>
       ) : showExpertInput ? (
         answer ? (
@@ -742,6 +751,14 @@ export function GamePlayScreen() {
                 icon="wrong"
               />
             )}
+            {!answer.correct && answer.species && answer.answer ? (
+              <ComparisonButton
+                species1Id={answer.species.id}
+                species2Id={answer.answer.id}
+                species1Name={speciesDisplayName(answer.species, lang)}
+                species2Name={speciesDisplayName(answer.answer, lang)}
+              />
+            ) : null}
           </View>
         ) : (
           <KeyboardAvoidingView

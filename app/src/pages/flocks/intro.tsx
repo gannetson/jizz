@@ -50,7 +50,7 @@ export function FlocksIntroPage() {
           <Text fontSize="md" color="primary.100" lineHeight="tall">
             <FormattedMessage
               id="flocks_intro_body"
-              defaultMessage="A flock is your private birding club. Invite friends, start a weekly challenge, and see who really knows their birds — it’s more fun together."
+              defaultMessage="A flock is your private birding club. Each week is a new 25-question quiz that starts easy and finishes difficult, so everyone should get some answers right."
             />
           </Text>
         </Box>
@@ -85,7 +85,7 @@ export function FlocksIntroPage() {
                       ? 'Create a flock for your club or group of friends'
                       : n === 2
                         ? 'Invite members with a link or code'
-                        : 'Compete in the same weekly 20-bird challenge'
+                        : 'Compete in the same weekly 25-question quiz — easy at first, harder at the end'
                   }
                 />
               </Text>

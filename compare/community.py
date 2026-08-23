@@ -94,6 +94,52 @@ def form_values(source) -> dict[str, str]:
     return values
 
 
+def contribution_snapshot(user) -> dict:
+    from django.db.models import Q
+    from django.urls import reverse
+    from django.utils.dateformat import format as date_format
+
+    from compare.models import CommunityComparison
+    from jizz.marketing.html import html_plain_text
+    from jizz.marketing.slugs import compare_pair_slug
+    from media.models import MediaReview
+
+    reviews = MediaReview.objects.filter(Q(user=user) | Q(player__user=user))
+    accepted = reviews.filter(review_type=MediaReview.APPROVED).count()
+    rejected = reviews.filter(review_type=MediaReview.REJECTED).count()
+    edits = []
+    rows = (
+        CommunityComparison.objects.filter(author=user)
+        .select_related('species_low', 'species_high')
+        .order_by('-updated')
+    )
+    for row in rows:
+        low, high = row.species_low, row.species_high
+        if not getattr(low, 'slug', None) or not getattr(high, 'slug', None):
+            continue
+        snippet = ''
+        for field, _label in FORM_FIELDS:
+            snippet = html_plain_text(getattr(row, field, '') or '')
+            if snippet:
+                break
+        pair = compare_pair_slug(low.slug, high.slug)
+        edits.append(
+            {
+                'left': low.name,
+                'right': high.name,
+                'url': reverse('marketing-compare', kwargs={'pair': pair}),
+                'snippet': snippet,
+                'updated': date_format(row.updated, 'j M Y'),
+            }
+        )
+    return {
+        'accepted': accepted,
+        'rejected': rejected,
+        'reviewed': accepted + rejected,
+        'edits': edits,
+    }
+
+
 def has_comparison_text(obj) -> bool:
     if obj is None:
         return False

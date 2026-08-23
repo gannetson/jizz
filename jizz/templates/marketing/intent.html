@@ -16,14 +16,34 @@
   {% for p in body_paragraphs %}
   <p>{{ p }}</p>
   {% endfor %}
-  {% if related_links %}
+</section>
+{% if levels %}
+<section>
+  <h2>Levels</h2>
+  <p>
+    Every quiz has a level. Start with distinctive birds, then work up to rare
+    lookalikes and typing the name yourself.
+  </p>
+  <div class="grid level-grid">
+    {% for level in levels %}
+    <article class="card">
+      <p class="kicker">{{ forloop.counter }}</p>
+      <h3>{{ level.name }}</h3>
+      <p>{{ level.description }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% if related_links %}
+<section>
   <p>
     {% for href, label in related_links %}
     <a href="{{ href }}">{{ label }}</a>{% if not forloop.last %} · {% endif %}
     {% endfor %}
   </p>
-  {% endif %}
 </section>
+{% endif %}
 {% if show_missed or show_pairs %}
 <section>
   <h2>Birds people mix up most</h2>

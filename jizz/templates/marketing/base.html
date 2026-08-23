@@ -25,6 +25,9 @@
   {% if bing_site_verification %}
   <meta name="msvalidate.01" content="{{ bing_site_verification }}">
   {% endif %}
+  {% if noindex %}
+  <meta name="robots" content="noindex, nofollow">
+  {% endif %}
   <script type="application/ld+json">{{ json_ld|safe }}</script>
   <style>
     :root {
@@ -113,7 +116,7 @@
       box-shadow: none;
     }
     nav.site a.nav-login:hover { background: var(--birdr-600); color: #fff; }
-    nav.site a.nav-user {
+    nav.site .nav-user {
       color: var(--birdr-500);
       box-shadow: none;
       max-width: 12rem;
@@ -121,7 +124,82 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    nav.site a.nav-user:hover { color: var(--birdr-800); }
+    nav.site .nav-user:hover { color: var(--birdr-800); }
+    nav.site .nav-account {
+      position: relative;
+    }
+    nav.site .nav-account > summary {
+      list-style: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    nav.site .nav-account > summary::-webkit-details-marker { display: none; }
+    nav.site .nav-account > summary::after {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--birdr-500);
+    }
+    nav.site .nav-account-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      min-width: 13.5rem;
+      background: #fff;
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 14px;
+      box-shadow: var(--shadow-menu);
+      padding: 8px 0;
+      z-index: 30;
+    }
+    nav.site .nav-account-menu a,
+    nav.site .nav-account-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--birdr-800);
+      text-decoration: none;
+      background: none;
+      border: 0;
+      cursor: pointer;
+      box-shadow: none;
+    }
+    nav.site .nav-account-menu a:hover,
+    nav.site .nav-account-menu button:hover {
+      background: var(--birdr-50);
+      color: var(--birdr-600);
+    }
+    nav.site .nav-account-menu hr {
+      border: 0;
+      border-top: 1px solid var(--birdr-200);
+      margin: 6px 0;
+    }
+    .edits-list {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+    }
+    .edits-list li {
+      background: var(--card);
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 16px;
+      box-shadow: var(--shadow-card);
+      padding: 16px 18px;
+      margin: 0 0 12px;
+    }
+    .edits-list a { font-weight: 700; }
+    .edits-list p { margin: 6px 0 0; }
+    .edit-meta { color: var(--birdr-500); font-size: 0.88rem; }
     .hero {
       padding: 56px 0 28px;
     }
@@ -344,6 +422,9 @@
       grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
       gap: 16px;
       margin: 24px 0 8px;
+    }
+    .level-grid {
+      grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
     }
     .card {
       background: var(--card);
@@ -700,6 +781,92 @@
       gap: 12px;
       margin: 0;
     }
+    .login-dialog {
+      width: min(420px, calc(100vw - 32px));
+      border: 1px solid var(--birdr-200);
+      border-radius: 18px;
+      padding: 0;
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: var(--shadow-menu);
+    }
+    .login-dialog::backdrop {
+      background: rgba(49, 34, 10, 0.45);
+    }
+    .login-dialog-panel {
+      position: relative;
+      padding: 22px 22px 20px;
+    }
+    .login-dialog-panel h2 {
+      font-size: 1.35rem;
+      margin: 0 0 14px;
+      padding-right: 28px;
+    }
+    .login-dialog-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 2rem;
+      height: 2rem;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--birdr-800);
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .login-dialog-close:hover { background: var(--birdr-50); }
+    .login-form p { margin: 0 0 12px; }
+    .login-form label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0 0 4px; }
+    .login-form input {
+      width: 100%;
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid var(--birdr-200);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+    .login-form .btn { width: 100%; text-align: center; }
+    .login-form .btn:disabled { opacity: 0.7; cursor: wait; }
+    .login-switch {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: var(--birdr-600);
+    }
+    .login-text-btn {
+      appearance: none;
+      border: 0;
+      background: none;
+      padding: 0;
+      color: var(--birdr-600);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .login-text-btn:hover { color: var(--birdr-800); }
+    #login-forgot-link { display: inline-block; margin-top: 6px; font-size: 0.85rem; }
+    .login-or {
+      text-align: center;
+      color: var(--birdr-600);
+      font-size: 0.9rem;
+      margin: 8px 0 12px;
+    }
+    .login-google,
+    .login-apple {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 0 8px;
+    }
+    .login-google { background: #c5221f; }
+    .login-google:hover { background: #a50d0b; }
     .form-hint { color: var(--birdr-600); font-size: 0.92rem; }
     .prose p { margin: 0 0 12px; }
     .prose p:last-child { margin-bottom: 0; }
@@ -722,7 +889,7 @@
     }
   </style>
 </head>
-<body>
+<body{% if nav_user_name %} data-session-user="1"{% endif %}>
   <header class="site">
     <div class="wrap">
       <a class="brand" href="{{ home_url }}">Birdr</a>
@@ -735,13 +902,24 @@
         {% for page in cms_nav_pages %}
         <a href="{{ page.get_absolute_url }}"{% if request.path == page.get_absolute_url %} aria-current="page"{% endif %}>{{ page.nav_text }}</a>
         {% endfor %}
-        <a href="{{ home_url }}#help">Help</a>
-        {% if nav_user_name %}
-        <a class="nav-user" href="/profile">{{ nav_user_name }}</a>
-        {% else %}
-        <a class="nav-login" id="nav-login" href="/login?next={{ request.path|urlencode }}">Log in</a>
-        <a class="nav-user" id="nav-user" href="/profile" hidden></a>
+        <a href="{{ home_url }}#help">Community</a>
+        {% if not nav_user_name %}
+        <a class="nav-login" id="nav-login" href="{{ login_href }}" aria-haspopup="dialog" aria-controls="login-dialog">Log in</a>
         {% endif %}
+        <details class="nav-account" id="nav-account"{% if not nav_user_name %} hidden{% endif %}>
+          <summary class="nav-user" id="nav-user">{{ nav_user_name }}</summary>
+          <div class="nav-account-menu">
+            <a href="/my-games">My Games</a>
+            <a href="/checklist">My Checklist</a>
+            <a href="/trouble-spots">My tricky birds</a>
+            <a href="/settings">Settings</a>
+            <hr>
+            <a href="/admin" id="nav-admin"{% if not nav_is_staff %} hidden{% endif %}>Admin</a>
+            <a href="/site/my-edits/">My edits</a>
+            <hr>
+            <button type="button" id="nav-logout">Logout</button>
+          </div>
+        </details>
         <a class="nav-cta" href="{{ home_url }}#get-the-app">Get the app</a>
       </nav>
     </div>
@@ -756,6 +934,7 @@
       </ol>
     </nav>
     {% endif %}
+    {% include "marketing/_login_modal.html" %}
     {% block content %}{% endblock %}
   </main>
   <footer class="site">
@@ -796,8 +975,41 @@
   <script>
   (function () {
     var login = document.getElementById('nav-login');
+    var account = document.getElementById('nav-account');
     var userLink = document.getElementById('nav-user');
-    if (!login || !userLink) return;
+    var adminLink = document.getElementById('nav-admin');
+    var logoutBtn = document.getElementById('nav-logout');
+    function displayName(profile) {
+      var full = ((profile.first_name || '') + ' ' + (profile.last_name || '')).trim();
+      var username = (profile.username || '').trim();
+      return full || (username && username.indexOf('@') === -1 ? username : '') || 'Account';
+    }
+    function showAccount(name, staff) {
+      if (userLink) userLink.textContent = name;
+      if (account) account.hidden = false;
+      if (login) login.hidden = true;
+      if (adminLink) adminLink.hidden = !staff;
+    }
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        if (window.birdrAuth && window.birdrAuth.logout) {
+          window.birdrAuth.logout();
+          return;
+        }
+        try {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('jw_token');
+        } catch (e) {}
+        window.location.href = '/site/logout/';
+      });
+    }
+    document.addEventListener('click', function (event) {
+      if (account && account.open && !account.contains(event.target)) {
+        account.removeAttribute('open');
+      }
+    });
+    if (!login || !userLink || !account) return;
     var token = null;
     try { token = localStorage.getItem('access_token') || localStorage.getItem('jw_token'); } catch (e) {}
     if (!token) return;
@@ -805,12 +1017,7 @@
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (profile) {
         if (!profile) return;
-        var full = ((profile.first_name || '') + ' ' + (profile.last_name || '')).trim();
-        var username = (profile.username || '').trim();
-        var name = full || (username && username.indexOf('@') === -1 ? username : '') || 'Account';
-        userLink.textContent = name;
-        userLink.hidden = false;
-        login.hidden = true;
+        showAccount(displayName(profile), !!(profile.is_staff || profile.is_superuser));
       });
   })();
   </script>

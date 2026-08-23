@@ -75,6 +75,41 @@ INTENT_PAGES = {
                 'at /play is there if you want to try a quiz first, or play on a laptop.'
             ),
         ],
+        'levels': [
+            {
+                'name': 'Beginner',
+                'description': (
+                    'Very easy multiple choice. Only familiar, distinctive species, so you can '
+                    'learn the obvious birds first.'
+                ),
+            },
+            {
+                'name': 'Novice',
+                'description': (
+                    'Still easy multiple choice, but the pool includes regular species, not only '
+                    'the most common ones.'
+                ),
+            },
+            {
+                'name': 'Advanced',
+                'description': (
+                    'Multiple choice with similar-looking birds mixed in. Built around the '
+                    'regular species of the country.'
+                ),
+            },
+            {
+                'name': 'Pro',
+                'description': (
+                    'The same lookalike multiple choice, now including rare species.'
+                ),
+            },
+            {
+                'name': 'Expert',
+                'description': (
+                    'Type the name yourself, with autocomplete. Includes rare birds.'
+                ),
+            },
+        ],
         'links': [
             ('/site/bird-identification-quiz/', 'Photo quizzes'),
             ('/site/my-tricky-birds/', 'My Tricky Birds'),
@@ -452,6 +487,11 @@ def base_context(request, *, title: str, description: str, path: str, breadcrumb
             and request.user.is_staff
         ),
         'nav_user_name': _nav_user_name(getattr(request, 'user', None)),
+        'nav_is_staff': bool(
+            getattr(request, 'user', None)
+            and request.user.is_authenticated
+            and (request.user.is_staff or request.user.is_superuser)
+        ),
         'login_href': f'/login?next={quote(getattr(request, "path", path) or path)}',
         **extra,
     }

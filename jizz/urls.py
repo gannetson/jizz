@@ -18,8 +18,10 @@ from jizz.marketing.views import (
     country_page,
     intent_page,
     landing,
+    my_edits,
     robots_txt,
     site_feedback,
+    site_logout,
 )
 from jizz.marketing.api import MarketingPageDetailView, MarketingPageListCreateView
 from jizz.marketing import sitemaps as marketing_sitemaps
@@ -255,12 +257,9 @@ urlpatterns = [
     ),
     path('site/birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
     path('site/flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
-    path(
-        'site/my-tricky-birds/',
-        intent_page,
-        {'slug': 'my-tricky-birds'},
-        name='marketing-my-tricky-birds',
-    ),
+    path('site/my-tricky-birds/', intent_page, {'slug': 'my-tricky-birds'}, name='marketing-my-tricky-birds'),
+    path('site/my-edits/', my_edits, name='marketing-my-edits'),
+    path('site/logout/', site_logout, name='marketing-logout'),
     path('site/countries/<slug:slug>/', country_page, name='marketing-country'),
     path('site/birds/', birds_index, name='marketing-birds'),
     path('site/birds/<slug:slug>/', bird_page, name='marketing-bird'),

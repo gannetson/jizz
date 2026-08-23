@@ -6,9 +6,10 @@ import logging
 
 from urllib.parse import quote
 
+from django.contrib.auth import logout
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -17,6 +18,7 @@ from compare.community import (
     FORM_FIELDS,
     can_manage,
     cleaned_fields,
+    contribution_snapshot,
     display_name_for_user,
     form_values,
     has_comparison_text,
@@ -223,6 +225,8 @@ def intent_page(request, slug: str):
         raise Http404()
     path = site_path(slug)
     extra = {}
+    if page.get('levels'):
+        extra['levels'] = page['levels']
     if page.get('show_countries'):
         extra['countries'] = _indexable_countries()
     if slug == 'my-tricky-birds':
@@ -619,9 +623,43 @@ def robots_txt(request):
         'Disallow: /admin/\n'
         'Disallow: /api/\n'
         'Disallow: /token/\n'
+        'Disallow: /site/my-edits/\n'
+        'Disallow: /site/logout/\n'
         f'Sitemap: {origin}/sitemap.xml\n'
     )
     return HttpResponse(body, content_type='text/plain; charset=utf-8')
+
+
+@require_http_methods(['GET', 'POST'])
+def site_logout(request):
+    logout(request)
+    return redirect(SITE_HOME)
+
+
+@require_GET
+def my_edits(request):
+    user = user_from_request(request)
+    if request.GET.get('format') == 'json':
+        if not user:
+            return JsonResponse({'detail': 'Authentication required.'}, status=401)
+        return JsonResponse(contribution_snapshot(user))
+    snapshot = contribution_snapshot(user) if user else {
+        'accepted': 0,
+        'rejected': 0,
+        'reviewed': 0,
+        'edits': [],
+    }
+    context = base_context(
+        request,
+        title='My edits | Birdr',
+        description='Comparisons you have written and photos you have reviewed on Birdr.',
+        path=reverse('marketing-my-edits'),
+        breadcrumbs=[('Home', SITE_HOME), ('My edits', '')],
+        noindex=True,
+        edits_user=bool(user),
+        **snapshot,
+    )
+    return render(request, 'marketing/my_edits.html', context)
 
 
 def marketing_404(request, exception=None):

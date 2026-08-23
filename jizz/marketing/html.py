@@ -92,6 +92,14 @@ def markdown_to_safe_html(value: str) -> str:
 _TAG_RE = re.compile(r'<[^>]+>')
 
 
+def html_plain_text(value: str, limit: int = 180) -> str:
+    text = unescape(_TAG_RE.sub(' ', value or ''))
+    text = ' '.join(text.replace('\xa0', ' ').split())
+    if limit and len(text) > limit:
+        return text[: limit - 1].rstrip() + '…'
+    return text
+
+
 def html_has_text(value: str) -> bool:
     text = unescape(_TAG_RE.sub('', value or ''))
     return bool(text.replace('\xa0', ' ').strip())

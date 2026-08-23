@@ -94,6 +94,10 @@ class MarketingPagesTests(TestCase):
         self.assertIn('id="nav-login"', html)
         self.assertIn('Log in', html)
         self.assertIn('/login?next=', html)
+        self.assertIn('id="login-dialog"', html)
+        self.assertIn('birdrAuth', html)
+        self.assertIn('id="nav-account"', html)
+        self.assertRegex(html, r'id="nav-account"[^>]*hidden')
         self.assertNotIn('Ada Lovelace', html)
 
         from django.contrib.auth import get_user_model
@@ -103,8 +107,27 @@ class MarketingPagesTests(TestCase):
         self.client.force_login(user)
         html = self.client.get('/site/').content.decode()
         self.assertIn('Ada Lovelace', html)
-        self.assertIn('href="/profile"', html)
+        self.assertIn('My Games', html)
+        self.assertIn('My Checklist', html)
+        self.assertIn('My tricky birds', html)
+        self.assertIn('Settings', html)
+        self.assertIn('My edits', html)
+        self.assertIn('Logout', html)
+        self.assertIn('href="/my-games"', html)
+        self.assertIn('href="/checklist"', html)
+        self.assertIn('href="/trouble-spots"', html)
+        self.assertIn('href="/settings"', html)
+        self.assertIn('href="/site/my-edits/"', html)
+        self.assertRegex(html, r'id="nav-admin"[^>]*hidden')
         self.assertNotIn('id="nav-login"', html)
+
+        staff = get_user_model().objects.create_user(
+            'navstaff', password='x', first_name='Mod', is_staff=True
+        )
+        self.client.force_login(staff)
+        staff_html = self.client.get('/site/').content.decode()
+        self.assertIn('href="/admin"', staff_html)
+        self.assertNotRegex(staff_html, r'id="nav-admin"[^>]*hidden')
 
     def test_intent_pages(self):
         paths = [
@@ -128,12 +151,25 @@ class MarketingPagesTests(TestCase):
         how = self.client.get('/site/how-it-works/').content.decode()
         self.assertRegex(how, r'href="/site/how-it-works/"[^>]*aria-current="page"')
         self.assertNotRegex(how, r'href="/site/birds/"[^>]*aria-current="page"')
+        self.assertIn('Beginner', how)
+        self.assertIn('Novice', how)
+        self.assertIn('Advanced', how)
+        self.assertIn('>Pro<', how)
+        self.assertIn('Expert', how)
+        self.assertIn('familiar, distinctive species', how)
+        self.assertIn('Type the name yourself', how)
+        self.assertIn('class="card"', how)
         quizzes = self.client.get('/site/bird-identification-quiz/').content.decode()
         self.assertRegex(quizzes, r'href="/site/bird-identification-quiz/"[^>]*aria-current="page"')
 
         quiz = self.client.get('/site/bird-identification-quiz/').content.decode()
         self.assertIn('compete in real time', quiz)
         self.assertIn('more points when you answer fast', quiz)
+
+        flocks = self.client.get('/site/flocks/').content.decode()
+        self.assertIn('25-question', flocks)
+        self.assertIn('start easy and finish difficult', flocks)
+        self.assertIn('everyone should get some answers right', flocks)
 
         tricky = self.client.get('/site/my-tricky-birds/').content.decode()
         self.assertNotIn('Most missed species', tricky)
@@ -370,6 +406,9 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Submit a better description', html)
         self.assertIn('community-driven', html)
         self.assertIn('community-dialog', html)
+        self.assertIn('id="login-dialog"', html)
+        self.assertIn('js-open-editor', html)
+        self.assertIn('birdr_open_editor', html)
         self.assertIn('contenteditable', html)
         self.assertIn('data-cmd="bold"', html)
         self.assertIn('data-cmd="italic"', html)
@@ -517,6 +556,8 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Disallow: /admin/', text)
         self.assertIn('Disallow: /api/', text)
         self.assertIn('Disallow: /token/', text)
+        self.assertIn('Disallow: /site/my-edits/', text)
+        self.assertIn('Disallow: /site/logout/', text)
         self.assertIn('Sitemap: https://birdr.pro/sitemap.xml', text)
 
         index = self.client.get('/sitemap.xml')
@@ -530,6 +571,7 @@ class MarketingPagesTests(TestCase):
         self.assertIn('https://birdr.pro/site/how-it-works/', body)
         self.assertIn('https://birdr.pro/site/bird-identification-quiz/', body)
         self.assertIn('https://birdr.pro/site/flocks/', body)
+        self.assertNotIn('/site/my-edits/', body)
 
         countries = self.client.get('/sitemap-countries.xml').content.decode()
         self.assertIn('/site/countries/netherlands/', countries)
@@ -706,6 +748,75 @@ class MarketingCompareCommunityTests(TestCase):
         row = CommunityComparison.objects.get()
         self.assertEqual(row.summary, 'JWT community text.')
         self.assertEqual(row.author, user)
+
+    def test_my_edits_page_and_json(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from compare.models import CommunityComparison
+        from media.models import MediaReview
+
+        User = get_user_model()
+        guest = self.client.get('/site/my-edits/')
+        self.assertEqual(guest.status_code, 200)
+        guest_html = guest.content.decode()
+        self.assertIn('community-driven', guest_html)
+        self.assertIn('name="robots"', guest_html)
+        self.assertIn('noindex', guest_html)
+        self.assertIn('id="edits-login"', guest_html)
+        self.assertIn('Log in to see', guest_html)
+        self.assertEqual(self.client.get('/site/my-edits/?format=json').status_code, 401)
+
+        author = User.objects.create_user(
+            'editorada', password='x', first_name='Ada', last_name='Lovelace'
+        )
+        self.sparrow.refresh_from_db()
+        self.goshawk.refresh_from_db()
+        low, high, pair = self._compare_pair()
+        CommunityComparison.objects.create(
+            species_low=low,
+            species_high=high,
+            author=author,
+            author_name='Ada Lovelace',
+            summary='Square tail vs bulky bulk.',
+            published=True,
+        )
+        MediaReview.objects.create(
+            media=Media.objects.filter(species=self.sparrow).first(),
+            user=author,
+            review_type=MediaReview.APPROVED,
+        )
+        MediaReview.objects.create(
+            media=Media.objects.filter(species=self.goshawk).first(),
+            user=author,
+            review_type=MediaReview.REJECTED,
+        )
+        self.client.force_login(author)
+        html = self.client.get('/site/my-edits/').content.decode()
+        self.assertIn('Square tail vs bulky bulk.', html)
+        self.assertIn(f'/site/compare/{pair}/', html)
+        self.assertIn(low.name, html)
+        self.assertIn(high.name, html)
+        self.assertIn('id="review-accepted">1<', html)
+        self.assertIn('id="review-rejected">1<', html)
+
+        data = self.client.get('/site/my-edits/?format=json').json()
+        self.assertEqual(data['accepted'], 1)
+        self.assertEqual(data['rejected'], 1)
+        self.assertEqual(len(data['edits']), 1)
+        self.assertEqual(data['edits'][0]['url'], f'/site/compare/{pair}/')
+
+        self.client.logout()
+        token = str(RefreshToken.for_user(author).access_token)
+        jwt = self.client.get(
+            '/site/my-edits/?format=json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+        self.assertEqual(jwt.status_code, 200)
+        self.assertEqual(jwt.json()['accepted'], 1)
+
+        logout = self.client.post('/site/logout/')
+        self.assertEqual(logout.status_code, 302)
+        self.assertEqual(logout['Location'], '/site/')
 
 
 def _started_token(seconds_ago=3):

@@ -69,6 +69,7 @@
       class="btn js-open-editor js-editor"
       aria-haspopup="dialog"
       aria-controls="community-dialog"
+      data-login-dialog="login-dialog"
       {% if community and not can_edit %} hidden{% endif %}
     >Write</button>
   </div>
@@ -260,9 +261,33 @@
   }
 
   if (dialog && typeof dialog.showModal === 'function') {
+    function hasAuth() {
+      if (window.birdrAuth && typeof window.birdrAuth.isLoggedIn === 'function') {
+        return window.birdrAuth.isLoggedIn();
+      }
+      var box = document.getElementById('community-box');
+      if (box && box.getAttribute('data-session') === '1') return true;
+      try {
+        return !!(localStorage.getItem('access_token') || localStorage.getItem('jw_token'));
+      } catch (e) {
+        return false;
+      }
+    }
     function openEditor() {
       dialog.showModal();
       rememberState();
+    }
+    function requestWrite() {
+      if (hasAuth()) {
+        openEditor();
+        return;
+      }
+      try { sessionStorage.setItem('birdr_open_editor', '1'); } catch (e) {}
+      if (window.birdrAuth && typeof window.birdrAuth.open === 'function') {
+        window.birdrAuth.open();
+        return;
+      }
+      window.location.href = '{{ login_href|escapejs }}';
     }
     function requestClose() {
       if (isDirty() && discardDialog && typeof discardDialog.showModal === 'function') {
@@ -272,7 +297,7 @@
       dialog.close();
     }
     document.querySelectorAll('.js-open-editor').forEach(function (btn) {
-      btn.addEventListener('click', openEditor);
+      btn.addEventListener('click', requestWrite);
     });
     document.querySelectorAll('.js-close-editor').forEach(function (btn) {
       btn.addEventListener('click', requestClose);
@@ -301,7 +326,15 @@
         if (event.target === discardDialog) discardDialog.close();
       });
     }
-    if (dialog.getAttribute('data-open') === '1') openEditor();
+    var pendingEditor = false;
+    try { pendingEditor = sessionStorage.getItem('birdr_open_editor') === '1'; } catch (e) {}
+    if (hasAuth() && (dialog.getAttribute('data-open') === '1' || pendingEditor)) {
+      try { sessionStorage.removeItem('birdr_open_editor'); } catch (e) {}
+      openEditor();
+    } else if (!hasAuth() && (dialog.getAttribute('data-open') === '1' || pendingEditor)) {
+      try { sessionStorage.setItem('birdr_open_editor', '1'); } catch (e) {}
+      if (window.birdrAuth && typeof window.birdrAuth.open === 'function') window.birdrAuth.open();
+    }
   }
 
   var box = document.getElementById('community-box');

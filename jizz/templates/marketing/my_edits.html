@@ -1,0 +1,108 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>My edits</h1>
+  <p class="lead">
+    Birdr is a community-driven project. Comparisons you write help other
+    birders tell similar species apart, and photo reviews keep the quiz
+    images accurate.
+  </p>
+</section>
+
+<div id="edits-guest"{% if edits_user %} hidden{% endif %}>
+  <p>Log in to see the comparisons you have published and the photos you have reviewed.</p>
+  <p>
+    <button type="button" class="btn" id="edits-login">Log in</button>
+  </p>
+</div>
+
+<div id="edits-body"{% if not edits_user %} hidden{% endif %}>
+  <section>
+    <h2>Photo reviews</h2>
+    <div class="stats-grid" id="review-stats">
+      <div class="card">
+        <p class="stat-figure" id="review-accepted">{{ accepted }}</p>
+        <p>Accepted</p>
+      </div>
+      <div class="card">
+        <p class="stat-figure" id="review-rejected">{{ rejected }}</p>
+        <p>Rejected</p>
+      </div>
+    </div>
+    <p class="form-note" id="review-empty"{% if reviewed %} hidden{% endif %}>
+      You have not reviewed any photos yet.
+      <a href="/media-review/">Review photos</a>
+    </p>
+  </section>
+
+  <section>
+    <h2>Comparisons you have written</h2>
+    <p id="edits-empty"{% if edits %} hidden{% endif %}>
+      You have not published a comparison yet. Open a confusing pair and
+      write a better description so others can tell the birds apart.
+    </p>
+    <ul class="edits-list" id="edits-list">
+      {% for row in edits %}
+      <li>
+        <a href="{{ row.url }}">{{ row.left }} vs {{ row.right }}</a>
+        {% if row.snippet %}<p>{{ row.snippet }}</p>{% endif %}
+        {% if row.updated %}<p class="edit-meta">Updated {{ row.updated }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+<script>
+(function () {
+  var guest = document.getElementById('edits-guest');
+  var body = document.getElementById('edits-body');
+  var loginBtn = document.getElementById('edits-login');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', function () {
+      if (window.birdrAuth && window.birdrAuth.open) window.birdrAuth.open();
+    });
+  }
+  if (body && !body.hidden) return;
+  var token = null;
+  try { token = localStorage.getItem('access_token') || localStorage.getItem('jw_token'); } catch (e) {}
+  if (!token) return;
+  fetch('/site/my-edits/?format=json', { headers: { Authorization: 'Bearer ' + token } })
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      if (guest) guest.hidden = true;
+      if (body) body.hidden = false;
+      var accepted = document.getElementById('review-accepted');
+      var rejected = document.getElementById('review-rejected');
+      var reviewEmpty = document.getElementById('review-empty');
+      var list = document.getElementById('edits-list');
+      var empty = document.getElementById('edits-empty');
+      if (accepted) accepted.textContent = data.accepted || 0;
+      if (rejected) rejected.textContent = data.rejected || 0;
+      if (reviewEmpty) reviewEmpty.hidden = !!(data.reviewed);
+      if (!list) return;
+      list.innerHTML = '';
+      (data.edits || []).forEach(function (row) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = row.url;
+        a.textContent = row.left + ' vs ' + row.right;
+        li.appendChild(a);
+        if (row.snippet) {
+          var p = document.createElement('p');
+          p.textContent = row.snippet;
+          li.appendChild(p);
+        }
+        if (row.updated) {
+          var meta = document.createElement('p');
+          meta.className = 'edit-meta';
+          meta.textContent = 'Updated ' + row.updated;
+          li.appendChild(meta);
+        }
+        list.appendChild(li);
+      });
+      if (empty) empty.hidden = (data.edits || []).length > 0;
+    });
+})();
+</script>
+{% endblock %}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from django.core.cache import cache
 from django.db.models import Q
 
 from jizz.country_challenge_leaderboard import country_challenge_leaderboard
@@ -12,6 +13,12 @@ from jizz.quiz_mistake_stats import get_confusion_pair_rows, get_species_mistake
 from jizz.user_names import sanitize_player_name
 
 TOP_N = 5
+_MISTAKE_STATS_CACHE_TTL = 6 * 60 * 60
+
+
+def _mistake_cache_key(kind: str, country_code: str | None, limit: int) -> str:
+    scope = (country_code or 'all').lower()
+    return f'marketing-{kind}:{scope}:{limit}'
 
 
 def _hiscore_qs(country):
@@ -45,6 +52,10 @@ def _highscores(country, *, limit: int = TOP_N) -> list[dict]:
 
 
 def missed_birds(country_code: str | None = None, *, limit: int = TOP_N) -> list[dict]:
+    cache_key = _mistake_cache_key('missed-birds', country_code, limit)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     rows = get_species_mistake_rows(country_code)
     rows.sort(
         key=lambda row: (row['wrongly_answered'], row['error_rate'] or 0.0),
@@ -68,10 +79,15 @@ def missed_birds(country_code: str | None = None, *, limit: int = TOP_N) -> list
                 'url': f'/site/birds/{slug}/' if slug else '',
             }
         )
+    cache.set(cache_key, out, _MISTAKE_STATS_CACHE_TTL)
     return out
 
 
 def confusion_pairs(country_code: str | None = None, *, limit: int = TOP_N) -> list[dict]:
+    cache_key = _mistake_cache_key('confusion-pairs', country_code, limit)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     rows = get_confusion_pair_rows(country_code)[:limit]
     ids = {row['low_id'] for row in rows} | {row['high_id'] for row in rows}
     slugs = dict(
@@ -92,6 +108,7 @@ def confusion_pairs(country_code: str | None = None, *, limit: int = TOP_N) -> l
                 'url': compare_url,
             }
         )
+    cache.set(cache_key, out, _MISTAKE_STATS_CACHE_TTL)
     return out
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from django.core.cache import cache
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -104,8 +105,15 @@ def _botw_url(species) -> str:
     )
 
 
+_CONFUSED_SPECIES_CACHE_TTL = 6 * 60 * 60
+
+
 def _confused_species_rows(species, *, limit: int = 5) -> list[dict]:
     """Top lookalikes from quiz mix-ups, with bird and compare page URLs."""
+    cache_key = f'marketing-confused-species:{species.id}:{limit}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     self_slug = species.slug or ''
     rows = []
     for row in get_confused_partners_for_species(species.id, limit=limit):
@@ -124,6 +132,7 @@ def _confused_species_rows(species, *, limit: int = 5) -> list[dict]:
             'url': bird_url,
             'compare_url': compare_url,
         })
+    cache.set(cache_key, rows, _CONFUSED_SPECIES_CACHE_TTL)
     return rows
 
 
@@ -202,6 +211,17 @@ def intent_page(request, slug: str):
     extra = {}
     if page.get('show_countries'):
         extra['countries'] = _indexable_countries()
+    if slug == 'my-tricky-birds':
+        missed = missed_birds(limit=8)
+        pairs = confusion_pairs(limit=8)
+        extra.update(
+            missed_birds=missed,
+            show_missed=bool(missed),
+            missed_href='/data/quiz-mistakes/species/',
+            confusion_pairs=pairs,
+            show_pairs=bool(pairs),
+            pairs_href='/data/quiz-mistakes/pairs/',
+        )
     context = base_context(
         request,
         title=page['title'],

@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from compare.models import SpeciesComparison
@@ -21,6 +22,7 @@ from media.models import Media, MediaReview
 
 class MarketingPagesTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.nl, _ = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})
         if self.nl.name != 'Netherlands':
             self.nl.name = 'Netherlands'
@@ -106,9 +108,19 @@ class MarketingPagesTests(TestCase):
                 self.assertIn(f'https://birdr.pro{path}', html)
                 self.assertIn('<title>', html)
 
+        how = self.client.get('/site/how-it-works/').content.decode()
+        self.assertRegex(how, r'href="/site/how-it-works/"[^>]*aria-current="page"')
+        self.assertNotRegex(how, r'href="/site/birds/"[^>]*aria-current="page"')
+        quizzes = self.client.get('/site/bird-identification-quiz/').content.decode()
+        self.assertRegex(quizzes, r'href="/site/bird-identification-quiz/"[^>]*aria-current="page"')
+
         quiz = self.client.get('/site/bird-identification-quiz/').content.decode()
         self.assertIn('compete in real time', quiz)
         self.assertIn('more points when you answer fast', quiz)
+
+        tricky = self.client.get('/site/my-tricky-birds/').content.decode()
+        self.assertNotIn('Most missed species', tricky)
+        self.assertNotIn('Confusing pairs', tricky)
 
     def test_legacy_marketing_paths_redirect(self):
         pairs = [
@@ -205,6 +217,7 @@ class MarketingPagesTests(TestCase):
                 answer=self.sparrow,
                 correct=False,
             )
+        cache.clear()
         missed = self.client.get('/site/birds/').content.decode()
         self.assertIn('Most missed species', missed)
         self.assertIn('Confusing pairs', missed)
@@ -277,6 +290,8 @@ class MarketingPagesTests(TestCase):
         self.assertIn(f'/media-review/?species={self.sparrow.id}', html)
         self.assertNotIn('review-status is-ok', html)
         self.assertNotIn('Often mixed up with', html)
+        self.assertIn('aria-current="page"', html)
+        self.assertRegex(html, r'href="/site/birds/"[^>]*aria-current="page"')
 
         game = Game.objects.create(
             country=self.nl,
@@ -304,6 +319,7 @@ class MarketingPagesTests(TestCase):
                 correct=False,
             )
 
+        cache.clear()
         html = self.client.get(f'/site/birds/{self.sparrow.slug}/').content.decode()
         self.assertIn('Often mixed up with', html)
         self.assertIn('Northern Goshawk', html)
@@ -364,6 +380,59 @@ class MarketingPagesTests(TestCase):
         self.assertNotIn('Review needed', html)
         self.assertNotIn('Review photos', html)
         self.assertNotIn(f'/media-review/?species={self.sparrow.id}', html)
+
+    def test_tricky_birds_page_shows_missed_and_pairs(self):
+        game = Game.objects.create(
+            country=self.nl,
+            level='beginner',
+            length=10,
+            media='images',
+            multiplayer=False,
+        )
+        question = Question.objects.create(
+            game=game, species=self.goshawk, number=1, sequence=1,
+        )
+        for i in range(10):
+            player = Player.objects.create(name=f'Tricky-miss-{i}', language='en')
+            score = PlayerScore.objects.create(player=player, game=game, score=10)
+            Answer.objects.create(
+                player_score=score,
+                question=question,
+                answer=self.sparrow,
+                correct=False,
+            )
+
+        html = self.client.get('/site/my-tricky-birds/').content.decode()
+        self.assertIn('Birds people mix up most', html)
+        self.assertIn('Most missed species', html)
+        self.assertIn('Confusing pairs', html)
+        self.assertIn('Eurasian Sparrowhawk', html)
+        self.assertIn('Northern Goshawk', html)
+        self.assertIn(f'/site/birds/{self.sparrow.slug}/', html)
+        low, high = (
+            (self.sparrow, self.goshawk)
+            if self.sparrow.id < self.goshawk.id
+            else (self.goshawk, self.sparrow)
+        )
+        self.assertIn(f'/site/compare/{low.slug}-vs-{high.slug}/', html)
+        self.assertIn('/data/quiz-mistakes/species/', html)
+        self.assertIn('/data/quiz-mistakes/pairs/', html)
+
+    @patch('jizz.marketing.country_stats.get_species_mistake_rows', return_value=[])
+    @patch('jizz.marketing.country_stats.get_confusion_pair_rows', return_value=[])
+    def test_tricky_birds_page_caches_mistake_queries(self, mock_pairs, mock_missed):
+        url = '/site/my-tricky-birds/'
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(mock_missed.call_count, 1)
+        self.assertEqual(mock_pairs.call_count, 1)
+
+    @patch('jizz.marketing.views.get_confused_partners_for_species', return_value=[])
+    def test_bird_page_caches_confused_species_query(self, mock_partners):
+        url = f'/site/birds/{self.sparrow.slug}/'
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(mock_partners.call_count, 1)
 
     def test_compare_page_without_written_comparison(self):
         extra = Species.objects.create(name='Little Gull', name_latin='Hydrocoloeus minutus', code='litgul')

@@ -225,10 +225,17 @@ location ^~ /site/ {
 }
 
 # SPA (React app) – /play and other app routes. Must come AFTER the Django locations above.
-# location / {
-#     root /var/www/jizz/app/build;
-#     try_files $uri $uri/ /index.html;
+# The CRA build has index.html at the build root (not build/play/). Do not use
+# `root …/build` inside `location /play` — that looks for build/play/index.html and 404s.
+# Either omit a /play block and let this catch-all serve /play, or use try_files /index.html:
+# location ^~ /play {
+#     root /var/www/jizz/jizz/app/build;
+#     try_files /index.html =404;
 # }
+location / {
+    root /var/www/jizz/jizz/app/build;
+    try_files $uri $uri/ /index.html;
+}
 
 ```
 

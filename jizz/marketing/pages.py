@@ -393,6 +393,22 @@ def dumps_json_ld(blocks: list[dict]) -> str:
     return mark_safe(json.dumps(payload, ensure_ascii=False))
 
 
+def nav_section_for_path(path: str) -> str:
+    """Which primary nav item the current marketing URL belongs to."""
+    current = path or ''
+    if current.startswith('/site/how-it-works/'):
+        return 'how-it-works'
+    if current.startswith('/site/bird-identification-quiz/'):
+        return 'quizzes'
+    if current.startswith('/site/birds/') or current.startswith('/site/compare/'):
+        return 'species'
+    if current.startswith('/site/bird-quiz-by-country/') or current.startswith('/site/countries/'):
+        return 'countries'
+    if current.startswith('/site/flocks/'):
+        return 'flocks'
+    return ''
+
+
 def base_context(request, *, title: str, description: str, path: str, breadcrumbs=None, extra_json_ld=None, **extra):
     origin = canonical_origin(request)
     app_store_url, play_store_url = store_urls()
@@ -419,6 +435,7 @@ def base_context(request, *, title: str, description: str, path: str, breadcrumb
         'home_url': SITE_HOME,
         'cms_index_url': CMS_INDEX,
         'cms_nav_pages': _cms_nav_pages(),
+        'nav_section': nav_section_for_path(path),
         'feedback_started': _feedback_started_token(),
         'can_edit': bool(
             getattr(request, 'user', None)

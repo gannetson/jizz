@@ -91,11 +91,17 @@
     }
     nav.site { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.92rem; align-items: center; }
     nav.site a { text-decoration: none; font-weight: 600; color: var(--birdr-800); }
+    nav.site a:hover { color: var(--birdr-600); }
+    nav.site a[aria-current="page"] {
+      color: var(--birdr-600);
+      box-shadow: inset 0 -2px 0 var(--birdr-600);
+    }
     nav.site a.nav-cta {
       background: var(--birdr-600);
       color: #fff;
       padding: 8px 12px;
       border-radius: 999px;
+      box-shadow: none;
     }
     nav.site a.nav-cta:hover { background: var(--birdr-800); color: #fff; }
     .hero {
@@ -535,13 +541,13 @@
     <div class="wrap">
       <a class="brand" href="{{ home_url }}">Birdr</a>
       <nav class="site" aria-label="Primary">
-        <a href="/site/how-it-works/">How it works</a>
-        <a href="/site/bird-identification-quiz/">Quizzes</a>
-        <a href="/site/birds/">Species</a>
-        <a href="/site/bird-quiz-by-country/">Countries</a>
-        <a href="/site/flocks/">Flocks</a>
+        <a href="/site/how-it-works/"{% if nav_section == 'how-it-works' %} aria-current="page"{% endif %}>How it works</a>
+        <a href="/site/bird-identification-quiz/"{% if nav_section == 'quizzes' %} aria-current="page"{% endif %}>Quizzes</a>
+        <a href="/site/birds/"{% if nav_section == 'species' %} aria-current="page"{% endif %}>Species</a>
+        <a href="/site/bird-quiz-by-country/"{% if nav_section == 'countries' %} aria-current="page"{% endif %}>Countries</a>
+        <a href="/site/flocks/"{% if nav_section == 'flocks' %} aria-current="page"{% endif %}>Flocks</a>
         {% for page in cms_nav_pages %}
-        <a href="{{ page.get_absolute_url }}">{{ page.nav_text }}</a>
+        <a href="{{ page.get_absolute_url }}"{% if request.path == page.get_absolute_url %} aria-current="page"{% endif %}>{{ page.nav_text }}</a>
         {% endfor %}
         <a href="{{ home_url }}#help">Help</a>
         <a class="nav-cta" href="{{ home_url }}#get-the-app">Get the app</a>

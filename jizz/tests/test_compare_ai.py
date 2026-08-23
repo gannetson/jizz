@@ -7,7 +7,7 @@ from compare.ai_service import AIComparisonService, name_search_terms
 from compare.generation import get_or_create_species_comparison
 from compare.models import SpeciesComparison, SpeciesTrait
 from jizz.models import Species
-from jizz.marketing.html import markdown_to_safe_html
+from jizz.marketing.html import markdown_to_safe_html, to_safe_html
 
 
 class NameSearchTermsTests(TestCase):
@@ -136,5 +136,15 @@ class ComparisonMarkdownTests(TestCase):
     def test_markdown_to_safe_html_allows_lists(self):
         html = markdown_to_safe_html('Look at **primary projection**.\n\n- Short\n- Long')
         self.assertIn('<strong>primary projection</strong>', html)
+        self.assertIn('<li>', html)
+        self.assertNotIn('<script>', html)
+
+    def test_to_safe_html_keeps_markup_and_strips_scripts(self):
+        html = to_safe_html(
+            '<p>Look at <strong>primary</strong> and <em>tone</em>.</p>'
+            '<script>alert(1)</script><ul><li>Short</li></ul>'
+        )
+        self.assertIn('<strong>primary</strong>', html)
+        self.assertIn('<em>tone</em>', html)
         self.assertIn('<li>', html)
         self.assertNotIn('<script>', html)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SpeciesTrait, SpeciesComparison, ComparisonRequest
+from .models import CommunityComparison, SpeciesTrait, SpeciesComparison, ComparisonRequest
 
 
 @admin.register(SpeciesTrait)
@@ -18,6 +18,20 @@ class SpeciesComparisonAdmin(admin.ModelAdmin):
     search_fields = ['species_1__name', 'species_2__name', 'family_1', 'family_2', 'order_1', 'order_2']
     readonly_fields = ['generated_at', 'updated_at']
     raw_id_fields = ['species_1', 'species_2']
+
+
+@admin.register(CommunityComparison)
+class CommunityComparisonAdmin(admin.ModelAdmin):
+    list_display = ['__str__', 'author_name', 'published', 'updated']
+    list_filter = ['published', 'updated']
+    search_fields = [
+        'species_low__name',
+        'species_high__name',
+        'author_name',
+        'summary',
+    ]
+    raw_id_fields = ['species_low', 'species_high', 'author']
+    readonly_fields = ['created', 'updated']
 
 
 @admin.register(ComparisonRequest)

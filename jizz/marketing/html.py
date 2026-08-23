@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from html import escape, unescape
 from html.parser import HTMLParser
 from urllib.parse import urlparse
@@ -86,3 +87,21 @@ def markdown_to_safe_html(value: str) -> str:
         return ''
     html = markdown.markdown(text, extensions=['extra', 'nl2br'])
     return sanitize_html(html)
+
+
+_TAG_RE = re.compile(r'<[^>]+>')
+
+
+def html_has_text(value: str) -> bool:
+    text = unescape(_TAG_RE.sub('', value or ''))
+    return bool(text.replace('\xa0', ' ').strip())
+
+
+def to_safe_html(value: str) -> str:
+    """Sanitize stored HTML, or render markdown from older plain-text fields."""
+    text = (value or '').strip()
+    if not text:
+        return ''
+    if text.startswith('<'):
+        return sanitize_html(text)
+    return markdown_to_safe_html(text)

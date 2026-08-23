@@ -4,14 +4,28 @@ from __future__ import annotations
 
 import logging
 
+from urllib.parse import quote
+
 from django.core.cache import cache
+from django.db import IntegrityError
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from compare.community import (
+    FORM_FIELDS,
+    can_manage,
+    cleaned_fields,
+    display_name_for_user,
+    form_values,
+    has_comparison_text,
+    published_for_pair,
+    rendered_parts,
+    user_from_request,
+)
 from compare.generation import get_or_create_species_comparison
-from compare.models import SpeciesComparison
+from compare.models import CommunityComparison, SpeciesComparison
 from jizz.marketing.pages import (
     CMS_INDEX,
     DEFAULT_DESCRIPTION,
@@ -373,8 +387,7 @@ def bird_page(request, slug: str):
     return render(request, 'marketing/bird.html', context)
 
 
-@require_GET
-def compare_page(request, pair: str):
+def _compare_pair_species(pair: str):
     parsed = parse_compare_pair(pair)
     if parsed is None:
         raise Http404()
@@ -385,8 +398,10 @@ def compare_page(request, pair: str):
         raise Http404()
     low, high = (species_a, species_b) if species_a.id < species_b.id else (species_b, species_a)
     canonical_pair = compare_pair_slug(low.slug, high.slug)
-    if pair != canonical_pair:
-        return redirect('marketing-compare', pair=canonical_pair, permanent=True)
+    return low, high, canonical_pair
+
+
+def _ai_comparison_for(low, high):
     comparison = (
         SpeciesComparison.objects.filter(
             comparison_type='species',
@@ -405,28 +420,44 @@ def compare_page(request, pair: str):
         except Exception:
             logger.exception('Failed to generate comparison for %s vs %s', low.name, high.name)
             comparison = None
-    path = reverse('marketing-compare', kwargs={'pair': canonical_pair})
-    title = f'{low.name} vs {high.name} – How to Tell Them Apart | Birdr'
+    return comparison
+
+
+def _compare_page_response(
+    request,
+    low,
+    high,
+    path,
+    pair,
+    *,
+    form_error='',
+    form_open=False,
+    notice='',
+):
+    comparison = _ai_comparison_for(low, high)
+    community = published_for_pair(low, high)
+    user = user_from_request(request)
+    session_user = bool(getattr(request.user, 'is_authenticated', False))
+    show_ai = request.GET.get('source') == 'ai' or not community
+    active = comparison if show_ai else community
+    summary_html, sections, detailed_html = rendered_parts(active)
+    if show_ai and not summary_html and not sections and not detailed_html:
+        summary_html, sections, detailed_html = '', [], ''
     description = (
-        (comparison.summary if comparison else '')
+        (community.summary if community and not show_ai else '')
+        or (comparison.summary if comparison else '')
         or f'Learn the field marks that separate {low.name} and {high.name}, then practise the pair on Birdr.'
     )
     description = ' '.join(description.replace('*', '').replace('_', '').split())
-    sections = []
-    detailed_html = ''
-    summary_html = ''
-    if comparison:
-        summary_html = markdown_to_safe_html(comparison.summary)
-        detailed_html = markdown_to_safe_html(comparison.detailed_comparison)
-        sections = [
-            ('Identification tips', markdown_to_safe_html(comparison.identification_tips)),
-            ('Size', markdown_to_safe_html(comparison.size_comparison)),
-            ('Plumage', markdown_to_safe_html(comparison.plumage_comparison)),
-            ('Behaviour', markdown_to_safe_html(comparison.behavior_comparison)),
-            ('Habitat', markdown_to_safe_html(comparison.habitat_comparison)),
-            ('Voice', markdown_to_safe_html(comparison.vocalization_comparison)),
-        ]
-        sections = [(label, html) for label, html in sections if html]
+    can_edit = can_manage(user, community) if community else False
+    can_submit = bool(user) and not community
+    initial_source = community or comparison
+    values = form_values(initial_source)
+    form_rows = [
+        {'name': field, 'label': label, 'value': values.get(field, '')}
+        for field, label in FORM_FIELDS
+    ]
+    title = f'{low.name} vs {high.name} – How to Tell Them Apart | Birdr'
     context = base_context(
         request,
         title=title,
@@ -445,8 +476,101 @@ def compare_page(request, pair: str):
         detailed_html=detailed_html,
         sections=sections,
         practise_href='/trouble-spots',
+        showing_ai=show_ai,
+        has_ai=has_comparison_text(comparison),
+        community=community,
+        author_name=(community.author_name if community else ''),
+        can_edit=can_edit,
+        can_submit=can_submit,
+        session_user=session_user,
+        form_rows=form_rows,
+        form_error=form_error,
+        form_open=form_open or bool(form_error) or request.GET.get('edit') == '1',
+        notice=notice or request.GET.get('notice', ''),
+        login_href=f'/login?next={quote(path + "?edit=1")}',
+        community_action=reverse('marketing-compare-community', kwargs={'pair': pair}),
+        compare_path=path,
     )
     return render(request, 'marketing/compare.html', context)
+
+
+@require_GET
+def compare_page(request, pair: str):
+    low, high, canonical_pair = _compare_pair_species(pair)
+    if pair != canonical_pair:
+        return redirect('marketing-compare', pair=canonical_pair, permanent=True)
+    path = reverse('marketing-compare', kwargs={'pair': canonical_pair})
+    return _compare_page_response(request, low, high, path, canonical_pair)
+
+
+@require_http_methods(['POST'])
+def compare_community(request, pair: str):
+    low, high, canonical_pair = _compare_pair_species(pair)
+    if pair != canonical_pair:
+        return redirect('marketing-compare-community', pair=canonical_pair)
+    path = reverse('marketing-compare', kwargs={'pair': canonical_pair})
+    user = user_from_request(request)
+    if not user:
+        return redirect(f'/login?next={path}')
+    if (request.POST.get('website') or '').strip():
+        return redirect(path)
+    community = (
+        CommunityComparison.objects.filter(species_low=low, species_high=high)
+        .select_related('author')
+        .first()
+    )
+    if request.POST.get('action') == 'delete':
+        if not community or not can_manage(user, community):
+            return redirect(path)
+        community.delete()
+        return redirect(f'{path}?notice=deleted')
+    data, any_text = cleaned_fields(request.POST)
+    if not any_text:
+        return _compare_page_response(
+            request,
+            low,
+            high,
+            path,
+            canonical_pair,
+            form_error='Write at least one section before publishing.',
+            form_open=True,
+        )
+    if community:
+        if not can_manage(user, community):
+            return _compare_page_response(
+                request,
+                low,
+                high,
+                path,
+                canonical_pair,
+                form_error='A community description is already published for this pair.',
+            )
+        for field, value in data.items():
+            setattr(community, field, value)
+        if community.author_id == user.id:
+            community.author_name = display_name_for_user(user)
+        community.published = True
+        community.save()
+    else:
+        try:
+            CommunityComparison.objects.create(
+                species_low=low,
+                species_high=high,
+                author=user,
+                author_name=display_name_for_user(user),
+                published=True,
+                **data,
+            )
+        except IntegrityError:
+            return _compare_page_response(
+                request,
+                low,
+                high,
+                path,
+                canonical_pair,
+                form_error='A community description is already published for this pair.',
+            )
+    return redirect(f'{path}?notice=saved')
 
 
 @require_POST

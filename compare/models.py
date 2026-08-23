@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from jizz.models import Species
 
@@ -173,4 +174,50 @@ class ComparisonRequest(models.Model):
     
     def __str__(self):
         return f"Comparison request {self.id} - {self.status}"
+
+
+class CommunityComparison(models.Model):
+    """User-submitted comparison text for a species pair. Published immediately for now."""
+
+    species_low = models.ForeignKey(
+        Species,
+        on_delete=models.CASCADE,
+        related_name='community_comparisons_as_low',
+    )
+    species_high = models.ForeignKey(
+        Species,
+        on_delete=models.CASCADE,
+        related_name='community_comparisons_as_high',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='community_comparisons',
+    )
+    author_name = models.CharField(max_length=120)
+    summary = models.TextField(blank=True, default='')
+    identification_tips = models.TextField(blank=True, default='')
+    size_comparison = models.TextField(blank=True, default='')
+    plumage_comparison = models.TextField(blank=True, default='')
+    behavior_comparison = models.TextField(blank=True, default='')
+    habitat_comparison = models.TextField(blank=True, default='')
+    vocalization_comparison = models.TextField(blank=True, default='')
+    published = models.BooleanField(
+        default=True,
+        help_text='Shown on the public compare page. Review can be added later.',
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['species_low', 'species_high'],
+                name='community_comparison_pair_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.species_low} vs {self.species_high} (community)'
 

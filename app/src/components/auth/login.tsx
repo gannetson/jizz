@@ -45,7 +45,9 @@ export const Login = () => {
 
       authService.storeTokens(tokens);
       await linkStoredPlayerToAccount();
-      navigate("/start");
+      const next = new URLSearchParams(window.location.search).get("next");
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/start";
+      navigate(safeNext);
     } catch (err: any) {
       const authError = err as AuthError;
       setError(authError.message || "Authentication failed. Please try again.");

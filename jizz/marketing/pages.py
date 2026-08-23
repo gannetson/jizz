@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import quote
 
 from django.conf import settings
 from django.db import OperationalError, ProgrammingError
@@ -409,6 +410,14 @@ def nav_section_for_path(path: str) -> str:
     return ''
 
 
+def _nav_user_name(user) -> str:
+    if not user or not getattr(user, 'is_authenticated', False):
+        return ''
+    from compare.community import display_name_for_user
+
+    return display_name_for_user(user)
+
+
 def base_context(request, *, title: str, description: str, path: str, breadcrumbs=None, extra_json_ld=None, **extra):
     origin = canonical_origin(request)
     app_store_url, play_store_url = store_urls()
@@ -442,6 +451,8 @@ def base_context(request, *, title: str, description: str, path: str, breadcrumb
             and request.user.is_authenticated
             and request.user.is_staff
         ),
+        'nav_user_name': _nav_user_name(getattr(request, 'user', None)),
+        'login_href': f'/login?next={quote(getattr(request, "path", path) or path)}',
         **extra,
     }
 

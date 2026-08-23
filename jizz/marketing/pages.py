@@ -244,17 +244,21 @@ INTENT_PAGES = {
     'flocks': {
         'title': 'Bird Club Quiz & Leaderboard – Flocks | Birdr',
         'description': (
-            'Create a Flock for your bird club or group. Shared quizzes and a leaderboard '
-            'keep everyone practising together. Free on Birdr.'
+            'Create a Flock for your bird club. Each week is a new 25-question quiz '
+            'that starts easy and finishes difficult, with a private leaderboard. Free on Birdr.'
         ),
         'heading': 'Flocks: quizzes for bird clubs',
         'lead': (
-            'A Flock is your club, WhatsApp group or trip companions on Birdr. Play the '
-            'same quiz, compare scores, and keep a leaderboard.'
+            'A Flock is your club, WhatsApp group or trip companions on Birdr. Each week '
+            'you play the same 25-question quiz, compare scores, and keep a leaderboard.'
         ),
         'cta_href': '/flocks/intro',
         'cta_label': 'Create or join a Flock',
         'body': [
+            (
+                'Every week is a new game: 25 questions that start easy and finish '
+                'difficult, so everyone should get some answers right — beginners included.'
+            ),
             (
                 'Admins set a country and a challenge. Members play on their phones or on '
                 'the web. Results can be shared without opening the whole club to the public.'

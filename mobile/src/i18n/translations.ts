@@ -1087,7 +1087,7 @@ export const translations: Record<string, Record<string, string>> = {
     flocks_no_active_challenge_short: 'Geen actieve uitdaging',
     flocks_intro_title: 'Speel vogelherkenning met je vrienden',
     flocks_intro_body:
-      'Een flock is jouw privé vogelclub. Nodig vrienden uit, start een wekelijkse uitdaging en ontdek wie de vogels echt kent — samen is het veel leuker.',
+      'Een flock is jouw privé vogelclub. Elke week is er een nieuwe quiz van 25 vragen die makkelijk begint en moeilijk eindigt, zodat iedereen een paar antwoorden goed zou moeten hebben.',
     flocks_intro_step_create: 'Maak een flock voor je club of vriendengroep',
     flocks_intro_step_invite: 'Nodig leden uit met een link of code',
     flocks_intro_step_compete: 'Speel dezelfde wekelijkse quiz van 25 vragen — eerst makkelijk, daarna moeilijker',

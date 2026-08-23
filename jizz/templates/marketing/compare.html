@@ -129,6 +129,12 @@
   <div class="community-dialog-panel">
     <h2 id="community-dialog-title">{% if can_edit or community %}Edit this description{% else %}Submit a better description{% endif %}</h2>
     {% if form_error %}<p class="form-error">{{ form_error }}</p>{% endif %}
+    <div id="copyright-notice" class="copyright-notice">
+      <p>Please don’t copy and paste from copyright-protected sources. Write in your own words.</p>
+      <p class="copyright-notice-actions">
+        <button class="btn secondary js-copyright-ok" type="button">I understand</button>
+      </p>
+    </div>
     <p class="form-hint">Use the same sections as the comparison. Your text is published immediately.</p>
     <form id="community-form" class="community-form-wrap" method="post" action="{{ community_action }}">
       {% csrf_token %}
@@ -273,7 +279,23 @@
         return false;
       }
     }
+    var COPYRIGHT_KEY = 'birdr_copyright_disclaimer_ok';
+    function syncCopyrightNotice() {
+      var notice = document.getElementById('copyright-notice');
+      if (!notice) return;
+      var ok = false;
+      try { ok = localStorage.getItem(COPYRIGHT_KEY) === '1'; } catch (e) {}
+      notice.hidden = ok;
+    }
+    document.querySelectorAll('.js-copyright-ok').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        try { localStorage.setItem(COPYRIGHT_KEY, '1'); } catch (e) {}
+        syncCopyrightNotice();
+      });
+    });
+    syncCopyrightNotice();
     function openEditor() {
+      syncCopyrightNotice();
       dialog.showModal();
       rememberState();
     }

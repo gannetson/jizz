@@ -1,4 +1,4 @@
-"""Landing testimonials (player + country only) and FAQ copy."""
+"""Landing testimonials and FAQ copy."""
 
 TESTIMONIALS = [
     {
@@ -6,32 +6,32 @@ TESTIMONIALS = [
             'I gave Birdr a quick spin and immediately found it incredibly useful. '
             'Kudos to the developer!'
         ),
-        'attribution': 'Birdr player, India',
+        'attribution': 'Bombay Natural History Society, India',
     },
     {
         'quote': (
             'The bird comparisons are thorough and could really help people improve '
             'their identification skills.'
         ),
-        'attribution': 'Birdr player, United Kingdom',
+        'attribution': 'Kent Ornithological Society, United Kingdom',
     },
     {
         'quote': 'Birdr works well—even with Finnish bird names.',
-        'attribution': 'Birdr player, Finland',
+        'attribution': 'BirdLife Finland (BirdLife Suomi), Finland',
     },
     {
         'quote': (
             'The Pro and Expert levels offer exactly the kind of serious identification '
             'training I was looking for.'
         ),
-        'attribution': 'Birdr player, Japan',
+        'attribution': 'Japan Bird Research Association, Japan',
     },
     {
         'quote': (
             'The app looks appealing and friendly, while the higher levels provide a '
             'genuine challenge.'
         ),
-        'attribution': 'Birdr player, Japan',
+        'attribution': 'Japan Bird Research Association, Japan',
     },
     {
         'quote': (

@@ -79,6 +79,10 @@ class MarketingPagesTests(TestCase):
         self.assertIn('MobileApplication', html)
         self.assertIn('FAQPage', html)
         self.assertIn('Kudos to the developer!', html)
+        self.assertIn('Bombay Natural History Society, India', html)
+        self.assertIn('Kent Ornithological Society, United Kingdom', html)
+        self.assertIn('BirdLife Finland (BirdLife Suomi), Finland', html)
+        self.assertIn('Japan Bird Research Association, Japan', html)
         self.assertIn('How can I help?', html)
         self.assertIn('Flag', html)
         self.assertIn('#review-photos', html)
@@ -276,6 +280,23 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Confusing pairs', missed)
         self.assertIn('/data/quiz-mistakes/species/', missed)
 
+    def test_species_index_caches_expensive_queries(self):
+        from jizz.marketing.pages import public_species_count, public_species_ids
+        from jizz.marketing.species_index import featured_comparisons, public_families
+        from jizz.marketing.views import _indexable_countries
+
+        families = public_families()
+        count = public_species_count()
+        featured = featured_comparisons()
+        countries = _indexable_countries()
+        ids = public_species_ids()
+        with self.assertNumQueries(0):
+            self.assertEqual(public_families(), families)
+            self.assertEqual(public_species_count(), count)
+            self.assertEqual(featured_comparisons(), featured)
+            self.assertEqual(_indexable_countries(), countries)
+            self.assertEqual(public_species_ids(), ids)
+
     def test_country_page_stats_from_data_section(self):
         CountrySpecies.objects.filter(country=self.nl).update(status='native')
         game = Game.objects.create(
@@ -414,6 +435,9 @@ class MarketingPagesTests(TestCase):
         self.assertIn('data-cmd="italic"', html)
         self.assertIn('data-cmd="insertUnorderedList"', html)
         self.assertIn('data-cmd="insertOrderedList"', html)
+        self.assertIn('copyright-protected sources', html)
+        self.assertIn('I understand', html)
+        self.assertIn('birdr_copyright_disclaimer_ok', html)
         self.assertIn('Discard your changes?', html)
         self.assertIn('Keep editing', html)
         self.assertIn('data-open-species-media', html)

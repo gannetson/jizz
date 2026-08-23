@@ -6,6 +6,7 @@ import json
 from urllib.parse import quote
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
@@ -327,18 +328,47 @@ def store_urls() -> tuple[str, str]:
     )
 
 
+MARKETING_QUERY_CACHE_TTL = 6 * 60 * 60
+
+
+def indexable_country_codes() -> list[str]:
+    cached = cache.get('marketing-indexable-country-codes')
+    if cached is not None:
+        return cached
+    codes = [c.code for c in Country.objects.only('code') if country_is_indexable(c)]
+    cache.set('marketing-indexable-country-codes', codes, MARKETING_QUERY_CACHE_TTL)
+    return codes
+
+
 def public_species_qs():
     """Species with a slug, public photo, and membership on a real country list."""
-    indexable_codes = [c.code for c in Country.objects.all() if country_is_indexable(c)]
     return (
         Species.objects.filter(
             media__type='image',
             media__hide=False,
-            countryspecies__country_id__in=indexable_codes,
+            countryspecies__country_id__in=indexable_country_codes(),
         )
         .exclude(Q(slug='') | Q(slug__isnull=True))
         .distinct()
     )
+
+
+def public_species_ids() -> list[int]:
+    cached = cache.get('marketing-public-species-ids')
+    if cached is not None:
+        return cached
+    ids = list(public_species_qs().values_list('id', flat=True))
+    cache.set('marketing-public-species-ids', ids, MARKETING_QUERY_CACHE_TTL)
+    return ids
+
+
+def public_species_count() -> int:
+    cached = cache.get('marketing-public-species-count')
+    if cached is not None:
+        return cached
+    n = len(public_species_ids())
+    cache.set('marketing-public-species-count', n, MARKETING_QUERY_CACHE_TTL)
+    return n
 
 
 def public_image_queryset(species):

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from django.core.cache import cache
 from django.db.models import Count, Q
 
 from compare.models import SpeciesComparison
-from jizz.marketing.pages import public_species_qs
+from jizz.marketing.pages import (
+    MARKETING_QUERY_CACHE_TTL,
+    public_species_ids,
+)
 from jizz.marketing.slugs import compare_pair_slug
-from jizz.models import TaxonomicFamily
+from jizz.models import Species, TaxonomicFamily
 
 SEARCH_MIN = 2
 SEARCH_LIMIT = 40
@@ -15,7 +19,7 @@ FAMILY_LIMIT = 80
 
 
 def search_public_species(query: str, *, family_latin: str = '', limit: int = SEARCH_LIMIT):
-    qs = public_species_qs()
+    qs = Species.objects.filter(pk__in=public_species_ids())
     if family_latin:
         qs = qs.filter(taxonomic_family__name_latin=family_latin)
     q = (query or '').strip()
@@ -32,16 +36,31 @@ def search_public_species(query: str, *, family_latin: str = '', limit: int = SE
 
 
 def public_families() -> list[dict]:
-    return list(
-        TaxonomicFamily.objects.filter(species__in=public_species_qs())
+    cached = cache.get('marketing-public-families')
+    if cached is not None:
+        return cached
+    rows = list(
+        TaxonomicFamily.objects.filter(species__pk__in=public_species_ids())
         .annotate(species_n=Count('species', distinct=True))
         .filter(species_n__gt=0)
         .order_by('name_en')
         .values('name_en', 'name_latin', 'species_n')
     )
+    cache.set('marketing-public-families', rows, MARKETING_QUERY_CACHE_TTL)
+    return rows
 
 
 def featured_comparisons(*, limit: int = 6) -> list[dict]:
+    cache_key = f'marketing-featured-comparisons:{limit}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    rows = _featured_comparisons(limit=limit)
+    cache.set(cache_key, rows, MARKETING_QUERY_CACHE_TTL)
+    return rows
+
+
+def _featured_comparisons(*, limit: int = 6) -> list[dict]:
     rows = []
     qs = (
         SpeciesComparison.objects.filter(comparison_type='species')

@@ -39,6 +39,7 @@ from jizz.marketing.pages import (
     canonical_origin,
     faq_json_ld,
     public_image_queryset,
+    public_species_count,
     public_species_qs,
     site_path,
     species_approved_image_count,
@@ -70,6 +71,11 @@ logger = logging.getLogger(__name__)
 def _indexable_countries():
     from django.db.models import Count
 
+    from jizz.marketing.pages import MARKETING_QUERY_CACHE_TTL
+
+    cached = cache.get('marketing-indexable-countries')
+    if cached is not None:
+        return cached
     rows = []
     seen_slugs = {}
     qs = (
@@ -91,6 +97,7 @@ def _indexable_countries():
             'count': country.species_n,
             'url': reverse('marketing-country', kwargs={'slug': slug}),
         })
+    cache.set('marketing-indexable-countries', rows, MARKETING_QUERY_CACHE_TTL)
     return rows
 
 
@@ -329,7 +336,7 @@ def birds_index(request):
         show_results=show_results,
         results=results,
         result_limit=result_limit,
-        species_count=public_species_qs().count(),
+        species_count=public_species_count(),
         missed_birds=missed,
         show_missed=bool(missed),
         missed_href='/data/quiz-mistakes/species/',

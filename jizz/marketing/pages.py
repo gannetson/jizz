@@ -272,6 +272,38 @@ INTENT_PAGES = {
             ('/play', 'Start a quiz'),
             ('/site/how-it-works/', 'How it works'),
         ],
+        'screenshots': [
+            {
+                'src': '/images/birdr-tricky-birds.png',
+                'width': 456,
+                'height': 1024,
+                'alt': (
+                    'My Tricky Birds in the app: a list of lookalike pairs for the '
+                    'Netherlands, with Practice buttons and FIXED badges'
+                ),
+                'caption': 'Your tricky pairs',
+            },
+            {
+                'src': '/images/birdr-tricky-practice.png',
+                'width': 456,
+                'height': 1024,
+                'alt': (
+                    'Pair practice quiz: Eurasian Treecreeper versus Short-toed '
+                    'Treecreeper, with the correct species marked'
+                ),
+                'caption': 'Practise a pair',
+            },
+            {
+                'src': '/images/birdr-tricky-results.png',
+                'width': 456,
+                'height': 1024,
+                'alt': (
+                    'Pair practice results: 18 of 20 correct, and the treecreepers '
+                    'no longer seem confusing'
+                ),
+                'caption': 'See when a pair is fixed',
+            },
+        ],
     },
     'flocks': {
         'title': 'Bird Club Quiz & Leaderboard – Flocks | Birdr',

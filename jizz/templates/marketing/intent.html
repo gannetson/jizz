@@ -12,6 +12,18 @@
     <a class="web-link" href="/play">Play in the browser</a>
   </p>
 </section>
+{% if screenshots %}
+<section class="screenshot-gallery" aria-label="App screenshots">
+  <div class="screenshot-row">
+    {% for shot in screenshots %}
+    <figure class="hero-art hero-phone">
+      <img src="{{ shot.src }}" width="{{ shot.width }}" height="{{ shot.height }}" alt="{{ shot.alt }}">
+      {% if shot.caption %}<figcaption>{{ shot.caption }}</figcaption>{% endif %}
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 <section>
   {% for p in body_paragraphs %}
   <p>{{ p }}</p>

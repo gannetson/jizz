@@ -236,6 +236,8 @@ def intent_page(request, slug: str):
         extra['levels'] = page['levels']
     if page.get('start_options'):
         extra['start_options'] = page['start_options']
+    if page.get('screenshots'):
+        extra['screenshots'] = page['screenshots']
     if slug == 'community':
         extra['countries'] = _indexable_countries()[:12]
     elif page.get('show_countries'):

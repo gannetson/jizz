@@ -110,12 +110,12 @@ class MarketingPagesTests(TestCase):
     def test_header_uses_birdr_icon_and_favicon(self):
         html = self.client.get('/site/').content.decode()
         self.assertIn('favicon-32x32.png', html)
-        self.assertIn('/images/birdr-icon.png', html)
+        self.assertIn('/images/birdr-anime.gif', html)
         self.assertIn('class="brand-icon"', html)
         self.assertIn('padding: 8px 20px 0', html)
-        icon = self.client.get('/images/birdr-icon.png')
+        icon = self.client.get('/images/birdr-anime.gif')
         self.assertEqual(icon.status_code, 200)
-        self.assertEqual(icon['Content-Type'], 'image/png')
+        self.assertEqual(icon['Content-Type'], 'image/gif')
         favicon = self.client.get('/favicon-32x32.png')
         self.assertEqual(favicon.status_code, 200)
 
@@ -199,6 +199,20 @@ class MarketingPagesTests(TestCase):
         tricky = self.client.get('/site/my-tricky-birds/').content.decode()
         self.assertNotIn('Most missed species', tricky)
         self.assertNotIn('Confusing pairs', tricky)
+        self.assertIn('/images/birdr-tricky-birds.png', tricky)
+        self.assertIn('/images/birdr-tricky-practice.png', tricky)
+        self.assertIn('/images/birdr-tricky-results.png', tricky)
+        self.assertIn('Your tricky pairs', tricky)
+        self.assertIn('Practise a pair', tricky)
+        self.assertIn('See when a pair is fixed', tricky)
+        for path in (
+            '/images/birdr-tricky-birds.png',
+            '/images/birdr-tricky-practice.png',
+            '/images/birdr-tricky-results.png',
+        ):
+            shot = self.client.get(path)
+            self.assertEqual(shot.status_code, 200, path)
+            self.assertEqual(shot['Content-Type'], 'image/png')
 
         flocks = self.client.get('/site/flocks/').content.decode()
         self.assertIn('Flocks: quizzes for bird clubs', flocks)

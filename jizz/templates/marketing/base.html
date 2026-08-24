@@ -6,7 +6,7 @@
   <title>{{ page_title }}</title>
   <meta name="description" content="{{ meta_description }}">
   <link rel="canonical" href="{{ canonical_url }}">
-  <link rel="icon" href="/logo192.png">
+  {% include "includes/favicon_links.html" %}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ site_name }}">
   <meta property="og:title" content="{{ page_title }}">
@@ -78,10 +78,10 @@
     }
     header.site .wrap {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       justify-content: space-between;
       gap: 16px;
-      padding: 12px 20px;
+      padding: 8px 20px 0;
       flex-wrap: wrap;
     }
     .brand {
@@ -93,7 +93,24 @@
       color: var(--birdr-600);
       font-size: 1.1rem;
     }
-    nav.site { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.92rem; align-items: center; }
+    header.site .brand {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 0.55rem;
+      line-height: 1;
+    }
+    header.site .brand-icon {
+      display: block;
+      width: 3.25rem;
+      height: 3.25rem;
+      margin: 0;
+      padding: 0;
+      max-width: none;
+    }
+    header.site .brand-name {
+      padding-bottom: 0.7rem;
+    }
+    nav.site { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.92rem; align-items: center; padding-bottom: 0.65rem; }
     nav.site a { text-decoration: none; font-weight: 600; color: var(--birdr-800); }
     nav.site a:hover { color: var(--birdr-600); }
     nav.site a[aria-current="page"] {
@@ -547,8 +564,7 @@
       margin: 0;
       box-shadow: var(--shadow-card);
     }
-    .quote p { margin: 0 0 10px; font-family: var(--font); font-size: 1.05rem; }
-    .quote footer { color: var(--birdr-600); font-size: 0.88rem; font-weight: 600; }
+    .quote p { margin: 0 0 10px; }
     .crumbs { font-size: 0.9rem; margin: 16px 0 0; }
     .crumbs ol { list-style: none; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
     .crumbs li:not(:last-child)::after { content: " /"; color: var(--birdr-500); }
@@ -935,18 +951,60 @@
       font-size: 0.9rem;
       box-shadow: 0 4px 14px rgba(49, 34, 10, 0.08);
     }
+    .quote-body {
+      position: relative;
+      margin: 0 0 10px;
+      font-family: "Special Elite", "Courier New", Courier, monospace;
+      font-size: 1.08rem;
+      line-height: 1.6;
+      letter-spacing: 0.01em;
+    }
+    .quote-sizer {
+      visibility: hidden;
+      display: block;
+    }
+    .quote-live {
+      position: absolute;
+      inset: 0;
+    }
+    .quote-caret {
+      display: inline-block;
+      width: 0.55em;
+      height: 1em;
+      margin-left: 1px;
+      background: var(--ink);
+      vertical-align: -0.12em;
+      animation: quote-caret 0.85s steps(1) infinite;
+    }
+    .quote.is-typed .quote-caret { display: none; }
+    .quote footer {
+      color: var(--birdr-600);
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: opacity 0.35s ease;
+    }
+    .quote.is-waiting footer { opacity: 0; }
+    @keyframes quote-caret {
+      50% { background: transparent; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .quote-caret { display: none; animation: none; }
+      .quote.is-waiting footer { opacity: 1; }
+    }
   </style>
+  {% block extra_head %}{% endblock %}
 </head>
 <body{% if nav_user_name %} data-session-user="1"{% endif %}>
   <header class="site">
     <div class="wrap">
-      <a class="brand" href="{{ home_url }}">Birdr</a>
+      <a class="brand" href="{{ home_url }}">
+        <img class="brand-icon" src="/images/birdr-icon.png" width="52" height="52" alt="">
+        <span class="brand-name">Birdr</span>
+      </a>
       <nav class="site" aria-label="Primary">
         <a href="/site/how-it-works/"{% if nav_section == 'how-it-works' %} aria-current="page"{% endif %}>How it works</a>
-        <a href="/site/bird-identification-quiz/"{% if nav_section == 'quizzes' %} aria-current="page"{% endif %}>Quizzes</a>
         <a href="/site/birds/"{% if nav_section == 'species' %} aria-current="page"{% endif %}>Species</a>
         <a href="/site/bird-quiz-by-country/"{% if nav_section == 'countries' %} aria-current="page"{% endif %}>Countries</a>
-        <a href="/site/flocks/"{% if nav_section == 'flocks' %} aria-current="page"{% endif %}>Flocks</a>
         {% for page in cms_nav_pages %}
         <a href="{{ page.get_absolute_url }}"{% if request.path == page.get_absolute_url %} aria-current="page"{% endif %}>{{ page.nav_text }}</a>
         {% endfor %}
@@ -997,7 +1055,7 @@
         <h3>Learn</h3>
         <ul>
           <li><a href="/site/how-it-works/">How it works</a></li>
-          <li><a href="/site/bird-identification-quiz/">Photo quizzes</a></li>
+          <li><a href="/play">Play a quiz</a></li>
           <li><a href="/site/birds/">Species</a></li>
           <li><a href="/site/learn-bird-identification/">Learn bird identification</a></li>
           <li><a href="/site/my-tricky-birds/">My Tricky Birds</a></li>
@@ -1008,7 +1066,6 @@
         <h3>Birdr</h3>
         <ul>
           <li><a href="/site/birding-app/">The app</a></li>
-          <li><a href="/site/flocks/">Flocks for clubs</a></li>
           {% for page in cms_nav_pages %}
           <li><a href="{{ page.get_absolute_url }}">{{ page.nav_text }}</a></li>
           {% endfor %}
@@ -1067,6 +1124,81 @@
         if (!profile) return;
         showAccount(displayName(profile), !!(profile.is_staff || profile.is_superuser));
       });
+  })();
+  (function () {
+    var quotes = document.querySelectorAll('[data-typewriter]');
+    if (!quotes.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!('IntersectionObserver' in window)) return;
+
+    function enhance(quote) {
+      var body = quote.querySelector('.quote-body');
+      if (!body) return;
+      var full = body.textContent || '';
+      body.textContent = '';
+      var sizer = document.createElement('span');
+      sizer.className = 'quote-sizer';
+      sizer.setAttribute('aria-hidden', 'true');
+      sizer.textContent = full;
+      var live = document.createElement('span');
+      live.className = 'quote-live';
+      var caret = document.createElement('span');
+      caret.className = 'quote-caret';
+      caret.setAttribute('aria-hidden', 'true');
+      live.appendChild(caret);
+      body.appendChild(sizer);
+      body.appendChild(live);
+      quote._typeFull = full;
+      quote._typeLive = live;
+      quote._typeCaret = caret;
+      quote.setAttribute('aria-label', full);
+      quote.classList.add('is-waiting');
+    }
+
+    function typeQuote(quote) {
+      var text = quote._typeFull || '';
+      var live = quote._typeLive;
+      var caret = quote._typeCaret;
+      if (!live || !caret) {
+        quote.classList.add('is-typed');
+        quote.classList.remove('is-waiting');
+        return;
+      }
+      var i = 0;
+      function tick() {
+        if (i >= text.length) {
+          quote.classList.add('is-typed');
+          quote.classList.remove('is-waiting');
+          return;
+        }
+        live.insertBefore(document.createTextNode(text.charAt(i)), caret);
+        var ch = text.charAt(i);
+        i += 1;
+        var delay = /[.,!?;:]/.test(ch) ? 120 + Math.random() * 80 : 18 + Math.random() * 28;
+        window.setTimeout(tick, delay);
+      }
+      tick();
+    }
+
+    var stagger = 0;
+    var staggerReset = null;
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var quote = entry.target;
+        observer.unobserve(quote);
+        var delay = (stagger % 3) * 240;
+        stagger += 1;
+        if (staggerReset) window.clearTimeout(staggerReset);
+        staggerReset = window.setTimeout(function () { stagger = 0; }, 700);
+        window.setTimeout(function () { typeQuote(quote); }, delay);
+      });
+    }, { threshold: 0.28, rootMargin: '0px 0px -8% 0px' });
+
+    Array.prototype.forEach.call(quotes, function (quote) {
+      enhance(quote);
+      observer.observe(quote);
+    });
   })();
   </script>
 </body>

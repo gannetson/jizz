@@ -27,6 +27,7 @@ import { CountrySelect } from '../components/CountrySelect';
 import { AccessibleSheetModal } from '../components/AccessibleSheetModal';
 import { SpeciesLanguageLabel } from '../components/SpeciesLanguageLabel';
 import { colors } from '../theme';
+import { matchCountry, resolveDefaultCountry } from '../lib/countryPreference';
 import {
   loadTaxOrders,
   loadTaxFamilies,
@@ -62,6 +63,7 @@ export function StartScreen() {
     setPlayerName,
     country,
     setCountry,
+    countryReady,
     language,
     setLanguage,
     playLevel,
@@ -122,14 +124,40 @@ export function StartScreen() {
       const filtered = list.filter((c) => !c.code.includes('NL-NH'));
       setCountries(filtered);
       setCountriesLoaded(true);
-      if (filtered.length > 0) {
-        const nl = filtered.find((c) => c.code === 'NL') || filtered[0];
-        setCountry(nl);
-      }
     });
     loadLanguages().then(setLanguages);
     loadStoredPlayer();
   }, []);
+
+  useEffect(() => {
+    if (!countriesLoaded || !countryReady || !profileReady) return;
+    const hydrated = country?.code ? matchCountry(countries, country.code) : undefined;
+    if (hydrated && hydrated.name !== country?.name) {
+      setCountry(hydrated);
+      return;
+    }
+    if (country?.code) return;
+    let cancelled = false;
+    resolveDefaultCountry(
+      countries,
+      isAuthenticated ? profile?.country_code : null,
+    ).then((resolved) => {
+      if (!cancelled && resolved) setCountry(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    countriesLoaded,
+    countryReady,
+    profileReady,
+    countries,
+    country?.code,
+    country?.name,
+    isAuthenticated,
+    profile?.country_code,
+    setCountry,
+  ]);
 
   const sortedLanguages = React.useMemo(
     () => [...languages].sort((a, b) => compareSpeciesLanguages(a, b, locale)),

@@ -79,6 +79,8 @@ class MarketingPagesTests(TestCase):
         self.assertIn('MobileApplication', html)
         self.assertIn('FAQPage', html)
         self.assertIn('Kudos to the developer!', html)
+        self.assertIn('data-typewriter', html)
+        self.assertIn('Special+Elite', html)
         self.assertIn('Bombay Natural History Society, India', html)
         self.assertIn('Kent Ornithological Society, United Kingdom', html)
         self.assertIn('BirdLife Finland (BirdLife Suomi), Finland', html)
@@ -148,11 +150,9 @@ class MarketingPagesTests(TestCase):
     def test_intent_pages(self):
         paths = [
             '/site/how-it-works/',
-            '/site/bird-identification-quiz/',
             '/site/learn-bird-identification/',
             '/site/bird-quiz-by-country/',
             '/site/birding-app/',
-            '/site/flocks/',
             '/site/my-tricky-birds/',
         ]
         for path in paths:
@@ -180,17 +180,6 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Number of questions', how)
         self.assertIn('Taxonomic order / family', how)
         self.assertIn('Pictures, sounds or video', how)
-        quizzes = self.client.get('/site/bird-identification-quiz/').content.decode()
-        self.assertRegex(quizzes, r'href="/site/bird-identification-quiz/"[^>]*aria-current="page"')
-
-        quiz = self.client.get('/site/bird-identification-quiz/').content.decode()
-        self.assertIn('compete in real time', quiz)
-        self.assertIn('more points when you answer fast', quiz)
-
-        flocks = self.client.get('/site/flocks/').content.decode()
-        self.assertIn('25-question', flocks)
-        self.assertIn('start easy and finish difficult', flocks)
-        self.assertIn('everyone should get some answers right', flocks)
 
         tricky = self.client.get('/site/my-tricky-birds/').content.decode()
         self.assertNotIn('Most missed species', tricky)
@@ -199,8 +188,10 @@ class MarketingPagesTests(TestCase):
     def test_legacy_marketing_paths_redirect(self):
         pairs = [
             ('/how-it-works/', '/site/how-it-works/'),
-            ('/bird-identification-quiz/', '/site/bird-identification-quiz/'),
-            ('/flocks/', '/site/flocks/'),
+            ('/bird-identification-quiz/', '/play'),
+            ('/site/bird-identification-quiz/', '/play'),
+            ('/flocks/', '/site/'),
+            ('/site/flocks/', '/site/'),
             ('/countries/netherlands/', '/site/countries/netherlands/'),
         ]
         for old, new in pairs:
@@ -618,8 +609,8 @@ class MarketingPagesTests(TestCase):
         self.assertIn('https://birdr.pro/site/', body)
         self.assertIn('https://birdr.pro/site/birds/', body)
         self.assertIn('https://birdr.pro/site/how-it-works/', body)
-        self.assertIn('https://birdr.pro/site/bird-identification-quiz/', body)
-        self.assertIn('https://birdr.pro/site/flocks/', body)
+        self.assertNotIn('https://birdr.pro/site/bird-identification-quiz/', body)
+        self.assertNotIn('https://birdr.pro/site/flocks/', body)
         self.assertNotIn('/site/my-edits/', body)
 
         countries = self.client.get('/sitemap-countries.xml').content.decode()

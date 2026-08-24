@@ -39,7 +39,7 @@ class AppVersionNoCacheMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if request.path.rstrip('/') == '/api/app-version':
+        if request.path.rstrip('/') in ('/api/app-version', '/api/geo/country'):
             response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
             response['Pragma'] = 'no-cache'
             if 'Expires' in response:

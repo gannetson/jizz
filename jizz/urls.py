@@ -71,6 +71,7 @@ from jizz.birdr_journey_views import (
 )
 from jizz.checklist_views import ChecklistView
 from jizz.app_version_views import AppVersionView
+from jizz.geo_views import GeoCountryView
 from jizz.practice_views import (
     StartConfusionPairPracticeView,
     StartSpeciesPracticeView,
@@ -239,8 +240,7 @@ urlpatterns = [
     ),
     path(
         'site/bird-identification-quiz/',
-        intent_page,
-        {'slug': 'bird-identification-quiz'},
+        RedirectView.as_view(url='/play', permanent=True),
         name='marketing-bird-identification-quiz',
     ),
     path(
@@ -256,7 +256,7 @@ urlpatterns = [
         name='marketing-bird-quiz-by-country',
     ),
     path('site/birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
-    path('site/flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
+    path('site/flocks/', RedirectView.as_view(url='/site/', permanent=True), name='marketing-flocks'),
     path('site/my-tricky-birds/', intent_page, {'slug': 'my-tricky-birds'}, name='marketing-my-tricky-birds'),
     path('site/my-edits/', my_edits, name='marketing-my-edits'),
     path('site/logout/', site_logout, name='marketing-logout'),
@@ -273,7 +273,7 @@ urlpatterns = [
     path('how-it-works/', RedirectView.as_view(url='/site/how-it-works/', permanent=True)),
     path(
         'bird-identification-quiz/',
-        RedirectView.as_view(url='/site/bird-identification-quiz/', permanent=True),
+        RedirectView.as_view(url='/play', permanent=True),
     ),
     path(
         'learn-bird-identification/',
@@ -284,7 +284,7 @@ urlpatterns = [
         RedirectView.as_view(url='/site/bird-quiz-by-country/', permanent=True),
     ),
     path('birding-app/', RedirectView.as_view(url='/site/birding-app/', permanent=True)),
-    path('flocks/', RedirectView.as_view(url='/site/flocks/', permanent=True)),
+    path('flocks/', RedirectView.as_view(url='/site/', permanent=True)),
     path('my-tricky-birds/', RedirectView.as_view(url='/site/my-tricky-birds/', permanent=True)),
     path(
         'countries/<slug:slug>/',
@@ -426,6 +426,7 @@ urlpatterns = [
 
     re_path(r"^api/feedback/$", FeedbackListView.as_view(), name="feedback"),
     path('api/app-version/', AppVersionView.as_view(), name='app-version'),
+    path('api/geo/country/', GeoCountryView.as_view(), name='geo-country'),
     path('api/practice/trouble-spots/', TroubleSpotsView.as_view(), name='practice-trouble-spots'),
     path(
         'api/practice/confusion-pair/start/',

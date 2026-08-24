@@ -2,6 +2,8 @@
 Tests for all API endpoints (jizz and compare).
 Auth/profile/my-games/scores are covered in test_auth_and_profile and test_player_score_list.
 """
+from unittest.mock import patch
+
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -56,6 +58,70 @@ class ApiCountriesTestCase(TestCase):
         response = self.client.get(f'/api/countries/{self.country.code}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['code'], self.country.code)
+
+
+class ApiGeoCountryTestCase(TestCase):
+    """GET /api/geo/country/ — CF header, then MaxMind, quiz countries only."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.nl = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
+        self.de = Country.objects.get_or_create(code='DE', defaults={'name': 'Germany'})[0]
+        species, _ = Species.objects.get_or_create(
+            code='TGEO', defaults={'name': 'Geo bird', 'name_latin': 'Geo avis'}
+        )
+        CountrySpecies.objects.get_or_create(
+            country=self.nl, species=species, defaults={'status': 'native'}
+        )
+        CountrySpecies.objects.get_or_create(
+            country=self.de, species=species, defaults={'status': 'native'}
+        )
+
+    def test_cf_header_returns_quiz_country(self):
+        with patch('jizz.geo_views.lookup_ip_country_mmdb') as mock_mmdb:
+            response = self.client.get('/api/geo/country/', HTTP_CF_IPCOUNTRY='DE')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'country_code': 'DE'})
+        mock_mmdb.assert_not_called()
+
+    def test_cf_xx_and_private_ip_return_null(self):
+        with patch('jizz.geo_views.lookup_ip_country_mmdb', return_value={}) as mock_mmdb:
+            response = self.client.get(
+                '/api/geo/country/',
+                HTTP_CF_IPCOUNTRY='XX',
+                REMOTE_ADDR='127.0.0.1',
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'country_code': None})
+        mock_mmdb.assert_called_once_with('127.0.0.1')
+
+    def test_unknown_iso_returns_null(self):
+        response = self.client.get('/api/geo/country/', HTTP_CF_IPCOUNTRY='ZZ')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'country_code': None})
+
+    def test_country_without_species_returns_null(self):
+        Country.objects.get_or_create(code='FR', defaults={'name': 'France'})
+        response = self.client.get('/api/geo/country/', HTTP_CF_IPCOUNTRY='FR')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'country_code': None})
+
+    def test_no_header_uses_mmdb_for_public_ip(self):
+        with patch('jizz.geo_views.lookup_ip_country_mmdb') as mock_mmdb:
+            mock_mmdb.return_value = {'country_code': 'NL', 'country_name': 'Netherlands', 'city': ''}
+            response = self.client.get('/api/geo/country/', REMOTE_ADDR='8.8.8.8')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'country_code': 'NL'})
+        mock_mmdb.assert_called_once_with('8.8.8.8')
+
+    def test_does_not_use_profile_country(self):
+        user = User.objects.create_user('geo-user', password='x')
+        from jizz.models import UserProfile
+        UserProfile.objects.create(user=user, country_id='NL')
+        self.client.force_authenticate(user=user)
+        with patch('jizz.geo_views.lookup_ip_country_mmdb', return_value={}):
+            response = self.client.get('/api/geo/country/', REMOTE_ADDR='127.0.0.1')
+        self.assertEqual(response.data, {'country_code': None})
 
 
 class ApiLanguagesTestCase(TestCase):

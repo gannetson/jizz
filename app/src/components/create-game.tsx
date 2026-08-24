@@ -77,7 +77,7 @@ export const CreateGame = ({
     }
 
   }, [
-    countries.length, pickCountry,
+    countries.length, pickCountry, country?.code,
     pickLevel, pickLength, pickMediaType, pickRarity, pickPlayLevel,
     setPlayLevel, setMediaType, setLength, setCountry
   ]);
@@ -140,7 +140,7 @@ export const CreateGame = ({
     }
   }
 
-  const canStart = Boolean(country && playerName?.trim())
+  const canStart = Boolean(country?.code && playerName?.trim())
   const startDisabled = loading || !canStart
 
   return (

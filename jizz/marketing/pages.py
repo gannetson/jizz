@@ -148,45 +148,10 @@ INTENT_PAGES = {
             },
         ],
         'links': [
-            ('/site/bird-identification-quiz/', 'Photo quizzes'),
+            ('/play', 'Start a quiz'),
             ('/site/my-tricky-birds/', 'My Tricky Birds'),
             ('/site/bird-quiz-by-country/', 'Country Challenges'),
             ('/site/birding-app/', 'Get the app'),
-        ],
-    },
-    'bird-identification-quiz': {
-        'title': 'Bird Identification Quiz – Free Photo Quizzes | Birdr',
-        'description': (
-            'Take a free bird identification quiz with real photos. Train on the birds '
-            'of any country, from beginner to expert, on iPhone, Android and the web.'
-        ),
-        'heading': 'Bird identification quiz',
-        'lead': (
-            'Learn to identify birds yourself with short photo quizzes. Each round shows '
-            'a real photograph and asks you to pick the species—then explains what to look for.'
-        ),
-        'cta_href': '/play',
-        'cta_label': 'Start a quiz',
-        'body': [
-            (
-                'Quizzes use photos from the wild, not cartoons. Choose a country list, '
-                'a difficulty, and how long you want to play. Beginners get distinctive '
-                'species; higher levels mix in lookalikes.'
-            ),
-            (
-                'Play on your own, or start a live quiz and compete in real time against '
-                'each other on the same birds. Speed is important: you get more points '
-                'when you answer fast.'
-            ),
-            (
-                'When you miss a bird, Birdr can send you back to My Tricky Birds so those '
-                'species show up again until they stick. That is training, not a one-off score.'
-            ),
-        ],
-        'links': [
-            ('/site/learn-bird-identification/', 'Learn bird identification'),
-            ('/site/bird-quiz-by-country/', 'Quizzes by country'),
-            ('/site/my-tricky-birds/', 'My Tricky Birds'),
         ],
     },
     'learn-bird-identification': {
@@ -213,7 +178,7 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/site/bird-identification-quiz/', 'Bird identification quiz'),
+            ('/play', 'Start a quiz'),
             ('/site/birding-app/', 'Birding training app'),
             ('/site/my-tricky-birds/', 'Practise difficult birds'),
         ],
@@ -243,9 +208,9 @@ INTENT_PAGES = {
             ),
         ],
         'links': [
-            ('/site/bird-identification-quiz/', 'Photo quizzes'),
+            ('/play', 'Start a quiz'),
             ('/site/birding-app/', 'The Birdr app'),
-            ('/site/flocks/', 'Flocks for clubs'),
+            ('/site/how-it-works/', 'How it works'),
         ],
         'show_countries': True,
     },
@@ -268,47 +233,14 @@ INTENT_PAGES = {
                 'The same account works in the apps and in the browser.'
             ),
             (
-                'Clubs can play together in Flocks. Friends can run a Daily Challenge. '
-                'You can drill My Tricky Birds until the hard species stop being hard.'
+                'Friends can run a Daily Challenge. You can drill My Tricky Birds until the '
+                'hard species stop being hard.'
             ),
         ],
         'links': [
-            ('/site/bird-identification-quiz/', 'Photo quizzes'),
-            ('/site/flocks/', 'Flocks'),
+            ('/play', 'Start a quiz'),
             ('/site/learn-bird-identification/', 'How Birdr teaches'),
-        ],
-    },
-    'flocks': {
-        'title': 'Bird Club Quiz & Leaderboard – Flocks | Birdr',
-        'description': (
-            'Create a Flock for your bird club. Each week is a new 25-question quiz '
-            'that starts easy and finishes difficult, with a private leaderboard. Free on Birdr.'
-        ),
-        'heading': 'Flocks: quizzes for bird clubs',
-        'lead': (
-            'A Flock is your club, WhatsApp group or trip companions on Birdr. Each week '
-            'you play the same 25-question quiz, compare scores, and keep a leaderboard.'
-        ),
-        'cta_href': '/flocks/intro',
-        'cta_label': 'Create or join a Flock',
-        'body': [
-            (
-                'Every week is a new game: 25 questions that start easy and finish '
-                'difficult, so everyone should get some answers right — beginners included.'
-            ),
-            (
-                'Admins set a country and a challenge. Members play on their phones or on '
-                'the web. Results can be shared without opening the whole club to the public.'
-            ),
-            (
-                'It is built for real groups of birders, not a global anonymous ladder. '
-                'Start from the app or the web after you sign in.'
-            ),
-        ],
-        'links': [
-            ('/site/bird-identification-quiz/', 'Photo quizzes'),
-            ('/site/bird-quiz-by-country/', 'Country quizzes'),
-            ('/play', 'Open the app'),
+            ('/site/how-it-works/', 'How it works'),
         ],
     },
     'my-tricky-birds': {
@@ -337,8 +269,8 @@ INTENT_PAGES = {
         ],
         'links': [
             ('/site/learn-bird-identification/', 'Learn bird identification'),
-            ('/site/bird-identification-quiz/', 'Photo quizzes'),
             ('/play', 'Start a quiz'),
+            ('/site/how-it-works/', 'How it works'),
         ],
     },
 }
@@ -504,14 +436,10 @@ def nav_section_for_path(path: str) -> str:
     current = path or ''
     if current.startswith('/site/how-it-works/'):
         return 'how-it-works'
-    if current.startswith('/site/bird-identification-quiz/'):
-        return 'quizzes'
     if current.startswith('/site/birds/') or current.startswith('/site/compare/'):
         return 'species'
     if current.startswith('/site/bird-quiz-by-country/') or current.startswith('/site/countries/'):
         return 'countries'
-    if current.startswith('/site/flocks/'):
-        return 'flocks'
     return ''
 
 

@@ -21,6 +21,7 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
 import { runBirdrJourneyPushOnboarding } from '../lib/notifications';
+import { matchCountry, resolveDefaultCountry, writeStoredCountryCode } from '../lib/countryPreference';
 
 type RouteParams = {
   BirdrJourneyCountry: { resumeCountryCode?: string } | undefined;
@@ -38,22 +39,32 @@ export function BirdrJourneyCountryScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     loadCountries()
-      .then((list) => {
+      .then(async (list) => {
         const filtered = list.filter((c) => !c.code.includes('NL-NH'));
+        if (cancelled) return;
         setCountries(filtered);
         const resume = route.params?.resumeCountryCode;
         if (resume) {
-          const match = filtered.find((c) => c.code === resume);
-          if (match) setCountry(match);
-        } else if (profileReady && profile?.country_code) {
-          const match = filtered.find((c) => c.code === profile.country_code);
-          if (match) setCountry(match);
-        } else if (!country && filtered.length > 0) {
-          setCountry(filtered.find((c) => c.code === 'NL') ?? filtered[0]);
+          const match = matchCountry(filtered, resume);
+          if (match) {
+            setCountry(match);
+            return;
+          }
         }
+        const resolved = await resolveDefaultCountry(
+          filtered,
+          profileReady ? profile?.country_code : null,
+        );
+        if (!cancelled && resolved) setCountry(resolved);
       })
-      .finally(() => setLoadingCountries(false));
+      .finally(() => {
+        if (!cancelled) setLoadingCountries(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [profileReady, profile?.country_code, route.params?.resumeCountryCode]);
 
   const ensureAuth = async (): Promise<boolean> => {
@@ -106,7 +117,10 @@ export function BirdrJourneyCountryScreen() {
       <Text style={styles.label}>{t('country')}</Text>
       <CountrySelect
         value={country}
-        onChange={setCountry}
+        onChange={(c) => {
+          setCountry(c);
+          if (c?.code) void writeStoredCountryCode(c.code);
+        }}
         countries={countries}
         excludeRegionCodes={false}
         style={styles.countrySelect}

@@ -65,6 +65,7 @@ API_EVENT_LABELS: dict[tuple[str, str], str] = {
 API_SKIP_URL_NAMES: frozenset[str] = frozenset({
     'analytics-event',
     'app-version',
+    'geo-country',
     'species-list',
     'species-detail',
     'species-cover',

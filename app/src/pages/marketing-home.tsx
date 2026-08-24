@@ -118,10 +118,8 @@ export function MarketingHomePage() {
             </Link>
             <Flex gap={4} wrap="wrap" fontWeight="600" fontSize="sm" align="center">
               <Link href="/site/how-it-works/">How it works</Link>
-              <Link href="/site/bird-identification-quiz/">Quizzes</Link>
               <Link href="/site/birds/">Species</Link>
               <Link href="/site/bird-quiz-by-country/">Countries</Link>
-              <Link href="/site/flocks/">Flocks</Link>
               <Link
                 href="#get-the-app"
                 bg="primary.600"
@@ -209,7 +207,7 @@ export function MarketingHomePage() {
         </Heading>
         <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
           {[
-            ['Photo quizzes', 'One quick game, or a longer session. Choose a country, a level and photos, video or sound.', '/site/bird-identification-quiz/'],
+            ['Photo quizzes', 'One quick game, or a longer session. Choose a country, a level and photos, video or sound.', '/play'],
             ['Sound quizzes', 'Hear a recording and pick the species. You can also play passerine sound quizzes in the browser.', '/play'],
             ['Multiplayer', 'A live quiz for two or more players. Faster correct answers score more points.', '/play'],
             ['High scores', 'See how you rank after a quiz.', '/scores/'],
@@ -217,7 +215,6 @@ export function MarketingHomePage() {
             ['Species', 'Look up a bird, see what people miss most, and open comparisons for lookalikes.', '/site/birds/'],
             ['Country Challenges', 'Structured levels for the birds of a country—from the Netherlands to Japan to Colombia.', '/site/bird-quiz-by-country/'],
             ['My Tricky Birds', 'Focused drills on the species and confusing pairs you actually mix up.', '/site/my-tricky-birds/'],
-            ['Flocks', 'Club quizzes and a private leaderboard for your group—not a global anonymous ladder.', '/site/flocks/'],
           ].map(([title, body, href]) => (
             <Box key={title} {...cardProps}>
               <Heading as="h3" size="md" mb={2}>
@@ -289,7 +286,7 @@ export function MarketingHomePage() {
               </Text>
               <Flex direction="column" gap={1}>
                 <Link href="/site/how-it-works/">How it works</Link>
-                <Link href="/site/bird-identification-quiz/">Photo quizzes</Link>
+                <Link href="/play">Play a quiz</Link>
                 <Link href="/site/birds/">Species</Link>
                 <Link href="/site/my-tricky-birds/">My Tricky Birds</Link>
                 <Link href="/site/bird-quiz-by-country/">Quizzes by country</Link>
@@ -301,7 +298,6 @@ export function MarketingHomePage() {
               </Text>
               <Flex direction="column" gap={1}>
                 <Link href="/site/birding-app/">The app</Link>
-                <Link href="/site/flocks/">Flocks for clubs</Link>
                 <Link href="/site/page/about/">About</Link>
                 <Link href="/site/page/privacy/">Privacy</Link>
                 <Link href="mailto:info@goedloek.nl">Contact</Link>

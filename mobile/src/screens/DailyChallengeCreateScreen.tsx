@@ -13,6 +13,7 @@ import { loadCountries, type Country } from '../api/countries';
 import { createDailyChallenge, startDailyChallenge } from '../api/dailyChallenge';
 import { CountrySelect } from '../components/CountrySelect';
 import { colors } from '../theme';
+import { resolveDefaultCountry, writeStoredCountryCode } from '../lib/countryPreference';
 
 const MEDIA_OPTIONS = [
   { value: 'images', label: 'Images' },
@@ -37,14 +38,17 @@ export function DailyChallengeCreateScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCountries().then((list) => {
+    let cancelled = false;
+    loadCountries().then(async (list) => {
       const filtered = list.filter((c) => !c.code.includes('NL-NH'));
+      if (cancelled) return;
       setCountries(filtered);
-      if (filtered.length > 0 && !country) {
-        const nl = filtered.find((c) => c.code === 'NL') || filtered[0];
-        setCountry(nl);
-      }
+      const resolved = await resolveDefaultCountry(filtered);
+      if (!cancelled && resolved) setCountry(resolved);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleCreateAndStart = async () => {
@@ -87,7 +91,10 @@ export function DailyChallengeCreateScreen() {
       <Text style={styles.label}>Country</Text>
       <CountrySelect
         value={country}
-        onChange={setCountry}
+        onChange={(c) => {
+          setCountry(c);
+          if (c?.code) void writeStoredCountryCode(c.code);
+        }}
         countries={countries}
         excludeRegionCodes={false}
         style={styles.countrySelect}

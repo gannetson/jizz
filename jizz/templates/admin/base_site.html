@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {% include "includes/favicon_links.html" %}
+  <style>
+    #header {
+      align-items: flex-end;
+      padding-top: 6px;
+      padding-bottom: 0;
+    }
+    #branding {
+      padding: 0;
+      overflow: visible;
+    }
+    #branding h1,
+    #branding h1 a {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      line-height: 1.15;
+    }
+    #branding h1 a {
+      color: inherit;
+    }
+    #branding .brand-icon {
+      display: block;
+      width: 42px;
+      height: 42px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    #branding .brand-name {
+      padding-bottom: 10px;
+    }
+    #user-tools {
+      padding-bottom: 10px;
+    }
+  </style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <img class="brand-icon" src="/images/birdr-icon.png" width="42" height="42" alt="">
+    <span class="brand-name">{{ site_header|default:_('Django administration') }}</span>
+  </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

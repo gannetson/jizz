@@ -256,7 +256,7 @@ const AppContext = createContext<SharedState>({
   setTaxFamily: () => {},
   length: '20',
   setLength: () => {},
-  country: { code: 'nl', name: 'Netherlands' },
+  country: { code: '', name: '' },
   setCountry: () => {},
   speciesLanguage: 'en',
   mediaType: 'images',

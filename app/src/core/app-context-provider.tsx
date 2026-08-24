@@ -1,4 +1,4 @@
-import React, {FC, ReactNode, useEffect, useState, useCallback} from 'react';
+import React, {FC, ReactNode, SetStateAction, useEffect, useState, useCallback} from 'react';
 import AppContext, {Answer, Country, Game, Player, Species} from "./app-context";
 import { toaster } from "@/components/ui/toaster";
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
@@ -15,6 +15,12 @@ import {
   settingsFromPlayLevel,
   type PlayLevel,
 } from './play-level';
+import {
+  fetchGuessedCountryCode,
+  isPersistableCountryCode,
+  readStoredCountryCode,
+  writeStoredCountryCode,
+} from '../user/country-preference';
 
 type Props = {
   children: ReactNode;
@@ -22,7 +28,20 @@ type Props = {
 
 const AppContextProvider: FC<Props> = ({children}) => {
   const [level, setLevel] = useState<string>('advanced');
-  const [country, setCountry] = useState<Country>({code: 'NL', name: 'Netherlands'});
+  const [country, setCountryState] = useState<Country>(() => {
+    const code = readStoredCountryCode();
+    return code ? {code, name: code} : {code: '', name: ''};
+  });
+  const [profileReady, setProfileReady] = useState(false);
+  const setCountry = useCallback((update: SetStateAction<Country>) => {
+    setCountryState((prev) => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      if (isPersistableCountryCode(next?.code)) {
+        writeStoredCountryCode(next.code);
+      }
+      return next;
+    });
+  }, []);
   const [language, setLanguage] = useState<string>(() => {
     try {
       return localStorage.getItem('birdr-language') || 'en';
@@ -87,12 +106,14 @@ const AppContextProvider: FC<Props> = ({children}) => {
     (async () => {
       if (!authService.getAccessToken()) {
         setProfile(null);
+        setProfileReady(true);
         return;
       }
       const ok = await authService.ensureValidAccessToken();
       if (cancelled) return;
       if (!ok || !authService.getAccessToken()) {
         setProfile(null);
+        setProfileReady(true);
         return;
       }
       await linkStoredPlayerToAccount();
@@ -102,6 +123,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
         .then((p) => {
           if (cancelled) return;
           setProfile(p);
+          if (p.country_code && !p.country_code.includes('-')) {
+            setCountry({
+              code: p.country_code,
+              name: p.country_name || p.country_code,
+            });
+          }
           try {
             if (p.language && !localStorage.getItem('birdr-language')) {
               setLanguage(p.language);
@@ -113,12 +140,27 @@ const AppContextProvider: FC<Props> = ({children}) => {
         })
         .catch(() => {
           if (!cancelled) setProfile(null);
+        })
+        .finally(() => {
+          if (!cancelled) setProfileReady(true);
         });
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setCountry]);
+
+  useEffect(() => {
+    if (!profileReady || country.code) return;
+    let cancelled = false;
+    fetchGuessedCountryCode().then((code) => {
+      if (cancelled || !code) return;
+      setCountry((prev) => (prev.code ? prev : {code, name: code}));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileReady, country.code, setCountry]);
 
   const setUserPreferredLanguage = useCallback((lang: string) => {
     setLanguage(lang);

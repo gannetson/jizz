@@ -13,6 +13,7 @@ import CountryCombobox from '../../components/country-combobox';
 import AppContext from '../../core/app-context';
 import { Page } from '../../shared/components/layout';
 import { UseCountries } from '../../user/use-countries';
+import { resolveDefaultCountry, writeStoredCountryCode } from '../../user/country-preference';
 
 export function BirdrJourneyCountryPage() {
   const navigate = useNavigate();
@@ -26,14 +27,19 @@ export function BirdrJourneyCountryPage() {
   useEffect(() => {
     if (!countries?.length) return;
     const filtered = countries.filter((c) => !c.code.includes('NL-NH'));
-    profileService.getProfile().then((profile) => {
-      const match = filtered.find((c) => c.code === profile.country_code);
-      if (match) setCountry(match);
-      else setCountry(filtered.find((c) => c.code === 'NL') ?? filtered[0] ?? null);
-    }).catch(() => {
-      setCountry(filtered.find((c) => c.code === 'NL') ?? filtered[0] ?? null);
-    });
-  }, [countries]);
+    let cancelled = false;
+    const profileCode = isAuthenticated
+      ? profileService.getProfile().then((profile) => profile.country_code).catch(() => null)
+      : Promise.resolve(null);
+    profileCode
+      .then((code) => resolveDefaultCountry(filtered, code))
+      .then((match) => {
+        if (!cancelled && match) setCountry(match);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [countries, isAuthenticated]);
 
   const ensureAuth = async (): Promise<boolean> => {
     if (isAuthenticated) return true;
@@ -95,7 +101,10 @@ export function BirdrJourneyCountryPage() {
           <CountryCombobox
             countries={countries.filter((c) => !c.code.includes('NL-NH'))}
             value={country}
-            onChange={setCountry}
+            onChange={(c) => {
+              setCountry(c);
+              if (c?.code) writeStoredCountryCode(c.code);
+            }}
           />
         </Box>
 

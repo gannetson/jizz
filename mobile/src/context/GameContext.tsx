@@ -10,6 +10,7 @@ import * as playerApi from '../api/player';
 import * as gamesApi from '../api/games';
 import * as authApi from '../api/auth';
 import { useAuth } from './AuthContext';
+import { readStoredCountryCode, writeStoredCountryCode } from '../lib/countryPreference';
 
 const PLAYER_TOKEN_KEY = playerApi.PLAYER_TOKEN_STORAGE_KEY;
 const GAME_TOKEN_KEY = 'game-token';
@@ -19,6 +20,7 @@ type GameContextType = {
   setPlayerName: (v: string) => void;
   country: Country | undefined;
   setCountry: (c: Country) => void;
+  countryReady: boolean;
   language: string;
   setLanguage: (v: string) => void;
   level: string;
@@ -59,7 +61,8 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [playerName, setPlayerName] = useState('');
-  const [country, setCountry] = useState<Country | undefined>(undefined);
+  const [country, setCountryState] = useState<Country | undefined>(undefined);
+  const [countryReady, setCountryReady] = useState(false);
   const [language, setLanguage] = useState('en');
   const [playLevel, setPlayLevelState] = useState<PlayLevel>('advanced');
   const [level, setLevel] = useState('advanced');
@@ -78,6 +81,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [player, setPlayer] = useState<Player | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
+  const setCountry = useCallback((c: Country) => {
+    setCountryState(c);
+    void writeStoredCountryCode(c.code);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const code = await readStoredCountryCode();
+      if (!cancelled && code) {
+        setCountryState({ code, name: code });
+      }
+      if (!cancelled) setCountryReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   /** Avoid overwriting species language after the user picks a value — loadStoredPlayer can run twice (provider + Start). */
   const lastLanguageSyncPlayerTokenRef = useRef<string | null>(null);
   /** True after user selects species language on Start / profile; cleared when player token is cleared. */
@@ -245,6 +266,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setPlayerName,
         country,
         setCountry,
+        countryReady,
         language,
         setLanguage,
         level,

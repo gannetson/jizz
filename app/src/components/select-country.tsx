@@ -18,6 +18,14 @@ const SelectCountry = () => {
     }
   }, [game?.country]);
 
+  useEffect(() => {
+    if (!country?.code || !countries.length) return;
+    const match = countries.find((c) => c.code === country.code);
+    if (match && match.name !== country.name) {
+      setCountry?.(match);
+    }
+  }, [countries, country?.code, country?.name, setCountry]);
+
   return (
     <Box>
       <Heading size="md" mb={4} colorPalette="primary">

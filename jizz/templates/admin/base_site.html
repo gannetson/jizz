@@ -4,10 +4,12 @@
   {{ block.super }}
   {% include "includes/favicon_links.html" %}
   <style>
-    #header {
+    #header,
+    .login #header {
       align-items: flex-end;
       padding-top: 6px;
       padding-bottom: 0;
+      overflow: visible;
     }
     #branding {
       padding: 0;

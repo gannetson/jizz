@@ -77,7 +77,11 @@ class MarketingPagesTests(TestCase):
         self.assertIn('https://birdr.pro/site/', html)
         self.assertIn('WebApplication', html)
         self.assertIn('MobileApplication', html)
-        self.assertIn('FAQPage', html)
+        self.assertNotIn('FAQPage', html)
+        self.assertIn('href="/site/community/"', html)
+        self.assertIn('href="/site/faq/"', html)
+        self.assertIn('How you can help', html)
+        self.assertIn('Read the FAQ', html)
         self.assertIn('Kudos to the developer!', html)
         self.assertIn('data-typewriter', html)
         self.assertIn('Special+Elite', html)
@@ -85,15 +89,11 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Kent Ornithological Society, United Kingdom', html)
         self.assertIn('BirdLife Finland (BirdLife Suomi), Finland', html)
         self.assertIn('Japan Bird Research Association, Japan', html)
-        self.assertIn('How can I help?', html)
-        self.assertIn('Flag', html)
-        self.assertIn('#review-photos', html)
-        self.assertIn('/media-review/', html)
-        self.assertIn('/media-review/NL', html)
         self.assertIn('info@birdr.pro', html)
         self.assertIn('Get it on Google Play', html)
         self.assertIn('Or play a quiz in the browser', html)
         self.assertIn('href="/play"', html)
+        self.assertIn('/images/birdr-quiz.png', html)
         self.assertIn('What you can play', html)
         self.assertIn('Sound quizzes', html)
         self.assertIn('passerine sound quizzes', html)
@@ -106,6 +106,18 @@ class MarketingPagesTests(TestCase):
         self.assertIn('My checklist', html)
         self.assertIn('named correctly in your country', html)
         self.assertIn('href="/checklist"', html)
+
+    def test_header_uses_birdr_icon_and_favicon(self):
+        html = self.client.get('/site/').content.decode()
+        self.assertIn('favicon-32x32.png', html)
+        self.assertIn('/images/birdr-icon.png', html)
+        self.assertIn('class="brand-icon"', html)
+        self.assertIn('padding: 8px 20px 0', html)
+        icon = self.client.get('/images/birdr-icon.png')
+        self.assertEqual(icon.status_code, 200)
+        self.assertEqual(icon['Content-Type'], 'image/png')
+        favicon = self.client.get('/favicon-32x32.png')
+        self.assertEqual(favicon.status_code, 200)
 
     def test_nav_shows_login_or_username(self):
         html = self.client.get('/site/').content.decode()
@@ -154,6 +166,9 @@ class MarketingPagesTests(TestCase):
             '/site/bird-quiz-by-country/',
             '/site/birding-app/',
             '/site/my-tricky-birds/',
+            '/site/flocks/',
+            '/site/community/',
+            '/site/faq/',
         ]
         for path in paths:
             with self.subTest(path=path):
@@ -185,13 +200,33 @@ class MarketingPagesTests(TestCase):
         self.assertNotIn('Most missed species', tricky)
         self.assertNotIn('Confusing pairs', tricky)
 
+        flocks = self.client.get('/site/flocks/').content.decode()
+        self.assertIn('Flocks: quizzes for bird clubs', flocks)
+        self.assertIn('/flocks/intro', flocks)
+
+        community = self.client.get('/site/community/').content.decode()
+        self.assertIn('How can I help?', community)
+        self.assertIn('Flag', community)
+        self.assertIn('#review-photos', community)
+        self.assertIn('/media-review/', community)
+        self.assertIn('Write comparisons', community)
+        self.assertIn('Write a better description', community)
+        self.assertIn('href="/site/birds/"', community)
+        self.assertRegex(community, r'href="/site/community/"[^>]*aria-current="page"')
+
+        faq = self.client.get('/site/faq/').content.decode()
+        self.assertIn('FAQPage', faq)
+        self.assertIn('Is Birdr free?', faq)
+        self.assertIn('What are Flocks?', faq)
+
     def test_legacy_marketing_paths_redirect(self):
         pairs = [
             ('/how-it-works/', '/site/how-it-works/'),
             ('/bird-identification-quiz/', '/play'),
             ('/site/bird-identification-quiz/', '/play'),
-            ('/flocks/', '/site/'),
-            ('/site/flocks/', '/site/'),
+            ('/flocks/', '/site/flocks/'),
+            ('/community/', '/site/community/'),
+            ('/faq/', '/site/faq/'),
             ('/countries/netherlands/', '/site/countries/netherlands/'),
         ]
         for old, new in pairs:
@@ -610,7 +645,9 @@ class MarketingPagesTests(TestCase):
         self.assertIn('https://birdr.pro/site/birds/', body)
         self.assertIn('https://birdr.pro/site/how-it-works/', body)
         self.assertNotIn('https://birdr.pro/site/bird-identification-quiz/', body)
-        self.assertNotIn('https://birdr.pro/site/flocks/', body)
+        self.assertIn('https://birdr.pro/site/flocks/', body)
+        self.assertIn('https://birdr.pro/site/community/', body)
+        self.assertIn('https://birdr.pro/site/faq/', body)
         self.assertNotIn('/site/my-edits/', body)
 
         countries = self.client.get('/sitemap-countries.xml').content.decode()
@@ -867,8 +904,8 @@ def _started_token(seconds_ago=3):
 
 
 class MarketingFeedbackFormTests(TestCase):
-    def test_landing_shows_form(self):
-        html = self.client.get('/site/').content.decode()
+    def test_community_shows_form(self):
+        html = self.client.get('/site/community/').content.decode()
         self.assertIn('name="comment"', html)
         self.assertIn('name="website"', html)
         self.assertIn('action="/site/feedback/"', html)

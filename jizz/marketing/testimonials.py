@@ -105,6 +105,13 @@ FAQ = [
         ),
     },
     {
+        'question': 'What are Flocks?',
+        'answer': (
+            'A Flock is a bird club or group on Birdr. Members play shared quizzes and '
+            'see a leaderboard—useful for clubs, WhatsApp groups and trip companions.'
+        ),
+    },
+    {
         'question': 'Where can I play?',
         'answer': (
             'In the free iOS and Android apps, or in the browser at birdr.pro. Your '

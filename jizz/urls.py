@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path, re_path, include
 from django.views.generic import RedirectView
+from django.views.static import serve as serve_static
 from rest_framework import routers
 from rest_framework_simplejwt import views as jwt_views
 from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
@@ -256,7 +257,9 @@ urlpatterns = [
         name='marketing-bird-quiz-by-country',
     ),
     path('site/birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
-    path('site/flocks/', RedirectView.as_view(url='/site/', permanent=True), name='marketing-flocks'),
+    path('site/flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
+    path('site/community/', intent_page, {'slug': 'community'}, name='marketing-community'),
+    path('site/faq/', intent_page, {'slug': 'faq'}, name='marketing-faq'),
     path('site/my-tricky-birds/', intent_page, {'slug': 'my-tricky-birds'}, name='marketing-my-tricky-birds'),
     path('site/my-edits/', my_edits, name='marketing-my-edits'),
     path('site/logout/', site_logout, name='marketing-logout'),
@@ -284,7 +287,9 @@ urlpatterns = [
         RedirectView.as_view(url='/site/bird-quiz-by-country/', permanent=True),
     ),
     path('birding-app/', RedirectView.as_view(url='/site/birding-app/', permanent=True)),
-    path('flocks/', RedirectView.as_view(url='/site/', permanent=True)),
+    path('flocks/', RedirectView.as_view(url='/site/flocks/', permanent=True)),
+    path('community/', RedirectView.as_view(url='/site/community/', permanent=True)),
+    path('faq/', RedirectView.as_view(url='/site/faq/', permanent=True)),
     path('my-tricky-birds/', RedirectView.as_view(url='/site/my-tricky-birds/', permanent=True)),
     path(
         'countries/<slug:slug>/',
@@ -537,6 +542,16 @@ urlpatterns = [
 handler404 = 'jizz.marketing.views.marketing_404'
 
 urlpatterns += router.urls
+
+_public = settings.BASE_DIR.parent / 'app' / 'public'
+urlpatterns += [
+    re_path(
+        r'^(?P<path>(?:favicon\.ico|favicon-16x16\.png|favicon-32x32\.png|'
+        r'apple-touch-icon\.png|logo192\.png|logo512\.png|images/birdr-icon\.png))$',
+        serve_static,
+        {'document_root': str(_public)},
+    ),
+]
 
 # Serve media files in development
 if settings.DEBUG:

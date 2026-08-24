@@ -101,8 +101,8 @@
     }
     header.site .brand-icon {
       display: block;
-      width: 3.25rem;
-      height: 3.25rem;
+      width: 5rem;
+      height: 5rem;
       margin: 0;
       padding: 0;
       max-width: none;
@@ -286,6 +286,21 @@
       box-shadow: var(--shadow-card);
     }
     .hero-art img { width: min(360px, 100%); }
+    .hero-art.hero-phone {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+    .hero-art.hero-phone img {
+      width: auto;
+      height: auto;
+      max-width: min(260px, 100%);
+      max-height: min(560px, 70vh);
+      border-radius: 28px;
+      border: 1px solid var(--birdr-200);
+      box-shadow: var(--shadow-card);
+    }
     .hero-art figcaption { color: var(--birdr-600); font-size: 0.9rem; margin-top: 8px; }
     .species-hero { padding-bottom: 12px; }
     .species-title-row {
@@ -998,7 +1013,7 @@
   <header class="site">
     <div class="wrap">
       <a class="brand" href="{{ home_url }}">
-        <img class="brand-icon" src="/images/birdr-icon.png" width="52" height="52" alt="">
+        <img class="brand-icon" src="/images/birdr-icon.png" width="70" height="70" alt="">
         <span class="brand-name">Birdr</span>
       </a>
       <nav class="site" aria-label="Primary">
@@ -1008,7 +1023,7 @@
         {% for page in cms_nav_pages %}
         <a href="{{ page.get_absolute_url }}"{% if request.path == page.get_absolute_url %} aria-current="page"{% endif %}>{{ page.nav_text }}</a>
         {% endfor %}
-        <a href="{{ home_url }}#help">Community</a>
+        <a href="/site/community/"{% if nav_section == 'community' %} aria-current="page"{% endif %}>Community</a>
         {% if not nav_user_name %}
         <a class="nav-login" id="nav-login" href="{{ login_href }}" aria-haspopup="dialog" aria-controls="login-dialog">Log in</a>
         {% endif %}
@@ -1066,11 +1081,13 @@
         <h3>Birdr</h3>
         <ul>
           <li><a href="/site/birding-app/">The app</a></li>
+          <li><a href="/site/flocks/">Flocks</a></li>
+          <li><a href="/site/faq/">FAQ</a></li>
+          <li><a href="/site/community/">Community</a></li>
           {% for page in cms_nav_pages %}
           <li><a href="{{ page.get_absolute_url }}">{{ page.nav_text }}</a></li>
           {% endfor %}
           <li><a href="{{ cms_index_url }}">All pages</a></li>
-          <li><a href="{{ home_url }}#help">How can I help?</a></li>
           <li><a href="mailto:info@birdr.pro">Contact</a></li>
         </ul>
       </div>

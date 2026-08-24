@@ -1,0 +1,24 @@
+{% extends "marketing/base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>{{ heading }}</h1>
+  <p class="lead">{{ lead }}</p>
+</section>
+<section>
+  {% for item in faq %}
+  <details>
+    <summary>{{ item.question }}</summary>
+    <p>{{ item.answer }}</p>
+  </details>
+  {% endfor %}
+</section>
+{% if related_links %}
+<section>
+  <p>
+    {% for href, label in related_links %}
+    <a href="{{ href }}">{{ label }}</a>{% if not forloop.last %} · {% endif %}
+    {% endfor %}
+  </p>
+</section>
+{% endif %}
+{% endblock %}

@@ -49,6 +49,17 @@ class AdminAuthenticationTestCase(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse('admin:jizz_country_changelist'))
         self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('favicon-32x32.png', html)
+        self.assertIn('/images/birdr-icon.png', html)
+        self.assertIn('padding-bottom: 0', html)
+
+    def test_login_uses_birdr_icon_and_favicon(self):
+        response = self.client.get(reverse('admin:login'))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('favicon-32x32.png', html)
+        self.assertIn('/images/birdr-icon.png', html)
 
 
 class AdminChangelistTestCase(TestCase):

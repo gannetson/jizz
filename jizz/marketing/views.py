@@ -179,7 +179,7 @@ def landing(request):
         title=DEFAULT_TITLE,
         description=DEFAULT_DESCRIPTION,
         path=SITE_HOME,
-        extra_json_ld=[faq_json_ld()],
+        extra_json_ld=None,
         heading='Learn to identify birds yourself.',
         supporting=(
             'Free photo quizzes, personalised practice and country challenges '
@@ -236,7 +236,9 @@ def intent_page(request, slug: str):
         extra['levels'] = page['levels']
     if page.get('start_options'):
         extra['start_options'] = page['start_options']
-    if page.get('show_countries'):
+    if slug == 'community':
+        extra['countries'] = _indexable_countries()[:12]
+    elif page.get('show_countries'):
         extra['countries'] = _indexable_countries()
     if slug == 'my-tricky-birds':
         missed = missed_birds(limit=8)
@@ -255,7 +257,7 @@ def intent_page(request, slug: str):
         description=page['description'],
         path=path,
         breadcrumbs=[('Home', SITE_HOME), (page['heading'], path)],
-        extra_json_ld=[faq_json_ld()] if slug in ('birding-app', 'learn-bird-identification') else None,
+        extra_json_ld=[faq_json_ld()] if slug in ('faq', 'birding-app', 'learn-bird-identification') else None,
         heading=page['heading'],
         lead=page['lead'],
         body_paragraphs=page['body'],
@@ -264,7 +266,11 @@ def intent_page(request, slug: str):
         related_links=page['links'],
         **extra,
     )
-    return render(request, 'marketing/intent.html', context)
+    template = {
+        'community': 'marketing/community.html',
+        'faq': 'marketing/faq.html',
+    }.get(slug, 'marketing/intent.html')
+    return render(request, template, context)
 
 
 @require_GET

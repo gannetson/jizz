@@ -273,6 +273,79 @@ INTENT_PAGES = {
             ('/site/how-it-works/', 'How it works'),
         ],
     },
+    'flocks': {
+        'title': 'Bird Club Quiz & Leaderboard – Flocks | Birdr',
+        'description': (
+            'Create a Flock for your bird club or group. Shared quizzes and a leaderboard '
+            'keep everyone practising together. Free on Birdr.'
+        ),
+        'heading': 'Flocks: quizzes for bird clubs',
+        'lead': (
+            'A Flock is your club, WhatsApp group or trip companions on Birdr. Play the '
+            'same quiz, compare scores, and keep a leaderboard.'
+        ),
+        'cta_href': '/flocks/intro',
+        'cta_label': 'Create or join a Flock',
+        'body': [
+            (
+                'Each Flock quiz has 25 questions. It starts easy and finishes hard, so '
+                'mixed-ability groups can play the same game.'
+            ),
+            (
+                'Admins set a country and a challenge. Members play on their phones or on '
+                'the web. Results can be shared without opening the whole club to the public.'
+            ),
+            (
+                'It is built for real groups of birders, not a global anonymous ladder. '
+                'Start from the app or the web after you sign in.'
+            ),
+        ],
+        'links': [
+            ('/play', 'Photo quizzes'),
+            ('/site/bird-quiz-by-country/', 'Country quizzes'),
+            ('/site/community/', 'Community'),
+        ],
+    },
+    'community': {
+        'title': 'Help Birdr – Community | Birdr',
+        'description': (
+            'Help Birdr by sending feedback, reviewing quiz photos, and writing '
+            'descriptions for species comparison pages.'
+        ),
+        'heading': 'Community',
+        'lead': (
+            'Birdr is a small project. Feedback, photo review, and comparison '
+            'descriptions for lookalike birds all help.'
+        ),
+        'cta_href': '/play',
+        'cta_label': 'Play a quiz',
+        'body': [],
+        'links': [
+            ('/site/faq/', 'FAQ'),
+            ('/site/flocks/', 'Flocks'),
+            ('/play', 'Start a quiz'),
+        ],
+        'show_countries': True,
+    },
+    'faq': {
+        'title': 'Birdr FAQ – Free Bird Identification Quiz',
+        'description': (
+            'Answers about Birdr: is it free, does it identify birds from a photo, and '
+            'where you can play photo quizzes and country challenges.'
+        ),
+        'heading': 'Frequently asked questions',
+        'lead': (
+            'Is Birdr free? Does it identify birds from a photo? Where can you play?'
+        ),
+        'cta_href': '/play',
+        'cta_label': 'Try a quiz',
+        'body': [],
+        'links': [
+            ('/site/community/', 'Community'),
+            ('/site/flocks/', 'Flocks'),
+            ('/play', 'Start a quiz'),
+        ],
+    },
 }
 
 
@@ -440,6 +513,8 @@ def nav_section_for_path(path: str) -> str:
         return 'species'
     if current.startswith('/site/bird-quiz-by-country/') or current.startswith('/site/countries/'):
         return 'countries'
+    if current.startswith('/site/community/'):
+        return 'community'
     return ''
 
 

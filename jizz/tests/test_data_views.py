@@ -68,6 +68,9 @@ class DataViewsTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "Birdr data")
         self.assertContains(res, reverse("data-taxon-orders"))
+        self.assertContains(res, "favicon-32x32.png")
+        self.assertContains(res, "/images/birdr-icon.png")
+        self.assertContains(res, "padding: 0.85rem 1.5rem 0")
 
     def test_taxon_orders_global_counts(self):
         res = Client().get(reverse("data-taxon-orders"))

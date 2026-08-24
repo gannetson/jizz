@@ -58,25 +58,6 @@ const TESTIMONIALS = [
   },
 ];
 
-const FAQ = [
-  {
-    q: 'Is Birdr free?',
-    a: 'Yes. Birdr is free on iPhone, Android and the web. Quizzes, country challenges and personalised practice do not require a paid subscription.',
-  },
-  {
-    q: 'Does Birdr identify birds from a photo for me?',
-    a: 'No. Birdr is a training app: you learn to identify birds yourself through quizzes and practice.',
-  },
-  {
-    q: 'Can I practise the birds of my country?',
-    a: 'Yes. Start a photo quiz for a country list, or take a Country Challenge with levels from easy to expert.',
-  },
-  {
-    q: 'Where should I play?',
-    a: 'The iPhone and Android apps are the best daily experience. You can also play in the browser if you want to try a quiz first.',
-  },
-];
-
 function StoreBadges() {
   return (
     <Flex gap={2} align="center" wrap="wrap">
@@ -120,6 +101,7 @@ export function MarketingHomePage() {
               <Link href="/site/how-it-works/">How it works</Link>
               <Link href="/site/birds/">Species</Link>
               <Link href="/site/bird-quiz-by-country/">Countries</Link>
+              <Link href="/site/community/">Community</Link>
               <Link
                 href="#get-the-app"
                 bg="primary.600"
@@ -245,16 +227,28 @@ export function MarketingHomePage() {
         </Grid>
 
         <Heading as="h2" size="xl" mt={16} mb={4}>
-          FAQ
+          Community and FAQ
         </Heading>
-        {FAQ.map((item) => (
-          <Box key={item.q} as="details" {...cardProps} mb={2}>
-            <Box as="summary" fontWeight="700" cursor="pointer">
-              {item.q}
-            </Box>
-            <Text mt={2}>{item.a}</Text>
+        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+          <Box {...cardProps}>
+            <Heading as="h3" size="md" mb={2}>
+              Community
+            </Heading>
+            <Text mb={3}>Birdr is a small project. Send feedback or review photos if you know a country’s birds.</Text>
+            <Link href="/site/community/" fontWeight="600">
+              How you can help
+            </Link>
           </Box>
-        ))}
+          <Box {...cardProps}>
+            <Heading as="h3" size="md" mb={2}>
+              FAQ
+            </Heading>
+            <Text mb={3}>Is Birdr free? Does it identify birds from a photo? Where can I play?</Text>
+            <Link href="/site/faq/" fontWeight="600">
+              Read the FAQ
+            </Link>
+          </Box>
+        </Grid>
 
         <Box bg="primary.800" color="primary.50" borderRadius="2xl" p={8} mt={16}>
           <Heading as="h2" size="xl" color="white" mb={3}>
@@ -298,6 +292,9 @@ export function MarketingHomePage() {
               </Text>
               <Flex direction="column" gap={1}>
                 <Link href="/site/birding-app/">The app</Link>
+                <Link href="/site/flocks/">Flocks</Link>
+                <Link href="/site/faq/">FAQ</Link>
+                <Link href="/site/community/">Community</Link>
                 <Link href="/site/page/about/">About</Link>
                 <Link href="/site/page/privacy/">Privacy</Link>
                 <Link href="mailto:info@goedloek.nl">Contact</Link>

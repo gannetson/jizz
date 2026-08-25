@@ -1,0 +1,65 @@
+/** App UI locales — distinct from bird-name / species language. */
+
+export const APP_LOCALES = ['en', 'nl', 'es', 'fr', 'de', 'pt-BR', 'ja'] as const;
+
+export type AppLocale = (typeof APP_LOCALES)[number];
+
+export const APP_LOCALE_LABELS: Record<AppLocale, string> = {
+  en: 'English',
+  nl: 'Nederlands',
+  es: 'Español',
+  fr: 'Français',
+  de: 'Deutsch',
+  'pt-BR': 'Português (Brasil)',
+  ja: '日本語',
+};
+
+export const APP_LOCALE_STORAGE_KEY = 'birdr-app-language';
+
+export function isAppLocale(value: string | null | undefined): value is AppLocale {
+  return !!value && (APP_LOCALES as readonly string[]).includes(value);
+}
+
+/** Map a BCP-47 / OS tag onto a supported app locale, or null if unknown. */
+export function matchAppLocale(tag: string | null | undefined): AppLocale | null {
+  const raw = (tag || '').trim();
+  if (!raw) return null;
+  if (isAppLocale(raw)) return raw;
+  const lower = raw.replace(/_/g, '-').toLowerCase();
+  if (lower.startsWith('pt')) return 'pt-BR';
+  const prefix = lower.split('-')[0];
+  if (isAppLocale(prefix)) return prefix;
+  return null;
+}
+
+export function getDeviceLanguageTag(): string {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      return navigator.language;
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().locale || 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+export function guessAppLocaleFromDevice(tag?: string | null): AppLocale {
+  return matchAppLocale(tag ?? getDeviceLanguageTag()) ?? 'en';
+}
+
+/** Resolve UI locale: profile → stored → device → en. Empty profile means unset. */
+export function resolveAppLocale(options: {
+  profileAppLanguage?: string | null;
+  stored?: string | null;
+  deviceTag?: string | null;
+}): AppLocale {
+  return (
+    matchAppLocale(options.profileAppLanguage) ??
+    matchAppLocale(options.stored) ??
+    guessAppLocaleFromDevice(options.deviceTag)
+  );
+}

@@ -203,6 +203,7 @@ class ProfileViewTestCase(TestCase):
         self.assertEqual(response.data['username'], 'profileuser')
         self.assertEqual(response.data['email'], 'profile@example.com')
         self.assertIn('language', response.data)
+        self.assertIn('app_language', response.data)
         self.assertIn('receive_updates', response.data)
 
     def test_profile_get_unauthorized(self):
@@ -233,6 +234,29 @@ class ProfileViewTestCase(TestCase):
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.language, 'nl')
         self.assertEqual(self.user.profile.country_id, self.country.code)
+        self.assertEqual(response.data.get('app_language', ''), '')
+
+    def test_profile_update_app_language_does_not_change_bird_names(self):
+        self.client.put('/api/profile/', {'language': 'nl'}, format='json')
+        response = self.client.put(
+            '/api/profile/',
+            {'app_language': 'es'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['app_language'], 'es')
+        self.assertEqual(response.data['language'], 'nl')
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.app_language, 'es')
+        self.assertEqual(self.user.profile.language, 'nl')
+
+    def test_profile_rejects_invalid_app_language(self):
+        response = self.client.put(
+            '/api/profile/',
+            {'app_language': 'xx'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_profile_update_receive_updates(self):
         response = self.client.put(

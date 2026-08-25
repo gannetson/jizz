@@ -6,8 +6,8 @@ import AppContext from "../../core/app-context"
 import { getCountryDisplayName } from "../../data/country-names-nl"
 
 const GameHeader: React.FC = () => {
-  const { country, language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { country, appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
 
   return (
     <Page.Header>

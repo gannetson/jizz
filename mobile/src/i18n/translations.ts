@@ -1,7 +1,14 @@
 /**
- * Interface copy – English and Dutch.
- * Use with useTranslation() and locale from profile/settings (e.g. 'en' | 'nl').
+ * Interface copy – English and Dutch inline; other locales from JSON (English fallback).
+ * Use with useTranslation() and locale from profile/settings.
  */
+import es from './locales/es.json';
+import fr from './locales/fr.json';
+import de from './locales/de.json';
+import ptBR from './locales/pt-BR.json';
+import ja from './locales/ja.json';
+import type { AppLocale } from './appLocales';
+
 export const translations: Record<string, Record<string, string>> = {
   en: {
     // General
@@ -197,7 +204,7 @@ export const translations: Record<string, Record<string, string>> = {
     trouble_spots_change_country: 'Change country',
     trouble_spots_select_country: 'Select country',
     trouble_spots_country_label: 'Country',
-    pair_practice_pass_correct: 18,
+    pair_practice_pass_correct: '18',
     pair_practice_results_title: 'Pair practice',
     pair_practice_score: '{correct} / {total} correct',
     pair_practice_fixed_message: 'You fixed it! {species1} and {species2} no longer seem that confusing to you!',
@@ -356,6 +363,9 @@ export const translations: Record<string, Record<string, string>> = {
     email: 'Email',
     species_language_names: 'Species language (names)',
     app_language: 'App language',
+    app_language_hint: 'Menus and buttons',
+    bird_name_language: 'Bird name language',
+    bird_name_language_hint: 'Names in quizzes and lists',
     country_optional: 'Country (optional)',
     none: 'None',
     logged_in: 'Logged in',
@@ -803,7 +813,7 @@ export const translations: Record<string, Record<string, string>> = {
     trouble_spots_change_country: 'Land wijzigen',
     trouble_spots_select_country: 'Land kiezen',
     trouble_spots_country_label: 'Land',
-    pair_practice_pass_correct: 18,
+    pair_practice_pass_correct: '18',
     pair_practice_results_title: 'Paaroefening',
     pair_practice_score: '{correct} / {total} goed',
     pair_practice_fixed_message: 'Gelukt! {species1} en {species2} lijken niet meer zo verwarrend!',
@@ -961,6 +971,9 @@ export const translations: Record<string, Record<string, string>> = {
     email: 'E-mail',
     species_language_names: 'Soorttaal (namen)',
     app_language: 'Apptaal',
+    app_language_hint: 'Menu\'s en knoppen',
+    bird_name_language: 'Taal van vogelnamen',
+    bird_name_language_hint: 'Namen in quizzes en lijsten',
     country_optional: 'Land (optioneel)',
     none: 'Geen',
     logged_in: 'Ingelogd',
@@ -1220,9 +1233,14 @@ export const translations: Record<string, Record<string, string>> = {
     start_a_game: 'Start een spel',
     birdr_home: 'Birdr-home',
   },
+  es: es as Record<string, string>,
+  fr: fr as Record<string, string>,
+  de: de as Record<string, string>,
+  'pt-BR': ptBR as Record<string, string>,
+  ja: ja as Record<string, string>,
 };
 
-export type Locale = 'en' | 'nl';
+export type Locale = AppLocale;
 
 export function getTranslation(locale: Locale, key: string, params?: Record<string, string | number>): string {
   const dict = translations[locale] ?? translations.en;

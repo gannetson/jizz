@@ -29,8 +29,8 @@ function LengthRadioOption({ value }: { value: string }) {
 }
 
 export const SelectLength = () => {
-  const { length, setLength, country, language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { length, setLength, country, appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
 
   const onChange = (value: string) => {
     setLength && setLength(value)

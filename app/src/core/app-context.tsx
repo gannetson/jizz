@@ -218,9 +218,13 @@ type SharedState = {
   setCountry: Dispatch<SetStateAction<Country>>
   language?: string
   setLanguage?: Dispatch<SetStateAction<string>>
-  /** Set interface + species language and persist to localStorage and profile (if authenticated). */
+  /** App UI language (menus/buttons). Distinct from bird-name `language`. */
+  appLanguage?: string
+  /** Persist app UI language to localStorage and profile.app_language (if authenticated). */
+  setAppLanguage?: (lang: string) => void
+  /** @deprecated Use setAppLanguage. */
   setUserPreferredLanguage?: (lang: string) => void
-  /** Language for species names (profile > player > en). Use for species lists and media. */
+  /** Language for species names (game > profile > en). */
   speciesLanguage?: string
   multiplayer?: string
   setMultiplayer?: Dispatch<SetStateAction<string>>
@@ -259,10 +263,12 @@ const AppContext = createContext<SharedState>({
   country: { code: '', name: '' },
   setCountry: () => {},
   speciesLanguage: 'en',
+  appLanguage: 'en',
   mediaType: 'images',
   setMediaType: () => {},
   soundsScope: 'all',
   setSoundsScope: () => {},
+  setAppLanguage: () => {},
   setUserPreferredLanguage: () => {}
 });
 

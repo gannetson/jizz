@@ -49,5 +49,14 @@ export function getCountryDisplayName(country: CountryLike | null | undefined, l
   if (locale === 'nl' && countryNamesNl[country.code]) {
     return countryNamesNl[country.code];
   }
+  if (locale && locale !== 'en' && country.code && !country.code.includes('-')) {
+    try {
+      const names = new Intl.DisplayNames([locale], { type: 'region' });
+      const label = names.of(country.code);
+      if (label) return label;
+    } catch {
+      /* ignore */
+    }
+  }
   return country.name;
 }

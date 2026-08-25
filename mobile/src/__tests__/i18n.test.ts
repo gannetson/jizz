@@ -21,7 +21,11 @@ describe('getTranslation', () => {
   });
 
   it('falls back to en when locale is unknown', () => {
-    const result = getTranslation('de' as any, 'cancel');
-    expect(result).toBe('Cancel');
+    expect(getTranslation('xx' as any, 'cancel')).toBe('Cancel');
+  });
+
+  it('uses Spanish catalog and English fallback', () => {
+    expect(getTranslation('es', 'cancel')).toBe('Cancelar');
+    expect(getTranslation('es', 'unknown_key')).toBe('unknown_key');
   });
 });

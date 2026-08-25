@@ -19,6 +19,7 @@ import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
+import { AppLanguagePicker } from './AppLanguagePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
@@ -88,21 +89,9 @@ export function UserMenuModal() {
           <Pressable style={StyleSheet.absoluteFill} onPress={(e) => e.stopPropagation()}>
             <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingTop: Math.max(56, insets.top) }]}>
               <Text style={styles.sectionTitle}>{t('account')}</Text>
+              <Text style={styles.languageLabel}>{t('app_language')}</Text>
               <View style={styles.languageRow}>
-                <View style={styles.languageChips}>
-                  <TouchableOpacity
-                    style={[styles.languageChip, locale === 'en' && styles.languageChipSelected]}
-                    onPress={() => setLocale('en')}
-                  >
-                    <Text style={[styles.languageChipText, locale === 'en' && styles.languageChipTextSelected]}>English</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.languageChip, locale === 'nl' && styles.languageChipSelected]}
-                    onPress={() => setLocale('nl')}
-                  >
-                    <Text style={[styles.languageChipText, locale === 'nl' && styles.languageChipTextSelected]}>Nederlands</Text>
-                  </TouchableOpacity>
-                </View>
+                <AppLanguagePicker value={locale} onChange={setLocale} />
               </View>
               <View style={styles.separator} />
               {!isAuthenticated ? (

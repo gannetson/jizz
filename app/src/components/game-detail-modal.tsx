@@ -47,8 +47,8 @@ type GameDetailModalProps = {
 
 export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: GameDetailModalProps) => {
   const navigate = useNavigate();
-  const { language, loadGame, loadPlayer, setGame } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage, loadGame, loadPlayer, setGame } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const [game, setGameDetail] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

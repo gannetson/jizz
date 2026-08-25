@@ -42,8 +42,8 @@ import { getCountryDisplayName } from '../../data/country-names-nl';
 export function FlockDetailPage() {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { language, loadGame, loadPlayer, setGame } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage, loadGame, loadPlayer, setGame } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [flock, setFlock] = useState<Flock | null>(null);

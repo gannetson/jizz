@@ -59,8 +59,8 @@ export const CountryCombobox = ({
   excludeRegionCodes = false,
 }: CountryComboboxProps) => {
   const intl = useIntl();
-  const { language } = useContext(AppContext);
-  const locale = language === "nl" ? "nl" : "en";
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || "en";
 
   const options = useMemo(() => {
     const source = excludeRegionCodes

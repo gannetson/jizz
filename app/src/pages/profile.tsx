@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Button,
@@ -26,10 +26,14 @@ import { UseCountries } from "../user/use-countries";
 import { UseLanguages } from "../user/use-languages";
 import { ProfileLanguageSelect } from "../components/profile-language-select";
 import { ProfileCountrySelect } from "../components/profile-country-select";
+import { AppLanguageSelect } from "../components/app-language-select";
+import type { AppLocale } from "../i18n/app-locales";
+import AppContext from "../core/app-context";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const intl = useIntl();
+  const { setAppLanguage: persistAppLanguage } = useContext(AppContext);
   const { countries } = UseCountries();
   const { languages } = UseLanguages();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -44,6 +48,7 @@ export const ProfilePage = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [receiveUpdates, setReceiveUpdates] = useState(false);
   const [language, setLanguage] = useState("en");
+  const [appLanguage, setAppLanguage] = useState<AppLocale>("en");
   const [timezone, setTimezone] = useState("Europe/Amsterdam");
   const [countryCode, setCountryCode] = useState<string | null>(null);
 
@@ -64,6 +69,7 @@ export const ProfilePage = () => {
         setAvatarPreview(getAvatarUrl(profileData));
         setReceiveUpdates(profileData.receive_updates ?? true);
         setLanguage(profileData.language || "en");
+        setAppLanguage((profileData.app_language as AppLocale) || "en");
         setTimezone(profileData.timezone || "Europe/Amsterdam");
         setCountryCode(profileData.country_code || null);
       } catch (err: any) {
@@ -129,6 +135,10 @@ export const ProfilePage = () => {
         updateData.language = language;
       }
 
+      if (appLanguage !== (profile?.app_language || "")) {
+        updateData.app_language = appLanguage;
+      }
+
       if (countryCode !== (profile?.country_code || null)) {
         updateData.country_code = countryCode;
       }
@@ -145,6 +155,9 @@ export const ProfilePage = () => {
 
       const updatedProfile = await profileService.updateProfile(updateData);
       setProfile(updatedProfile);
+      if (updateData.app_language) {
+        persistAppLanguage?.(updatedProfile.app_language || appLanguage);
+      }
       setUsername(updatedProfile.username);
       setFirstName(updatedProfile.first_name || "");
       setLastName(updatedProfile.last_name || "");
@@ -152,6 +165,7 @@ export const ProfilePage = () => {
       setAvatarFile(null);
       setReceiveUpdates(updatedProfile.receive_updates ?? true);
       setLanguage(updatedProfile.language || "en");
+      setAppLanguage((updatedProfile.app_language as AppLocale) || "en");
       setTimezone(updatedProfile.timezone ?? "Europe/Amsterdam");
       setCountryCode(updatedProfile.country_code || null);
       setSuccess("Profile updated successfully!");
@@ -334,10 +348,26 @@ export const ProfilePage = () => {
               </Flex>
             </Field.Root>
 
-            {/* Language Preference */}
+            {/* App language vs bird names */}
             <Box>
-              <Text fontSize="sm" fontWeight="medium" mb={2}>
-                <FormattedMessage id="preferred_language" defaultMessage="Preferred Language" />
+              <Text fontSize="sm" fontWeight="medium" mb={1}>
+                <FormattedMessage id="app_language" defaultMessage="App language" />
+              </Text>
+              <Text fontSize="sm" color="gray.500" mb={2}>
+                <FormattedMessage id="app_language_hint" defaultMessage="Menus and buttons" />
+              </Text>
+              <AppLanguageSelect value={appLanguage} onChange={setAppLanguage} />
+            </Box>
+
+            <Box>
+              <Text fontSize="sm" fontWeight="medium" mb={1}>
+                <FormattedMessage id="bird_name_language" defaultMessage="Bird name language" />
+              </Text>
+              <Text fontSize="sm" color="gray.500" mb={2}>
+                <FormattedMessage
+                  id="bird_name_language_hint"
+                  defaultMessage="Names in quizzes and lists"
+                />
               </Text>
               <ProfileLanguageSelect
                 languages={languages}

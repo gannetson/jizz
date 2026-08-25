@@ -751,7 +751,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'timezone', 'country_code', 'country_name', 'is_staff', 'is_superuser')
+        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'app_language', 'timezone', 'country_code', 'country_name', 'is_staff', 'is_superuser')
         read_only_fields = ('avatar_url', 'country_code', 'country_name', 'is_staff', 'is_superuser')
 
     def get_avatar_url(self, obj):
@@ -782,6 +782,7 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     avatar = serializers.ImageField(required=False, allow_null=True)
     receive_updates = serializers.BooleanField(required=False)
     language = serializers.CharField(required=False, max_length=10, allow_blank=True)
+    app_language = serializers.CharField(required=False, max_length=10, allow_blank=True)
     timezone = serializers.CharField(required=False, max_length=63, allow_blank=True)
     country_code = serializers.CharField(required=False, max_length=10, allow_blank=True, allow_null=True)
 
@@ -793,6 +794,14 @@ class UserProfileUpdateSerializer(serializers.Serializer):
             user = self.context['request'].user
             return make_unique_username(value, exclude_user_id=user.pk)
         return value
+
+    def validate_app_language(self, value):
+        from jizz.app_languages import APP_LANGUAGES, normalize_app_language
+
+        normalized = normalize_app_language(value)
+        if (value or '').strip() and normalized not in APP_LANGUAGES:
+            raise serializers.ValidationError("Invalid app language.")
+        return normalized
 
     def validate_country_code(self, value):
         if value:
@@ -839,6 +848,9 @@ class UserProfileUpdateSerializer(serializers.Serializer):
         # Update language if provided
         if 'language' in validated_data:
             instance.language = validated_data['language']
+
+        if 'app_language' in validated_data:
+            instance.app_language = validated_data['app_language']
         
         # Update timezone if provided
         if 'timezone' in validated_data:

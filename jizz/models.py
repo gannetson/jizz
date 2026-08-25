@@ -740,7 +740,13 @@ class UserProfile(models.Model):
     user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     receive_updates = models.BooleanField(default=True, help_text='Receive Birdr news and update emails')
-    language = models.CharField(max_length=10, default='en', blank=True, help_text='Preferred language')
+    language = models.CharField(max_length=10, default='en', blank=True, help_text='Bird name language')
+    app_language = models.CharField(
+        max_length=10,
+        default='',
+        blank=True,
+        help_text='App UI language (empty = not set; clients guess from the device)',
+    )
     country = models.ForeignKey('jizz.Country', on_delete=models.SET_NULL, null=True, blank=True, help_text='Preferred country')
     timezone = models.CharField(
         max_length=63,

@@ -20,6 +20,22 @@ export const SCIENTIFIC_LANGUAGE_CODE = 'la';
 export const SCIENTIFIC_LANGUAGE_NAME_EN = 'Scientific (Latin)';
 export const SCIENTIFIC_LANGUAGE_NAME_NL = 'Wetenschappelijk (Latijn)';
 
+const SCIENTIFIC_LANGUAGE_NAMES: Record<string, string> = {
+  en: SCIENTIFIC_LANGUAGE_NAME_EN,
+  nl: SCIENTIFIC_LANGUAGE_NAME_NL,
+  es: 'Científico (latín)',
+  fr: 'Scientifique (latin)',
+  de: 'Wissenschaftlich (Latein)',
+  'pt-BR': 'Científico (latim)',
+  ja: '学名（ラテン語）',
+};
+
+function languageTagForDisplay(code: string): string {
+  if (code === 'en_UK') return 'en-GB';
+  if (code === 'en_US') return 'en-US';
+  return code.replace(/_/g, '-');
+}
+
 export function withScientificLanguage<T extends LanguageLike>(languages: T[]): T[] {
   const rest = languages.filter((l) => l.code !== 'la');
   return [{ code: 'la', name: SCIENTIFIC_LANGUAGE_NAME_EN } as T, ...rest];
@@ -28,10 +44,19 @@ export function withScientificLanguage<T extends LanguageLike>(languages: T[]): 
 export function getLanguageDisplayName(lang: LanguageLike | null | undefined, locale: string): string {
   if (!lang) return '';
   if (lang.code === 'la') {
-    return locale === 'nl' ? SCIENTIFIC_LANGUAGE_NAME_NL : SCIENTIFIC_LANGUAGE_NAME_EN;
+    return SCIENTIFIC_LANGUAGE_NAMES[locale] || SCIENTIFIC_LANGUAGE_NAME_EN;
   }
   if (locale === 'nl' && languageNamesNl[lang.code]) {
     return languageNamesNl[lang.code];
+  }
+  if (locale && locale !== 'en') {
+    try {
+      const names = new Intl.DisplayNames([locale], { type: 'language' });
+      const label = names.of(languageTagForDisplay(lang.code));
+      if (label) return label;
+    } catch {
+      /* ignore */
+    }
   }
   return lang.name;
 }

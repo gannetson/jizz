@@ -11,6 +11,7 @@ export interface UserProfile {
   avatar_url: string | null;
   receive_updates: boolean;
   language: string;
+  app_language?: string;
   timezone?: string;
   country_code: string | null;
   country_name: string | null;
@@ -34,6 +35,7 @@ export interface ProfileUpdateData {
   avatar?: File | null;
   receive_updates?: boolean;
   language?: string;
+  app_language?: string;
   timezone?: string;
   country_code?: string | null;
 }
@@ -97,6 +99,9 @@ class ProfileService {
       }
       if (data.language !== undefined) {
         formData.append('language', data.language);
+      }
+      if (data.app_language !== undefined) {
+        formData.append('app_language', data.app_language);
       }
       if (data.timezone !== undefined) {
         formData.append('timezone', data.timezone || '');

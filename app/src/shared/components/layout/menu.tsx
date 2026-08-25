@@ -1,7 +1,6 @@
 import {Flex, Link} from "@chakra-ui/react";
 import {FormattedMessage} from "react-intl"
 import {Link as RouterLink} from "react-router-dom";
-import ChangeLanguage from "../../../components/change-language";
 import { getCountryChallengesPath, getCountryChallengeLeaderboardPath } from "../../../api/birdrJourney";
 import { getFlocksPath } from "../../../api/flocks";
 
@@ -50,8 +49,6 @@ export const BirdrMenu = () => {
             <Link href={'/about'} textDecoration="none">
               <FormattedMessage id={'about birdr'} defaultMessage={'About Birdr'} />
             </Link>
-
-            <ChangeLanguage />
         </Flex>
     );
 }

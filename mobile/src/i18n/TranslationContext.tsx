@@ -3,13 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTranslation, type Locale } from './translations';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../api/profile';
-import { getAccessToken, ensureFreshAccessToken } from '../api/auth';
+import { getAccessToken } from '../api/auth';
 import { useProfile } from '../context/ProfileContext';
-import { useGame } from '../context/GameContext';
-import * as playerApi from '../api/player';
-import { getSpeciesLanguageIndependent } from './speciesLanguagePreference';
-
-const LOCALE_KEY = 'app_locale';
+import {
+  APP_LOCALE_STORAGE_KEY,
+  guessAppLocaleFromDevice,
+  isAppLocale,
+  resolveAppLocale,
+} from './appLocales';
 
 type TranslationContextType = {
   locale: Locale;
@@ -22,94 +23,56 @@ const TranslationContext = createContext<TranslationContextType | undefined>(und
 export function TranslationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const { refreshProfile, profile, ready: profileReady } = useProfile();
-  const { language: gameLanguage, setLanguage, player, setPlayer } = useGame();
-  const [locale, setLocaleState] = useState<Locale>('en');
-  /** False until LOCALE_KEY (or profile fallback) has been read — avoids sync effect using default 'en' and overwriting species language. */
-  const [localeHydrated, setLocaleHydrated] = useState(false);
+  const [locale, setLocaleState] = useState<Locale>(() => guessAppLocaleFromDevice());
 
-  const applyAppLocaleToSpeciesLanguage = useCallback(
+  const setLocale = useCallback(
     async (l: Locale) => {
-      setLanguage(l);
+      if (!isAppLocale(l)) return;
+      setLocaleState(l);
+      try {
+        await AsyncStorage.setItem(APP_LOCALE_STORAGE_KEY, l);
+      } catch {
+        /* ignore */
+      }
       try {
         const token = await getAccessToken();
         if (token) {
-          await updateProfile({ language: l });
+          await updateProfile({ app_language: l });
           refreshProfile();
         }
       } catch {
         /* ignore */
       }
-      try {
-        const access = await ensureFreshAccessToken();
-        if (player && access) {
-          const updated = await playerApi.updatePlayer(
-            player.token,
-            { name: player.name, language: l },
-            access
-          );
-          if (updated) setPlayer(updated);
-        }
-      } catch {
-        /* ignore */
-      }
     },
-    [setLanguage, player, setPlayer, refreshProfile]
-  );
-
-  const setLocale = useCallback(
-    async (l: Locale) => {
-      setLocaleState(l);
-      try {
-        await AsyncStorage.setItem(LOCALE_KEY, l);
-      } catch {
-        /* ignore */
-      }
-      const indep = await getSpeciesLanguageIndependent();
-      if (!indep) {
-        await applyAppLocaleToSpeciesLanguage(l);
-      }
-      /* Independent species language: UI locale only — do not read or PATCH player. */
-    },
-    [applyAppLocaleToSpeciesLanguage]
+    [refreshProfile]
   );
 
   useEffect(() => {
     let cancelled = false;
-    setLocaleHydrated(false);
     (async () => {
-      const stored = await AsyncStorage.getItem(LOCALE_KEY);
+      let stored: string | null = null;
+      try {
+        stored = await AsyncStorage.getItem(APP_LOCALE_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
       if (cancelled) return;
-      if (stored === 'nl' || stored === 'en') {
-        setLocaleState(stored);
-      } else if (isAuthenticated) {
-        if (!profileReady) return;
-        const lang = profile?.language;
-        if (lang === 'nl' || lang === 'en') {
-          setLocaleState(lang);
-          await AsyncStorage.setItem(LOCALE_KEY, lang).catch(() => {});
-        }
+      if (isAuthenticated && !profileReady) return;
+      const next = resolveAppLocale({
+        profileAppLanguage: isAuthenticated ? profile?.app_language : undefined,
+        stored,
+      });
+      setLocaleState(next);
+      try {
+        await AsyncStorage.setItem(APP_LOCALE_STORAGE_KEY, next);
+      } catch {
+        /* ignore */
       }
-      if (!cancelled) setLocaleHydrated(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, profileReady, profile?.language]);
-
-  useEffect(() => {
-    if (!localeHydrated) return;
-    let cancelled = false;
-    (async () => {
-      const indep = await getSpeciesLanguageIndependent();
-      if (cancelled || indep) return;
-      if (locale !== 'en' && locale !== 'nl') return;
-      if (gameLanguage === locale) return;
-      await applyAppLocaleToSpeciesLanguage(locale);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [localeHydrated, locale, gameLanguage, applyAppLocaleToSpeciesLanguage]);
+  }, [isAuthenticated, profileReady, profile?.app_language]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => getTranslation(locale, key, params),

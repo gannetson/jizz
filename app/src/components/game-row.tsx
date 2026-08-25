@@ -27,8 +27,8 @@ type GameRowProps = {
 export const GameRow = ({ game, emphasizeClickable = false, playerToken }: GameRowProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const intl = useIntl();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
 
   const formatDate = (dateString: string) => {
     try {

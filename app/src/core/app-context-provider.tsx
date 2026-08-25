@@ -21,6 +21,12 @@ import {
   readStoredCountryCode,
   writeStoredCountryCode,
 } from '../user/country-preference';
+import {
+  APP_LOCALE_STORAGE_KEY,
+  matchAppLocale,
+  resolveAppLocale,
+  type AppLocale,
+} from '../i18n/app-locales';
 
 type Props = {
   children: ReactNode;
@@ -47,6 +53,15 @@ const AppContextProvider: FC<Props> = ({children}) => {
       return localStorage.getItem('birdr-language') || 'en';
     } catch {
       return 'en';
+    }
+  });
+  const [appLanguage, setAppLanguageState] = useState<AppLocale>(() => {
+    try {
+      return resolveAppLocale({
+        stored: localStorage.getItem(APP_LOCALE_STORAGE_KEY),
+      });
+    } catch {
+      return resolveAppLocale({});
     }
   });
   const [taxOrder, setTaxOrder] = useState<TaxOrder | undefined>();
@@ -137,6 +152,22 @@ const AppContextProvider: FC<Props> = ({children}) => {
           } catch {
             /* ignore */
           }
+          const nextApp = resolveAppLocale({
+            profileAppLanguage: p.app_language,
+            stored: (() => {
+              try {
+                return localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+              } catch {
+                return null;
+              }
+            })(),
+          });
+          setAppLanguageState(nextApp);
+          try {
+            localStorage.setItem(APP_LOCALE_STORAGE_KEY, nextApp);
+          } catch {
+            /* ignore */
+          }
         })
         .catch(() => {
           if (!cancelled) setProfile(null);
@@ -162,15 +193,17 @@ const AppContextProvider: FC<Props> = ({children}) => {
     };
   }, [profileReady, country.code, setCountry]);
 
-  const setUserPreferredLanguage = useCallback((lang: string) => {
-    setLanguage(lang);
+  const setAppLanguage = useCallback((lang: string) => {
+    const next = matchAppLocale(lang);
+    if (!next) return;
+    setAppLanguageState(next);
     try {
-      localStorage.setItem('birdr-language', lang);
+      localStorage.setItem(APP_LOCALE_STORAGE_KEY, next);
     } catch {
       /* ignore */
     }
     if (authService.getAccessToken()) {
-      profileService.updateProfile({ language: lang })
+      profileService.updateProfile({ app_language: next })
         .then((updated) => setProfile(updated))
         .catch(() => {});
     }
@@ -430,7 +463,9 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setCountry,
       language,
       setLanguage,
-      setUserPreferredLanguage,
+      appLanguage,
+      setAppLanguage,
+      setUserPreferredLanguage: setAppLanguage,
       speciesLanguage,
       multiplayer,
       setMultiplayer,

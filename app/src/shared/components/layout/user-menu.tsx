@@ -1,27 +1,23 @@
-import { Flex, Link, Button, VStack, Text, Separator, Avatar } from "@chakra-ui/react";
+import { Flex, Link, Button, VStack, Text, Separator, Avatar, Box } from "@chakra-ui/react";
 import { useState, useEffect, useContext } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../../api/services/auth.service";
 import { profileService, UserProfile, getAvatarUrl } from "../../../api/services/profile.service";
 import AppContext from "../../../core/app-context";
+import { AppLanguageSelect } from "../../../components/app-language-select";
+import type { AppLocale } from "../../../i18n/app-locales";
 
 type UserMenuProps = {
   onOpenLoginModal?: (mode: 'login' | 'register') => void;
 };
 
-const INTERFACE_LANG_EN = 'en';
-const INTERFACE_LANG_NL = 'nl';
-
 export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
   const navigate = useNavigate();
-  const { language, setUserPreferredLanguage } = useContext(AppContext);
+  const { appLanguage, setAppLanguage } = useContext(AppContext);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  const interfaceLang = language === 'nl' ? INTERFACE_LANG_NL : INTERFACE_LANG_EN;
-  const setInterfaceLang = (lang: string) => setUserPreferredLanguage?.(lang) ?? undefined;
 
   const checkAuth = async () => {
     const token = authService.getAccessToken();
@@ -73,27 +69,15 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
   };
 
   const languageToggle = (
-    <Flex gap={2} alignItems="center" flexWrap="wrap">
-      <Text fontSize="sm" color="gray.600" mr={1}>
-        <FormattedMessage id="language" defaultMessage="Language" />:
+    <Box>
+      <Text fontSize="sm" color="gray.600" mb={1}>
+        <FormattedMessage id="app_language" defaultMessage="App language" />
       </Text>
-      <Button
-        size="sm"
-        variant={interfaceLang === INTERFACE_LANG_EN ? 'solid' : 'outline'}
-        colorPalette={interfaceLang === INTERFACE_LANG_EN ? 'primary' : 'gray'}
-        onClick={() => setInterfaceLang(INTERFACE_LANG_EN)}
-      >
-        English
-      </Button>
-      <Button
-        size="sm"
-        variant={interfaceLang === INTERFACE_LANG_NL ? 'solid' : 'outline'}
-        colorPalette={interfaceLang === INTERFACE_LANG_NL ? 'primary' : 'gray'}
-        onClick={() => setInterfaceLang(INTERFACE_LANG_NL)}
-      >
-        Nederlands
-      </Button>
-    </Flex>
+      <AppLanguageSelect
+        value={appLanguage || 'en'}
+        onChange={(locale: AppLocale) => setAppLanguage?.(locale)}
+      />
+    </Box>
   );
 
   if (!isAuthenticated) {

@@ -28,6 +28,7 @@ import { loadLanguages, type Language } from '../api/languages';
 import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
 import { CountrySelect } from '../components/CountrySelect';
 import { SpeciesLanguageLabel } from '../components/SpeciesLanguageLabel';
+import { AppLanguagePicker } from '../components/AppLanguagePicker';
 import { colors } from '../theme';
 
 export function ProfileScreen() {
@@ -201,11 +202,11 @@ export function ProfileScreen() {
       await updateProfile({
         username: username.trim() || undefined,
         language: language || undefined,
+        app_language: locale,
         timezone: timezone?.trim() || undefined,
         country_code: country?.code ?? undefined,
         receive_updates: receiveUpdates,
       });
-      const speciesCode = (language || 'en').trim();
       const updated = await getProfile();
       setProfile(updated);
       setUsername(updated.username);
@@ -321,7 +322,13 @@ export function ProfileScreen() {
         editable={false}
         placeholderTextColor={colors.primary[500]}
       />
-      <Text style={styles.label}>{t('species_language_names')}</Text>
+      <Text style={styles.label}>{t('app_language')}</Text>
+      <Text style={styles.switchHint}>{t('app_language_hint')}</Text>
+      <View style={styles.appLanguageWrap}>
+        <AppLanguagePicker value={locale} onChange={setLocale} />
+      </View>
+      <Text style={styles.label}>{t('bird_name_language')}</Text>
+      <Text style={styles.switchHint}>{t('bird_name_language_hint')}</Text>
       <TouchableOpacity style={styles.selectButton} onPress={() => setLanguageModalVisible(true)}>
         <SpeciesLanguageLabel code={language} label={languageLabel} />
       </TouchableOpacity>
@@ -501,6 +508,7 @@ const styles = StyleSheet.create({
     color: colors.primary[50],
   },
   label: { fontSize: 16, fontWeight: '600', color: colors.primary[800], marginTop: 16, marginBottom: 8 },
+  appLanguageWrap: { marginBottom: 8 },
   input: {
     borderWidth: 1,
     borderColor: colors.primary[300],

@@ -1,0 +1,25 @@
+import { matchAppLocale, guessAppLocaleFromDevice, resolveAppLocale } from '../i18n/app-locales';
+
+describe('app locale matching', () => {
+  test('maps device tags onto supported locales', () => {
+    expect(matchAppLocale('es-MX')).toBe('es');
+    expect(matchAppLocale('fr_CA')).toBe('fr');
+    expect(matchAppLocale('de-AT')).toBe('de');
+    expect(matchAppLocale('pt-BR')).toBe('pt-BR');
+    expect(matchAppLocale('pt')).toBe('pt-BR');
+    expect(matchAppLocale('ja-JP')).toBe('ja');
+    expect(matchAppLocale('nl-BE')).toBe('nl');
+    expect(matchAppLocale('en-GB')).toBe('en');
+    expect(matchAppLocale('xx')).toBeNull();
+  });
+
+  test('guesses English when the device tag is unknown', () => {
+    expect(guessAppLocaleFromDevice('zh-CN')).toBe('en');
+  });
+
+  test('prefers profile, then stored, then device', () => {
+    expect(resolveAppLocale({ profileAppLanguage: 'fr', stored: 'nl', deviceTag: 'de' })).toBe('fr');
+    expect(resolveAppLocale({ profileAppLanguage: '', stored: 'nl', deviceTag: 'de' })).toBe('nl');
+    expect(resolveAppLocale({ profileAppLanguage: '', stored: '', deviceTag: 'ja-JP' })).toBe('ja');
+  });
+});

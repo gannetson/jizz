@@ -40,8 +40,8 @@ function stepLabel(row: CountryChallengeLeaderboardRow): string {
 
 export function CountryChallengeLeaderboardPage() {
   const intl = useIntl();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const { countries } = UseCountries();
   const countriesList = Array.isArray(countries) ? countries : [];
   const [country, setCountry] = useState<Country | null>(null);

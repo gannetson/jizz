@@ -24,8 +24,8 @@ import { format } from "date-fns";
 export const GameDetailPage = () => {
   const navigate = useNavigate();
   const { token } = useParams<{ token: string }>();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const [game, setGame] = useState<GameDetailWithAnswers | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

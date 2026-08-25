@@ -10,7 +10,11 @@ import {IntlProvider} from "react-intl";
 
 import enMessages from './locales/en.json';
 import nlMessages from './locales/nl.json';
-import laMessages from './locales/la.json';
+import esMessages from './locales/es.json';
+import frMessages from './locales/fr.json';
+import deMessages from './locales/de.json';
+import ptBRMessages from './locales/pt-BR.json';
+import jaMessages from './locales/ja.json';
 import MultiPlayerGame from "./pages/mpg/multi-player-game"
 import AppContext from "./core/app-context"
 import StartPage from "./pages/start"
@@ -62,18 +66,22 @@ export const MainContent = () => {
     document.title = "Birdr"
 
   }, []);
-  const {language} = useContext(AppContext)
+  const {appLanguage} = useContext(AppContext)
 
-
-  const messages = {
+  const catalogs: Record<string, Record<string, string>> = {
     en: enMessages,
     nl: nlMessages,
-    la: laMessages
+    es: esMessages,
+    fr: frMessages,
+    de: deMessages,
+    'pt-BR': ptBRMessages,
+    ja: jaMessages,
   }
-  const locale  = language === 'nl' ? 'nl' : language === 'la' ? 'la' : language === 'en_US' ? 'en' : 'en';
+  const locale = appLanguage && catalogs[appLanguage] ? appLanguage : 'en';
+  const messages = { ...enMessages, ...(catalogs[locale] || {}) };
 
   return (
-    <IntlProvider locale={locale} messages={messages[locale]}>
+    <IntlProvider locale={locale} defaultLocale="en" messages={messages}>
       <BrowserRouter>
         <AnalyticsTracker />
         <Routes>

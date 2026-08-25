@@ -38,8 +38,8 @@ const APP_STORE_BADGE = '/images/app-store.png';
 const PLAY_STORE_BADGE = '/images/google-play.png';
 
 const HomePage = () => {
-  const { player, loading, language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { player, loading, appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const navigate = useNavigate();
   const [updates, setUpdates] = useState<UpdateListItem[]>([]);
   const [activeJourney, setActiveJourney] = useState<BirdrJourneyListItem | null>(null);

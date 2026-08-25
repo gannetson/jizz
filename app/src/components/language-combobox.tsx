@@ -41,8 +41,8 @@ export const LanguageCombobox = ({
   placeholder,
 }: LanguageComboboxProps) => {
   const intl = useIntl();
-  const { language } = useContext(AppContext);
-  const locale = language === "nl" ? "nl" : "en";
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || "en";
 
   const options = useMemo(() => {
     const withLabels = languages.map((l) => ({

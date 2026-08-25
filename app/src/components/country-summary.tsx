@@ -5,8 +5,8 @@ import {FormattedMessage} from "react-intl";
 import { getCountryDisplayName } from "../data/country-names-nl";
 
 const CountrySummary = () => {
-  const { country, species, language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { country, species, appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
 
 
   const speciesCount = species?.length || 0

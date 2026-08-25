@@ -37,8 +37,8 @@ import { getCountryDisplayName } from '../../data/country-names-nl';
 export function BirdrJourneyListPage() {
   const navigate = useNavigate();
   const intl = useIntl();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const [journeys, setJourneys] = useState<BirdrJourneyListItem[]>([]);
   const [activeCountryCode, setActiveCountryCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

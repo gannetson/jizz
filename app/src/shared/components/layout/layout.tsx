@@ -81,14 +81,7 @@ const Layout = () => {
   }, []);
 
   const handleUserIconClick = () => {
-    if (!isAuthenticated) {
-      // If not logged in, open login modal directly
-      setLoginModalMode('login');
-      onLoginModalOpen();
-    } else {
-      // If logged in, open the drawer
-      onUserMenuOpen();
-    }
+    onUserMenuOpen();
   };
 
   return (

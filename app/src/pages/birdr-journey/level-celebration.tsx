@@ -16,8 +16,8 @@ import { Page } from '../../shared/components/layout';
 export function BirdrJourneyLevelCelebrationPage() {
   const { countryCode = '' } = useParams<{ countryCode: string }>();
   const navigate = useNavigate();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);

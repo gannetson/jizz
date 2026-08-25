@@ -32,8 +32,8 @@ import AppContext from '../../core/app-context';
 
 export function FlocksListPage() {
   const navigate = useNavigate();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
 
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [loading, setLoading] = useState(true);

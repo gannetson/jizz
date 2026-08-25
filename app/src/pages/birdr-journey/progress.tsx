@@ -19,8 +19,8 @@ import { Page } from '../../shared/components/layout';
 export function BirdrJourneyProgressPage() {
   const { countryCode = '' } = useParams<{ countryCode: string }>();
   const navigate = useNavigate();
-  const { language } = useContext(AppContext);
-  const locale = language === 'nl' ? 'nl' : 'en';
+  const { appLanguage } = useContext(AppContext);
+  const locale = appLanguage || 'en';
   const isAuthenticated = !!authService.getAccessToken();
   const [loading, setLoading] = useState(true);
   const [journey, setJourney] = useState<BirdrJourney | null>(null);

@@ -15,6 +15,8 @@ type Props = {
   variant: BirdrLevelImageVariant;
   size?: number;
   style?: StyleProp<ImageStyle>;
+  /** When false, show only the picture (no fill, border, or clipped box). */
+  framed?: boolean;
 };
 
 const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
@@ -25,7 +27,7 @@ const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
   plain: 88,
 };
 
-export function BirdrLevelImage({ iconUrl, sequence, variant, size, style }: Props) {
+export function BirdrLevelImage({ iconUrl, sequence, variant, size, style, framed = true }: Props) {
   const { visualStyle } = useVisualStyle();
   const dimension = size ?? SIZE_BY_VARIANT[variant];
   const isSilhouette = variant === 'next' || variant === 'locked';
@@ -38,7 +40,14 @@ export function BirdrLevelImage({ iconUrl, sequence, variant, size, style }: Pro
   const resolvedUrl = stylishSource || !showArt ? null : resolveMediaUrl(iconUrl);
   const source = stylishSource ?? (resolvedUrl ? { uri: resolvedUrl } : null);
   const levelNumber = journeyLevelNumber(sequence);
-  const radius = 8;
+  const radius = framed ? 8 : 0;
+  const frameBg = !framed
+    ? 'transparent'
+    : source
+      ? colors.primary[100]
+      : isSilhouette
+        ? colors.primary[200]
+        : colors.primary[500];
 
   return (
     <View
@@ -48,9 +57,10 @@ export function BirdrLevelImage({ iconUrl, sequence, variant, size, style }: Pro
           width: dimension,
           height: dimension,
           borderRadius: radius,
-          backgroundColor: source ? colors.primary[100] : isSilhouette ? colors.primary[200] : colors.primary[500],
+          backgroundColor: frameBg,
+          overflow: framed ? 'hidden' : 'visible',
         },
-        variant === 'current' && styles.frameCurrent,
+        framed && variant === 'current' && styles.frameCurrent,
       ]}
     >
       {source ? (

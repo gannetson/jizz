@@ -251,6 +251,7 @@ export function HomeScreen() {
             sequence={activeJourney.current_level?.sequence}
             variant="current"
             size={88}
+            framed={false}
           />
           <View style={styles.journeyHeroText}>
             <Text style={styles.journeyHeroLevel} numberOfLines={2}>

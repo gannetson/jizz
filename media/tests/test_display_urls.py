@@ -49,3 +49,12 @@ class MediaDisplayUrlTests(SimpleTestCase):
             media_display_url(inat),
             'https://inaturalist-open-data.s3.amazonaws.com/photos/604502879/large.jpg',
         )
+
+    def test_wikimedia_video_becomes_480p(self):
+        webm = (
+            'https://upload.wikimedia.org/wikipedia/commons/e/e6/'
+            'Huiszwaluw_zittend_op_schapenhek-4961660.webm'
+        )
+        out = media_display_url(webm)
+        self.assertIn('.480p.vp9.webm', out)
+        self.assertIn('/transcoded/', out)

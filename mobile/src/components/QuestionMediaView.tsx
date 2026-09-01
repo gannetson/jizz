@@ -6,13 +6,12 @@ import {
   Pressable,
   StyleSheet,
   Animated,
-  Platform,
   Image as RnImage,
   type ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { setAudioModeAsync } from 'expo-audio';
+import { PlayableVideo } from './PlayableVideo';
 import { MediaCredits } from './MediaCredits';
 import { FullScreenImageViewerModal } from './FullScreenImageViewerModal';
 import { QuestionMediaLoadingOverlay } from './QuestionMediaLoadingOverlay';
@@ -147,21 +146,7 @@ export function QuestionMediaView({
     onMediaReady();
   }, [onMediaReady]);
 
-  function wikimediaMp4(url: string) {
-    // iOS doesn't support webm, ogv, ogg video; use Wikimedia transcoded mov
-    const match = url.match(/.*commons\/(.+\/.+\/.+\.(webm|ogv|ogg))$/i);
-    if (!match) return url;
-    const path = match[1];
-    const filename = path.split('/').pop();
-    return `https://upload.wikimedia.org/wikipedia/commons/transcoded/${path}/${filename}.144p.mjpeg.mov`;
-  }
-
-  const displayVideoUri =
-    mediaType === 'video' && videoUri
-      ? Platform.OS === 'ios'
-        ? wikimediaMp4(videoUri)
-        : videoUri
-      : null;
+  const displayVideoUri = mediaType === 'video' && videoUri ? videoUri : null;
 
   React.useEffect(() => {
     mediaReadyOnce.current = false;
@@ -200,25 +185,6 @@ export function QuestionMediaView({
       interruptionMode: 'duckOthers',
     }).catch(() => {});
   }, [mediaType, displayVideoUri]);
-
-  const videoPlayer = useVideoPlayer(
-    mediaType === 'video' && displayVideoUri ? displayVideoUri : null,
-    (player) => {
-      if (mediaType === 'video' && displayVideoUri) player.play();
-    }
-  );
-
-  React.useEffect(() => {
-    if (mediaType === 'video' && displayVideoUri && onMediaReady) {
-      const sub = videoPlayer.addListener('statusChange', ({ status }: { status: string }) => {
-        if (status === 'readyToPlay') {
-          setVideoReady(true);
-          fireMediaReady();
-        }
-      });
-      return () => sub.remove();
-    }
-  }, [mediaType, displayVideoUri, videoPlayer, onMediaReady, fireMediaReady]);
 
   React.useEffect(() => {
     if (mediaType === 'audio' && soundUri) fireMediaReady();
@@ -361,12 +327,14 @@ export function QuestionMediaView({
                 videoHeight != null && { height: videoHeight },
               ]}
             >
-              <VideoView
-                key={displayVideoUri}
-                player={videoPlayer}
+              <PlayableVideo
+                uri={displayVideoUri}
                 style={styles.video}
-                nativeControls={true}
-                contentFit="contain"
+                autoPlay
+                onReady={() => {
+                  setVideoReady(true);
+                  fireMediaReady();
+                }}
               />
               {!videoReady ? <QuestionMediaLoadingOverlay /> : null}
             </View>

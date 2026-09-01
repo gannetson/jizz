@@ -9,6 +9,7 @@ import {
 } from '@chakra-ui/react';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import ReactPlayer from 'react-player';
+import { PlayableVideo } from '../../components/playable-video';
 import { FormattedMessage } from 'react-intl';
 import {
   FaCheckCircle,
@@ -377,13 +378,13 @@ export function BirdrJourneyPlayPage() {
           <>
           {gameMedia === 'video' && currentVideo && (
             <Box position="relative" minH="220px">
-              <ReactPlayer
+              <PlayableVideo
                 key={`${question.id}-video-${currentMediaIndex}`}
+                url={currentVideo.url}
+                playing
+                controls
                 width="100%"
                 height="50%"
-                url={currentVideo.url}
-                controls
-                playing
                 onReady={notifyMediaReady}
               />
               {showFeedback && (

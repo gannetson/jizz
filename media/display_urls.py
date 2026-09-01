@@ -12,7 +12,7 @@ from urllib.parse import urlparse, urlunparse
 
 from django.conf import settings
 
-from media.wikimedia_urls import wikimedia_display_url
+from media.wikimedia_urls import wikimedia_display_url, wikimedia_video_playback_url
 
 # Largest first. Only rewrite down, never up (a stored medium stays medium).
 INATURALIST_SIZE_RANK = ('original', 'large', 'medium', 'small', 'thumb', 'square')
@@ -56,10 +56,10 @@ def inaturalist_display_url(url: str | None, size: str | None = None) -> str | N
 
 
 def media_display_url(url: str | None) -> str | None:
-    """Client URL for quiz/API/marketing (Wikimedia thumb, iNat large).
+    """Client URL for quiz/API/marketing (Wikimedia thumb, iNat large, Commons 480p video).
 
     Xeno-Canto audio is not rewritten here: /download cannot be turned into an
     MP3 without the XC sono hash. Playback URLs are stored on Media.url
     (scraper + ``backfill_xeno_canto_mp3_urls``).
     """
-    return inaturalist_display_url(wikimedia_display_url(url))
+    return wikimedia_video_playback_url(inaturalist_display_url(wikimedia_display_url(url)))

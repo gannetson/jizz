@@ -1415,7 +1415,7 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
                 video = videos[media_index]
                 return {
                     'type': 'video',
-                    'url': video.url,
+                    'url': media_display_url(video.url),
                     'link': video.link,
                     'contributor': video.contributor,
                 }

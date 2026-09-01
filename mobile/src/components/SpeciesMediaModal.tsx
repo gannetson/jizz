@@ -13,8 +13,8 @@ import {
   Animated,
   Linking,
 } from 'react-native';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { PlayableVideo } from './PlayableVideo';
 import { MediaCredits } from './MediaCredits';
 import { FlagMediaModal, type FlagMediaInfo } from './FlagMediaModal';
 import { apiUrl } from '../api/config';
@@ -73,16 +73,8 @@ function speciesTitle(s: SpeciesMediaData, lang?: string): string {
 }
 
 function VideoItem({ uri, width }: { uri: string; width: number }) {
-  const player = useVideoPlayer(uri, (p: { play: () => void }) => {
-    // p.play();
-  });
   return (
-    <VideoView
-      player={player}
-      style={[styles.mediaVideo, { width }]}
-      nativeControls={true}
-      contentFit="contain"
-    />
+    <PlayableVideo uri={uri} style={[styles.mediaVideo, { width }]} />
   );
 }
 

@@ -38,6 +38,7 @@ from media.management.commands import standardize_copyright
 from media.first_assertion.run_inference import infer_media_queryset
 from media.models import Media, MediaPrediction
 from media.utils import get_species_media, parse_copyright
+from media.wikimedia_urls import wikimedia_video_playback_url
 
 
 class UserProfileInline(admin.StackedInline):
@@ -268,13 +269,9 @@ class MediaInline(admin.TabularInline):
                 url=obj.url
             )
         elif obj.type == 'video':
-            # Inline video player
             return format_html(
-                '<video controls style="max-width: 200px; max-height: 150px;">'
-                '<source src="{url}" type="video/mp4" />'
-                'Your browser does not support the video tag.'
-                '</video>',
-                url=obj.url
+                '<video controls src="{url}" style="max-width: 200px; max-height: 150px;"></video>',
+                url=wikimedia_video_playback_url(obj.url) or obj.url,
             )
         elif obj.type == 'audio':
             # Inline audio player (omit type: XC /download may be WAV, not MPEG)

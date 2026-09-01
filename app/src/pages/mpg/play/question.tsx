@@ -13,6 +13,7 @@ import {
 import React, {useContext, useState, useEffect, useCallback, useRef, useMemo} from "react"
 import { FaHeart, FaHeartBroken } from "react-icons/fa"
 import ReactPlayer from "react-player"
+import { PlayableVideo } from "../../../components/playable-video"
 import WebsocketContext from "../../../core/websocket-context"
 import AppContext, {Answer, Species} from "../../../core/app-context"
 import {SpeciesName} from "../../../components/species-name"
@@ -430,12 +431,12 @@ export const QuestionComponent = () => {
         {gameMedia === 'video' && currentVideo && (
           <>
             <Box position="relative" minH="220px">
-              <ReactPlayer
-                width={'100%'}
-                height={'50%'}
+              <PlayableVideo
                 url={currentVideo.url}
-                controls={true}
-                playing={true}
+                playing
+                controls
+                width="100%"
+                height="50%"
                 onReady={notifyMediaReady}
               />
               {showFeedback && answer != null && (

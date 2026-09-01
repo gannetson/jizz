@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
+from compare.ai_service import comparison_model_name, comparison_prompt_version
 from compare.models import SpeciesComparison
 from jizz.models import (
     Answer,
@@ -60,6 +61,8 @@ class MarketingPagesTests(TestCase):
             summary='Sparrowhawks are smaller, with a squared tail; goshawks are bulkier.',
             detailed_comparison='Size, tail shape and flight style separate the two Accipiters.',
             identification_tips='Look at size against nearby birds, then tail corners.',
+            ai_model=comparison_model_name(),
+            ai_prompt_version=comparison_prompt_version(),
         )
 
     def test_legacy_home_redirects_to_site(self):
@@ -118,6 +121,11 @@ class MarketingPagesTests(TestCase):
         self.assertEqual(icon['Content-Type'], 'image/gif')
         favicon = self.client.get('/favicon-32x32.png')
         self.assertEqual(favicon.status_code, 200)
+
+    def test_stylish_birdr_images_are_served(self):
+        response = self.client.get('/images/stylish/birdr-waiting.png')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Type'].startswith('image/'))
 
     def test_nav_shows_login_or_username(self):
         html = self.client.get('/site/').content.decode()
@@ -600,16 +608,20 @@ class MarketingPagesTests(TestCase):
             else (extra, self.sparrow)
         )
         pair = f'{low.slug}-vs-{high.slug}'
-        with patch('jizz.marketing.views.get_or_create_species_comparison', return_value=None):
+        with patch('compare.generation.get_or_create_species_comparison') as mock_generate:
             response = self.client.get(f'/site/compare/{pair}/')
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
         self.assertIn(low.name, html)
         self.assertIn(high.name, html)
-        self.assertIn('often mixed up', html)
+        self.assertIn('id="ai-generate"', html)
+        self.assertIn(f'data-species-1="{low.id}"', html)
+        self.assertIn(f'data-species-2="{high.id}"', html)
+        self.assertIn('/api/compare/request/', html)
+        self.assertIn('Birds of the World', html)
+        mock_generate.assert_not_called()
 
-    @patch('jizz.marketing.views.get_or_create_species_comparison')
-    def test_compare_page_renders_generated_markdown(self, mock_generate):
+    def test_compare_page_renders_generated_markdown(self):
         extra = Species.objects.create(name='Little Gull', name_latin='Hydrocoloeus minutus', code='litgul')
         extra.refresh_from_db()
         low, high = (
@@ -617,7 +629,7 @@ class MarketingPagesTests(TestCase):
             if self.sparrow.id < extra.id
             else (extra, self.sparrow)
         )
-        mock_generate.return_value = SpeciesComparison(
+        SpeciesComparison.objects.create(
             comparison_type='species',
             species_1=low,
             species_2=high,
@@ -625,6 +637,8 @@ class MarketingPagesTests(TestCase):
             size_comparison='Almost the same size.',
             identification_tips='- Check primary projection\n- Listen in spring',
             detailed_comparison='',
+            ai_model=comparison_model_name(),
+            ai_prompt_version=comparison_prompt_version(),
         )
         pair = f'{low.slug}-vs-{high.slug}'
         response = self.client.get(f'/site/compare/{pair}/')
@@ -636,7 +650,7 @@ class MarketingPagesTests(TestCase):
         self.assertLess(html.find('Identification tips'), html.find('>Size<'))
         self.assertIn('<li>', html)
         self.assertNotIn('often mixed up', html)
-        mock_generate.assert_called_once()
+        self.assertNotIn('id="ai-generate"', html)
 
     def test_robots_and_sitemaps(self):
         robots = self.client.get('/robots.txt')

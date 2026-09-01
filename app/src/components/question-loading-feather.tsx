@@ -2,6 +2,7 @@ import { Box, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { FloatingFeather } from './floating-feather';
+import { PLAY_IMAGE_STAGE_HEIGHT } from './zoomable-play-image';
 
 type Props = {
   /** Fixed stage height (prevents layout jump vs question media). */
@@ -13,7 +14,7 @@ type Props = {
 /** Shown while waiting for the next question (replaces bird media). */
 export function QuestionLoadingFeather({
   height,
-  minHeight = '280px',
+  minHeight = PLAY_IMAGE_STAGE_HEIGHT,
   showLabel = true,
 }: Props) {
   const stageHeight = height ?? minHeight;

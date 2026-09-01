@@ -9,7 +9,6 @@ import {
   Container,
   Flex,
   Heading,
-  Image,
   Spinner,
   TableBody,
   TableCell,
@@ -34,6 +33,7 @@ import {
   type LeaderboardPayload,
 } from '../../api/flocks';
 import { authService } from '../../api/services/auth.service';
+import { BirdrArtImage } from '../../components/birdr-art-image';
 import { Page } from '../../shared/components/layout';
 
 function LeaderboardTable({
@@ -189,8 +189,8 @@ export function FlockLeaderboardPage() {
             </Flex>
           ) : (
             <>
-              <Image
-                src="/images/birdr-leaderboard.png"
+              <BirdrArtImage
+                filename="birdr-leaderboard.png"
                 alt=""
                 maxW="220px"
                 mx="auto"

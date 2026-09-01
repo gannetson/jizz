@@ -1,14 +1,17 @@
 import { Box, Image, Spinner, Text, VStack } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
+import { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
+import AppContext from '../core/app-context';
+import { birdrImage, showsGameArt } from '../user/visual-style';
 
 export type BirdrMood = 'waiting' | 'success' | 'failed' | 'stressed';
 
-const MOOD_IMAGES: Record<BirdrMood, string> = {
-  waiting: '/images/birdr-waiting.png',
-  success: '/images/birdr-success.png',
-  failed: '/images/birdr-failed.png',
-  stressed: '/images/birdr-stressed.png',
+const MOOD_FILES: Record<BirdrMood, string> = {
+  waiting: 'birdr-waiting.png',
+  success: 'birdr-success.png',
+  failed: 'birdr-failed.png',
+  stressed: 'birdr-stressed.png',
 };
 
 const pulse = keyframes`
@@ -35,19 +38,23 @@ export function BirdrMoodHero({
   showSpinner = false,
   pulse: shouldPulse = false,
 }: Props) {
+  const { visualStyle } = useContext(AppContext);
+  const showArt = showsGameArt(visualStyle);
   return (
     <VStack gap={4} py={6} px={6} align="center">
-      <Box
-        animation={shouldPulse ? `${pulse} 2s ease-in-out infinite` : undefined}
-      >
-        <Image
-          src={MOOD_IMAGES[mood]}
-          alt=""
-          width="220px"
-          height="220px"
-          objectFit="contain"
-        />
-      </Box>
+      {showArt ? (
+        <Box
+          animation={shouldPulse ? `${pulse} 2s ease-in-out infinite` : undefined}
+        >
+          <Image
+            src={birdrImage(MOOD_FILES[mood], visualStyle ?? 'classic')}
+            alt=""
+            width="220px"
+            height="220px"
+            objectFit="contain"
+          />
+        </Box>
+      ) : null}
       {showSpinner && <Spinner size="lg" color="primary.500" />}
       {titleId && (
         <Text fontSize="xl" fontWeight="700" color="primary.800" textAlign="center">

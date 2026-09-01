@@ -1,9 +1,17 @@
 """Species comparison AI prompt/parse and generate-on-demand."""
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
-from compare.ai_service import AIComparisonService, name_search_terms
+from compare.ai_service import (
+    AIComparisonService,
+    ComparisonGenerationError,
+    HANDBOOK_MODEL,
+    NO_GROUNDING_MESSAGE,
+    comparison_model_name,
+    comparison_prompt_version,
+    name_search_terms,
+)
 from compare.generation import get_or_create_species_comparison
 from compare.models import SpeciesComparison, SpeciesTrait
 from jizz.models import Species
@@ -42,6 +50,34 @@ class ComparisonPromptTests(TestCase):
         self.assertIn('Acrocephalus dumetorum', prompt)
         self.assertIn('JSON object', prompt)
         self.assertIn('field mark', prompt)
+        self.assertIn('empty', prompt.lower())
+        self.assertNotIn('well-established field knowledge', prompt)
+        self.assertNotIn('field knowledge', prompt)
+
+    def test_prompt_keeps_similar_species_and_drops_diet(self):
+        prompt = self.service._build_comparison_prompt(
+            {
+                'diet': {'content': 'Eats insects all year.'},
+                'habitat': {'content': 'Reedbeds and damp thickets.'},
+                'similar_species': {'content': 'Told from Blyth’s by longer primary projection.'},
+                'identification': {'content': 'Primary projection long.'},
+            },
+            {
+                'diet': {'content': 'Mostly seeds in winter.'},
+                'identification': {'content': 'Primary projection short.'},
+            },
+            'Marsh Warbler',
+            "Blyth's Reed Warbler",
+            None,
+            'Acrocephalus palustris',
+            'Acrocephalus dumetorum',
+        )
+        self.assertIn('Told from Blyth', prompt)
+        self.assertIn('Primary projection long', prompt)
+        self.assertNotIn('Eats insects', prompt)
+        self.assertNotIn('Reedbeds', prompt)
+        self.assertNotIn('Mostly seeds', prompt)
+        self.assertLess(prompt.find('SIMILAR SPECIES'), prompt.find('IDENTIFICATION'))
 
     def test_generic_marsh_does_not_match_habitat(self):
         mentions = self.service._extract_similar_species_mentions(
@@ -65,6 +101,25 @@ class ComparisonPromptTests(TestCase):
         )
         self.assertTrue(mentions['species_1_mentions_species_2'])
 
+    def test_similar_species_cross_mention_uses_large_window(self):
+        pad = 'alpha ' * 900
+        content = (
+            pad
+            + 'Easily confused with A. dumetorum in worn plumage. '
+            + pad
+        )
+        mentions = self.service._extract_similar_species_mentions(
+            {'similar_species': {'content': content}},
+            {},
+            'Marsh Warbler',
+            "Blyth's Reed Warbler",
+            'Acrocephalus palustris',
+            'Acrocephalus dumetorum',
+        )
+        self.assertTrue(mentions['species_1_mentions_species_2'])
+        context = mentions['species_1_mentions_species_2'][0]['context']
+        self.assertGreater(len(context), 1000)
+
     def test_parse_json_and_assemble_detailed(self):
         raw = """
         {
@@ -84,17 +139,67 @@ class ComparisonPromptTests(TestCase):
         self.assertIn('## SUMMARY', detailed)
         self.assertIn('### Identification Tips', detailed)
         self.assertNotIn('### Behavior', detailed)
+        self.assertLess(
+            detailed.find('### Identification Tips'),
+            detailed.find('### Size'),
+        )
+
+    def test_generate_refuses_without_grounding(self):
+        with patch.object(self.service, '_call_openai') as mock_call:
+            with self.assertRaises(ComparisonGenerationError) as ctx:
+                self.service.generate_species_comparison(
+                    {'plumage': {'content': 'Warm brown.'}},
+                    {'diet': {'content': 'Seeds.'}},
+                    'Alpha',
+                    'Beta',
+                )
+        mock_call.assert_not_called()
+        self.assertEqual(str(ctx.exception), NO_GROUNDING_MESSAGE)
+
+    def test_quota_error_falls_back_to_handbook_extract(self):
+        with patch.object(self.service, '_call_openai') as mock_call:
+            mock_call.side_effect = ComparisonGenerationError(
+                'The AI comparison service is out of credits right now. '
+                'You can still write a better description if you are logged in.'
+            )
+            result = self.service.generate_species_comparison(
+                {
+                    'similar_species': {
+                        'content': 'Easily confused with A. scirpaceus; Marsh has a longer primary projection.',
+                    },
+                    'identification': {'content': 'Primary projection long.'},
+                },
+                {'identification': {'content': 'Primary projection short.'}},
+                'Marsh Warbler',
+                'Common Reed Warbler',
+                'Acrocephalus palustris',
+                'Acrocephalus scirpaceus',
+            )
+        mock_call.assert_called_once()
+        self.assertEqual(self.service.model, HANDBOOK_MODEL)
+        self.assertIn('Birds of the World', result['summary'])
+        self.assertIn('Primary projection', result['identification_tips'])
+        self.assertIn('longer primary projection', result['identification_tips'])
 
 
+@override_settings(COMPARISON_AI_PROMPT_VERSION='v3', COMPARISON_AI_MODEL='gpt-4o')
 class ComparisonGenerationTests(TestCase):
     def setUp(self):
         self.sp_a = Species.objects.create(name='Alpha', name_latin='Alpha a', code='AA01')
         self.sp_b = Species.objects.create(name='Beta', name_latin='Beta b', code='BB02')
+
+    def _identification_traits(self):
         SpeciesTrait.objects.create(
-            species=self.sp_a, category='plumage', title='Colour', content='Warm brown.',
+            species=self.sp_a,
+            category='identification',
+            title='ID',
+            content='Primary projection long.',
         )
         SpeciesTrait.objects.create(
-            species=self.sp_b, category='plumage', title='Colour', content='Grey-brown.',
+            species=self.sp_b,
+            category='identification',
+            title='ID',
+            content='Primary projection short.',
         )
 
     def test_returns_existing_without_calling_ai(self):
@@ -104,14 +209,59 @@ class ComparisonGenerationTests(TestCase):
             species_2=self.sp_b,
             summary='Already done.',
             detailed_comparison='Cached.',
+            ai_model=comparison_model_name(),
+            ai_prompt_version=comparison_prompt_version(),
         )
         with patch('compare.generation.AIComparisonService.generate_species_comparison') as mock_gen:
             result = get_or_create_species_comparison(self.sp_b, self.sp_a)
         self.assertEqual(result.id, existing.id)
         mock_gen.assert_not_called()
 
+    def test_stale_prompt_version_regenerates(self):
+        self._identification_traits()
+        existing = SpeciesComparison.objects.create(
+            comparison_type='species',
+            species_1=self.sp_a,
+            species_2=self.sp_b,
+            summary='Old v1 text.',
+            detailed_comparison='Stale.',
+            ai_model='gpt-4o-mini',
+            ai_prompt_version='v1',
+        )
+        with patch('compare.generation.AIComparisonService.generate_species_comparison') as mock_gen:
+            mock_gen.return_value = {
+                'summary': 'Wing formula is safer.',
+                'detailed_comparison': '## SUMMARY\nWing formula is safer.',
+                'size_comparison': '',
+                'plumage_comparison': '',
+                'behavior_comparison': '',
+                'habitat_comparison': '',
+                'vocalization_comparison': '',
+                'identification_tips': 'Check primary projection.',
+            }
+            result = get_or_create_species_comparison(self.sp_a, self.sp_b, scrape=False)
+        mock_gen.assert_called_once()
+        self.assertEqual(result.id, existing.id)
+        self.assertEqual(result.summary, 'Wing formula is safer.')
+        self.assertEqual(result.ai_prompt_version, comparison_prompt_version())
+        self.assertEqual(result.ai_model, comparison_model_name())
+
+    def test_refuses_when_both_species_lack_grounding_traits(self):
+        SpeciesTrait.objects.create(
+            species=self.sp_a, category='plumage', title='Colour', content='Warm brown.',
+        )
+        SpeciesTrait.objects.create(
+            species=self.sp_b, category='diet', title='Food', content='Seeds.',
+        )
+        with patch('compare.generation.AIComparisonService.generate_species_comparison') as mock_gen:
+            with self.assertRaises(ComparisonGenerationError) as ctx:
+                get_or_create_species_comparison(self.sp_a, self.sp_b, scrape=False)
+        mock_gen.assert_not_called()
+        self.assertEqual(str(ctx.exception), NO_GROUNDING_MESSAGE)
+
     @patch('compare.generation.AIComparisonService.generate_species_comparison')
     def test_creates_canonical_pair(self, mock_gen):
+        self._identification_traits()
         mock_gen.return_value = {
             'summary': 'Alpha is warmer.',
             'detailed_comparison': '## SUMMARY\nAlpha is warmer.',
@@ -128,8 +278,27 @@ class ComparisonGenerationTests(TestCase):
         self.assertEqual(result.species_1_id, low.id)
         self.assertEqual(result.species_2_id, high.id)
         self.assertEqual(result.summary, 'Alpha is warmer.')
-        self.assertEqual(result.ai_prompt_version, 'v2')
+        self.assertEqual(result.ai_prompt_version, comparison_prompt_version())
+        self.assertEqual(result.ai_prompt_version, 'v3')
         mock_gen.assert_called_once()
+
+    @patch('compare.ai_service.AIComparisonService._call_openai')
+    def test_quota_error_saves_handbook_extract(self, mock_call):
+        self._identification_traits()
+        mock_call.side_effect = ComparisonGenerationError(
+            'The AI comparison service is out of credits right now.'
+        )
+        result = get_or_create_species_comparison(self.sp_a, self.sp_b, scrape=False)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.ai_model, HANDBOOK_MODEL)
+        self.assertTrue(result.summary)
+        self.assertIn('Primary projection', result.identification_tips)
+        mock_call.assert_called_once()
+
+        with patch('compare.generation.AIComparisonService.generate_species_comparison') as mock_gen:
+            cached = get_or_create_species_comparison(self.sp_a, self.sp_b, scrape=False)
+        self.assertEqual(cached.id, result.id)
+        mock_gen.assert_not_called()
 
 
 class ComparisonMarkdownTests(TestCase):

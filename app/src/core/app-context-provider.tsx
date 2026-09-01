@@ -27,6 +27,12 @@ import {
   resolveAppLocale,
   type AppLocale,
 } from '../i18n/app-locales';
+import {
+  parseVisualStyle,
+  readStoredVisualStyle,
+  writeStoredVisualStyle,
+  type VisualStyle,
+} from '../user/visual-style';
 
 type Props = {
   children: ReactNode;
@@ -85,6 +91,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
   }, []);
   const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [visualStyle, setVisualStyleState] = useState<VisualStyle>(() => readStoredVisualStyle())
+  const setVisualStyle = useCallback((style: VisualStyle) => {
+    const next = parseVisualStyle(style);
+    setVisualStyleState(next);
+    writeStoredVisualStyle(next);
+  }, []);
 
   const playerToken = localStorage.getItem('player-token')
   const gameToken = localStorage.getItem('game-token')
@@ -167,6 +179,11 @@ const AppContextProvider: FC<Props> = ({children}) => {
             localStorage.setItem(APP_LOCALE_STORAGE_KEY, nextApp);
           } catch {
             /* ignore */
+          }
+          if (p.visual_style) {
+            const nextStyle = parseVisualStyle(p.visual_style);
+            setVisualStyleState(nextStyle);
+            writeStoredVisualStyle(nextStyle);
           }
         })
         .catch(() => {
@@ -467,6 +484,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setAppLanguage,
       setUserPreferredLanguage: setAppLanguage,
       speciesLanguage,
+      visualStyle,
+      setVisualStyle,
       multiplayer,
       setMultiplayer,
       mediaType,

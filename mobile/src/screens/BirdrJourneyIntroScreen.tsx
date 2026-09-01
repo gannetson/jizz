@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +12,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
 import { getLevelAsset } from '../constants/birdrLevels';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 
 type NavParams = {
   BirdrJourneyIntro: undefined;
@@ -23,6 +24,7 @@ type NavParams = {
 export function BirdrJourneyIntroScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<NavParams>>();
   const { t } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const { isAuthenticated } = useAuth();
 
   const goCountry = () => navigation.navigate('BirdrJourneyCountry');
@@ -31,7 +33,7 @@ export function BirdrJourneyIntroScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBand}>
         <View style={styles.heroImageWrap}>
-          <Image source={getLevelAsset(0)} style={styles.heroImage} resizeMode="contain" />
+          <GameArtImage source={getLevelAsset(0, visualStyle)} style={styles.heroImage} resizeMode="contain" />
         </View>
         <Text style={styles.heroTitle}>{t('birdr_journey_intro_title')}</Text>
         <Text style={styles.heroBody}>{t('birdr_journey_intro_body')}</Text>

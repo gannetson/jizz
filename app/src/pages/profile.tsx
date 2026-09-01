@@ -16,6 +16,7 @@ import {
   Link,
   Switch,
   Flex,
+  Image,
 } from "@chakra-ui/react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -29,11 +30,12 @@ import { ProfileCountrySelect } from "../components/profile-country-select";
 import { AppLanguageSelect } from "../components/app-language-select";
 import type { AppLocale } from "../i18n/app-locales";
 import AppContext from "../core/app-context";
+import { parseVisualStyle, type VisualStyle } from "../user/visual-style";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const intl = useIntl();
-  const { setAppLanguage: persistAppLanguage } = useContext(AppContext);
+  const { setAppLanguage: persistAppLanguage, visualStyle: contextVisualStyle, setVisualStyle } = useContext(AppContext);
   const { countries } = UseCountries();
   const { languages } = UseLanguages();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -51,6 +53,7 @@ export const ProfilePage = () => {
   const [appLanguage, setAppLanguage] = useState<AppLocale>("en");
   const [timezone, setTimezone] = useState("Europe/Amsterdam");
   const [countryCode, setCountryCode] = useState<string | null>(null);
+  const [visualStyle, setVisualStyleLocal] = useState<VisualStyle>(contextVisualStyle ?? "classic");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -72,6 +75,7 @@ export const ProfilePage = () => {
         setAppLanguage((profileData.app_language as AppLocale) || "en");
         setTimezone(profileData.timezone || "Europe/Amsterdam");
         setCountryCode(profileData.country_code || null);
+        setVisualStyleLocal(parseVisualStyle(profileData.visual_style));
       } catch (err: any) {
         setError(err.message || "Failed to load profile");
         if (err.message?.includes("401") || err.message?.includes("Unauthorized")) {
@@ -147,6 +151,10 @@ export const ProfilePage = () => {
         updateData.timezone = timezone?.trim() || "Europe/Amsterdam";
       }
 
+      if (visualStyle !== parseVisualStyle(profile?.visual_style)) {
+        updateData.visual_style = visualStyle;
+      }
+
       if (Object.keys(updateData).length === 0) {
         setSuccess("No changes to save");
         setSaving(false);
@@ -168,6 +176,8 @@ export const ProfilePage = () => {
       setAppLanguage((updatedProfile.app_language as AppLocale) || "en");
       setTimezone(updatedProfile.timezone ?? "Europe/Amsterdam");
       setCountryCode(updatedProfile.country_code || null);
+      setVisualStyleLocal(parseVisualStyle(updatedProfile.visual_style));
+      setVisualStyle?.(parseVisualStyle(updatedProfile.visual_style));
       setSuccess("Profile updated successfully!");
       
       // Refresh auth state to update username in token if changed
@@ -346,6 +356,79 @@ export const ProfilePage = () => {
                   <Switch.Control />
                 </Switch.Root>
               </Flex>
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label>
+                <FormattedMessage
+                  id="visual_style"
+                  defaultMessage="Game illustrations"
+                />
+              </Field.Label>
+              <HStack
+                gap={2}
+                mt={2}
+                align="stretch"
+                role="radiogroup"
+                aria-label={intl.formatMessage({
+                  id: "visual_style",
+                  defaultMessage: "Game illustrations",
+                })}
+              >
+                {([
+                  { id: "classic" as const, src: "/images/birdr-start-game.png", labelId: "visual_style_bertie", labelDefault: "Bertie" },
+                  { id: "stylish" as const, src: "/images/stylish/birdr-start-game.png?v=2", labelId: "visual_style_classic", labelDefault: "Classic" },
+                  { id: "none" as const, src: null, labelId: "visual_style_none", labelDefault: "None" },
+                ]).map((option) => {
+                  const selected = visualStyle === option.id;
+                  return (
+                    <Box key={option.id} flex={1} minW={0} aspectRatio="1">
+                      <Button
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        w="100%"
+                        h="100%"
+                        p={2}
+                        variant="outline"
+                        borderWidth="2px"
+                        borderRadius="md"
+                        css={{ borderRadius: '8px' }}
+                        borderColor={selected ? "primary.500" : "gray.200"}
+                        bg={selected ? "primary.50" : "white"}
+                        overflow="hidden"
+                        onClick={() => {
+                          setVisualStyleLocal(option.id);
+                          setVisualStyle?.(option.id);
+                        }}
+                      >
+                        <VStack gap={1} w="100%" h="100%" justify="center">
+                          {option.src ? (
+                            <Image
+                              src={option.src}
+                              alt=""
+                              w="80%"
+                              maxH="70%"
+                              objectFit="contain"
+                            />
+                          ) : (
+                            <Box
+                              w="80%"
+                              aspectRatio="1"
+                              maxH="70%"
+                              borderRadius="xl"
+                              bg="primary.100"
+                            />
+                          )}
+                          <Text fontWeight="600" fontSize="sm" color="primary.800">
+                            <FormattedMessage id={option.labelId} defaultMessage={option.labelDefault} />
+                          </Text>
+                        </VStack>
+                      </Button>
+                    </Box>
+                  );
+                })}
+              </HStack>
             </Field.Root>
 
             {/* App language vs bird names */}

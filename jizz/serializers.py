@@ -9,7 +9,7 @@ from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer
     JourneyLevel, JourneyStep, TaxonomicOrder, TaxonomicFamily, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
-from media.wikimedia_urls import wikimedia_display_url
+from media.display_urls import media_display_url
 
 
 def _species_name_for_language(species, language: str | None) -> str:
@@ -42,7 +42,7 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
 
     def get_url(self, obj):
         # Safe no-op for non-Wikimedia / non-image paths (videos, audio).
-        return wikimedia_display_url(obj.url)
+        return media_display_url(obj.url)
 
     def get_link(self, obj):
         if not obj.link:
@@ -68,7 +68,7 @@ class MediaSerializer(serializers.ModelSerializer):
 
     def get_url(self, obj):
         if obj.type == 'image':
-            return wikimedia_display_url(obj.url)
+            return media_display_url(obj.url)
         return obj.url
 
     def get_species_name(self, obj):
@@ -751,7 +751,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'app_language', 'timezone', 'country_code', 'country_name', 'is_staff', 'is_superuser')
+        fields = ('username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url', 'receive_updates', 'language', 'app_language', 'timezone', 'visual_style', 'country_code', 'country_name', 'is_staff', 'is_superuser')
         read_only_fields = ('avatar_url', 'country_code', 'country_name', 'is_staff', 'is_superuser')
 
     def get_avatar_url(self, obj):
@@ -784,6 +784,10 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     language = serializers.CharField(required=False, max_length=10, allow_blank=True)
     app_language = serializers.CharField(required=False, max_length=10, allow_blank=True)
     timezone = serializers.CharField(required=False, max_length=63, allow_blank=True)
+    visual_style = serializers.ChoiceField(
+        required=False,
+        choices=('classic', 'stylish', 'none'),
+    )
     country_code = serializers.CharField(required=False, max_length=10, allow_blank=True, allow_null=True)
 
     def validate_username(self, value):
@@ -855,6 +859,9 @@ class UserProfileUpdateSerializer(serializers.Serializer):
         # Update timezone if provided
         if 'timezone' in validated_data:
             instance.timezone = (validated_data['timezone'] or 'Europe/Amsterdam').strip() or 'Europe/Amsterdam'
+
+        if 'visual_style' in validated_data:
+            instance.visual_style = validated_data['visual_style']
         
         # Update country if provided
         if 'country_code' in validated_data:
@@ -1401,7 +1408,7 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
                 image = images[media_index]
                 return {
                     'type': 'image',
-                    'url': wikimedia_display_url(image.url),
+                    'url': media_display_url(image.url),
                     'link': image.link,
                     'contributor': image.contributor,
                 }

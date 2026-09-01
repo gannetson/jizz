@@ -271,6 +271,7 @@ export function BirdrJourneyListScreen() {
               >
                 <BirdrLevelImage
                   iconUrl={journey.current_level?.icon_url}
+                  sequence={journey.current_level?.sequence}
                   variant={journey.is_champion ? 'current' : 'current'}
                   size={56}
                 />

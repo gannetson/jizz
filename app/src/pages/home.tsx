@@ -19,6 +19,7 @@ import {
 } from '../api/flocks';
 import { authService } from '../api/services/auth.service';
 import { profileService, type UserProfile } from '../api/services/profile.service';
+import { BirdrArtImage } from '../components/birdr-art-image';
 import { BirdrLevelImage } from '../components/birdr-level-image';
 import { Feedback } from '../components/feedback';
 import { UpdateListItemCard } from '../components/updates/update-list-item';
@@ -217,14 +218,17 @@ const HomePage = () => {
               bg="primary.500"
               borderWidth="2px"
               borderColor="primary.400"
+              borderRadius="full"
             >
               <Flex align="center" gap={4} width="full" textAlign="left">
-                <Image
-                  src="/images/birdr-start-game.png"
+                <BirdrArtImage
+                  filename="birdr-start-game.png"
                   alt=""
                   width="88px"
                   height="88px"
                   objectFit="contain"
+                  bg="transparent"
+                  overflow="visible"
                   flexShrink={0}
                 />
                 <Flex direction="column" flex={1} minW={0}>
@@ -255,12 +259,15 @@ const HomePage = () => {
                 bg="primary.800"
                 borderWidth="2px"
                 borderColor="primary.400"
+                borderRadius="full"
               >
                 <Flex align="center" gap={4} width="full" textAlign="left">
                   <BirdrLevelImage
                     iconUrl={activeJourney.current_level?.icon_url}
+                    sequence={activeJourney.current_level?.sequence}
                     variant="current"
                     size={88}
+                    framed={false}
                   />
                   <Flex direction="column" flex={1} minW={0}>
                     <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
@@ -287,14 +294,17 @@ const HomePage = () => {
                 bg="primary.800"
                 borderWidth="2px"
                 borderColor="primary.400"
+                borderRadius="full"
               >
                 <Flex align="center" gap={4} width="full" textAlign="left">
-                  <Image
-                    src="/images/birdr-success.png"
+                  <BirdrArtImage
+                    filename="birdr-success.png"
                     alt=""
                     width="88px"
                     height="88px"
                     objectFit="contain"
+                    bg="transparent"
+                    overflow="visible"
                     flexShrink={0}
                   />
                   <Flex direction="column" flex={1} minW={0}>
@@ -323,19 +333,29 @@ const HomePage = () => {
                 bg="primary.600"
                 borderWidth="2px"
                 borderColor="primary.400"
+                borderRadius="full"
               >
                 <Flex align="center" gap={4} width="full" textAlign="left">
-                  <Image
-                    src={
-                      mainFlock.logo_url || '/images/birdr-leaderboard.png'
-                    }
-                    alt=""
-                    width="96px"
-                    height="64px"
-                    objectFit={mainFlock.logo_url ? 'cover' : 'contain'}
-                    borderRadius={mainFlock.logo_url ? 'md' : undefined}
-                    flexShrink={0}
-                  />
+                  {mainFlock.logo_url ? (
+                    <Image
+                      src={mainFlock.logo_url}
+                      alt=""
+                      width="96px"
+                      height="64px"
+                      objectFit="cover"
+                      borderRadius="md"
+                      flexShrink={0}
+                    />
+                  ) : (
+                    <BirdrArtImage
+                      filename="birdr-leaderboard.png"
+                      alt=""
+                      width="96px"
+                      height="64px"
+                      objectFit="contain"
+                      flexShrink={0}
+                    />
+                  )}
                   <Flex direction="column" flex={1} minW={0}>
                     <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
                       {mainFlock.name}
@@ -361,10 +381,11 @@ const HomePage = () => {
                 bg="primary.600"
                 borderWidth="2px"
                 borderColor="primary.400"
+                borderRadius="full"
               >
                 <Flex align="center" gap={4} width="full" textAlign="left">
-                  <Image
-                    src="/images/birdr-flock-invite.png"
+                  <BirdrArtImage
+                    filename="birdr-flock-invite.png"
                     alt=""
                     width="96px"
                     height="64px"

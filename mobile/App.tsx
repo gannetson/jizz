@@ -12,6 +12,7 @@ import { GameProvider } from './src/context/GameContext';
 import { GameWebSocketProvider } from './src/context/GameWebSocketContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { ProfileProvider } from './src/context/ProfileContext';
+import { VisualStyleProvider } from './src/context/VisualStyleContext';
 import { TranslationProvider } from './src/i18n/TranslationContext';
 import { DeepLinkHandler } from './src/components/DeepLinkHandler';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -50,6 +51,7 @@ export default function App() {
         <AutocompleteDropdownContextProvider>
         <AuthProvider>
           <ProfileProvider>
+            <VisualStyleProvider>
             <GameProvider>
               <TranslationProvider>
                 <GameWebSocketProvider>
@@ -63,6 +65,7 @@ export default function App() {
                 </GameWebSocketProvider>
               </TranslationProvider>
             </GameProvider>
+            </VisualStyleProvider>
           </ProfileProvider>
         </AuthProvider>
         </AutocompleteDropdownContextProvider>

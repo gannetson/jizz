@@ -25,6 +25,7 @@ import AppContext, { Species } from "../core/app-context";
 import { getCountryDisplayName } from "../data/country-names-nl";
 import { SpeciesButton } from "./species-button";
 import { MediaCredits } from "./media-credits";
+import { playPreviewSrc } from "../utils/play-image-url";
 
 const {
   Root: DialogRoot,
@@ -341,7 +342,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: Gam
                                   {question.media_item.type === 'image' && (
                                     <VStack align="stretch" gap={2}>
                                       <Image
-                                        src={question.media_item.url.replace('/1800', '/900')}
+                                        src={playPreviewSrc(question.media_item.url)}
                                         alt={speciesName}
                                         borderRadius="md"
                                         onError={(e) => {

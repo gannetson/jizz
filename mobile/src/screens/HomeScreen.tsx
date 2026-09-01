@@ -15,9 +15,11 @@ import {
 } from '../api/birdrJourney';
 import { listFlocks, pickMainFlock, setStoredMainFlockSlug, type Flock } from '../api/flocks';
 import { BirdrLevelImage } from '../components/BirdrLevelImage';
+import { GameArtImage } from '../components/GameArtImage';
 import { colors } from '../theme';
-import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getMoodImage } from '../constants/birdrMoodImages';
+import { getFlockImage, getStartGameImage } from '../constants/birdrFlockImages';
+import { useVisualStyle } from '../context/VisualStyleContext';
 import { FeedbackForm } from '../components/FeedbackForm';
 import { useSoftUpdateAvailable } from '../hooks/useSoftUpdateAvailable';
 import { resolveMediaUrl } from '../api/config';
@@ -62,6 +64,7 @@ type RootStackParamList = {
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
   const { t, locale } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const { isAuthenticated } = useAuth();
   const { profile, ready: profileReady } = useProfile();
   const softUpdate = useSoftUpdateAvailable();
@@ -221,8 +224,8 @@ export function HomeScreen() {
         testID="home.startNewGame"
         accessibilityLabel={t('start_new_game')}
       >
-        <Image
-          source={require('../../assets/birdr-start-game.png')}
+        <GameArtImage
+          source={getStartGameImage(visualStyle)}
           style={styles.startHeroImage}
           resizeMode="contain"
         />
@@ -245,6 +248,7 @@ export function HomeScreen() {
         >
           <BirdrLevelImage
             iconUrl={activeJourney.current_level?.icon_url}
+            sequence={activeJourney.current_level?.sequence}
             variant="current"
             size={88}
           />
@@ -265,7 +269,7 @@ export function HomeScreen() {
           testID="home.birdrJourney"
           accessibilityLabel={`${t('country_challenge')}, ${t('country_challenge_new_improved')}`}
         >
-          <Image source={BIRDR_MOOD_IMAGES.success} style={styles.journeyNewHeroImage} resizeMode="contain" />
+          <GameArtImage source={getMoodImage('success', visualStyle)} style={styles.journeyNewHeroImage} resizeMode="contain" />
           <View style={styles.journeyHeroText}>
             <Text style={styles.journeyHeroLevel} numberOfLines={2}>
               {t('country_challenge')}
@@ -289,8 +293,8 @@ export function HomeScreen() {
           {flockLogoUri ? (
             <Image source={{ uri: flockLogoUri }} style={styles.flocksHeroLogo} resizeMode="cover" />
           ) : (
-            <Image
-              source={BIRDR_FLOCK_IMAGES.leaderboard}
+            <GameArtImage
+              source={getFlockImage('leaderboard', visualStyle)}
               style={styles.flocksHeroImage}
               resizeMode="contain"
             />
@@ -314,8 +318,8 @@ export function HomeScreen() {
           testID="home.flocks"
           accessibilityLabel={t('flocks_start')}
         >
-          <Image
-            source={BIRDR_FLOCK_IMAGES.invite}
+          <GameArtImage
+            source={getFlockImage('invite', visualStyle)}
             style={styles.flocksHeroImage}
             resizeMode="contain"
           />
@@ -426,7 +430,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[500],
     paddingVertical: 18,
     paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 999,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: colors.primary[400],
@@ -464,7 +468,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[800],
     paddingVertical: 18,
     paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 999,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: colors.primary[400],
@@ -507,7 +511,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[600],
     paddingVertical: 18,
     paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 999,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: colors.primary[400],

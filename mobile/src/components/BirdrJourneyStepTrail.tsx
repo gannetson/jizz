@@ -139,6 +139,7 @@ export function BirdrJourneyStepTrail({ currentLevel, nextLevel, onStepPress, ca
     <View style={styles.trail}>
       <BirdrLevelImage
         iconUrl={currentLevel.icon_url}
+        sequence={currentLevel.sequence}
         variant="current"
         size={140}
       />
@@ -161,6 +162,7 @@ export function BirdrJourneyStepTrail({ currentLevel, nextLevel, onStepPress, ca
           <View style={styles.connector} />
           <BirdrLevelImage
             iconUrl={nextLevel.icon_url}
+            sequence={nextLevel.sequence}
             variant="next"
             size={140}
           />

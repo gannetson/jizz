@@ -15,13 +15,16 @@ import { getFlockInvitePreview, joinFlock, setStoredMainFlockSlug } from '../api
 import { resolveMediaUrl } from '../api/config';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getFlockImage } from '../constants/birdrFlockImages';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 
 export function FlockInviteLandingScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const inviteToken = (route.params as { inviteToken?: string })?.inviteToken;
   const { t, locale } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const { isAuthenticated } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -103,7 +106,7 @@ export function FlockInviteLandingScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Image source={BIRDR_FLOCK_IMAGES.invite} style={styles.heroImage} resizeMode="contain" />
+      <GameArtImage source={getFlockImage('invite', visualStyle)} style={styles.heroImage} resizeMode="contain" />
       <Text style={styles.title}>{t('flock_invite_title')}</Text>
       <Text style={styles.hint}>{t('flock_invite_hint')}</Text>
 

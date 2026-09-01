@@ -15,12 +15,15 @@ import { useTranslation } from '../i18n/TranslationContext';
 import { listFlocks, setStoredMainFlockSlug, type Flock } from '../api/flocks';
 import { getCountryDisplayName } from '../i18n/countryNames';
 import { colors } from '../theme';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getFlockImage } from '../constants/birdrFlockImages';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 import { resolveMediaUrl } from '../api/config';
 
 export function FlockListScreen() {
   const navigation = useNavigation();
   const { t, locale } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const { isAuthenticated } = useAuth();
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,8 +95,8 @@ export function FlockListScreen() {
                   {logoUri ? (
                     <Image source={{ uri: logoUri }} style={styles.cardLogo} resizeMode="cover" />
                   ) : (
-                    <Image
-                      source={BIRDR_FLOCK_IMAGES.leaderboard}
+                    <GameArtImage
+                      source={getFlockImage('leaderboard', visualStyle)}
                       style={styles.cardLogoPlaceholder}
                       resizeMode="contain"
                     />
@@ -123,7 +126,7 @@ export function FlockListScreen() {
         </>
       ) : !loading ? (
         <>
-          <Image source={BIRDR_FLOCK_IMAGES.invite} style={styles.heroImage} resizeMode="contain" />
+          <GameArtImage source={getFlockImage('invite', visualStyle)} style={styles.heroImage} resizeMode="contain" />
           <Text style={styles.hint}>{t('flocks_hint')}</Text>
           <TouchableOpacity
             style={styles.primaryButton}

@@ -11,6 +11,7 @@ export type UserProfile = {
   language: string;
   app_language?: string;
   timezone: string;
+  visual_style?: string;
   country_code: string | null;
   country_name: string | null;
   is_staff?: boolean;
@@ -25,6 +26,7 @@ export type ProfileUpdateData = {
   language?: string;
   app_language?: string;
   timezone?: string;
+  visual_style?: string;
   country_code?: string | null;
 };
 

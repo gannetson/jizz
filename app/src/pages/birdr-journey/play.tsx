@@ -30,7 +30,8 @@ import { AnswerFeedback, normalizeChecklistAdded, normalizeChecklistMissed } fro
 import { FlagMediaButton } from '../../components/flag-media-button';
 import { QuestionLoadingFeather } from '../../components/question-loading-feather';
 import SpeciesCombobox from '../../components/species-combobox';
-import { ZoomablePlayImage } from '../../components/zoomable-play-image';
+import { PLAY_IMAGE_STAGE_HEIGHT, ZoomablePlayImage } from '../../components/zoomable-play-image';
+import { playFullSrc, playPreviewSrc } from '../../utils/play-image-url';
 import { SpeedChallengeTimer } from '../../components/speed-challenge-timer';
 import AppContext, { Answer, Question, Species } from '../../core/app-context';
 import { isStalePlayQuestion } from '../../core/apply-incoming-question';
@@ -177,7 +178,7 @@ export function BirdrJourneyPlayPage() {
     return (
       <Page>
         <Page.Body>
-          <QuestionLoadingFeather minHeight="280px" />
+          <QuestionLoadingFeather />
         </Page.Body>
       </Page>
     );
@@ -187,14 +188,14 @@ export function BirdrJourneyPlayPage() {
     return (
       <Page>
         <Page.Body>
-          <QuestionLoadingFeather minHeight="280px" />
+          <QuestionLoadingFeather />
         </Page.Body>
       </Page>
     );
   }
 
   const mediaLoaderHeight =
-    gameMedia === 'audio' ? '80px' : gameMedia === 'video' ? '220px' : '280px';
+    gameMedia === 'audio' ? '80px' : gameMedia === 'video' ? '220px' : PLAY_IMAGE_STAGE_HEIGHT;
   const showMediaLoader = loadingNextQuestion || !question;
 
   const mediaLength = question ? mediaArrayLengthForQuestion(question, gameMedia) : 0;
@@ -397,11 +398,11 @@ export function BirdrJourneyPlayPage() {
             </Box>
           )}
           {gameMedia === 'images' && currentImage && (
-            <Box position="relative" minH="280px">
+            <Box position="relative" h={PLAY_IMAGE_STAGE_HEIGHT}>
               <ZoomablePlayImage
                 key={`${question.id}-img-${currentMediaIndex}`}
-                previewSrc={currentImage.url.replace('/1800', '/900')}
-                fullSrc={currentImage.url}
+                previewSrc={playPreviewSrc(currentImage.url)}
+                fullSrc={playFullSrc(currentImage.url)}
                 onLoad={notifyMediaReady}
                 onError={(e) => {
                   e.currentTarget.src = '/images/birdr-logo.png';

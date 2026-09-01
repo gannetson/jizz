@@ -10,6 +10,9 @@ import {
 import { FormattedMessage, useIntl } from "react-intl";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
+/** Same height for every in-game photo so questions don't jump. ~400px on a typical laptop. */
+export const PLAY_IMAGE_STAGE_HEIGHT = "clamp(240px, 45vh, 480px)";
+
 export type ZoomablePlayImageProps = {
   previewSrc: string;
   /** Higher-resolution URL for the full-screen viewer (pinch / zoom) */
@@ -32,18 +35,32 @@ export function ZoomablePlayImage({
 
   return (
     <>
-      <Image
-        src={previewSrc}
-        onLoad={onLoad}
-        onError={onError}
-        cursor="pointer"
+      <Box
         w="100%"
+        h={PLAY_IMAGE_STAGE_HEIGHT}
+        bg="transparent"
+        overflow="hidden"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        cursor="pointer"
         onClick={() => setOpen(true)}
         title={intl.formatMessage({
           id: "tap_image_fullscreen",
           defaultMessage: "Click to open full screen — pinch or scroll wheel to zoom",
         })}
-      />
+      >
+        <Image
+          src={previewSrc}
+          onLoad={onLoad}
+          onError={onError}
+          w="100%"
+          h="100%"
+          objectFit="contain"
+          bg="transparent"
+          pointerEvents="none"
+        />
+      </Box>
       <Dialog.Root
         open={open}
         onOpenChange={(e: { open: boolean }) => !e.open && setOpen(false)}
@@ -106,18 +123,20 @@ export function ZoomablePlayImage({
                         justifyContent: "center",
                       }}
                     >
-                      <img
-                        src={fullSrc}
-                        alt=""
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "calc(100vh - 5rem)",
-                          objectFit: "contain",
-                        }}
-                        onError={(e) => {
-                          e.currentTarget.src = "/images/birdr-logo.png";
-                        }}
-                      />
+                      {open ? (
+                        <img
+                          src={fullSrc}
+                          alt=""
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "calc(100vh - 5rem)",
+                            objectFit: "contain",
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.src = "/images/birdr-logo.png";
+                          }}
+                        />
+                      ) : null}
                     </TransformComponent>
                   </TransformWrapper>
                 </Box>

@@ -94,7 +94,7 @@ export function BirdrJourneyProgressPage() {
         </Page.Header>
         <Page.Body>
           <VStack gap={4} py={4}>
-            <BirdrLevelImage iconUrl={currentLevel.icon_url} variant="current" size={200} />
+            <BirdrLevelImage iconUrl={currentLevel.icon_url} sequence={currentLevel.sequence} variant="current" size={200} />
             <Text fontSize="2xl" fontWeight="700" color="primary.800" textAlign="center">
               {currentTitle}
             </Text>

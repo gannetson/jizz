@@ -27,6 +27,7 @@ import {
 } from '../../api/flocks';
 import { authService } from '../../api/services/auth.service';
 import { FlockShareBlock } from '../../components/flocks/share-block';
+import { BirdrArtImage } from '../../components/birdr-art-image';
 import { Page } from '../../shared/components/layout';
 import AppStoreBanner from '../../components/app-store-banner';
 
@@ -121,8 +122,8 @@ export function FlockResultPage() {
         <Container maxW="container.md" py={4}>
           <VStack align="stretch" gap={6}>
             <Box borderWidth="1px" borderRadius="lg" p={6} bg="white" textAlign="center">
-              <Image
-                src="/images/birdr-leaderboard.png"
+              <BirdrArtImage
+                filename="birdr-leaderboard.png"
                 alt=""
                 maxW="220px"
                 mx="auto"

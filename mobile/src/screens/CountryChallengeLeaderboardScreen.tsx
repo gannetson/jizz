@@ -169,7 +169,7 @@ export function CountryChallengeLeaderboardScreen() {
               <Text style={styles.stepText}>{stepLabel(row)}</Text>
             </View>
             <View style={styles.levelIconAside}>
-              <BirdrLevelImage iconUrl={row.level_icon_url} variant="plain" size={64} />
+              <BirdrLevelImage iconUrl={row.level_icon_url} sequence={row.level_index} variant="plain" size={64} />
             </View>
           </View>
         );

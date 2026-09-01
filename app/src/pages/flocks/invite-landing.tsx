@@ -25,6 +25,7 @@ import {
 } from '../../api/flocks';
 import { authService } from '../../api/services/auth.service';
 import { LoginModal } from '../../components/auth/login-modal';
+import { BirdrArtImage } from '../../components/birdr-art-image';
 import { Page } from '../../shared/components/layout';
 import AppStoreBanner from '../../components/app-store-banner';
 
@@ -152,8 +153,8 @@ export function FlockInviteLandingPage() {
       <Page.Body>
         <Container maxW="container.md" py={4}>
           <VStack align="stretch" gap={4}>
-            <Image
-              src="/images/birdr-flock-invite.png"
+            <BirdrArtImage
+              filename="birdr-flock-invite.png"
               alt=""
               maxW="280px"
               mx="auto"

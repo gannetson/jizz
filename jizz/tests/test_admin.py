@@ -16,6 +16,7 @@ from jizz.models import (
     Feedback,
     Language,
 )
+from compare.ai_service import comparison_model_name, comparison_prompt_version
 from compare.models import SpeciesComparison, SpeciesTrait
 
 User = get_user_model()
@@ -307,6 +308,8 @@ class AdminSpeciesActionsTestCase(TestCase):
             species_2=self.species2,
             summary='Existing',
             detailed_comparison='Existing comparison.',
+            ai_model=comparison_model_name(),
+            ai_prompt_version=comparison_prompt_version(),
         )
         response = self.client.post(
             reverse('admin:jizz_species_changelist'),

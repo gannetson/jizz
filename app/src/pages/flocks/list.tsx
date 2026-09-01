@@ -27,6 +27,7 @@ import {
 } from '../../api/flocks';
 import { authService } from '../../api/services/auth.service';
 import { Page } from '../../shared/components/layout';
+import { BirdrArtImage } from '../../components/birdr-art-image';
 import { getCountryDisplayName } from '../../data/country-names-nl';
 import AppContext from '../../core/app-context';
 
@@ -158,8 +159,8 @@ export function FlocksListPage() {
                             objectFit="cover"
                           />
                         ) : (
-                          <Image
-                            src="/images/birdr-leaderboard.png"
+                          <BirdrArtImage
+                            filename="birdr-leaderboard.png"
                             alt=""
                             boxSize="56px"
                             objectFit="contain"
@@ -221,8 +222,8 @@ export function FlocksListPage() {
             </>
           ) : !loading ? (
             <>
-              <Image
-                src="/images/birdr-flock-invite.png"
+              <BirdrArtImage
+                filename="birdr-flock-invite.png"
                 alt=""
                 maxW="240px"
                 mx="auto"

@@ -26,8 +26,9 @@ from compare.community import (
     rendered_parts,
     user_from_request,
 )
-from compare.generation import get_or_create_species_comparison
-from compare.models import CommunityComparison, SpeciesComparison
+from compare.ai_service import HANDBOOK_MODEL
+from compare.generation import comparison_cache_is_current, find_species_comparison
+from compare.models import CommunityComparison
 from jizz.marketing.pages import (
     CMS_INDEX,
     DEFAULT_DESCRIPTION,
@@ -63,7 +64,7 @@ from jizz.marketing.species_index import (
 from jizz.models import Country, Feedback, MarketingPage, Species
 from jizz.quiz_mistake_stats import get_confused_partners_for_species
 from jizz.services.species_cover import species_cover_url
-from media.wikimedia_urls import wikimedia_display_url
+from media.display_urls import media_display_url
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +165,7 @@ def _photo_urls(request, species, limit=2):
     for media in public_image_queryset(species)[:limit]:
         if not media.url:
             continue
-        url = wikimedia_display_url(media.url) or media.url
+        url = media_display_url(media.url) or media.url
         photos.append({
             'url': url,
             'alt': f'{species.name} ({species.name_latin})',
@@ -421,26 +422,12 @@ def _compare_pair_species(pair: str):
     return low, high, canonical_pair
 
 
-def _ai_comparison_for(low, high):
-    comparison = (
-        SpeciesComparison.objects.filter(
-            comparison_type='species',
-            species_1=low,
-            species_2=high,
-        ).first()
-        or SpeciesComparison.objects.filter(
-            comparison_type='species',
-            species_1=high,
-            species_2=low,
-        ).first()
-    )
-    if comparison is None:
-        try:
-            comparison = get_or_create_species_comparison(low, high)
-        except Exception:
-            logger.exception('Failed to generate comparison for %s vs %s', low.name, high.name)
-            comparison = None
-    return comparison
+def _cached_ai_comparison(low, high):
+    """Return a current cached AI comparison, or None. Do not scrape or call OpenAI."""
+    comparison = find_species_comparison(low, high)
+    if comparison and comparison_cache_is_current(comparison) and has_comparison_text(comparison):
+        return comparison
+    return None
 
 
 def _compare_page_response(
@@ -454,11 +441,12 @@ def _compare_page_response(
     form_open=False,
     notice='',
 ):
-    comparison = _ai_comparison_for(low, high)
+    comparison = _cached_ai_comparison(low, high)
     community = published_for_pair(low, high)
     user = user_from_request(request)
     session_user = bool(getattr(request.user, 'is_authenticated', False))
     show_ai = request.GET.get('source') == 'ai' or not community
+    needs_ai_generation = show_ai and not has_comparison_text(comparison)
     active = comparison if show_ai else community
     summary_html, sections, detailed_html = rendered_parts(active)
     if show_ai and not summary_html and not sections and not detailed_html:
@@ -498,6 +486,8 @@ def _compare_page_response(
         practise_href=f'/practice/pair/{pair}',
         showing_ai=show_ai,
         has_ai=has_comparison_text(comparison),
+        handbook_extract=bool(comparison and (comparison.ai_model or '') == HANDBOOK_MODEL),
+        needs_ai_generation=needs_ai_generation,
         community=community,
         author_name=(community.author_name if community else ''),
         can_edit=can_edit,

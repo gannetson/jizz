@@ -17,19 +17,31 @@ class ComparisonGenerationError(Exception):
     """Raised when a comparison cannot be generated."""
 
 
-def _friendly_openai_error(exc: BaseException) -> str:
-    text = str(exc).lower()
-    if any(
+def _exception_text(exc: BaseException) -> str:
+    parts = [str(exc)]
+    cause = getattr(exc, '__cause__', None)
+    if cause is not None:
+        parts.append(str(cause))
+    return ' '.join(parts).lower()
+
+
+def _is_quota_error(exc: BaseException) -> bool:
+    text = _exception_text(exc)
+    return any(
         token in text
         for token in (
             'insufficient_quota',
             'credit_balance_exhausted',
-            'credit_balance_exhausted',
             'no credits remaining',
-            'you have no credits remaining',
-            '429',
+            'exceeded your current quota',
+            'out of credits',
         )
-    ):
+    )
+
+
+def _friendly_openai_error(exc: BaseException) -> str:
+    text = _exception_text(exc)
+    if _is_quota_error(exc):
         return (
             'The AI comparison service is out of credits right now. '
             'You can still write a better description if you are logged in.'
@@ -38,8 +50,15 @@ def _friendly_openai_error(exc: BaseException) -> str:
         return 'The AI comparison service is busy. Please try again in a moment.'
     return 'Could not generate the comparison. Please try again.'
 
-PROMPT_VERSION = 'v2'
+PROMPT_VERSION = 'v3'
 DEFAULT_MODEL = 'gpt-4o'
+HANDBOOK_MODEL = 'botw-extract'
+GROUNDING_CATEGORIES = ('identification', 'similar_species')
+NO_GROUNDING_MESSAGE = (
+    'A handbook comparison is not available for this pair yet '
+    '(no Birds of the World identification notes). '
+    'You can still write a better description if you are logged in.'
+)
 
 # First tokens that match too many unrelated passages in Birds of the World text.
 _GENERIC_NAME_TOKENS = frozenset({
@@ -51,34 +70,23 @@ _GENERIC_NAME_TOKENS = frozenset({
     'yellow',
 })
 
+# Only diagnostic handbook sections go into the prompt (not diet/range essays).
 _TRAIT_ORDER = (
-    'identification',
     'similar_species',
+    'identification',
     'measurements',
-    'size',
-    'plumage',
     'vocalization',
-    'habitat',
-    'behavior',
-    'diet',
-    'distribution',
-    'other',
-    'taxonomy',
+    'plumage',
+    'size',
 )
 
 _TRAIT_CHAR_LIMITS = {
-    'similar_species': 2200,
-    'identification': 2200,
+    'similar_species': 12000,
+    'identification': 5000,
     'measurements': 1400,
-    'plumage': 1400,
     'vocalization': 1400,
-    'size': 1000,
-    'habitat': 1000,
-    'behavior': 1000,
-    'diet': 800,
-    'distribution': 800,
-    'other': 800,
-    'taxonomy': 400,
+    'plumage': 800,
+    'size': 800,
 }
 
 _JSON_KEYS = (
@@ -95,14 +103,27 @@ SYSTEM_PROMPT = (
     'You are a field-guide editor for Birdr, writing for birdwatchers who need '
     'to tell two similar species apart in the field. Be precise, practical and '
     'honest about uncertainty. Prefer diagnostic, observable differences over '
-    'encyclopedic lists. Do not invent measurements, ranges or voice details. '
+    'encyclopedic lists. Only contrast these two species. Do not invent '
+    'measurements, ranges, songs or field marks that are not in the notes. '
     'If sources conflict, prefer Birds of the World similar-species passages. '
-    'Reply with a JSON object only.'
+    'Leave a section empty when it is not diagnostic. Reply with a JSON object only.'
 )
 
 
 def comparison_model_name() -> str:
     return (getattr(settings, 'COMPARISON_AI_MODEL', None) or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+
+
+def comparison_prompt_version() -> str:
+    return (getattr(settings, 'COMPARISON_AI_PROMPT_VERSION', None) or PROMPT_VERSION).strip() or PROMPT_VERSION
+
+
+def has_grounding_traits(traits: dict | None) -> bool:
+    """True when handbook identification or similar-species text is present."""
+    for key in GROUNDING_CATEGORIES:
+        if _trait_content((traits or {}).get(key)).strip():
+            return True
+    return False
 
 
 def name_search_terms(name: str, latin_name: str | None = None) -> list[str]:
@@ -166,7 +187,7 @@ class AIComparisonService:
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = (api_key or getattr(settings, 'OPENAI_API_KEY', None) or '').strip()
         self.model = model or comparison_model_name()
-        self.prompt_version = getattr(settings, 'COMPARISON_AI_PROMPT_VERSION', None) or PROMPT_VERSION
+        self.prompt_version = comparison_prompt_version()
         if not self.api_key:
             logger.warning('OPENAI_API_KEY is not set; species comparisons cannot be generated')
 
@@ -215,6 +236,8 @@ class AIComparisonService:
     ) -> Dict[str, str]:
         latin_1 = species_1_latin or species_1_traits.get('name_latin') or None
         latin_2 = species_2_latin or species_2_traits.get('name_latin') or None
+        if not has_grounding_traits(species_1_traits) and not has_grounding_traits(species_2_traits):
+            raise ComparisonGenerationError(NO_GROUNDING_MESSAGE)
 
         similar_species_info = self._extract_similar_species_mentions(
             species_1_traits,
@@ -241,7 +264,27 @@ class AIComparisonService:
             len(prompt),
         )
 
-        raw = self._call_openai(prompt, max_tokens=3500, json_object=True)
+        try:
+            raw = self._call_openai(prompt, max_tokens=3500, json_object=True)
+        except ComparisonGenerationError as exc:
+            if not _is_quota_error(exc):
+                raise
+            logger.warning(
+                'OpenAI quota exhausted; assembling handbook extract for %s vs %s',
+                species_1_name,
+                species_2_name,
+            )
+            parsed = self._handbook_extract(
+                species_1_traits,
+                species_2_traits,
+                species_1_name,
+                species_2_name,
+                similar_species_info,
+            )
+            self.model = HANDBOOK_MODEL
+            parsed['detailed_comparison'] = self._assemble_detailed(parsed)
+            return parsed
+
         if not raw:
             raise ComparisonGenerationError(
                 'The comparison model returned an empty response. Please try again.'
@@ -283,8 +326,9 @@ class AIComparisonService:
                 match = re.search(pattern, content_str, re.IGNORECASE)
                 if not match:
                     continue
-                start = max(0, match.start() - 280)
-                end = min(len(content_str), match.end() + 280)
+                window = 3000 if section_name == 'similar_species' else 800
+                start = max(0, match.start() - window)
+                end = min(len(content_str), match.end() + window)
                 mentions.append({
                     'section': section_name,
                     'matched_variation': variation,
@@ -316,16 +360,86 @@ class AIComparisonService:
 
         return result
 
+    def _handbook_extract(
+        self,
+        species_1_traits: Dict,
+        species_2_traits: Dict,
+        species_1_name: str,
+        species_2_name: str,
+        similar_species_info: Dict | None = None,
+    ) -> Dict[str, str]:
+        """Assemble a comparison from BotW notes when the chat model is unavailable."""
+        parsed = {key: '' for key in _JSON_KEYS}
+        info = similar_species_info or {}
+        mention_bits = []
+        for source_name, mentions, other_name in (
+            (species_1_name, info.get('species_1_mentions_species_2') or [], species_2_name),
+            (species_2_name, info.get('species_2_mentions_species_1') or [], species_1_name),
+        ):
+            for mention in mentions:
+                context = (mention.get('context') or '').strip()
+                if not context:
+                    continue
+                mention_bits.append(f'**{source_name}** on {other_name}: {context}')
+
+        tip_parts = []
+        if mention_bits:
+            tip_parts.append(
+                '### Pairwise notes from Birds of the World\n\n'
+                + '\n\n'.join(f'- {bit}' for bit in mention_bits)
+            )
+        for name, traits in (
+            (species_1_name, species_1_traits),
+            (species_2_name, species_2_traits),
+        ):
+            similar = _clip(_trait_content(traits.get('similar_species')), 2500)
+            ident = _clip(_trait_content(traits.get('identification')), 1800)
+            species_bits = []
+            if similar:
+                species_bits.append(f'**Similar species:** {similar}')
+            if ident:
+                species_bits.append(f'**Identification:** {ident}')
+            if species_bits:
+                tip_parts.append(f'### {name}\n\n' + '\n\n'.join(species_bits))
+        parsed['identification_tips'] = '\n\n'.join(tip_parts)
+
+        if mention_bits:
+            lead = re.sub(r'\*\*[^*]+\*\*', '', mention_bits[0]).strip(' :')
+            parsed['summary'] = _clip(
+                f'{species_1_name} and {species_2_name} are compared from Birds of the World '
+                f'similar-species and identification notes. {lead}',
+                500,
+            )
+        else:
+            parsed['summary'] = (
+                f'{species_1_name} and {species_2_name} can be separated using the Birds of the World '
+                f'identification notes below. This is a handbook extract, not a rewritten field-guide card.'
+            )
+
+        for dest, category in (
+            ('size_comparison', 'measurements'),
+            ('plumage_comparison', 'plumage'),
+            ('vocalization_comparison', 'vocalization'),
+        ):
+            first = _clip(_trait_content(species_1_traits.get(category)), 700)
+            second = _clip(_trait_content(species_2_traits.get(category)), 700)
+            if not first and not second:
+                continue
+            chunks = []
+            if first:
+                chunks.append(f'**{species_1_name}:** {first}')
+            if second:
+                chunks.append(f'**{species_2_name}:** {second}')
+            parsed[dest] = '\n\n'.join(chunks)
+        return parsed
+
     def _format_traits(self, traits_dict: Dict) -> str:
         chunks = []
-        seen = set()
-        keys = [key for key in _TRAIT_ORDER if key in traits_dict]
-        keys.extend(key for key in traits_dict if key not in seen and key not in _TRAIT_ORDER and key != 'name_latin')
-        for category in keys:
-            if category in seen or category == 'name_latin':
-                continue
-            seen.add(category)
-            content = _clip(_trait_content(traits_dict.get(category)), _TRAIT_CHAR_LIMITS.get(category, 900))
+        for category in _TRAIT_ORDER:
+            content = _clip(
+                _trait_content(traits_dict.get(category)),
+                _TRAIT_CHAR_LIMITS.get(category, 900),
+            )
             if not content:
                 continue
             chunks.append(f'{category.upper().replace("_", " ")}:\n{content}')
@@ -381,7 +495,9 @@ SPECIES B: {label_2}
 {species_2_text}
 {expert_block}
 
-Write for someone with binoculars, not a monograph. Lead with the most reliable field mark in the summary. If the two species are close relatives, compare structure first (bill, primary projection / wing formula, tail length, supercilium shape) before colour tone — colour is often the least reliable mark. Then cover song and call when they differ. If a feature is similar, say so in one clause and move on. Do not invent measurements, songs or ranges that are not in the notes. If notes are thin, use well-established field knowledge of these taxa and say when you are unsure.
+Write for someone with binoculars, not a monograph. Only contrast these two species. Lead with the most reliable field mark in the summary. If they are close relatives, compare structure first (bill, primary projection / wing formula, tail length, supercilium shape) before colour tone — colour is often the least reliable mark. Then cover song and call when the notes show they differ. If a feature is similar, say so in one clause and move on.
+
+Do not invent measurements, songs, ranges or field marks. If the notes do not support a section, leave that JSON value empty — do not pad with generic natural history.
 
 Identification tips should be ordered checks (most reliable first), including season, age or sex pitfalls when the sources mention them. You may cite Birds of the World once when using those expert passages. Do not use headings like "AI Field Diagnostics".
 
@@ -393,7 +509,7 @@ Return a JSON object with these string keys (markdown allowed inside strings: bo
 - habitat_comparison
 - vocalization_comparison
 - identification_tips
-Use empty strings only when the sources truly have nothing useful."""
+Empty strings are allowed and preferred when a section is not diagnostic."""
 
     def _parse_json_response(self, response: str) -> Dict[str, str]:
         text = (response or '').strip()
@@ -424,12 +540,12 @@ Use empty strings only when the sources truly have nothing useful."""
         if parsed.get('summary'):
             parts.append(f"## SUMMARY\n{parsed['summary']}")
         for heading, key in (
+            ('Identification Tips', 'identification_tips'),
             ('Size', 'size_comparison'),
             ('Plumage', 'plumage_comparison'),
             ('Behavior', 'behavior_comparison'),
             ('Habitat', 'habitat_comparison'),
             ('Vocalization', 'vocalization_comparison'),
-            ('Identification Tips', 'identification_tips'),
         ):
             if parsed.get(key):
                 parts.append(f'### {heading}\n{parsed[key]}')

@@ -27,6 +27,7 @@ import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
 import { answersEnabledForMedia } from '../game/mediaAnswerGate';
 import { resolvePlayMediaType } from '../utils/questionMediaIndex';
+import { playPreviewSrc } from '../utils/playImageUrl';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { ComparisonButton } from '../components/ComparisonButton';
@@ -298,7 +299,9 @@ export function ChallengePlayScreen() {
   const video = question?.videos?.[currentMediaIdx];
   const soundForAudio = question?.sounds?.[currentMediaIdx];
   const soundUri = soundForAudio?.url ? (soundForAudio.url.startsWith('http') ? soundForAudio.url : apiUrl(soundForAudio.url)) : null;
-  const imageUri = image?.url ? (image.url.startsWith('http') ? image.url : apiUrl(image.url)).replace('/1800', '/900') : null;
+  const imageUri = image?.url
+    ? playPreviewSrc(image.url.startsWith('http') ? image.url : apiUrl(image.url))
+    : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
 
   const advanceToNextMedia = useCallback(() => {

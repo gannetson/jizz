@@ -9,7 +9,9 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { BIRDR_MOOD_IMAGES, type BirdrMood } from '../constants/birdrMoodImages';
+import { getMoodImage, type BirdrMood } from '../constants/birdrMoodImages';
+import { useVisualStyle } from '../context/VisualStyleContext';
+import { showsGameArt } from '../lib/visualStyle';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { colors } from '../theme';
 
@@ -33,18 +35,20 @@ export function BirdrMoodHero({
   style,
 }: Props) {
   const pulseStyle = usePulsatingAnimation(!!pulse);
-  const image = (
+  const { visualStyle } = useVisualStyle();
+  const showArt = showsGameArt(visualStyle);
+  const image = showArt ? (
     <Image
-      source={BIRDR_MOOD_IMAGES[mood]}
+      source={getMoodImage(mood, visualStyle)}
       style={styles.image}
       resizeMode="contain"
       accessibilityIgnoresInvertColors
     />
-  );
+  ) : null;
 
   return (
     <View style={[styles.wrap, style]} testID={testID}>
-      {pulse ? <Animated.View style={pulseStyle}>{image}</Animated.View> : image}
+      {image ? (pulse ? <Animated.View style={pulseStyle}>{image}</Animated.View> : image) : null}
       {showSpinner ? (
         <ActivityIndicator size="large" color={colors.primary[500]} style={styles.spinner} />
       ) : null}

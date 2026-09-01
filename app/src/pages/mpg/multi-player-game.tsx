@@ -61,7 +61,7 @@ const MultiPlayerGame: React.FC = () => {
           ) : question ? (
             <QuestionComponent />
           ) : (
-            <QuestionLoadingFeather minHeight="280px" />
+            <QuestionLoadingFeather />
           )}
         </>
       </Page.Body>

@@ -5,14 +5,15 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getFlockImage } from '../constants/birdrFlockImages';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 
 type NavParams = {
   FlockIntro: undefined;
@@ -24,6 +25,7 @@ type NavParams = {
 export function FlockIntroScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<NavParams>>();
   const { t } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const { isAuthenticated } = useAuth();
 
   const requireAuth = (then: () => void) => {
@@ -37,7 +39,7 @@ export function FlockIntroScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBand}>
-        <Image source={BIRDR_FLOCK_IMAGES.invite} style={styles.heroImage} resizeMode="contain" />
+        <GameArtImage source={getFlockImage('invite', visualStyle)} style={styles.heroImage} resizeMode="contain" />
         <Text style={styles.heroTitle}>{t('flocks_intro_title')}</Text>
         <Text style={styles.heroBody}>{t('flocks_intro_body')}</Text>
       </View>

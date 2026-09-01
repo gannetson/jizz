@@ -21,7 +21,10 @@ import {
   QUESTION_IMAGE_HEIGHT,
   QUESTION_VIDEO_HEIGHT,
 } from '../constants/questionMediaLayout';
-import { BIRDR_MOOD_IMAGES } from '../constants/birdrMoodImages';
+import { getMoodImage } from '../constants/birdrMoodImages';
+import { useVisualStyle } from '../context/VisualStyleContext';
+import { showsGameArt } from '../lib/visualStyle';
+import { playFullSrc } from '../utils/playImageUrl';
 
 export type MediaWithCredits = {
   contributor?: string | null;
@@ -131,6 +134,7 @@ export function QuestionMediaView({
   closeFullScreenLabel = 'Close',
   feedbackOverlay,
 }: QuestionMediaViewProps) {
+  const { visualStyle } = useVisualStyle();
   const [fullScreenImage, setFullScreenImage] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
   const [imageProgress, setImageProgress] = React.useState<number | null>(null);
@@ -296,9 +300,7 @@ export function QuestionMediaView({
               </Pressable>
               <FullScreenImageViewerModal
                 visible={fullScreenImage}
-                imageUri={
-                  imageUri.includes('/900') ? imageUri.replace('/900', '/1800') : imageUri
-                }
+                imageUri={playFullSrc(imageUri)}
                 onClose={() => setFullScreenImage(false)}
                 closeLabel={closeFullScreenLabel}
               />
@@ -312,12 +314,14 @@ export function QuestionMediaView({
                   imageHeight != null && { minHeight: imageHeight },
                 ]}
               >
-                <RnImage
-                  source={BIRDR_MOOD_IMAGES.noimage}
-                  style={styles.placeholderImage}
-                  resizeMode="contain"
-                  accessibilityIgnoresInvertColors
-                />
+                {showsGameArt(visualStyle) ? (
+                  <RnImage
+                    source={getMoodImage('noimage', visualStyle)}
+                    style={styles.placeholderImage}
+                    resizeMode="contain"
+                    accessibilityIgnoresInvertColors
+                  />
+                ) : null}
                 <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
                 <View style={styles.errorActions}>
                   <TouchableOpacity
@@ -407,12 +411,14 @@ export function QuestionMediaView({
       {showLoadingPlaceholder && !hasMedia && (
         <MediaStage feedbackOverlay={feedbackOverlay}>
           <View style={[styles.placeholder, imageHeight != null && { height: imageHeight }]}>
-            <RnImage
-              source={BIRDR_MOOD_IMAGES.stressed}
-              style={styles.placeholderImage}
-              resizeMode="contain"
-              accessibilityIgnoresInvertColors
-            />
+            {showsGameArt(visualStyle) ? (
+              <RnImage
+                source={getMoodImage('stressed', visualStyle)}
+                style={styles.placeholderImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            ) : null}
             <Text style={styles.placeholderSubtext}>{loadingLabel}</Text>
           </View>
         </MediaStage>

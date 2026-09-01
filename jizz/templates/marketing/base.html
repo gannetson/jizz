@@ -63,7 +63,7 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      overflow: hidden;
+      overflow: visible;
       border-bottom: 1px solid rgba(212, 184, 138, 0.55);
       background: rgba(255, 253, 248, 0.94);
       backdrop-filter: blur(10px);
@@ -100,11 +100,20 @@
       gap: 0.55rem;
       line-height: 1;
     }
+    header.site .brand-icon-clip {
+      display: block;
+      overflow: hidden;
+      width: 5.8rem;
+      height: calc(5.8rem * 265 / 249 - 1.35rem);
+      flex-shrink: 0;
+    }
     header.site .brand-icon {
       display: block;
-      width: 5.8rem;
-      height: auto;
-      margin: 0 0 -1.35rem;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      margin: 0;
       padding: 0;
       max-width: none;
     }
@@ -145,6 +154,10 @@
     nav.site .nav-user:hover { color: var(--birdr-800); }
     nav.site .nav-account {
       position: relative;
+      z-index: 21;
+    }
+    nav.site .nav-account[open] {
+      z-index: 22;
     }
     nav.site .nav-account > summary {
       list-style: none;
@@ -736,6 +749,40 @@
       margin-top: 2px;
     }
     .ai-warning p { margin: 0; }
+    .ai-generate {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 0 0 24px;
+      padding: 16px 18px;
+      background: var(--card);
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 12px;
+      box-shadow: var(--shadow-card);
+    }
+    .ai-generate-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ai-spinner {
+      width: 1.35rem;
+      height: 1.35rem;
+      flex-shrink: 0;
+      border: 2px solid var(--birdr-100);
+      border-top-color: var(--birdr-600);
+      border-radius: 50%;
+      animation: ai-spin 0.8s linear infinite;
+    }
+    @keyframes ai-spin { to { transform: rotate(360deg); } }
+    .ai-generate-status { margin: 0; }
+    .ai-generate-note {
+      margin: 0;
+      color: var(--birdr-600);
+      font-size: 0.92rem;
+    }
+    .ai-generate-error { margin: 0; color: #9b1c1c; }
     .copyright-notice {
       background: #fff6e8;
       border: 1px solid #e0b15a;
@@ -1044,7 +1091,9 @@
   <header class="site">
     <div class="wrap">
       <a class="brand" href="{{ home_url }}">
-        <img class="brand-icon" src="/images/birdr-anime.gif" width="249" height="265" alt="">
+        <span class="brand-icon-clip">
+          <img class="brand-icon" src="/images/birdr-anime.gif" width="249" height="265" alt="">
+        </span>
         <span class="brand-name">Birdr</span>
       </a>
       <nav class="site" aria-label="Primary">

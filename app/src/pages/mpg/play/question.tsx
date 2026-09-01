@@ -28,7 +28,8 @@ import {BsImageFill, BsImages} from "react-icons/bs"
 import {PlayerItem} from "./player-item"
 import SpeciesCombobox from "../../../components/species-combobox"
 import { ComparisonButton } from "../../../components/comparison-button"
-import { ZoomablePlayImage } from "../../../components/zoomable-play-image"
+import { PLAY_IMAGE_STAGE_HEIGHT, ZoomablePlayImage } from "../../../components/zoomable-play-image"
+import { playFullSrc, playPreviewSrc } from "../../../utils/play-image-url"
 import { postQuestionMediaReady } from "../../../api/question-media-ready"
 import { postQuestionNextMedia } from "../../../api/question-next-media"
 import { getFlockPlayContext } from "../../../api/flocks"
@@ -214,13 +215,13 @@ export const QuestionComponent = () => {
   if (!question) {
     return (
       <Box py={2}>
-        <QuestionLoadingFeather minHeight="280px" />
+        <QuestionLoadingFeather minHeight={PLAY_IMAGE_STAGE_HEIGHT} />
       </Box>
     )
   }
 
   const mediaLoaderHeight =
-    gameMedia === 'audio' ? '80px' : gameMedia === 'video' ? '220px' : '280px'
+    gameMedia === 'audio' ? '80px' : gameMedia === 'video' ? '220px' : PLAY_IMAGE_STAGE_HEIGHT
 
   const flagMedia = () => {
     if (!question || !game) return
@@ -455,10 +456,10 @@ export const QuestionComponent = () => {
         )}
         {gameMedia === 'images' && currentImage && (
           <>
-            <Box position="relative" minH="280px">
+            <Box position="relative" h={PLAY_IMAGE_STAGE_HEIGHT}>
               <ZoomablePlayImage
-                previewSrc={currentImage.url.replace('/1800', '/900')}
-                fullSrc={currentImage.url}
+                previewSrc={playPreviewSrc(currentImage.url)}
+                fullSrc={playFullSrc(currentImage.url)}
                 onLoad={notifyMediaReady}
                 onError={(e) => {
                   e.currentTarget.src = '/images/birdr-logo.png';

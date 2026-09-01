@@ -20,7 +20,9 @@ import {
 } from '../api/flocks';
 import { resolveMediaUrl, apiUrl } from '../api/config';
 import { colors } from '../theme';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getFlockImage } from '../constants/birdrFlockImages';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 
 type ResultParams = {
   resultToken?: string;
@@ -34,6 +36,7 @@ export function FlockChallengeResultScreen() {
   const route = useRoute();
   const { resultToken, flockSlug, result: inlineResult } = (route.params as ResultParams) ?? {};
   const { t, locale } = useTranslation();
+  const { visualStyle } = useVisualStyle();
 
   const [loading, setLoading] = useState(!inlineResult);
   const [error, setError] = useState<string | null>(null);
@@ -177,8 +180,8 @@ export function FlockChallengeResultScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Image
-        source={BIRDR_FLOCK_IMAGES.leaderboard}
+      <GameArtImage
+        source={getFlockImage('leaderboard', visualStyle)}
         style={styles.heroImage}
         resizeMode="contain"
       />

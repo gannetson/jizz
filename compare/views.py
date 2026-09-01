@@ -92,18 +92,13 @@ class ComparisonRequestView(APIView):
         # Check if comparison already exists
         existing_comparison = None
         if comparison_type == 'species':
-            existing_comparison = (
-                SpeciesComparison.objects.filter(
-                    comparison_type='species',
-                    species_1_id=data['species_1_id'],
-                    species_2_id=data['species_2_id'],
-                ).first()
-                or SpeciesComparison.objects.filter(
-                    comparison_type='species',
-                    species_1_id=data['species_2_id'],
-                    species_2_id=data['species_1_id'],
-                ).first()
-            )
+            from compare.generation import comparison_cache_is_current, find_species_comparison
+
+            species_1 = get_object_or_404(Species, id=data['species_1_id'])
+            species_2 = get_object_or_404(Species, id=data['species_2_id'])
+            existing_comparison = find_species_comparison(species_1, species_2)
+            if existing_comparison and not comparison_cache_is_current(existing_comparison):
+                existing_comparison = None
         elif comparison_type == 'family':
             existing_comparison = SpeciesComparison.objects.filter(
                 comparison_type='family',

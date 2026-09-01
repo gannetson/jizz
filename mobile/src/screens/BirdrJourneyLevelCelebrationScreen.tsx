@@ -100,6 +100,7 @@ export function BirdrJourneyLevelCelebrationScreen() {
         <View style={styles.iconWrap}>
           <BirdrLevelImage
             iconUrl={nextLevel.icon_url}
+            sequence={nextLevel.sequence}
             variant="current"
             size={180}
           />

@@ -140,7 +140,7 @@ export function CountryChallengeLeaderboardPage() {
                       </TableCell>
                       <TableCell>
                         <Flex align="center" gap={3}>
-                          <BirdrLevelImage iconUrl={row.level_icon_url} variant="completed" size={44} />
+                          <BirdrLevelImage iconUrl={row.level_icon_url} sequence={row.level_index} variant="completed" size={44} />
                           <Text fontWeight="600">{leaderboardLevelTitle(row, locale)}</Text>
                         </Flex>
                       </TableCell>

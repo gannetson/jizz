@@ -81,7 +81,7 @@ export function BirdrJourneyLevelCelebrationPage() {
       <Page.Body>
         <VStack gap={4} align="center" py={4}>
           {nextLevel && (
-            <BirdrLevelImage iconUrl={nextLevel.icon_url} variant="current" size={180} />
+            <BirdrLevelImage iconUrl={nextLevel.icon_url} sequence={nextLevel.sequence} variant="current" size={180} />
           )}
           {title && (
             <Text fontSize="xl" fontWeight="700" color="primary.800" textAlign="center">

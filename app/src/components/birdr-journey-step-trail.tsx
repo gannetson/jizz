@@ -136,7 +136,7 @@ export function BirdrJourneyStepTrail({
 
   return (
     <Flex direction="column" align="center" py={2}>
-      <BirdrLevelImage iconUrl={currentLevel.icon_url} variant="current" size={140} />
+      <BirdrLevelImage iconUrl={currentLevel.icon_url} sequence={currentLevel.sequence} variant="current" size={140} />
       <Connector />
 
       {steps.map((step, index) => (
@@ -153,7 +153,7 @@ export function BirdrJourneyStepTrail({
       {nextLevel && (
         <>
           <Connector />
-          <BirdrLevelImage iconUrl={nextLevel.icon_url} variant="next" size={140} />
+          <BirdrLevelImage iconUrl={nextLevel.icon_url} sequence={nextLevel.sequence} variant="next" size={140} />
         </>
       )}
     </Flex>

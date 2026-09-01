@@ -1,13 +1,19 @@
-import { Box, Image } from '@chakra-ui/react';
+import { Box, Image, Text } from '@chakra-ui/react';
+import { useContext } from 'react';
 import { FaCheck, FaLock } from 'react-icons/fa';
 import { resolveMediaUrl } from '../api/baseUrl';
+import AppContext from '../core/app-context';
+import { journeyLevelIconUrl, journeyLevelNumber } from '../user/visual-style';
 
 export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed';
 
 type Props = {
   iconUrl?: string | null;
+  sequence?: number | null;
   variant: BirdrLevelImageVariant;
   size?: number;
+  /** When false, show only the picture (no fill, border, or clipped box). */
+  framed?: boolean;
 };
 
 const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
@@ -17,12 +23,16 @@ const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
   completed: 88,
 };
 
-export function BirdrLevelImage({ iconUrl, variant, size }: Props) {
+export function BirdrLevelImage({ iconUrl, sequence, variant, size, framed = true }: Props) {
+  const { visualStyle } = useContext(AppContext);
   const dimension = size ?? SIZE_BY_VARIANT[variant];
   const isSilhouette = variant === 'next' || variant === 'locked';
   const isCompleted = variant === 'completed';
-  const borderRadius = `${dimension * 0.12}px`;
-  const resolvedUrl = resolveMediaUrl(iconUrl);
+  const borderRadius = framed ? '8px' : undefined;
+  const resolvedUrl = resolveMediaUrl(
+    journeyLevelIconUrl(sequence, iconUrl, visualStyle ?? 'classic'),
+  );
+  const levelNumber = journeyLevelNumber(sequence);
 
   return (
     <Box
@@ -30,10 +40,14 @@ export function BirdrLevelImage({ iconUrl, variant, size }: Props) {
       width={`${dimension}px`}
       height={`${dimension}px`}
       borderRadius={borderRadius}
-      bg="primary.100"
-      overflow="hidden"
-      borderWidth={variant === 'current' ? '3px' : undefined}
-      borderColor={variant === 'current' ? 'primary.400' : undefined}
+      bg={framed ? (resolvedUrl ? 'primary.100' : isSilhouette ? 'primary.200' : 'primary.500') : 'transparent'}
+      overflow={framed ? 'hidden' : undefined}
+      flexShrink={0}
+      borderWidth={framed && variant === 'current' ? '3px' : undefined}
+      borderColor={framed && variant === 'current' ? 'primary.400' : undefined}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
     >
       {resolvedUrl ? (
         <>
@@ -46,6 +60,7 @@ export function BirdrLevelImage({ iconUrl, variant, size }: Props) {
             filter={isSilhouette ? 'blur(8px)' : undefined}
             opacity={isSilhouette ? 0.8 : isCompleted ? 0.75 : 1}
             bg={isSilhouette ? 'primary.900' : 'transparent'}
+            overflow={framed ? undefined : 'visible'}
           />
           {isSilhouette && (
             <Box
@@ -56,6 +71,15 @@ export function BirdrLevelImage({ iconUrl, variant, size }: Props) {
             />
           )}
         </>
+      ) : levelNumber != null ? (
+        <Text
+          fontSize={`${Math.max(16, Math.round(dimension * 0.42))}px`}
+          fontWeight="800"
+          color={isSilhouette ? 'primary.600' : 'primary.50'}
+          lineHeight="1"
+        >
+          {levelNumber}
+        </Text>
       ) : (
         <Box width="100%" height="100%" bg="primary.700" />
       )}

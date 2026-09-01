@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Image,
   Share,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -22,7 +21,9 @@ import {
   type FlockLeaderboardEntry,
 } from '../api/flocks';
 import { colors } from '../theme';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getFlockImage } from '../constants/birdrFlockImages';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 
 function LeaderboardRow({
   entry,
@@ -52,6 +53,7 @@ export function FlockLeaderboardScreen() {
   const route = useRoute();
   const { slug, challengeId } = (route.params as { slug?: string; challengeId?: number }) ?? {};
   const { t, locale } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const [flock, setFlock] = useState<Flock | null>(null);
   const [board, setBoard] = useState<FlockLeaderboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,7 +123,7 @@ export function FlockLeaderboardScreen() {
         </TouchableOpacity>
       ) : null}
 
-      <Image source={BIRDR_FLOCK_IMAGES.leaderboard} style={styles.heroImage} resizeMode="contain" />
+      <GameArtImage source={getFlockImage('leaderboard', visualStyle)} style={styles.heroImage} resizeMode="contain" />
 
       {loading && !board ? (
         <ActivityIndicator size="small" color={colors.primary[500]} />

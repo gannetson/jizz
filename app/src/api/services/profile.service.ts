@@ -13,6 +13,7 @@ export interface UserProfile {
   language: string;
   app_language?: string;
   timezone?: string;
+  visual_style?: string;
   country_code: string | null;
   country_name: string | null;
   is_staff: boolean;
@@ -37,6 +38,7 @@ export interface ProfileUpdateData {
   language?: string;
   app_language?: string;
   timezone?: string;
+  visual_style?: string;
   country_code?: string | null;
 }
 
@@ -105,6 +107,9 @@ class ProfileService {
       }
       if (data.timezone !== undefined) {
         formData.append('timezone', data.timezone || '');
+      }
+      if (data.visual_style !== undefined) {
+        formData.append('visual_style', data.visual_style);
       }
       if (data.country_code !== undefined) {
         formData.append('country_code', data.country_code || '');

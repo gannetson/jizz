@@ -18,6 +18,7 @@ import { getGameDetail, type GameDetailWithAnswers, type QuestionWithAnswer } fr
 import { startSpeciesPractice } from '../api/practice';
 import * as playerApi from '../api/player';
 import { apiUrl } from '../api/config';
+import { playPreviewSrc } from '../utils/playImageUrl';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { ComparisonButton } from '../components/ComparisonButton';
@@ -226,7 +227,7 @@ export function GameDetailScreen() {
                 <View style={styles.mediaBox}>
                   {q.media_item.type === 'image' && (
                     <Image
-                      source={{ uri: (q.media_item.url.startsWith('http') ? q.media_item.url : apiUrl(q.media_item.url)).replace('/1800', '/900') }}
+                      source={{ uri: playPreviewSrc(q.media_item.url.startsWith('http') ? q.media_item.url : apiUrl(q.media_item.url)) }}
                       style={styles.mediaImage}
                       resizeMode="contain"
                     />

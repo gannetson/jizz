@@ -23,6 +23,8 @@ import { useProfile } from '../context/ProfileContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { setSpeciesLanguageIndependent } from '../i18n/speciesLanguagePreference';
 import { getProfile, updateProfile, updateProfileAvatar, getAvatarUrl, deleteAccount, type UserProfile } from '../api/profile';
+import { useVisualStyle } from '../context/VisualStyleContext';
+import { parseVisualStyle, type VisualStyle } from '../lib/visualStyle';
 import { loadCountries, type Country } from '../api/countries';
 import { loadLanguages, type Language } from '../api/languages';
 import { compareSpeciesLanguages, getLanguageDisplayName } from '../i18n/languageNames';
@@ -37,6 +39,7 @@ export function ProfileScreen() {
   const navigation = useNavigation();
   const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { refreshProfile } = useProfile();
+  const { visualStyle: contextVisualStyle, setVisualStyle } = useVisualStyle();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,6 +49,7 @@ export function ProfileScreen() {
   const [timezone, setTimezone] = useState('Europe/Amsterdam');
   const [country, setCountry] = useState<Country | null>(null);
   const [receiveUpdates, setReceiveUpdates] = useState(true);
+  const [visualStyle, setVisualStyleLocal] = useState<VisualStyle>(contextVisualStyle);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
@@ -75,6 +79,7 @@ export function ProfileScreen() {
           : null
       );
       setReceiveUpdates(p.receive_updates ?? true);
+      setVisualStyleLocal(parseVisualStyle(p.visual_style));
       if (p.avatar_url) setAvatarPreviewUri(null);
     } catch (e: any) {
       setError(e?.message ?? t('failed_load_profile'));
@@ -206,6 +211,7 @@ export function ProfileScreen() {
         timezone: timezone?.trim() || undefined,
         country_code: country?.code ?? undefined,
         receive_updates: receiveUpdates,
+        visual_style: visualStyle,
       });
       const updated = await getProfile();
       setProfile(updated);
@@ -222,6 +228,8 @@ export function ProfileScreen() {
       );
       speciesLanguageDirtyRef.current = false;
       refreshProfile();
+      setVisualStyle(parseVisualStyle(updated.visual_style));
+      setVisualStyleLocal(parseVisualStyle(updated.visual_style));
       setSaveToast(t('profile_saved'));
       setTimeout(() => {
         (navigation as any).navigate('Home');
@@ -352,6 +360,58 @@ export function ProfileScreen() {
           trackColor={{ false: colors.primary[200], true: colors.primary[400] }}
           thumbColor={receiveUpdates ? colors.primary[700] : '#fff'}
         />
+      </View>
+      <Text style={styles.label}>{t('visual_style')}</Text>
+      <View
+        style={styles.styleChoiceRow}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={t('visual_style')}
+      >
+        {([
+          { id: 'classic' as const, source: require('../../assets/birdr-start-game.png'), labelKey: 'visual_style_bertie' },
+          { id: 'stylish' as const, source: require('../../assets/stylish/birdr-start-game.png'), labelKey: 'visual_style_classic' },
+          { id: 'none' as const, source: null, labelKey: 'visual_style_none' },
+        ]).map((option) => {
+          const selected = visualStyle === option.id;
+          return (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.styleChoice,
+                selected && styles.styleChoiceSelected,
+              ]}
+              onPress={() => {
+                setVisualStyleLocal(option.id);
+                setVisualStyle(option.id);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={t(option.labelKey)}
+            >
+              {option.source ? (
+                <View style={styles.styleChoiceImageWrap}>
+                  <Image
+                    source={option.source}
+                    style={styles.styleChoiceImage}
+                    resizeMode="contain"
+                    accessibilityIgnoresInvertColors
+                  />
+                </View>
+              ) : (
+                <View style={styles.styleChoiceEmpty} />
+              )}
+              <Text
+                style={[
+                  styles.styleChoiceLabel,
+                  selected && styles.styleChoiceLabelSelected,
+                ]}
+                numberOfLines={1}
+              >
+                {t(option.labelKey)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
       <TouchableOpacity
         style={[styles.saveButton, saving && styles.saveButtonDisabled]}
@@ -536,31 +596,51 @@ const styles = StyleSheet.create({
   },
   switchCopy: { flex: 1 },
   switchHint: { fontSize: 13, color: colors.primary[600], marginTop: 4 },
-  radioRow: {
+  styleChoiceRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 8,
   },
-  radioChip: {
+  styleChoice: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.primary[300],
-    backgroundColor: '#fff',
+    aspectRatio: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.primary[200],
+    backgroundColor: '#fff',
+    overflow: 'hidden',
   },
-  radioChipSelected: {
-    backgroundColor: colors.primary[500],
+  styleChoiceSelected: {
     borderColor: colors.primary[500],
+    backgroundColor: colors.primary[50],
   },
-  radioChipText: {
-    fontSize: 14,
+  styleChoiceImageWrap: {
+    width: '72%',
+    aspectRatio: 1,
+  },
+  styleChoiceImage: {
+    width: '100%',
+    height: '100%',
+  },
+  styleChoiceEmpty: {
+    width: '72%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    backgroundColor: colors.primary[100],
+  },
+  styleChoiceLabel: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.primary[800],
-    fontWeight: '500',
   },
-  radioChipTextSelected: {
-    color: '#fff',
+  styleChoiceLabelSelected: {
+    color: colors.primary[800],
   },
   saveButton: {
     marginTop: 32,

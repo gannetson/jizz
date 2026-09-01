@@ -754,6 +754,20 @@ class UserProfile(models.Model):
         blank=True,
         help_text='Timezone for daily challenge (e.g. Europe/Amsterdam)',
     )
+    VISUAL_STYLE_CLASSIC = 'classic'
+    VISUAL_STYLE_STYLISH = 'stylish'
+    VISUAL_STYLE_NONE = 'none'
+    VISUAL_STYLE_CHOICES = [
+        (VISUAL_STYLE_CLASSIC, 'Classic'),
+        (VISUAL_STYLE_STYLISH, 'Stylish'),
+        (VISUAL_STYLE_NONE, 'None'),
+    ]
+    visual_style = models.CharField(
+        max_length=16,
+        choices=VISUAL_STYLE_CHOICES,
+        default=VISUAL_STYLE_CLASSIC,
+        help_text='In-app illustration style (classic comic, stylish, or none)',
+    )
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 

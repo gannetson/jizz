@@ -9,7 +9,6 @@ import {
   Container,
   Flex,
   Heading,
-  Image,
   Spinner,
   Text,
 } from '@chakra-ui/react';
@@ -25,6 +24,7 @@ import {
 } from '../../api/flocks';
 import { authService } from '../../api/services/auth.service';
 import { FlockShareBlock } from '../../components/flocks/share-block';
+import { BirdrArtImage } from '../../components/birdr-art-image';
 import { Page } from '../../shared/components/layout';
 
 export function FlockInvitePage() {
@@ -117,8 +117,8 @@ export function FlockInvitePage() {
             </Text>
           ) : null}
 
-          <Image
-            src="/images/birdr-flock-invite.png"
+          <BirdrArtImage
+            filename="birdr-flock-invite.png"
             alt=""
             maxW="240px"
             mx="auto"

@@ -40,6 +40,7 @@ import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
 import { answersEnabledForMedia } from '../game/mediaAnswerGate';
 import { resolvePlayMediaType } from '../utils/questionMediaIndex';
+import { playPreviewSrc } from '../utils/playImageUrl';
 import {
   countWrongAnswers,
   PRACTICE_JOKERS,
@@ -441,7 +442,7 @@ export function GamePlayScreen() {
   };
 
   const imageUri = image?.url
-    ? (image.url.startsWith('http') ? image.url : apiUrl(image.url))
+    ? playPreviewSrc(image.url.startsWith('http') ? image.url : apiUrl(image.url))
     : null;
   const videoUri = video?.url ? (video.url.startsWith('http') ? video.url : apiUrl(video.url)) : null;
 

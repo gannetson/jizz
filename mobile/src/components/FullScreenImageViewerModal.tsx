@@ -109,17 +109,19 @@ export function FullScreenImageViewerModal({ visible, imageUri, onClose, closeLa
           </TouchableOpacity>
           <GestureDetector gesture={composed}>
             <Animated.View style={styles.zoomBox}>
-              <AnimatedImage
-                style={[styles.fullImage, imageStyle]}
-                source={{
-                  uri: imageUri,
-                  headers: {
-                    'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
-                  },
-                }}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-              />
+              {visible ? (
+                <AnimatedImage
+                  style={[styles.fullImage, imageStyle]}
+                  source={{
+                    uri: imageUri,
+                    headers: {
+                      'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
+                    },
+                  }}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              ) : null}
             </Animated.View>
           </GestureDetector>
         </View>

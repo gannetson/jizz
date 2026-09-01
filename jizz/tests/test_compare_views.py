@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from jizz.models import Species
+from compare.ai_service import comparison_model_name, comparison_prompt_version
 from compare.models import SpeciesTrait, SpeciesComparison, ComparisonRequest
 
 
@@ -190,6 +191,8 @@ class ComparisonRequestViewTestCase(TestCase):
             species_2=self.species2,
             summary='Existing.',
             detailed_comparison='Already generated.',
+            ai_model=comparison_model_name(),
+            ai_prompt_version=comparison_prompt_version(),
         )
         response = self.client.post(
             '/api/compare/request/',
@@ -211,6 +214,8 @@ class ComparisonRequestViewTestCase(TestCase):
             species_2=self.species2,
             summary='Existing reverse.',
             detailed_comparison='Already generated.',
+            ai_model=comparison_model_name(),
+            ai_prompt_version=comparison_prompt_version(),
         )
         response = self.client.post(
             '/api/compare/request/',

@@ -17,7 +17,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--force',
             action='store_true',
-            help='Force regeneration even if comparison exists',
+            help='Force regeneration even if a current comparison exists',
         )
 
     def handle(self, *args, **options):

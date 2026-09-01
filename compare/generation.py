@@ -10,8 +10,11 @@ from django.db import transaction
 from compare.ai_service import (
     AIComparisonService,
     ComparisonGenerationError,
-    PROMPT_VERSION,
+    HANDBOOK_MODEL,
+    NO_GROUNDING_MESSAGE,
     comparison_model_name,
+    comparison_prompt_version,
+    has_grounding_traits,
 )
 from compare.models import SpeciesComparison, SpeciesTrait
 from jizz.models import Species
@@ -38,6 +41,17 @@ def find_species_comparison(species_a: Species, species_b: Species) -> SpeciesCo
             species_2=species_a,
         ).first()
     )
+
+
+def comparison_cache_is_current(comparison: SpeciesComparison | None) -> bool:
+    """True when the cached row was built with the current model and prompt."""
+    if comparison is None:
+        return False
+    stored_model = (comparison.ai_model or '').strip()
+    stored_prompt = (comparison.ai_prompt_version or '').strip()
+    if stored_prompt != comparison_prompt_version():
+        return False
+    return stored_model == comparison_model_name() or stored_model == HANDBOOK_MODEL
 
 
 def traits_dict_for_species(species: Species) -> dict:
@@ -91,13 +105,15 @@ def _save_scraped_traits(species: Species, scraped_data: dict) -> None:
                 trait.save(update_fields=['content', 'source_url', 'section', 'updated_at'])
 
 
-def _has_handbook_traits(traits: dict) -> bool:
-    return any(key not in ('taxonomy', 'name_latin') for key in traits)
-
-
 def ensure_species_traits(species: Species, *, scrape: bool = True) -> dict:
     traits = traits_dict_for_species(species)
-    if _has_handbook_traits(traits) or not scrape:
+    if has_grounding_traits(traits):
+        return traits
+    if not scrape:
+        logger.info(
+            'Species %s has no identification/similar_species notes (scrape skipped)',
+            species.name,
+        )
         return traits
     try:
         from compare.scraper import BirdsOfTheWorldScraper
@@ -109,9 +125,19 @@ def ensure_species_traits(species: Species, *, scrape: bool = True) -> dict:
         )
         if scraped and scraped.get('traits'):
             _save_scraped_traits(species, scraped)
+        else:
+            logger.warning('BotW scrape for %s returned no traits', species.name)
     except Exception:
         logger.exception('Failed to scrape Birds of the World traits for %s', species.name)
-    return traits_dict_for_species(species)
+    refreshed = traits_dict_for_species(species)
+    if has_grounding_traits(refreshed):
+        logger.info('Scraped grounding traits for %s', species.name)
+    else:
+        logger.warning(
+            'BotW scrape for %s left identification/similar_species empty',
+            species.name,
+        )
+    return refreshed
 
 
 def get_or_create_species_comparison(
@@ -131,11 +157,19 @@ def get_or_create_species_comparison(
 
     low, high = canonical_species_pair(species_a, species_b)
     existing = find_species_comparison(low, high)
-    if existing and not force:
+    if existing and not force and comparison_cache_is_current(existing):
         return existing
 
     traits_1 = ensure_species_traits(low, scrape=scrape)
     traits_2 = ensure_species_traits(high, scrape=scrape)
+    if not has_grounding_traits(traits_1) and not has_grounding_traits(traits_2):
+        logger.warning(
+            'Refusing ungrounded comparison for %s vs %s (no identification/similar_species)',
+            low.name,
+            high.name,
+        )
+        raise ComparisonGenerationError(NO_GROUNDING_MESSAGE)
+
     traits_1['name_latin'] = low.name_latin
     traits_2['name_latin'] = high.name_latin
 
@@ -150,8 +184,6 @@ def get_or_create_species_comparison(
     )
     if not comparison_data.get('summary'):
         logger.warning('No comparison generated for %s vs %s', low.name, high.name)
-        if existing:
-            return existing
         raise ComparisonGenerationError(
             f'No comparison generated for {low.name} vs {high.name}'
         )
@@ -159,7 +191,7 @@ def get_or_create_species_comparison(
     defaults = {
         **comparison_data,
         'ai_model': service.model or comparison_model_name(),
-        'ai_prompt_version': service.prompt_version or PROMPT_VERSION,
+        'ai_prompt_version': service.prompt_version or comparison_prompt_version(),
     }
     comparison, _created = SpeciesComparison.objects.update_or_create(
         comparison_type='species',

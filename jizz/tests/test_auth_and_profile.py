@@ -205,6 +205,7 @@ class ProfileViewTestCase(TestCase):
         self.assertIn('language', response.data)
         self.assertIn('app_language', response.data)
         self.assertIn('receive_updates', response.data)
+        self.assertEqual(response.data.get('visual_style'), 'classic')
 
     def test_profile_get_unauthorized(self):
         self.client.credentials()
@@ -268,6 +269,36 @@ class ProfileViewTestCase(TestCase):
         self.assertTrue(response.data['receive_updates'])
         self.user.profile.refresh_from_db()
         self.assertTrue(self.user.profile.receive_updates)
+
+    def test_profile_update_visual_style(self):
+        response = self.client.put(
+            '/api/profile/',
+            {'visual_style': 'stylish'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['visual_style'], 'stylish')
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.visual_style, 'stylish')
+
+    def test_profile_update_visual_style_none(self):
+        response = self.client.put(
+            '/api/profile/',
+            {'visual_style': 'none'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['visual_style'], 'none')
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.visual_style, 'none')
+
+    def test_profile_rejects_invalid_visual_style(self):
+        response = self.client.put(
+            '/api/profile/',
+            {'visual_style': 'comic'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class UserGamesViewTestCase(TestCase):

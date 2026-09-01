@@ -124,6 +124,7 @@ export function BirdrJourneyProgressScreen() {
         <View style={styles.championSection}>
           <BirdrLevelImage
             iconUrl={currentLevel.icon_url}
+            sequence={currentLevel.sequence}
             variant="current"
             size={200}
           />

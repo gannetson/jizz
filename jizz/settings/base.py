@@ -33,6 +33,9 @@ MEDIA_HTTP_FETCH_DELAY_SECONDS = float(os.environ.get('MEDIA_HTTP_FETCH_DELAY_SE
 MEDIA_WIKIMEDIA_THUMB_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_THUMB_WIDTH_PX', '500'))
 # Width served to clients for Wikimedia images in game/API serializers (standard step).
 MEDIA_WIKIMEDIA_DISPLAY_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_DISPLAY_WIDTH_PX', '960'))
+# iNaturalist open-data size served to clients (original|large|medium|small).
+# `large` is typically 1024px — enough for quiz retina, much smaller than camera originals.
+MEDIA_INATURALIST_DISPLAY_SIZE = os.environ.get('MEDIA_INATURALIST_DISPLAY_SIZE', 'large')
 
 # Optional YOLO bird detector (offline only; used by handcrafted_v2_yolo extractor).
 # Provide an ONNX file path (e.g. yolov5n.onnx exported with 640x640 input).
@@ -356,7 +359,7 @@ SPECIES_ILLUSTRATION_OUTPUT_FORMAT = os.environ.get('SPECIES_ILLUSTRATION_OUTPUT
 
 # Species comparison text (OpenAI Chat Completions, cached on SpeciesComparison).
 COMPARISON_AI_MODEL = os.environ.get('COMPARISON_AI_MODEL', 'gpt-4o')
-COMPARISON_AI_PROMPT_VERSION = os.environ.get('COMPARISON_AI_PROMPT_VERSION', 'v2')
+COMPARISON_AI_PROMPT_VERSION = os.environ.get('COMPARISON_AI_PROMPT_VERSION', 'v3')
 
 # Native mobile app minimum semver (force-update gate in iOS/Android clients).
 APP_MIN_VERSION = os.environ.get('APP_MIN_VERSION', '1.79.0')

@@ -224,6 +224,8 @@ type SharedState = {
   setAppLanguage?: (lang: string) => void
   /** @deprecated Use setAppLanguage. */
   setUserPreferredLanguage?: (lang: string) => void
+  visualStyle?: import('../user/visual-style').VisualStyle
+  setVisualStyle?: (style: import('../user/visual-style').VisualStyle) => void
   /** Language for species names (game > profile > en). */
   speciesLanguage?: string
   multiplayer?: string
@@ -263,6 +265,8 @@ const AppContext = createContext<SharedState>({
   country: { code: '', name: '' },
   setCountry: () => {},
   speciesLanguage: 'en',
+  visualStyle: 'classic',
+  setVisualStyle: () => {},
   appLanguage: 'en',
   mediaType: 'images',
   setMediaType: () => {},

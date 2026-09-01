@@ -1,13 +1,17 @@
 import React from 'react';
-import { View, Image, StyleSheet, ImageStyle, StyleProp } from 'react-native';
+import { View, Image, Text, StyleSheet, ImageStyle, StyleProp } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { colors } from '../theme';
 import { resolveMediaUrl } from '../api/config';
+import { getLevelAsset } from '../constants/birdrLevels';
+import { useVisualStyle } from '../context/VisualStyleContext';
+import { journeyLevelNumber, showsGameArt } from '../lib/visualStyle';
 
 export type BirdrLevelImageVariant = 'current' | 'next' | 'locked' | 'completed' | 'plain';
 
 type Props = {
   iconUrl?: string | null;
+  sequence?: number | null;
   variant: BirdrLevelImageVariant;
   size?: number;
   style?: StyleProp<ImageStyle>;
@@ -21,23 +25,37 @@ const SIZE_BY_VARIANT: Record<BirdrLevelImageVariant, number> = {
   plain: 88,
 };
 
-export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
+export function BirdrLevelImage({ iconUrl, sequence, variant, size, style }: Props) {
+  const { visualStyle } = useVisualStyle();
   const dimension = size ?? SIZE_BY_VARIANT[variant];
   const isSilhouette = variant === 'next' || variant === 'locked';
   const isCompleted = variant === 'completed';
-  const resolvedUrl = resolveMediaUrl(iconUrl);
+  const showArt = showsGameArt(visualStyle);
+  const stylishSource =
+    showArt && visualStyle === 'stylish' && sequence != null
+      ? getLevelAsset(Number(sequence), visualStyle)
+      : null;
+  const resolvedUrl = stylishSource || !showArt ? null : resolveMediaUrl(iconUrl);
+  const source = stylishSource ?? (resolvedUrl ? { uri: resolvedUrl } : null);
+  const levelNumber = journeyLevelNumber(sequence);
+  const radius = 8;
 
   return (
     <View
       style={[
         styles.frame,
-        { width: dimension, height: dimension, borderRadius: dimension * 0.12 },
+        {
+          width: dimension,
+          height: dimension,
+          borderRadius: radius,
+          backgroundColor: source ? colors.primary[100] : isSilhouette ? colors.primary[200] : colors.primary[500],
+        },
         variant === 'current' && styles.frameCurrent,
       ]}
     >
-      {resolvedUrl ? (
+      {source ? (
         <Image
-          source={{ uri: resolvedUrl }}
+          source={source}
           style={[
             styles.image,
             { width: dimension, height: dimension },
@@ -49,10 +67,22 @@ export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
           resizeMode="contain"
           accessibilityIgnoresInvertColors
         />
+      ) : levelNumber != null ? (
+        <Text
+          style={[
+            styles.levelNumber,
+            {
+              fontSize: Math.max(16, Math.round(dimension * 0.42)),
+              color: isSilhouette ? colors.primary[600] : colors.primary[50],
+            },
+          ]}
+        >
+          {levelNumber}
+        </Text>
       ) : (
         <View style={[styles.placeholder, { width: dimension, height: dimension }]} />
       )}
-      {isSilhouette && resolvedUrl && <View style={[styles.overlay, { borderRadius: dimension * 0.12 }]} />}
+      {isSilhouette && source && <View style={[styles.overlay, { borderRadius: radius }]} />}
       {variant === 'locked' && (
         <View style={styles.lockBadge}>
           <FontAwesome5 name="lock" size={14} color={colors.primary[50]} />
@@ -69,7 +99,6 @@ export function BirdrLevelImage({ iconUrl, variant, size, style }: Props) {
 
 const styles = StyleSheet.create({
   frame: {
-    backgroundColor: colors.primary[100],
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -83,6 +112,9 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     backgroundColor: colors.primary[700],
+  },
+  levelNumber: {
+    fontWeight: '800',
   },
   silhouette: {
     backgroundColor: colors.primary[900],

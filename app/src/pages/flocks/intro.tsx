@@ -1,6 +1,7 @@
-import { Box, Button, Flex, Image, Text, VStack } from '@chakra-ui/react';
+import { Box, Button, Flex, Text, VStack } from '@chakra-ui/react';
 import { FormattedMessage } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
+import { BirdrArtImage } from '../../components/birdr-art-image';
 import { Page } from '../../shared/components/layout';
 import { authService } from '../../api/services/auth.service';
 import { getFlocksCreatePath, getFlocksJoinPath } from '../../api/flocks';
@@ -32,8 +33,8 @@ export function FlocksIntroPage() {
       </Page.Header>
       <Page.Body>
         <Box bg="primary.800" borderRadius="xl" p={6} mb={6} textAlign="center">
-          <Image
-            src="/images/birdr-flock-invite.png"
+          <BirdrArtImage
+            filename="birdr-flock-invite.png"
             alt=""
             maxW="100%"
             w="320px"

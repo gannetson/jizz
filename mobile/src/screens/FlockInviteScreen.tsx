@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Image,
   Linking,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -22,13 +21,16 @@ import {
   type Flock,
 } from '../api/flocks';
 import { colors } from '../theme';
-import { BIRDR_FLOCK_IMAGES } from '../constants/birdrFlockImages';
+import { getFlockImage } from '../constants/birdrFlockImages';
+import { GameArtImage } from '../components/GameArtImage';
+import { useVisualStyle } from '../context/VisualStyleContext';
 
 export function FlockInviteScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const slug = (route.params as { slug?: string })?.slug;
   const { t, locale } = useTranslation();
+  const { visualStyle } = useVisualStyle();
   const [flock, setFlock] = useState<Flock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export function FlockInviteScreen() {
       {flock ? <Text style={styles.meta}>{flock.name}</Text> : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Image source={BIRDR_FLOCK_IMAGES.invite} style={styles.heroImage} resizeMode="contain" />
+      <GameArtImage source={getFlockImage('invite', visualStyle)} style={styles.heroImage} resizeMode="contain" />
 
       {flock?.invite && inviteLink ? (
         <View style={styles.shareCard}>

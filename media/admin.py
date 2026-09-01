@@ -107,9 +107,7 @@ class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
             )
         elif obj.type == 'audio':
             return format_html(
-                '<audio controls style="max-width:200px;">'
-                '<source src="{}" type="audio/mpeg" />'
-                '</audio>',
+                '<audio controls src="{}" style="max-width:200px;"></audio>',
                 url
             )
         return "-"
@@ -133,10 +131,7 @@ class MediaAdmin(HideableAdminMixin, admin.ModelAdmin):
             )
         elif obj.type == 'audio':
             return format_html(
-                '<audio controls style="width:100%; max-width:800px;">'
-                '<source src="{}" type="audio/mpeg" />'
-                'Your browser does not support the audio tag.'
-                '</audio>',
+                '<audio controls src="{}" style="width:100%; max-width:800px;"></audio>',
                 url
             )
         return "No preview available"

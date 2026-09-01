@@ -370,10 +370,7 @@ export const GameDetailModal = ({ isOpen, onClose, gameToken, playerToken }: Gam
                                   {question.media_item.type === 'audio' && (
                                     <VStack align="stretch" gap={2}>
                                       <Box>
-                                        <audio controls style={{ width: '100%' }}>
-                                          <source src={question.media_item.url} type="audio/mpeg" />
-                                          Your browser does not support the audio element.
-                                        </audio>
+                                        <audio controls src={question.media_item.url} style={{ width: '100%' }} />
                                       </Box>
                                       <MediaCredits media={question.media_item} />
                                     </VStack>

@@ -56,5 +56,10 @@ def inaturalist_display_url(url: str | None, size: str | None = None) -> str | N
 
 
 def media_display_url(url: str | None) -> str | None:
-    """Display URL for quiz/API/marketing clients (Wikimedia thumb + iNat large)."""
+    """Client URL for quiz/API/marketing (Wikimedia thumb, iNat large).
+
+    Xeno-Canto audio is not rewritten here: /download cannot be turned into an
+    MP3 without the XC sono hash. Playback URLs are stored on Media.url
+    (scraper + ``backfill_xeno_canto_mp3_urls``).
+    """
     return inaturalist_display_url(wikimedia_display_url(url))

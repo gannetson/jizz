@@ -140,10 +140,7 @@ export const QuestionMediaModal = ({ question, gameLanguage, gameMedia, isOpen, 
                     <VStack gap={4} align="stretch">
                       {(species.sounds || []).map((sound, key) => (
                         <Box key={key}>
-                          <audio controls style={{ width: '100%' }}>
-                            <source src={sound.url} type="audio/mpeg" />
-                            Your browser does not support the audio element.
-                          </audio>
+                          <audio controls src={sound.url} style={{ width: '100%' }} />
                           {sound.link && (
                             <Link href={sound.link} target="_blank" rel="noopener noreferrer" fontSize="sm" color="gray.600">
                               {sound.link}

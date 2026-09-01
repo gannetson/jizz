@@ -319,10 +319,7 @@ export function SpeciesModal({
                       {sounds.map((sound, key) => (
                         <Box key={key}>
                           <Box>
-                            <audio controls style={{ width: '100%' }}>
-                              <source src={sound.url} type="audio/mpeg" />
-                              Your browser does not support the audio element.
-                            </audio>
+                            <audio controls src={sound.url} style={{ width: '100%' }} />
                           </Box>
                           <Flex justifyContent="space-between" alignItems="center" mt={2}>
                             <MediaCredits media={sound} />

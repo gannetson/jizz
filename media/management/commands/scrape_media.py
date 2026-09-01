@@ -176,7 +176,10 @@ class Command(BaseCommand):
             self.stdout.write(f'    Xeno-Canto returned {len(media_items)} recording(s)')
         created_count = 0
         for item in media_items:
-            # Check if already exists (by URL)
+            # Match by XC page link (stable) or url (playback path may change).
+            link = item.get('link')
+            if link and Media.objects.filter(species=species, link=link, type='audio').exists():
+                continue
             if Media.objects.filter(species=species, url=item.get('url'), type='audio').exists():
                 continue
             

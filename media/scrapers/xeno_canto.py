@@ -5,10 +5,10 @@ API v3: https://xeno-canto.org/api/3/recordings (requires key).
 Use settings.XENO_CANTO_API_KEY or env XENO_CANTO_API_KEY for v3.
 """
 import os
-import re
+import logging
 from typing import List, Dict, Optional
 from .base import BaseMediaScraper
-import logging
+from media.xeno_canto_urls import xeno_canto_playback_url_from_recording
 
 logger = logging.getLogger(__name__)
 
@@ -114,18 +114,12 @@ class XenoCantoScraper(BaseMediaScraper):
 
             for recording in recordings:
                 try:
-                    # Get the file URL
-                    file_url = recording.get('file', '')
+                    # Prefer the transcoded MP3; /download is often WAV and has no extension.
+                    file_url = xeno_canto_playback_url_from_recording(recording)
                     if not file_url:
                         if self.verbose and len(results) == 0 and recording is recordings[0]:
-                            logger.info(f"Xeno-Canto: first recording has no 'file'; keys={list(recording.keys())[:25]}")
+                            logger.info(f"Xeno-Canto: first recording has no playable file; keys={list(recording.keys())[:25]}")
                         continue
-
-                    # Construct full URL if relative
-                    if file_url.startswith('//'):
-                        file_url = 'https:' + file_url
-                    elif file_url.startswith('/'):
-                        file_url = 'https://xeno-canto.org' + file_url
 
                     # Get page URL
                     xc_id = recording.get('id', '')

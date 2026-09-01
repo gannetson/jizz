@@ -277,12 +277,9 @@ class MediaInline(admin.TabularInline):
                 url=obj.url
             )
         elif obj.type == 'audio':
-            # Inline audio player
+            # Inline audio player (omit type: XC /download may be WAV, not MPEG)
             return format_html(
-                '<audio controls style="width: 200px;">'
-                '<source src="{url}" type="audio/mpeg" />'
-                'Your browser does not support the audio tag.'
-                '</audio>',
+                '<audio controls src="{url}" style="width: 200px;"></audio>',
                 url=obj.url
             )
         return "-"

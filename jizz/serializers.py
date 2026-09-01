@@ -41,7 +41,6 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
     def get_url(self, obj):
-        # Safe no-op for non-Wikimedia / non-image paths (videos, audio).
         return media_display_url(obj.url)
 
     def get_link(self, obj):
@@ -67,9 +66,7 @@ class MediaSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
     def get_url(self, obj):
-        if obj.type == 'image':
-            return media_display_url(obj.url)
-        return obj.url
+        return media_display_url(obj.url)
 
     def get_species_name(self, obj):
         """Return species name in the requested language if available."""

@@ -28,4 +28,9 @@ describe('getTranslation', () => {
     expect(getTranslation('es', 'cancel')).toBe('Cancelar');
     expect(getTranslation('es', 'unknown_key')).toBe('unknown_key');
   });
+
+  it('uses Italian catalog', () => {
+    expect(getTranslation('it', 'cancel')).toBe('Annulla');
+    expect(getTranslation('it', 'login')).toBe('Accedi');
+  });
 });

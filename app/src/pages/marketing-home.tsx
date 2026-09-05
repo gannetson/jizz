@@ -125,7 +125,7 @@ export function MarketingHomePage() {
               Free bird identification training
             </Text>
             <Heading as="h1" size="4xl" lineHeight="1.1" mb={4} fontFamily="serif">
-              Learn to identify birds yourself.
+              Improve your birding skills.
             </Heading>
             <Text fontSize="xl" mb={6} maxW="38rem">
               Free photo quizzes, personalised practice and country challenges for birders worldwide.
@@ -271,7 +271,7 @@ export function MarketingHomePage() {
               <Text fontWeight="800" letterSpacing="0.12em" textTransform="uppercase" color="primary.600" mb={2}>
                 Birdr
               </Text>
-              <Text mb={3}>Learn to identify birds yourself. Free on iPhone, Android and the web.</Text>
+              <Text mb={3}>Improve your birding skills. Free on iPhone, Android and the web.</Text>
               <StoreBadges />
             </Box>
             <Box>

@@ -935,12 +935,9 @@ class UpdateSerializer(serializers.ModelSerializer):
 
 
 def _resolve_request_language(request) -> str:
-    from jizz.update_emails import resolve_language
+    from jizz.update_i18n import resolve_request_language
 
-    return resolve_language(
-        request.user if request.user.is_authenticated else None,
-        request.META.get('HTTP_ACCEPT_LANGUAGE', ''),
-    )
+    return resolve_request_language(request)
 
 
 class UpdateListSerializer(serializers.ModelSerializer):
@@ -1003,8 +1000,7 @@ class UpdateDetailSerializer(UpdateListSerializer):
     def get_body(self, obj):
         from jizz.update_emails import quill_value_to_json_string
 
-        language = self.context.get('language') or _resolve_request_language(self.context.get('request'))
-        return quill_value_to_json_string(obj.body_for_language(language))
+        return quill_value_to_json_string(obj.body_for_language(self._language()))
 
     def get_body_en(self, obj):
         from jizz.update_emails import quill_value_to_json_string

@@ -13,6 +13,7 @@ import nlMessages from './locales/nl.json';
 import esMessages from './locales/es.json';
 import frMessages from './locales/fr.json';
 import deMessages from './locales/de.json';
+import itMessages from './locales/it.json';
 import ptBRMessages from './locales/pt-BR.json';
 import jaMessages from './locales/ja.json';
 import MultiPlayerGame from "./pages/mpg/multi-player-game"
@@ -74,6 +75,7 @@ export const MainContent = () => {
     es: esMessages,
     fr: frMessages,
     de: deMessages,
+    it: itMessages,
     'pt-BR': ptBRMessages,
     ja: jaMessages,
   }

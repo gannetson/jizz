@@ -26,6 +26,7 @@ const SCIENTIFIC_LANGUAGE_NAMES: Record<string, string> = {
   es: 'Científico (latín)',
   fr: 'Scientifique (latin)',
   de: 'Wissenschaftlich (Latein)',
+  it: 'Scientifico (latino)',
   'pt-BR': 'Científico (latim)',
   ja: '学名（ラテン語）',
 };

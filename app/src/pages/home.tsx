@@ -97,8 +97,8 @@ const HomePage = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    loadUpdates().then(setUpdates).catch(() => {});
-  }, []);
+    loadUpdates(player?.token, locale).then(setUpdates).catch(() => {});
+  }, [player?.token, locale]);
 
   useEffect(() => {
     if (!isAuthenticated) {

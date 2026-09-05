@@ -5,6 +5,7 @@
 import es from './locales/es.json';
 import fr from './locales/fr.json';
 import de from './locales/de.json';
+import it from './locales/it.json';
 import ptBR from './locales/pt-BR.json';
 import ja from './locales/ja.json';
 import type { AppLocale } from './appLocales';
@@ -1244,6 +1245,7 @@ export const translations: Record<string, Record<string, string>> = {
   es: es as Record<string, string>,
   fr: fr as Record<string, string>,
   de: de as Record<string, string>,
+  it: it as Record<string, string>,
   'pt-BR': ptBR as Record<string, string>,
   ja: ja as Record<string, string>,
 };

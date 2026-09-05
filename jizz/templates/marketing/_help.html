@@ -1,80 +1,72 @@
 <section id="help">
-  <h2>How can I help?</h2>
+  <h2>{% mt "How can I help?" %}</h2>
   <p>
-    Birdr is a small project. Honest feedback, spotting the wrong bird, and
-    writing comparison descriptions for lookalike species all help.
+    {% mt "Birdr is a small project. Honest feedback, spotting the wrong bird, writing comparison descriptions for lookalike species, and telling other birders all help." %}
   </p>
   <p>
-    During a quiz, tap <strong>Flag</strong> if the photo, video or sound is not
-    the species shown—or is otherwise unusable. That skips the clip in your game
-    and reports it so we can take it out of the set.
+    {% mt "During a quiz, tap <strong>Flag</strong> if the photo, video or sound is not the species shown—or is otherwise unusable. That skips the clip in your game and reports it so we can take it out of the set." %}
   </p>
   <p>
-    A large part of the picture library is still waiting for review. If you know
-    a country’s birds, open <a href="#review-photos">Review photos</a> below and
-    approve or reject images a few at a time.
+    {% mt "A large part of the picture library is still waiting for review. If you know a country’s birds, open <a href=\"#review-photos\">Review photos</a> below and approve or reject images a few at a time." %}
   </p>
   <p>
-    Comparison pages still rely on AI text until someone who knows the birds
-    writes a better one. Open a lookalike pair from
-    <a href="/site/birds/">Species</a>, then use
-    <strong>Write a better description</strong>.
+    {% with birds_href='/site/birds/'|mpath %}
+    {% mt "Comparison pages still rely on AI text until someone who knows the birds writes a better one. Open a lookalike pair from <a href=\"{href}\">Species</a>, then use <strong>Write a better description</strong>." href=birds_href %}
+    {% endwith %}
   </p>
-  <div class="grid">
+  <div class="grid grid-2">
     <article class="card">
-      <h3>Send feedback</h3>
+      <h3>{% mt "Send feedback" %}</h3>
       {% if request.GET.sent == '1' %}
-      <p class="form-note">Thank you. We read every message.</p>
+      <p class="form-note">{% mt "Thank you. We read every message." %}</p>
       {% else %}
       <p>
-        Found a bug, have a suggestion, or something that worked well? Tell us here,
-        or write to <a href="mailto:info@birdr.pro">info@birdr.pro</a>.
+        {% mt "Found a bug, have a suggestion, or something that worked well? Tell us here, or write to" %}
+        <a href="mailto:info@birdr.pro">info@birdr.pro</a>.
       </p>
       {% if request.GET.sent == 'missing' %}
-      <p class="form-error">Please write a short message.</p>
+      <p class="form-error">{% mt "Please write a short message." %}</p>
       {% elif request.GET.sent == 'email' %}
-      <p class="form-error">That email address does not look valid.</p>
+      <p class="form-error">{% mt "That email address does not look valid." %}</p>
       {% endif %}
-      <form class="feedback-form" method="post" action="{% url 'marketing-feedback' %}">
+      <form class="feedback-form" method="post" action="{{ '/site/feedback/'|mpath }}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
         <input type="hidden" name="started" value="{{ feedback_started }}">
         <p class="hp-field">
-          <label for="feedback-website">Website</label>
+          <label for="feedback-website">{% mt "Website" %}</label>
           <input id="feedback-website" type="text" name="website" tabindex="-1" autocomplete="off">
         </p>
         <p>
-          <label for="feedback-comment">Message</label>
-          <textarea id="feedback-comment" name="comment" rows="5" required maxlength="5000" placeholder="Your feedback…"></textarea>
+          <label for="feedback-comment">{% mt "Message" %}</label>
+          <textarea id="feedback-comment" name="comment" rows="5" required maxlength="5000" placeholder="{% mt "Your feedback…" %}"></textarea>
         </p>
         <p>
-          <label for="feedback-name">Name <span>(optional)</span></label>
+          <label for="feedback-name">{% mt "Name" %} <span>({% mt "optional" %})</span></label>
           <input id="feedback-name" type="text" name="name" maxlength="120" autocomplete="name">
         </p>
         <p>
-          <label for="feedback-email">Email <span>(optional)</span></label>
+          <label for="feedback-email">{% mt "Email" %} <span>({% mt "optional" %})</span></label>
           <input id="feedback-email" type="email" name="email" maxlength="254" autocomplete="email">
         </p>
         <p>
-          <button class="btn secondary" type="submit">Send feedback</button>
+          <button class="btn secondary" type="submit">{% mt "Send feedback" %}</button>
         </p>
       </form>
       {% endif %}
     </article>
     <article class="card" id="review-photos">
-      <h3>Review photos</h3>
+      <h3>{% mt "Review photos" %}</h3>
       <p>
-        Quizzes are only as good as the pictures, and many still have not been
-        checked. Help by approving good photos and rejecting the wrong bird—start
-        with any country, or the birds you know best.
+        {% mt "Quizzes are only as good as the pictures, and many still have not been checked. Help by approving good photos and rejecting the wrong bird—start with any country, or the birds you know best." %}
       </p>
       {% if country %}
       <p>
-        <a class="btn" href="/media-review/{{ country.code }}">Review {{ country.name }} photos</a>
+        <a class="btn" href="/media-review/{{ country.code }}">{% mt "Review {name} photos" name=country|local_country %}</a>
       </p>
-      <p><a href="/media-review/">Review photos from any country</a></p>
+      <p><a href="/media-review/">{% mt "Review photos from any country" %}</a></p>
       {% else %}
-      <p><a class="btn" href="/media-review/">Review media</a></p>
+      <p><a class="btn" href="/media-review/">{% mt "Review media" %}</a></p>
       {% if countries %}
       <p>
         {% for c in countries %}
@@ -85,15 +77,211 @@
       {% endif %}
     </article>
     <article class="card" id="write-comparisons">
-      <h3>Write comparisons</h3>
+      <h3>{% mt "Write comparisons" %}</h3>
       <p>
-        Species pages link to lookalikes that people mix up. If you know those
-        birds, you can replace the AI text with a description that actually
-        helps others tell them apart. You need to be signed in.
+        {% mt "Species pages link to lookalikes that people mix up. If you know those birds, you can replace the AI text with a description that actually helps others tell them apart. You need to be signed in." %}
       </p>
       <p>
-        <a class="btn" href="/site/birds/">Find lookalikes</a>
+        <a class="btn" href="{{ '/site/birds/'|mpath }}">{% mt "Find lookalikes" %}</a>
+      </p>
+    </article>
+    <article class="card" id="spread-word">
+      <h3>{% mt "Spread the word" %}</h3>
+      <p>
+        {% with flocks_href='/site/flocks/'|mpath %}
+        {% mt "Birdr grows when birders tell other birders. Mention it in a club newsletter, a WhatsApp group, or after a field trip. Clubs can also start a <a href=\"{href}\">Flock</a> and play the same quiz." href=flocks_href %}
+        {% endwith %}
+      </p>
+      <p>
+        {% if nav_section == 'community' %}
+        <a class="btn" href="#club-newsletter">{% mt "See a newsletter example" %}</a>
+        {% else %}
+        <a class="btn" href="{{ '/site/community/'|mpath }}#club-newsletter">{% mt "See a newsletter example" %}</a>
+        {% endif %}
       </p>
     </article>
   </div>
+  {% if nav_section == 'community' %}
+  <div id="spread-birdr" class="spread-birdr">
+    <h3>{% mt "Spread Birdr" %}</h3>
+    <p>
+      {% mt "A short note in a club email or magazine reaches people who already care about identification. You are welcome to reuse the item below, including the screenshots. Change the wording if it fits your club better." %}
+    </p>
+    <p>
+      {% with app_href=home_url|add:'#get-the-app' %}
+      {% mt "Free on <a href=\"{app}\">iPhone and Android</a>, or play in the browser at <a href=\"https://birdr.pro/play\">birdr.pro/play</a>." app=app_href %}
+      {% endwith %}
+    </p>
+  </div>
+  <div id="club-newsletter" class="club-newsletter">
+    <h3>{% mt "Add it to your bird club newsletter" %}</h3>
+    <p>
+      {% mt "Use Copy to put this example on the clipboard, including the screenshots. Images stay on birdr.pro, so they show when you paste into email or Word. If your club starts a Flock, include the invite so members can join in one tap." %}
+    </p>
+    <article class="newsletter-example" aria-label="{% mt "Example club newsletter item" %}">
+      <div class="newsletter-example-head">
+        <p class="kicker">{% mt "Example newsletter item" %}</p>
+        <button
+          type="button"
+          class="btn secondary newsletter-copy"
+          data-newsletter-copy
+          data-label="{% mt "Copy" %}"
+          data-copied="{% mt "Copied" %}"
+          data-failed="{% mt "Could not copy" %}"
+          aria-live="polite"
+        >{% mt "Copy" %}</button>
+      </div>
+      <div id="newsletter-copy-body">
+      <h4>{% mt "A free way to practise bird ID between field trips" %}</h4>
+      <p>
+        {% mt "If you want to get sharper at identification between outings, try <a href=\"https://birdr.pro/\">Birdr</a>. It is a free quiz app: you see a real photograph (or hear a recording), choose the species, and learn from the ones you miss. Study the birds of your own country, or switch to another list to prepare for a trip abroad." %}
+      </p>
+      <p>
+        {% mt "It is not an auto-ID camera. The point is to learn the field marks yourself. Playing is easy and intuitive: pick a country, choose a level, and start. The game is available in multiple languages, including the bird names." %}
+      </p>
+      <p>
+        {% mt "After each answer you can open the bird and look at more photographs, videos and sounds. When you finish the game, you can go back through every question." %}
+      </p>
+      <div class="screenshot-row newsletter-shots" aria-label="{% mt "Birdr screenshots" %}">
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-new-game.png" width="456" height="1024" alt="{% mt "New game: pick a country, a language for species names, and a difficulty" %}">
+          <figcaption>{% mt "Pick a country and start" %}</figcaption>
+        </figure>
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-photo-quiz.png" width="456" height="993" alt="{% mt "Birdr photo quiz: a gull on water and six species to choose from" %}">
+          <figcaption>{% mt "Identify the bird from a photo" %}</figcaption>
+        </figure>
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-species-review.png" width="456" height="1024" alt="{% mt "Species page: Gull-billed Tern with photos, videos and sounds to review after an answer" %}">
+          <figcaption>{% mt "Review more pictures" %}</figcaption>
+        </figure>
+      </div>
+      <p>
+        {% mt "Wrong answers are not wasted. My Tricky Birds keeps the lookalikes you mix up, pipits, treecreepers, black-backed gulls, and lets you practise that pair until it sticks. When a pair is fixed, you see it." %}
+      </p>
+      <div class="screenshot-row newsletter-shots" aria-label="{% mt "My Tricky Birds screenshots" %}">
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-tricky-birds.png" width="456" height="1024" alt="{% mt "My Tricky Birds: a list of confusing pairs for the Netherlands, with Practice buttons and FIXED badges" %}">
+          <figcaption>{% mt "Your personal mix-ups" %}</figcaption>
+        </figure>
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-tricky-practice.png" width="456" height="1024" alt="{% mt "Pair practice: Eurasian Treecreeper versus Short-toed Treecreeper, with the correct species marked" %}">
+          <figcaption>{% mt "Practise a confusing pair" %}</figcaption>
+        </figure>
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-tricky-results.png" width="456" height="1024" alt="{% mt "Pair practice results: 18 of 20 correct, and the two treecreepers no longer seem confusing" %}">
+          <figcaption>{% mt "See when a pair is fixed" %}</figcaption>
+        </figure>
+      </div>
+      <p>
+        {% mt "Clubs can start a Flock: Every week the same 25-question quiz for the group, with a private leaderboard. Members have the entire week to play the game." %}
+      </p>
+      <p>
+        {% mt "A Country Challenge takes you through levels on one country’s list. It starts easy, but it ends tough, nobody has made it to the end yet." %}
+      </p>
+      <div class="screenshot-row newsletter-shots newsletter-shots-single" aria-label="{% mt "Country challenge screenshot" %}">
+        <figure class="hero-art hero-phone">
+          <img src="/images/birdr-country-challenge.png" width="456" height="993" alt="{% mt "Country challenge: United States Eastern, question 2 of 10, identify a Yellow-rumped Warbler" %}">
+          <figcaption>{% mt "Country Challenge" %}</figcaption>
+        </figure>
+      </div>
+      <p>
+        {% mt "Birdr is free on iPhone, Android and at <a href=\"https://birdr.pro/\">https://birdr.pro</a>. Sign up if you want to keep your progress." %}
+      </p>
+      {% include "marketing/_store_badges.html" %}
+      <p>
+        {% mt "App Store: <a href=\"{apple}\">{apple}</a>." apple=app_store_url %}
+          <br/>
+        {% mt "Google Play: <a href=\"{play}\">{play}</a>." play=play_store_url %}
+      </p>
+      </div>
+    </article>
+    <script>
+    (function () {
+      var btn = document.querySelector('[data-newsletter-copy]');
+      var source = document.getElementById('newsletter-copy-body');
+      if (!btn || !source) return;
+      var idle = btn.getAttribute('data-label') || 'Copy';
+      var done = btn.getAttribute('data-copied') || 'Copied';
+      var fail = btn.getAttribute('data-failed') || 'Could not copy';
+      var timer;
+
+      function flash(text) {
+        btn.textContent = text;
+        clearTimeout(timer);
+        timer = setTimeout(function () { btn.textContent = idle; }, 2000);
+      }
+
+      function filledClone() {
+        var clone = source.cloneNode(true);
+        var imgs = clone.querySelectorAll('img');
+        for (var i = 0; i < imgs.length; i++) {
+          imgs[i].setAttribute('src', imgs[i].src);
+        }
+        var links = clone.querySelectorAll('a');
+        for (var j = 0; j < links.length; j++) {
+          links[j].setAttribute('href', links[j].href);
+        }
+        return clone;
+      }
+
+      function htmlPayload() {
+        return '<html><body><!--StartFragment-->' + filledClone().innerHTML + '<!--EndFragment--></body></html>';
+      }
+
+      function execCopy() {
+        var holder = document.createElement('div');
+        holder.setAttribute('contenteditable', 'true');
+        holder.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;';
+        holder.appendChild(filledClone());
+        document.body.appendChild(holder);
+        holder.focus();
+        var selection = window.getSelection();
+        var range = document.createRange();
+        range.selectNodeContents(holder);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        selection.removeAllRanges();
+        document.body.removeChild(holder);
+        btn.focus();
+        return ok;
+      }
+
+      btn.addEventListener('click', function () {
+        var text = (source.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+        var copiedOk = execCopy();
+        if (navigator.clipboard && window.ClipboardItem) {
+          var html = htmlPayload();
+          var item;
+          try {
+            item = new ClipboardItem({
+              'text/html': new Blob([html], { type: 'text/html' }),
+              'text/plain': new Blob([text], { type: 'text/plain' })
+            });
+          } catch (e) {
+            item = new ClipboardItem({
+              'text/html': Promise.resolve(new Blob([html], { type: 'text/html' })),
+              'text/plain': Promise.resolve(new Blob([text], { type: 'text/plain' }))
+            });
+          }
+          navigator.clipboard.write([item]).then(function () {
+            flash(done);
+          }).catch(function () {
+            if (copiedOk) flash(done);
+            else if (navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(function () { flash(done); }).catch(function () { flash(fail); });
+            } else {
+              flash(fail);
+            }
+          });
+          return;
+        }
+        flash(copiedOk ? done : fail);
+      });
+    })();
+    </script>
+  </div>
+  {% endif %}
 </section>

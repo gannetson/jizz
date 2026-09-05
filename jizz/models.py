@@ -1136,14 +1136,37 @@ class Update(models.Model):
         return self.title_en
 
     def title_for_language(self, language: str) -> str:
-        if language.startswith('nl') and self.title_nl:
-            return self.title_nl
-        return self.title_en
+        from jizz.update_i18n import localized_title
+
+        return localized_title(self, language)
 
     def body_for_language(self, language: str):
-        if language.startswith('nl') and self.body_nl:
-            return self.body_nl
-        return self.body_en
+        from jizz.update_i18n import localized_body
+
+        return localized_body(self, language)
+
+
+class UpdateTranslation(models.Model):
+    """Cached auto-translation of an update for an app UI language."""
+
+    update = models.ForeignKey(Update, related_name='translations', on_delete=models.CASCADE)
+    language = models.CharField(max_length=10)
+    source_hash = models.CharField(max_length=32)
+    title = models.CharField(max_length=200)
+    body_html = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['update', 'language'], name='update_translation_lang_uniq'),
+        ]
+        indexes = [
+            models.Index(fields=['update', 'language', 'source_hash']),
+        ]
+
+    def __str__(self):
+        return f'{self.update_id} {self.language}'
 
 
 class UpdateThumbsUp(models.Model):

@@ -111,10 +111,10 @@ export function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadUpdates().then(setUpdates).catch(() => {});
+      loadUpdates(undefined, locale).then(setUpdates).catch(() => {});
       loadActiveJourney();
       loadFlockSummary();
-    }, [loadActiveJourney, loadFlockSummary])
+    }, [loadActiveJourney, loadFlockSummary, locale])
   );
 
   useEffect(() => {

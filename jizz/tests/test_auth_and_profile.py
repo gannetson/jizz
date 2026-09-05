@@ -259,6 +259,15 @@ class ProfileViewTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_profile_accepts_italian_app_language(self):
+        response = self.client.put(
+            '/api/profile/',
+            {'app_language': 'it-IT'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['app_language'], 'it')
+
     def test_profile_update_receive_updates(self):
         response = self.client.put(
             '/api/profile/',

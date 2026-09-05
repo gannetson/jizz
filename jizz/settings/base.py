@@ -108,6 +108,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'jizz.middleware.MarketingLocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'jizz.middleware.SocialAuthRedirectUriMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -132,6 +133,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+            ],
+            'builtins': [
+                'jizz.templatetags.mt',
             ],
         },
     },
@@ -360,6 +364,9 @@ SPECIES_ILLUSTRATION_OUTPUT_FORMAT = os.environ.get('SPECIES_ILLUSTRATION_OUTPUT
 # Species comparison text (OpenAI Chat Completions, cached on SpeciesComparison).
 COMPARISON_AI_MODEL = os.environ.get('COMPARISON_AI_MODEL', 'gpt-4o')
 COMPARISON_AI_PROMPT_VERSION = os.environ.get('COMPARISON_AI_PROMPT_VERSION', 'v3')
+
+# Update blog auto-translation (OpenAI Chat Completions, cached on UpdateTranslation).
+UPDATE_TRANSLATION_MODEL = os.environ.get('UPDATE_TRANSLATION_MODEL', 'gpt-4o-mini')
 
 # Native mobile app minimum semver (force-update gate in iOS/Android clients).
 APP_MIN_VERSION = os.environ.get('APP_MIN_VERSION', '1.79.0')

@@ -1,17 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ html_lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ page_title }}</title>
   <meta name="description" content="{{ meta_description }}">
   <link rel="canonical" href="{{ canonical_url }}">
+  {% for alt in locale_alternates %}
+  <link rel="alternate" hreflang="{{ alt.hreflang }}" href="{{ alt.absolute_url }}">
+  {% endfor %}
+  <link rel="alternate" hreflang="x-default" href="{{ locale_default_url }}">
   {% include "includes/favicon_links.html" %}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ site_name }}">
   <meta property="og:title" content="{{ page_title }}">
   <meta property="og:description" content="{{ meta_description }}">
   <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:locale" content="{{ og_locale }}">
+  {% for alt in locale_alternates %}
+  {% if not alt.current %}
+  <meta property="og:locale:alternate" content="{{ alt.og }}">
+  {% endif %}
+  {% endfor %}
   <meta property="og:image" content="{{ og_image }}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -74,7 +84,10 @@
     }
     #get-the-app,
     #help,
-    #download {
+    #download,
+    #spread-birdr,
+    #club-newsletter,
+    #spread-word {
       scroll-margin-top: 7.5rem;
     }
     header.site .wrap {
@@ -215,6 +228,59 @@
       border-top: 1px solid var(--birdr-200);
       margin: 6px 0;
     }
+    nav.site .nav-lang {
+      position: relative;
+      z-index: 21;
+    }
+    nav.site .nav-lang[open] { z-index: 22; }
+    nav.site .nav-lang > summary {
+      list-style: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--birdr-800);
+    }
+    nav.site .nav-lang > summary::-webkit-details-marker { display: none; }
+    nav.site .nav-lang > summary::after {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--birdr-500);
+    }
+    nav.site .nav-lang-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      min-width: 13.5rem;
+      background: #fff;
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 14px;
+      box-shadow: var(--shadow-menu);
+      padding: 8px 0;
+      z-index: 30;
+    }
+    nav.site .nav-lang-menu a {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--birdr-800);
+      text-decoration: none;
+      box-shadow: none;
+    }
+    nav.site .nav-lang-menu a:hover,
+    nav.site .nav-lang-menu a[aria-current="true"] {
+      background: var(--birdr-50);
+      color: var(--birdr-600);
+    }
     .edits-list {
       list-style: none;
       padding: 0;
@@ -290,7 +356,20 @@
       flex-wrap: wrap;
       align-items: center;
     }
-    .store-badges img { display: block; }
+    .store-badges a {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      overflow: hidden;
+    }
+    .store-badges img {
+      display: block;
+      height: 40px;
+      width: auto;
+    }
+    .store-badges .play-badge img {
+      height: 58px;
+    }
     .hero-art {
       background: #fff;
       border: 1px solid var(--birdr-200);
@@ -345,6 +424,54 @@
         scroll-snap-align: start;
         margin: 0;
       }
+    }
+    .spread-birdr,
+    .club-newsletter {
+      margin: 36px 0 0;
+    }
+    .spread-birdr h3,
+    .club-newsletter h3 {
+      font-family: var(--font);
+      font-size: 1.45rem;
+      margin: 0 0 12px;
+    }
+    .newsletter-example {
+      background: #fff;
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 18px;
+      padding: 28px 28px 20px;
+      box-shadow: var(--shadow-card);
+      margin: 20px 0 0;
+    }
+    .newsletter-example h4 {
+      font-family: var(--font);
+      font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+    .newsletter-example p { margin: 0 0 12px; }
+    .newsletter-example .store-badges { margin: 8px 0 12px; }
+    .newsletter-example-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 10px;
+    }
+    .newsletter-example-head .kicker { margin: 0; }
+    .newsletter-copy {
+      padding: 6px 14px;
+      font-size: 0.9rem;
+    }
+    .newsletter-example .newsletter-shots {
+      margin: 18px 0 22px;
+    }
+    .newsletter-shots-single {
+      grid-template-columns: minmax(0, 220px);
+      justify-content: start;
+    }
+    @media (max-width: 800px) {
+      .newsletter-example { padding: 20px 16px 12px; }
     }
     .species-hero { padding-bottom: 12px; }
     .species-title-row {
@@ -499,6 +626,12 @@
       grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
       gap: 16px;
       margin: 24px 0 8px;
+    }
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 700px) {
+      .grid-2 { grid-template-columns: 1fr; }
     }
     .level-grid {
       grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
@@ -783,6 +916,29 @@
       font-size: 0.92rem;
     }
     .ai-generate-error { margin: 0; color: #9b1c1c; }
+    .ai-credits {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+      margin: 0 0 24px;
+      padding: 20px 22px 24px;
+      background: var(--card);
+      border: 1px solid rgba(212, 184, 138, 0.55);
+      border-radius: 18px;
+      box-shadow: var(--shadow-card);
+    }
+    .ai-credits img {
+      display: block;
+      width: min(320px, 100%);
+      height: auto;
+    }
+    .ai-credits p {
+      margin: 0;
+      max-width: 28rem;
+      font-size: 1.05rem;
+    }
     .copyright-notice {
       background: #fff6e8;
       border: 1px solid #e0b15a;
@@ -1088,6 +1244,7 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body{% if nav_user_name %} data-session-user="1"{% endif %}>
+  <script>window.BIRDR_I18N = {{ js_i18n }};</script>
   <header class="site">
     <div class="wrap">
       <a class="brand" href="{{ home_url }}">
@@ -1096,38 +1253,43 @@
         </span>
         <span class="brand-name">Birdr</span>
       </a>
-      <nav class="site" aria-label="Primary">
-        <a href="/site/how-it-works/"{% if nav_section == 'how-it-works' %} aria-current="page"{% endif %}>How it works</a>
-        <a href="/site/birds/"{% if nav_section == 'species' %} aria-current="page"{% endif %}>Species</a>
-        <a href="/site/bird-quiz-by-country/"{% if nav_section == 'countries' %} aria-current="page"{% endif %}>Countries</a>
-        {% for page in cms_nav_pages %}
-        <a href="{{ page.get_absolute_url }}"{% if request.path == page.get_absolute_url %} aria-current="page"{% endif %}>{{ page.nav_text }}</a>
-        {% endfor %}
-        <a href="/site/community/"{% if nav_section == 'community' %} aria-current="page"{% endif %}>Community</a>
+      <nav class="site" aria-label="{% mt "Primary" %}">
+        <a href="{{ '/site/how-it-works/'|mpath }}"{% if nav_section == 'how-it-works' %} aria-current="page"{% endif %}>{% mt "How it works" %}</a>
+        <a href="{{ '/site/birds/'|mpath }}"{% if nav_section == 'species' %} aria-current="page"{% endif %}>{% mt "Species" %}</a>
+        <a href="{{ '/site/bird-quiz-by-country/'|mpath }}"{% if nav_section == 'countries' %} aria-current="page"{% endif %}>{% mt "Countries" %}</a>
+        <a href="{{ '/site/community/'|mpath }}"{% if nav_section == 'community' %} aria-current="page"{% endif %}>{% mt "Community" %}</a>
         {% if not nav_user_name %}
-        <a class="nav-login" id="nav-login" href="{{ login_href }}" aria-haspopup="dialog" aria-controls="login-dialog">Log in</a>
+        <a class="nav-login" id="nav-login" href="{{ login_href }}" aria-haspopup="dialog" aria-controls="login-dialog">{% mt "Log in" %}</a>
         {% endif %}
         <details class="nav-account" id="nav-account"{% if not nav_user_name %} hidden{% endif %}>
           <summary class="nav-user" id="nav-user">{{ nav_user_name }}</summary>
           <div class="nav-account-menu">
-            <a href="/my-games">My Games</a>
-            <a href="/checklist">My Checklist</a>
-            <a href="/trouble-spots">My tricky birds</a>
-            <a href="/settings">Settings</a>
+            <a href="/my-games">{% mt "My Games" %}</a>
+            <a href="/checklist">{% mt "My Checklist" %}</a>
+            <a href="/trouble-spots">{% mt "My tricky birds" %}</a>
+            <a href="/settings">{% mt "Settings" %}</a>
             <hr>
-            <a href="/admin" id="nav-admin"{% if not nav_is_staff %} hidden{% endif %}>Admin</a>
-            <a href="/site/my-edits/">My edits</a>
+            <a href="/admin" id="nav-admin"{% if not nav_is_staff %} hidden{% endif %}>{% mt "Admin" %}</a>
+            <a href="{{ '/site/my-edits/'|mpath }}">{% mt "My edits" %}</a>
             <hr>
-            <button type="button" id="nav-logout">Logout</button>
+            <button type="button" id="nav-logout">{% mt "Logout" %}</button>
           </div>
         </details>
-        <a class="nav-cta" href="{{ home_url }}#get-the-app">Get the app</a>
+        <details class="nav-lang" id="nav-lang">
+          <summary aria-label="{% mt "Language" %}">{% for alt in locale_alternates %}{% if alt.current %}{{ alt.label }}{% endif %}{% endfor %}</summary>
+          <div class="nav-lang-menu">
+            {% for alt in locale_alternates %}
+            <a href="{{ alt.url }}" hreflang="{{ alt.hreflang }}"{% if alt.current %} aria-current="true"{% endif %}>{{ alt.label }}</a>
+            {% endfor %}
+          </div>
+        </details>
+        <a class="nav-cta" href="{{ home_url }}#get-the-app">{% mt "Get the app" %}</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
     {% if breadcrumbs %}
-    <nav class="crumbs" aria-label="Breadcrumb">
+    <nav class="crumbs" aria-label="{% mt "Breadcrumb" %}">
       <ol>
         {% for name, href in breadcrumbs %}
         <li>{% if href and not forloop.last %}<a href="{{ href }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</li>
@@ -1142,33 +1304,33 @@
     <div class="wrap footer-grid">
       <div>
         <a class="brand" href="{{ home_url }}">Birdr</a>
-        <p>Learn to identify birds yourself. Free on iPhone, Android and the web.</p>
+        <p>{% mt "Improve your birding skills. Free on iPhone, Android and the web." %}</p>
         {% include "marketing/_store_badges.html" %}
-        <p><a class="web-link" href="/play">Play in the browser</a></p>
+        <p><a class="web-link" href="/play">{% mt "Play in the browser" %}</a></p>
       </div>
       <div>
-        <h3>Learn</h3>
+        <h3>{% mt "Learn" %}</h3>
         <ul>
-          <li><a href="/site/how-it-works/">How it works</a></li>
-          <li><a href="/play">Play a quiz</a></li>
-          <li><a href="/site/birds/">Species</a></li>
-          <li><a href="/site/learn-bird-identification/">Learn bird identification</a></li>
-          <li><a href="/site/my-tricky-birds/">My Tricky Birds</a></li>
-          <li><a href="/site/bird-quiz-by-country/">Quizzes by country</a></li>
+          <li><a href="{{ '/site/how-it-works/'|mpath }}">{% mt "How it works" %}</a></li>
+          <li><a href="/play">{% mt "Play a quiz" %}</a></li>
+          <li><a href="{{ '/site/birds/'|mpath }}">{% mt "Species" %}</a></li>
+          <li><a href="{{ '/site/learn-bird-identification/'|mpath }}">{% mt "Learn bird identification" %}</a></li>
+          <li><a href="{{ '/site/my-tricky-birds/'|mpath }}">{% mt "My Tricky Birds" %}</a></li>
+          <li><a href="{{ '/site/bird-quiz-by-country/'|mpath }}">{% mt "Quizzes by country" %}</a></li>
         </ul>
       </div>
       <div>
         <h3>Birdr</h3>
         <ul>
-          <li><a href="/site/birding-app/">The app</a></li>
-          <li><a href="/site/flocks/">Flocks</a></li>
-          <li><a href="/site/faq/">FAQ</a></li>
-          <li><a href="/site/community/">Community</a></li>
+          <li><a href="{{ '/site/birding-app/'|mpath }}">{% mt "The app" %}</a></li>
+          <li><a href="{{ '/site/flocks/'|mpath }}">{% mt "Flocks" %}</a></li>
+          <li><a href="{{ '/site/faq/'|mpath }}">{% mt "FAQ" %}</a></li>
+          <li><a href="{{ '/site/community/'|mpath }}">{% mt "Community" %}</a></li>
           {% for page in cms_nav_pages %}
-          <li><a href="{{ page.get_absolute_url }}">{{ page.nav_text }}</a></li>
+          <li><a href="{{ page.get_absolute_url|mpath }}">{{ page.nav_text }}</a></li>
           {% endfor %}
-          <li><a href="{{ cms_index_url }}">All pages</a></li>
-          <li><a href="mailto:info@birdr.pro">Contact</a></li>
+          <li><a href="{{ cms_index_url }}">{% mt "All pages" %}</a></li>
+          <li><a href="mailto:info@birdr.pro">{% mt "Contact" %}</a></li>
         </ul>
       </div>
     </div>
@@ -1178,13 +1340,15 @@
   (function () {
     var login = document.getElementById('nav-login');
     var account = document.getElementById('nav-account');
+    var langMenu = document.getElementById('nav-lang');
     var userLink = document.getElementById('nav-user');
     var adminLink = document.getElementById('nav-admin');
     var logoutBtn = document.getElementById('nav-logout');
+    var i18n = window.BIRDR_I18N || {};
     function displayName(profile) {
       var full = ((profile.first_name || '') + ' ' + (profile.last_name || '')).trim();
       var username = (profile.username || '').trim();
-      return full || (username && username.indexOf('@') === -1 ? username : '') || 'Account';
+      return full || (username && username.indexOf('@') === -1 ? username : '') || i18n['Account'] || 'Account';
     }
     function showAccount(name, staff) {
       if (userLink) userLink.textContent = name;
@@ -1203,12 +1367,15 @@
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('jw_token');
         } catch (e) {}
-        window.location.href = '/site/logout/';
+        window.location.href = '{{ logout_url|escapejs }}';
       });
     }
     document.addEventListener('click', function (event) {
       if (account && account.open && !account.contains(event.target)) {
         account.removeAttribute('open');
+      }
+      if (langMenu && langMenu.open && !langMenu.contains(event.target)) {
+        langMenu.removeAttribute('open');
       }
     });
     if (!login || !userLink || !account) return;

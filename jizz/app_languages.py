@@ -1,6 +1,6 @@
 """Supported app UI languages (BCP-47). Distinct from bird-name `UserProfile.language`."""
 
-APP_LANGUAGES = frozenset({'en', 'nl', 'es', 'fr', 'de', 'pt-BR', 'ja'})
+APP_LANGUAGES = frozenset({'en', 'nl', 'es', 'fr', 'de', 'it', 'pt-BR', 'ja'})
 
 
 def normalize_app_language(value: str | None) -> str:

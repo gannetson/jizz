@@ -12,6 +12,7 @@ from jizz.jwt_views import EmailOrUsernameTokenObtainPairView
 from jizz.marketing.views import (
     bird_page,
     birds_index,
+    cms_legacy_redirect,
     cms_index,
     cms_page,
     compare_page,
@@ -271,7 +272,7 @@ urlpatterns = [
     path('site/page/', cms_index, name='marketing-cms-index'),
     path('site/page/<slug:slug>/', cms_page, name='marketing-cms-page'),
     path('site/feedback/', site_feedback, name='marketing-feedback'),
-    path('site/<slug:slug>/', RedirectView.as_view(url='/site/page/%(slug)s/', permanent=True)),
+    path('site/<slug:slug>/', cms_legacy_redirect),
     path('', RedirectView.as_view(url='/site/', permanent=True)),
     path('how-it-works/', RedirectView.as_view(url='/site/how-it-works/', permanent=True)),
     path(

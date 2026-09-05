@@ -5,6 +5,7 @@ describe('app locale matching', () => {
     expect(matchAppLocale('es-MX')).toBe('es');
     expect(matchAppLocale('fr_CA')).toBe('fr');
     expect(matchAppLocale('de-AT')).toBe('de');
+    expect(matchAppLocale('it-IT')).toBe('it');
     expect(matchAppLocale('pt-BR')).toBe('pt-BR');
     expect(matchAppLocale('pt')).toBe('pt-BR');
     expect(matchAppLocale('ja-JP')).toBe('ja');
@@ -21,5 +22,6 @@ describe('app locale matching', () => {
     expect(resolveAppLocale({ profileAppLanguage: 'fr', stored: 'nl', deviceTag: 'de' })).toBe('fr');
     expect(resolveAppLocale({ profileAppLanguage: '', stored: 'nl', deviceTag: 'de' })).toBe('nl');
     expect(resolveAppLocale({ profileAppLanguage: '', stored: '', deviceTag: 'ja-JP' })).toBe('ja');
+    expect(resolveAppLocale({ profileAppLanguage: '', stored: '', deviceTag: 'it-IT' })).toBe('it');
   });
 });

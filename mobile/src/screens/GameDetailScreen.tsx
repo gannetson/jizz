@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
-  Animated,
 } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { PlayableVideo } from '../components/PlayableVideo';
@@ -24,7 +23,6 @@ import { SpeciesViewButton } from '../components/SpeciesViewButton';
 import { ComparisonButton } from '../components/ComparisonButton';
 import { useGame } from '../context/GameContext';
 import { useTranslation } from '../i18n/TranslationContext';
-import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { colors } from '../theme';
 
 type GameDetailRouteParams = { token: string; playerToken?: string };
@@ -99,9 +97,30 @@ export function GameDetailScreen() {
   const [practiceSpeciesId, setPracticeSpeciesId] = useState<number | null>(null);
   const [mediaSpecies, setMediaSpecies] = useState<SpeciesMediaData | null>(null);
 
+  const loadDetail = useCallback(async () => {
+    if (!token) {
+      setError('Game token is required');
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getGameDetail(
+        token,
+        playerToken ? { playerToken } : undefined
+      );
+      setGameDetail(data);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('failed_load'));
+    } finally {
+      setLoading(false);
+    }
+  }, [token, playerToken, t]);
+
   useEffect(() => {
-    loadGame();
-  }, [loadGame]);
+    loadDetail();
+  }, [loadDetail]);
 
   const handlePracticeSpecies = async (speciesId: number, e?: any) => {
     if (e?.stopPropagation) e.stopPropagation();

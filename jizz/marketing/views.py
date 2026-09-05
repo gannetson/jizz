@@ -514,6 +514,7 @@ def _compare_page_response(
     form_open=False,
     notice='',
 ):
+    locale = locale_from_request(request)
     comparison = _cached_ai_comparison(low, high)
     community = published_for_pair(low, high)
     user = user_from_request(request)
@@ -521,16 +522,20 @@ def _compare_page_response(
     show_ai = request.GET.get('source') == 'ai' or not community
     has_ai_text = has_comparison_text(comparison)
     needs_ai_generation = show_ai and not has_ai_text
-    active = comparison if show_ai else community
+    if show_ai and comparison:
+        from compare.i18n import localize_comparison
+
+        active = localize_comparison(comparison, locale)
+    else:
+        active = community if not show_ai else comparison
     summary_html, sections, detailed_html = rendered_parts(active)
     if show_ai and not summary_html and not sections and not detailed_html:
         summary_html, sections, detailed_html = '', [], ''
-    locale = locale_from_request(request)
     left_name = species_display_name(low, locale)
     right_name = species_display_name(high, locale)
     description = (
         (community.summary if community and not show_ai else '')
-        or (comparison.summary if comparison else '')
+        or (getattr(active, 'summary', None) if active else '')
         or translate(
             'Learn the field marks that separate {low} and {high}, then practise the pair on Birdr.',
             low=left_name,

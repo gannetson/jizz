@@ -39,6 +39,7 @@ from django.shortcuts import get_object_or_404
 from .models import Game, Language, Page
 from .serializers import (
     GameSerializer,
+    GameLanguageSerializer,
     FamilyListSerializer,
     OrderListSerializer,
     LanguageSerializer,
@@ -648,10 +649,24 @@ class GameListView(ListCreateAPIView, GetPlayerMixin):
         serializer.save(host=player)
 
 
-class GameDetailView(RetrieveAPIView):
+class GameDetailView(RetrieveUpdateAPIView):
     serializer_class = GameSerializer
     queryset = Game.objects.all()
     lookup_field = "token"
+    permission_classes = [AllowAny]
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return GameLanguageSerializer
+        return GameSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = GameLanguageSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(GameSerializer(instance, context=self.get_serializer_context()).data)
 
 
 class NoSpeciesForGame(APIException):

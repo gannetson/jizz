@@ -90,6 +90,7 @@
   id="ai-generate"
   data-species-1="{{ left.id }}"
   data-species-2="{{ right.id }}"
+  data-language="{{ html_lang }}"
 >
   <div class="ai-generate-row">
     <span class="ai-spinner" aria-hidden="true"></span>
@@ -229,9 +230,16 @@
     var statusEl = root.querySelector('.js-generate-status');
     var errorEl = root.querySelector('.js-generate-error');
     var spinner = root.querySelector('.ai-spinner');
-    fetch('/api/compare/request/', {
+    var language = root.getAttribute('data-language') || '';
+    var requestUrl = '/api/compare/request/';
+    if (language) {
+      requestUrl += '?app_language=' + encodeURIComponent(language) + '&language=' + encodeURIComponent(language);
+    }
+    var headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    if (language) headers['Accept-Language'] = language;
+    fetch(requestUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: headers,
       body: JSON.stringify({
         comparison_type: 'species',
         species_1_id: Number(root.getAttribute('data-species-1')),

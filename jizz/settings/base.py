@@ -367,6 +367,11 @@ COMPARISON_AI_PROMPT_VERSION = os.environ.get('COMPARISON_AI_PROMPT_VERSION', 'v
 
 # Update blog auto-translation (OpenAI Chat Completions, cached on UpdateTranslation).
 UPDATE_TRANSLATION_MODEL = os.environ.get('UPDATE_TRANSLATION_MODEL', 'gpt-4o-mini')
+# Species comparison auto-translation (OpenAI Chat Completions, cached on ComparisonTranslation).
+COMPARISON_TRANSLATION_MODEL = os.environ.get(
+    'COMPARISON_TRANSLATION_MODEL',
+    UPDATE_TRANSLATION_MODEL,
+)
 
 # Native mobile app minimum semver (force-update gate in iOS/Android clients).
 APP_MIN_VERSION = os.environ.get('APP_MIN_VERSION', '1.79.0')

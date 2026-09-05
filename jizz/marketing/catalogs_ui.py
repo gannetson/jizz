@@ -391,6 +391,30 @@ UI_ENTRIES: list[tuple[str, tuple[str, ...]]] = [
         ),
     ),
     (
+        'The <a href="https://www.facebook.com/groups/birdrcommunity">Facebook group</a> is the place to have discussions with other birders.',
+        (
+            'De <a href="https://www.facebook.com/groups/birdrcommunity">Facebookgroep</a> is de plek voor gesprekken met andere vogelaars.',
+            'El <a href="https://www.facebook.com/groups/birdrcommunity">grupo de Facebook</a> es el sitio para hablar con otros observadores.',
+            'Le <a href="https://www.facebook.com/groups/birdrcommunity">groupe Facebook</a> est l’endroit pour discuter avec d’autres ornithos.',
+            'Die <a href="https://www.facebook.com/groups/birdrcommunity">Facebook-Gruppe</a> ist der Ort für Gespräche mit anderen Birding-Leuten.',
+            'Il <a href="https://www.facebook.com/groups/birdrcommunity">gruppo Facebook</a> è il posto per discutere con altri birdwatcher.',
+            'O <a href="https://www.facebook.com/groups/birdrcommunity">grupo do Facebook</a> é o lugar para conversar com outros observadores.',
+            'ほかのバーダーと話す場所は <a href="https://www.facebook.com/groups/birdrcommunity">Facebookグループ</a> です。',
+        ),
+    ),
+    (
+        'To report a bug or request a feature, <a href="https://github.com/birdr-app/birdr/issues">submit a ticket on GitHub</a>.',
+        (
+            'Om een bug te melden of een functie te vragen, <a href="https://github.com/birdr-app/birdr/issues">dien een ticket in op GitHub</a>.',
+            'Para informar de un error o pedir una función, <a href="https://github.com/birdr-app/birdr/issues">abre un ticket en GitHub</a>.',
+            'Pour signaler un bug ou demander une fonction, <a href="https://github.com/birdr-app/birdr/issues">ouvre un ticket sur GitHub</a>.',
+            'Um einen Fehler zu melden oder eine Funktion zu wünschen, <a href="https://github.com/birdr-app/birdr/issues">eröffne ein Ticket auf GitHub</a>.',
+            'Per segnalare un bug o chiedere una funzione, <a href="https://github.com/birdr-app/birdr/issues">apri un ticket su GitHub</a>.',
+            'Para reportar um bug ou pedir um recurso, <a href="https://github.com/birdr-app/birdr/issues">abra um ticket no GitHub</a>.',
+            '不具合の報告や機能の要望は <a href="https://github.com/birdr-app/birdr/issues">GitHubでチケットを送ってください</a>。',
+        ),
+    ),
+    (
         'Birdr is a small project. Honest feedback, spotting the wrong bird, writing comparison descriptions for lookalike species, and telling other birders all help.',
         (
             'Birdr is een klein project. Eerlijke feedback, de verkeerde vogel herkennen, vergelijkingen schrijven voor lookalikes, en het doorvertellen aan andere vogelaars: alles helpt.',

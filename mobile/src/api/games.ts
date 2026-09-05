@@ -126,6 +126,18 @@ export async function getCurrentQuestion(
   return data as Question;
 }
 
+export async function updateGameLanguage(token: string, language: string): Promise<Game | null> {
+  const response = await fetch(apiUrl(`/api/games/${encodeURIComponent(token)}/`), {
+    method: 'PATCH',
+    cache: 'no-store',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ language }),
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data as Game;
+}
+
 /** Tell the server primary media has loaded so score timing starts from now (not question.created). */
 export async function postQuestionMediaReady(questionId: number, playerToken: string): Promise<void> {
   const response = await fetch(apiUrl(`/api/questions/${questionId}/media-ready/`), {

@@ -51,6 +51,13 @@ export function guessAppLocaleFromDevice(tag?: string | null): AppLocale {
   return matchAppLocale(tag ?? getDeviceLanguageTag()) ?? 'en';
 }
 
+/** App UI locale -> SpeciesName / game language id (`pt-BR` -> `pt_BR`). */
+export function speciesLanguageFromAppLocale(locale: string | null | undefined): string {
+  const next = matchAppLocale(locale);
+  if (next === 'pt-BR') return 'pt_BR';
+  return next ?? 'en';
+}
+
 export function resolveAppLocale(options: {
   profileAppLanguage?: string | null;
   stored?: string | null;

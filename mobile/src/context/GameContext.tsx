@@ -53,6 +53,8 @@ type GameContextType = {
   /** Call when user picks species language so a late loadStoredPlayer response does not overwrite it. */
   markSpeciesLanguageUserChosen: () => void;
   isSpeciesLanguageUserChosen: () => boolean;
+  /** Switch bird-name language for this session, player, and in-progress game. */
+  applySpeciesLanguage: (lang: string) => Promise<void>;
   clearGame: () => Promise<void>;
 };
 
@@ -111,6 +113,54 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isSpeciesLanguageUserChosen = useCallback(() => speciesLanguageUserChosenRef.current, []);
+
+  const playerRef = useRef(player);
+  playerRef.current = player;
+  const gameRef = useRef(game);
+  gameRef.current = game;
+  const playerNameRef = useRef(playerName);
+  playerNameRef.current = playerName;
+
+  const applySpeciesLanguage = useCallback(async (speciesLang: string) => {
+    if (!speciesLang) return;
+    speciesLanguageUserChosenRef.current = true;
+    setLanguage(speciesLang);
+    const p = playerRef.current;
+    if (p?.token && p.language !== speciesLang) {
+      setPlayer({ ...p, language: speciesLang });
+      try {
+        const accessToken = await authApi.ensureFreshAccessToken();
+        const updated = await playerApi.updatePlayer(
+          p.token,
+          { name: (playerNameRef.current || p.name || '').trim() || p.name, language: speciesLang },
+          accessToken
+        );
+        if (updated) setPlayer(updated);
+      } catch {
+        /* ignore */
+      }
+    }
+    let gameToken = gameRef.current?.token;
+    if (!gameToken) {
+      try {
+        gameToken = (await AsyncStorage.getItem(GAME_TOKEN_KEY)) || undefined;
+      } catch {
+        gameToken = undefined;
+      }
+    }
+    if (gameToken) {
+      const g = gameRef.current;
+      if (g && g.token === gameToken) {
+        setGame({ ...g, language: speciesLang });
+      }
+      try {
+        const updatedGame = await gamesApi.updateGameLanguage(gameToken, speciesLang);
+        if (updatedGame) setGame(updatedGame);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
 
   const trySetInitialPlayerName = useCallback((name: string) => {
     const t = name?.trim();
@@ -297,6 +347,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         trySetInitialPlayerName,
         markSpeciesLanguageUserChosen,
         isSpeciesLanguageUserChosen,
+        applySpeciesLanguage,
         clearGame,
       }}
     >

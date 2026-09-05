@@ -25,6 +25,7 @@ import {
   APP_LOCALE_STORAGE_KEY,
   matchAppLocale,
   resolveAppLocale,
+  speciesLanguageFromAppLocale,
   type AppLocale,
 } from '../i18n/app-locales';
 import {
@@ -210,21 +211,93 @@ const AppContextProvider: FC<Props> = ({children}) => {
     };
   }, [profileReady, country.code, setCountry]);
 
-  const setAppLanguage = useCallback((lang: string) => {
+  const applySpeciesLanguage = useCallback((speciesLang: string) => {
+    if (!speciesLang) return;
+    setLanguage(speciesLang);
+    try {
+      localStorage.setItem('birdr-language', speciesLang);
+    } catch {
+      /* ignore */
+    }
+    setPlayer((p) => (p ? { ...p, language: speciesLang } : p));
+    const playerToken = (() => {
+      try {
+        return localStorage.getItem('player-token');
+      } catch {
+        return null;
+      }
+    })();
+    if (playerToken) {
+      void fetch(apiUrl(`/api/player/${playerToken}/`), {
+        cache: 'no-store',
+        method: 'PATCH',
+        headers: {
+          ...noCacheHeaders,
+          Authorization: `Token ${playerToken}`,
+        },
+        body: JSON.stringify({ language: speciesLang }),
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (data?.token) {
+            try {
+              localStorage.setItem('player-token', data.token);
+            } catch {
+              /* ignore */
+            }
+            setPlayer(data);
+          }
+        })
+        .catch(() => {});
+    }
+    const token = (() => {
+      try {
+        return localStorage.getItem('game-token');
+      } catch {
+        return null;
+      }
+    })();
+    if (token) {
+      setGame((g) => (g && g.token === token ? { ...g, language: speciesLang } : g));
+      void fetch(apiUrl(`/api/games/${token}/`), {
+        cache: 'no-store',
+        method: 'PATCH',
+        headers: noCacheHeaders,
+        body: JSON.stringify({ language: speciesLang }),
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (data?.token) setGame(data);
+        })
+        .catch(() => {});
+    }
+  }, [noCacheHeaders]);
+
+  const setAppLanguage = useCallback((lang: string, options?: { syncSpeciesLanguage?: boolean }) => {
     const next = matchAppLocale(lang);
     if (!next) return;
+    const syncSpecies = options?.syncSpeciesLanguage !== false;
+    const speciesLang = speciesLanguageFromAppLocale(next);
     setAppLanguageState(next);
     try {
       localStorage.setItem(APP_LOCALE_STORAGE_KEY, next);
     } catch {
       /* ignore */
     }
+    if (syncSpecies) {
+      applySpeciesLanguage(speciesLang);
+    }
     if (authService.getAccessToken()) {
-      profileService.updateProfile({ app_language: next })
+      const payload = syncSpecies
+        ? { app_language: next, language: speciesLang }
+        : { app_language: next };
+      profileService.updateProfile(payload)
         .then((updated) => setProfile(updated))
         .catch(() => {});
+    } else if (syncSpecies) {
+      setProfile((p) => (p ? { ...p, app_language: next, language: speciesLang } : p));
     }
-  }, []);
+  }, [applySpeciesLanguage, noCacheHeaders]);
 
   const speciesLanguage = game?.language ?? profile?.language ?? language ?? 'en';
 
@@ -482,6 +555,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setLanguage,
       appLanguage,
       setAppLanguage,
+      applySpeciesLanguage,
       setUserPreferredLanguage: setAppLanguage,
       speciesLanguage,
       visualStyle,

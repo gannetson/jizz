@@ -3,6 +3,16 @@
 <section class="hero">
   <h1>{{ heading }}</h1>
   <p class="lead">{{ lead }}</p>
+  <p>
+    {% mt "The <a href=\"https://www.facebook.com/groups/birdrcommunity\">Facebook group</a> is the place to have discussions with other birders." %}
+  </p>
+  <p>
+    {% mt "To report a bug or request a feature, <a href=\"https://github.com/birdr-app/birdr/issues\">submit a ticket on GitHub</a>." %}
+  </p>
+  <div class="cta-row">
+    <a class="btn" href="https://www.facebook.com/groups/birdrcommunity" target="_blank" rel="noopener noreferrer">{% mt "Join the Facebook group" %}</a>
+    <a class="btn secondary" href="https://github.com/birdr-app/birdr/issues" target="_blank" rel="noopener noreferrer">{% mt "Submit a ticket" %}</a>
+  </div>
 </section>
 {% include "marketing/_help.html" %}
 {% endblock %}

@@ -295,6 +295,32 @@ class ApiGamesTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['token'], self.game.token)
 
+    def test_game_detail_patch_updates_language(self):
+        self.assertEqual(self.game.language, 'en')
+        response = self.client.patch(
+            f'/api/games/{self.game.token}/',
+            {'language': 'nl'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['token'], self.game.token)
+        self.assertEqual(response.data['language'], 'nl')
+        self.assertEqual(response.data['level'], 'beginner')
+        self.game.refresh_from_db()
+        self.assertEqual(self.game.language, 'nl')
+        self.assertEqual(self.game.level, 'beginner')
+
+    def test_game_detail_patch_ignores_level_changes(self):
+        response = self.client.patch(
+            f'/api/games/{self.game.token}/',
+            {'language': 'es', 'level': 'expert'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.game.refresh_from_db()
+        self.assertEqual(self.game.language, 'es')
+        self.assertEqual(self.game.level, 'beginner')
+
 
 class ApiQuestionAnswerTestCase(TestCase):
     """GET /api/games/<token>/question, POST /api/answer/, GET /api/answer/<question>/<token>/."""

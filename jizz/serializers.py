@@ -846,12 +846,17 @@ class UserProfileUpdateSerializer(serializers.Serializer):
         if 'receive_updates' in validated_data:
             instance.receive_updates = validated_data['receive_updates']
         
-        # Update language if provided
-        if 'language' in validated_data:
-            instance.language = validated_data['language']
-
         if 'app_language' in validated_data:
             instance.app_language = validated_data['app_language']
+
+        if 'language' in validated_data:
+            instance.language = validated_data['language']
+        elif 'app_language' in validated_data and validated_data['app_language']:
+            from jizz.app_languages import species_language_from_app_language
+
+            instance.language = species_language_from_app_language(
+                validated_data['app_language']
+            )
         
         # Update timezone if provided
         if 'timezone' in validated_data:
@@ -1198,6 +1203,14 @@ class GameSerializer(serializers.ModelSerializer):
             'speed_seconds',
             'scores'
         )
+
+
+class GameLanguageSerializer(serializers.ModelSerializer):
+    """PATCH /api/games/<token>/ — bird-name language for an in-progress game."""
+
+    class Meta:
+        model = Game
+        fields = ('language',)
 
 
 class UserGameSerializer(serializers.ModelSerializer):

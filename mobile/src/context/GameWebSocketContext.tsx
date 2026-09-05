@@ -13,6 +13,7 @@ import type { Player } from '../api/player';
 import type { Question, Answer, MultiPlayer } from '../types/game';
 import { getWebSocketUrl } from '../api/config';
 import { isStalePlayQuestion } from '../game/applyIncomingQuestion';
+import { useGame } from './GameContext';
 
 type GameWebSocketContextType = {
   players: MultiPlayer[];
@@ -557,9 +558,25 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
         refreshGameState,
       }}
     >
+      <RefreshQuestionOnGameLanguageChange />
       {children}
     </GameWebSocketContext.Provider>
   );
+}
+
+function RefreshQuestionOnGameLanguageChange() {
+  const { game } = useGame();
+  const { refreshGameState, question } = useGameWebSocket();
+  const prevLang = useRef<string | undefined>(game?.language);
+  useEffect(() => {
+    const next = game?.language;
+    if (prevLang.current === next) return;
+    prevLang.current = next;
+    if (next && question) {
+      void refreshGameState({ force: true });
+    }
+  }, [game?.language, question, refreshGameState]);
+  return null;
 }
 
 export function useGameWebSocket() {

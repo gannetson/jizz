@@ -93,6 +93,8 @@ class MarketingPagesTests(TestCase):
         self.assertIn('BirdLife Finland (BirdLife Suomi), Finland', html)
         self.assertIn('Japan Bird Research Association, Japan', html)
         self.assertIn('info@birdr.pro', html)
+        self.assertIn('https://www.facebook.com/groups/birdrcommunity', html)
+        self.assertIn('https://github.com/birdr-app/birdr/issues', html)
         self.assertIn('Get it on Google Play', html)
         self.assertIn('Or play a quiz in the browser', html)
         self.assertIn('href="/play"', html)
@@ -228,6 +230,11 @@ class MarketingPagesTests(TestCase):
 
         community = self.client.get('/site/community/').content.decode()
         self.assertIn('How can I help?', community)
+        self.assertIn('Facebook group', community)
+        self.assertIn('the place to have discussions', community)
+        self.assertIn('https://www.facebook.com/groups/birdrcommunity', community)
+        self.assertIn('submit a ticket on GitHub', community)
+        self.assertIn('https://github.com/birdr-app/birdr/issues', community)
         self.assertIn('Flag', community)
         self.assertIn('#review-photos', community)
         self.assertIn('/media-review/', community)
@@ -690,6 +697,36 @@ class MarketingPagesTests(TestCase):
         self.assertNotIn('often mixed up', html)
         self.assertNotIn('id="ai-generate"', html)
 
+    @patch('compare.i18n._translate_with_openai')
+    def test_compare_page_auto_translates_and_caches(self, mock_tr):
+        mock_tr.return_value = {
+            'summary': 'Sperwers zijn kleiner, met een vierkante staart.',
+            'detailed_comparison': 'Grootte, staartvorm en vlucht scheiden de twee Accipiters.',
+            'identification_tips': 'Kijk naar het formaat naast andere vogels, dan de staarthoeken.',
+        }
+        low, high = (
+            (self.sparrow, self.goshawk)
+            if self.sparrow.id < self.goshawk.id
+            else (self.goshawk, self.sparrow)
+        )
+        pair = f'{low.slug}-vs-{high.slug}'
+        first = self.client.get(f'/nl/site/compare/{pair}/')
+        self.assertEqual(first.status_code, 200)
+        html = first.content.decode()
+        self.assertIn('Sperwers zijn kleiner', html)
+        mock_tr.assert_called_once()
+        from compare.models import ComparisonTranslation
+
+        row = ComparisonTranslation.objects.get(language='nl')
+        self.assertEqual(
+            row.fields['summary'],
+            'Sperwers zijn kleiner, met een vierkante staart.',
+        )
+
+        second = self.client.get(f'/nl/site/compare/{pair}/')
+        self.assertIn('Sperwers zijn kleiner', second.content.decode())
+        mock_tr.assert_called_once()
+
     def test_compare_page_retries_handbook_extract(self):
         extra = Species.objects.create(name='Little Gull', name_latin='Hydrocoloeus minutus', code='litgul')
         extra.refresh_from_db()
@@ -793,6 +830,8 @@ class MarketingPagesTests(TestCase):
         community_nl = self.client.get('/nl/site/community/').content.decode()
         self.assertIn('Vertel het verder', community_nl)
         self.assertIn('#club-newsletter', community_nl)
+        self.assertIn('Facebookgroep', community_nl)
+        self.assertIn('ticket in op GitHub', community_nl)
 
         ja = self.client.get('/ja/site/faq/')
         self.assertEqual(ja.status_code, 200)

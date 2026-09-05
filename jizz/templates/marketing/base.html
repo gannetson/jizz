@@ -1326,6 +1326,8 @@
           <li><a href="{{ '/site/flocks/'|mpath }}">{% mt "Flocks" %}</a></li>
           <li><a href="{{ '/site/faq/'|mpath }}">{% mt "FAQ" %}</a></li>
           <li><a href="{{ '/site/community/'|mpath }}">{% mt "Community" %}</a></li>
+          <li><a href="https://www.facebook.com/groups/birdrcommunity" target="_blank" rel="noopener noreferrer">{% mt "Facebook group" %}</a></li>
+          <li><a href="https://github.com/birdr-app/birdr/issues" target="_blank" rel="noopener noreferrer">{% mt "GitHub issues" %}</a></li>
           {% for page in cms_nav_pages %}
           <li><a href="{{ page.get_absolute_url|mpath }}">{{ page.nav_text }}</a></li>
           {% endfor %}

@@ -3,7 +3,7 @@ import AppContext, {Answer, Game, MultiPlayer, Player, Question, Species} from "
 import WebsocketContext from "./websocket-context"
 import { toaster } from "@/components/ui/toaster"
 import { validateQuestionForGame } from './game-token-validator'
-import { getWebSocketUrl } from '../api/baseUrl'
+import { apiUrl, getWebSocketUrl } from '../api/baseUrl'
 import { isStalePlayQuestion } from './apply-incoming-question'
 
 type Props = {
@@ -82,6 +82,36 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     currentQuestionIdRef.current = question?.id
     currentQuestionSeqRef.current = question?.sequence
   }, [question?.id, question?.sequence])
+
+  const prevGameLanguageRef = useRef<string | undefined>(game?.language)
+  useEffect(() => {
+    const next = game?.language
+    if (prevGameLanguageRef.current === next) return
+    prevGameLanguageRef.current = next
+    const token = game?.token
+    if (!token || !next || !currentQuestionIdRef.current) return
+    let cancelled = false
+    fetch(apiUrl(`/api/games/${encodeURIComponent(token)}/question?${Date.now()}`), {
+      cache: 'no-store',
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.id) return
+        if (
+          isStalePlayQuestion(
+            { id: currentQuestionIdRef.current, sequence: currentQuestionSeqRef.current },
+            data
+          )
+        ) {
+          return
+        }
+        setQuestion(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [game?.token, game?.language])
 
   const markGameStarted = useCallback(() => {
     setGameStarted(true)

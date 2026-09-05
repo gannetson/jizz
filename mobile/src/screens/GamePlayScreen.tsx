@@ -51,10 +51,15 @@ import type { Species } from '../types/game';
 import * as playerApi from '../api/player';
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
 
-function speciesDisplayName(s: Species, lang?: string): string {
+function speciesDisplayName(s: Species, lang?: string, extras?: Species[]): string {
+  const fromList = extras?.find((x) => x.id === s.id);
+  if (lang === 'la') {
+    return fromList?.name_latin || s.name_latin || fromList?.name || s.name || `Species ${s.id}`;
+  }
+  if (fromList?.name_translated) return fromList.name_translated;
+  if (lang === 'nl' && (fromList?.name_nl || s.name_nl)) return fromList?.name_nl || s.name_nl || s.name || `Species ${s.id}`;
   if (s.name_translated) return s.name_translated;
   if (lang === 'nl' && s.name_nl) return s.name_nl;
-  if (lang === 'la' && s.name_latin) return s.name_latin;
   return s.name || s.name_latin || `Species ${s.id}`;
 }
 
@@ -288,12 +293,11 @@ export function GamePlayScreen() {
   }, [soloGameMode, question, game, player]);
 
   useEffect(() => {
-    if (!question || game?.level !== 'expert') return;
-    const countryCode = (game as any).country?.code;
+    const countryCode = (game as any)?.country?.code;
     if (!countryCode) return;
     const language = game?.language || (player as any)?.language || 'en';
     getSpeciesForCountry(countryCode, language).then(setExpertSpecies);
-  }, [question?.id, game?.level, game?.language, (game as any)?.country?.code, (player as any)?.language]);
+  }, [game?.language, (game as any)?.country?.code, (player as any)?.language]);
 
   useEffect(() => {
     setSubmittingId(null);
@@ -325,7 +329,7 @@ export function GamePlayScreen() {
     () =>
       expertSpecies.map((s) => ({
         id: String(s.id),
-        title: speciesDisplayName(s, langForDisplay),
+        title: speciesDisplayName(s, langForDisplay, expertSpecies),
       })),
     [expertSpecies, langForDisplay]
   );
@@ -693,7 +697,7 @@ export function GamePlayScreen() {
             const isWrong = answer && !answer.correct && answer.answer?.id === opt.id;
             const optionContent = answer ? (
               <SpeciesViewButton
-                label={speciesDisplayName(opt, lang)}
+                label={speciesDisplayName(opt, lang, expertSpecies)}
                 onPress={() => setMediaSpecies(opt as SpeciesMediaData)}
                 variant={isCorrect ? 'correct' : isWrong || isChosen ? 'wrong' : 'revealed'}
                 icon={isCorrect ? 'correct' : isWrong || isChosen ? 'wrong' : undefined}
@@ -707,11 +711,11 @@ export function GamePlayScreen() {
                 onPress={() => handleAnswer(opt)}
                 disabled={submittingId !== null || !answersEnabled}
                 testID={i === 0 ? 'gamePlay.firstOption' : `gamePlay.option.${opt.id}`}
-                accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang)}
+                accessibilityLabel={i === 0 ? 'First answer option' : speciesDisplayName(opt, lang, expertSpecies)}
               >
                 <View style={styles.row}>
                   <Text style={[styles.optionText, styles.optionTextFlex]} numberOfLines={2}>
-                    {speciesDisplayName(opt, lang)}
+                    {speciesDisplayName(opt, lang, expertSpecies)}
                   </Text>
                   {submittingId === opt.id && <ActivityIndicator size="small" color="#fff" />}
                 </View>
@@ -730,8 +734,8 @@ export function GamePlayScreen() {
             <ComparisonButton
               species1Id={answer.species.id}
               species2Id={answer.answer.id}
-              species1Name={speciesDisplayName(answer.species, lang)}
-              species2Name={speciesDisplayName(answer.answer, lang)}
+              species1Name={speciesDisplayName(answer.species, lang, expertSpecies)}
+              species2Name={speciesDisplayName(answer.answer, lang, expertSpecies)}
             />
           ) : null}
         </View>
@@ -739,14 +743,14 @@ export function GamePlayScreen() {
         answer ? (
           <View style={styles.options}>
             <SpeciesViewButton
-              label={answer.species ? speciesDisplayName(answer.species, lang) : '—'}
+              label={answer.species ? speciesDisplayName(answer.species, lang, expertSpecies) : '—'}
               onPress={() => answer.species && setMediaSpecies(answer.species as SpeciesMediaData)}
               variant="correct"
               icon="correct"
             />
             {!answer.correct && answer.answer && (
               <SpeciesViewButton
-                label={speciesDisplayName(answer.answer, lang)}
+                label={speciesDisplayName(answer.answer, lang, expertSpecies)}
                 onPress={() => setMediaSpecies(answer.answer as SpeciesMediaData)}
                 variant="wrong"
                 icon="wrong"
@@ -756,8 +760,8 @@ export function GamePlayScreen() {
               <ComparisonButton
                 species1Id={answer.species.id}
                 species2Id={answer.answer.id}
-                species1Name={speciesDisplayName(answer.species, lang)}
-                species2Name={speciesDisplayName(answer.answer, lang)}
+                species1Name={speciesDisplayName(answer.species, lang, expertSpecies)}
+                species2Name={speciesDisplayName(answer.answer, lang, expertSpecies)}
               />
             ) : null}
           </View>

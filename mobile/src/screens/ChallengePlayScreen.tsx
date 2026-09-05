@@ -44,6 +44,7 @@ import {
   QUESTION_MEDIA_CREDITS_HEIGHT,
 } from '../constants/questionMediaLayout';
 import { useTranslation } from '../i18n/TranslationContext';
+import { useGame } from '../context/GameContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 type ChallengePlayParams = {
@@ -81,9 +82,11 @@ function ChallengePlayAudio({
 
 export function ChallengePlayScreen() {
   const { t } = useTranslation();
+  const { game } = useGame();
   const route = useRoute<RouteProp<{ ChallengePlay: ChallengePlayParams }, 'ChallengePlay'>>();
   const navigation = useNavigation();
   const { gameToken, journeyId, countryCode, language: paramLanguage, gameLevel, gameMedia, stepJokers: paramStepJokers, stepLength: paramStepLength } = route.params ?? {};
+  const lang = (game?.token === gameToken && game.language) || paramLanguage || 'en';
   const [question, setQuestion] = useState<ChallengeQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -168,6 +171,27 @@ export function ChallengePlayScreen() {
       if (generation === questionFetchGenRef.current) setLoading(false);
     }
   }, [gameToken, getPlayPlayerToken, t]);
+
+  const prevSpeciesLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevSpeciesLangRef.current === lang) return;
+    prevSpeciesLangRef.current = lang;
+    if (!gameToken || !questionRef.current) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getPlayPlayerToken();
+        const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
+        if (cancelled || !q || isStalePlayQuestion(questionRef.current, q)) return;
+        setQuestion(q);
+      } catch {
+        /* keep current question if names fail to refresh */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lang, gameToken, getPlayPlayerToken]);
 
   /** Load journey step game (jokers, progress) for Birdr Journey play. */
   const loadJourneyGame = useCallback(async () => {
@@ -266,16 +290,15 @@ export function ChallengePlayScreen() {
   }, [question?.id, question?.sequence, gameToken, loadJourneyGame]);
 
   useEffect(() => {
-    if (question && countryCode && paramLanguage) {
-      getSpeciesForCountry(countryCode, paramLanguage).then(setExpertSpecies);
+    if (question && countryCode) {
+      getSpeciesForCountry(countryCode, lang).then(setExpertSpecies);
     }
-  }, [question?.id, countryCode, paramLanguage]);
+  }, [question?.id, countryCode, lang]);
 
   useEffect(() => {
     setExpertQuery('');
   }, [question?.id]);
 
-  const lang = paramLanguage || 'en';
   const mediaType = resolvePlayMediaType(question as any, gameMedia);
   const isExpert = gameLevel === 'expert' || (question as any)?.game?.level === 'expert';
   const options = question?.options ?? [];

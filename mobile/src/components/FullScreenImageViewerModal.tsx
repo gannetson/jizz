@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, clamp, withTiming } from 'react-native-reanimated';
@@ -81,6 +82,9 @@ export function FullScreenImageViewerModal({ visible, imageUri, onClose, closeLa
 
   const composed = Gesture.Simultaneous(pinchGesture, panGesture);
 
+  const androidStatusBar = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+  const closeBtnTop = Math.max(insets.top, androidStatusBar) + 8;
+
   const imageStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
@@ -100,7 +104,7 @@ export function FullScreenImageViewerModal({ visible, imageUri, onClose, closeLa
       <GestureHandlerRootView style={styles.root}>
         <View style={[styles.backdrop, { paddingTop: insets.top }]}>
           <TouchableOpacity
-            style={[styles.closeBtn, Platform.OS === 'ios' ? { top: insets.top + 8 } : { top: 12 }]}
+            style={[styles.closeBtn, { top: closeBtnTop }]}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={closeLabel}

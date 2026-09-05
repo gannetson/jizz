@@ -220,8 +220,11 @@ type SharedState = {
   setLanguage?: Dispatch<SetStateAction<string>>
   /** App UI language (menus/buttons). Distinct from bird-name `language`. */
   appLanguage?: string
-  /** Persist app UI language to localStorage and profile.app_language (if authenticated). */
-  setAppLanguage?: (lang: string) => void
+  /** Persist app UI language to localStorage and profile.app_language (if authenticated).
+   *  By default also switches bird-name language (including in-progress games). */
+  setAppLanguage?: (lang: string, options?: { syncSpeciesLanguage?: boolean }) => void
+  /** Switch bird-name language for this session, player, and in-progress game. */
+  applySpeciesLanguage?: (lang: string) => void
   /** @deprecated Use setAppLanguage. */
   setUserPreferredLanguage?: (lang: string) => void
   visualStyle?: import('../user/visual-style').VisualStyle

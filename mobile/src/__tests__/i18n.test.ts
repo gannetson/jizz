@@ -1,4 +1,5 @@
 import { getTranslation } from '../i18n/translations';
+import { speciesLanguageFromAppLocale } from '../i18n/appLocales';
 
 describe('getTranslation', () => {
   it('returns en string for known key', () => {
@@ -32,5 +33,15 @@ describe('getTranslation', () => {
   it('uses Italian catalog', () => {
     expect(getTranslation('it', 'cancel')).toBe('Annulla');
     expect(getTranslation('it', 'login')).toBe('Accedi');
+  });
+});
+
+describe('speciesLanguageFromAppLocale', () => {
+  it('maps app locales onto species-name language ids', () => {
+    expect(speciesLanguageFromAppLocale('nl')).toBe('nl');
+    expect(speciesLanguageFromAppLocale('pt-BR')).toBe('pt_BR');
+    expect(speciesLanguageFromAppLocale('pt')).toBe('pt_BR');
+    expect(speciesLanguageFromAppLocale('ja-JP')).toBe('ja');
+    expect(speciesLanguageFromAppLocale('xx')).toBe('en');
   });
 });

@@ -1187,6 +1187,25 @@
     .prose li { margin: 0 0 6px; }
     .prose strong, .prose b { font-weight: 700; }
     .prose em, .prose i { font-style: italic; }
+    .prose h2 {
+      font-family: var(--font);
+      font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+      margin: 1.3em 0 0.45em;
+    }
+    .prose h3 {
+      font-family: var(--font);
+      font-size: 1.15rem;
+      margin: 1.1em 0 0.35em;
+    }
+    .prose blockquote {
+      margin: 0 0 12px;
+      padding: 0 0 0 14px;
+      border-left: 3px solid var(--birdr-200);
+      color: var(--birdr-800);
+    }
+    .cms-body { max-width: 42rem; min-height: 4em; }
+    .tox-tinymce-inline { z-index: 40 !important; }
+    .tox-tinymce-aux { z-index: 50 !important; }
     ul.plain { padding-left: 1.2rem; columns: 2; column-gap: 32px; }
     @media (max-width: 640px) { ul.plain { columns: 1; } }
     .country-pills { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -151,6 +151,13 @@ export function MarketingHomePage() {
         </Grid>
 
         <Heading as="h2" size="xl" mb={4}>
+          What is Birdr?
+        </Heading>
+        <Text mb={12} maxW="46rem">
+          Birdr is a free bird-identification training app. It helps birders learn to recognise species through photo, video and sound quizzes, personalised practice and country challenges. You can sign in with Google so Birdr can create your account and save your scores and learning progress.
+        </Text>
+
+        <Heading as="h2" size="xl" mb={4}>
           How Birdr teaches
         </Heading>
         <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4} mb={4}>

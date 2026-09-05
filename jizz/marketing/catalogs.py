@@ -66,6 +66,19 @@ _ENTRIES: list[tuple[str, tuple[str, ...]]] = [
             '無料の写真クイズ、あなた向けの練習、国別チャレンジを世界中のバーダーに。',
         ),
     ),
+    ('What is Birdr?', ('Wat is Birdr?', '¿Qué es Birdr?', 'Qu’est-ce que Birdr ?', 'Was ist Birdr?', 'Cos’è Birdr?', 'O que é o Birdr?', 'Birdrとは？')),
+    (
+        'Birdr is a free bird-identification training app. It helps birders learn to recognise species through photo, video and sound quizzes, personalised practice and country challenges. You can sign in with Google so Birdr can create your account and save your scores and learning progress.',
+        (
+            'Birdr is een gratis trainingsapp voor vogelherkenning. Vogelaars leren soorten herkennen met foto-, video- en geluidquizzen, persoonlijke oefening en landenuitdagingen. Je kunt inloggen met Google, zodat Birdr je account kan aanmaken en je scores en leervoortgang kan bewaren.',
+            'Birdr es una app gratuita de entrenamiento para identificar aves. Ayuda a los observadores a reconocer especies con quizzes de fotos, vídeo y sonido, práctica personalizada y retos por país. Puedes iniciar sesión con Google para que Birdr cree tu cuenta y guarde tus puntuaciones y tu progreso.',
+            'Birdr est une appli gratuite d’entraînement à l’identification des oiseaux. Elle aide les ornithos à reconnaître les espèces grâce à des quiz photo, vidéo et son, un entraînement personnalisé et des défis par pays. Tu peux te connecter avec Google pour que Birdr crée ton compte et enregistre tes scores et ta progression.',
+            'Birdr ist eine kostenlose Trainings-App zur Vogelbestimmung. Sie hilft Birding-Fans, Arten anhand von Foto-, Video- und Sound-Quiz, persönlichem Training und Länder-Challenges zu erkennen. Du kannst dich mit Google anmelden, damit Birdr dein Konto anlegt und deine Punkte und deinen Lernfortschritt speichert.',
+            'Birdr è un’app gratuita di allenamento per identificare gli uccelli. Aiuta i birdwatcher a riconoscere le specie con quiz fotografici, video e sonori, pratica personalizzata e sfide per paese. Puoi accedere con Google così Birdr può creare il tuo account e salvare i punteggi e i progressi.',
+            'O Birdr é um app gratuito de treino para identificação de aves. Ele ajuda observadores a reconhecer espécies com quizzes de fotos, vídeo e som, prática personalizada e desafios por país. Você pode entrar com o Google para o Birdr criar sua conta e salvar suas pontuações e seu progresso.',
+            'Birdrは無料の鳥類識別トレーニングアプリです。写真・動画・鳴き声のクイズ、あなた向けの練習、国別チャレンジで、バーダーが種を見分けられるようにします。Googleでログインすると、Birdrがアカウントを作成し、スコアと学習の進捗を保存できます。',
+        ),
+    ),
     (
         'Birdr – Free Bird Identification Quiz & Training App',
         (

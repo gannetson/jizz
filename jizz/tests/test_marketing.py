@@ -76,6 +76,8 @@ class MarketingPagesTests(TestCase):
         html = response.content.decode()
         self.assertIn('Birdr – Free Bird Identification Quiz &amp; Training App', html)
         self.assertIn('Improve your birding skills.', html)
+        self.assertIn('What is Birdr?', html)
+        self.assertIn('sign in with Google so Birdr can create your account', html)
         self.assertIn('rel="canonical"', html)
         self.assertIn('https://birdr.pro/site/', html)
         self.assertIn('WebApplication', html)
@@ -882,6 +884,8 @@ class MarketingPagesTests(TestCase):
 
         landing_nl = self.client.get('/nl/site/').content.decode()
         self.assertIn('>Nederland</a>', landing_nl)
+        self.assertIn('Wat is Birdr?', landing_nl)
+        self.assertIn('inloggen met Google', landing_nl)
 
         bird_en = self.client.get(f'/site/birds/{self.sparrow.slug}/').content.decode()
         self.assertIn('Eurasian Sparrowhawk', bird_en)

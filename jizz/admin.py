@@ -3,6 +3,7 @@ import re
 
 from django.contrib import admin, messages
 from django.contrib.admin import register
+from django.contrib.admin.widgets import AdminTextareaWidget
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
@@ -725,6 +726,16 @@ class MarketingPageAdmin(admin.ModelAdmin):
         'title', 'slug', 'meta_description', 'body',
         'published', 'show_in_nav', 'nav_label', 'nav_order',
     ]
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == 'body':
+            kwargs['widget'] = AdminTextareaWidget(attrs={'rows': 22})
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        from jizz.marketing.html import sanitize_html
+        obj.body = sanitize_html(obj.body)
+        super().save_model(request, obj, form, change)
 
 
 @register(SpeciesName)

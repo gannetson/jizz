@@ -5,13 +5,14 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 from jizz.country_challenge_leaderboard import country_challenge_leaderboard
+from jizz.data_user_stats import games_per_user_rows, media_reviews_per_user_rows
 from jizz.games_played_stats import (
     default_date_range,
     games_played_payload,
     parse_date_param,
     parse_granularity,
 )
-from jizz.models import Country, TaxonomicFamily, TaxonomicOrder
+from jizz.models import Country, SpeciesGroup, TaxonomicFamily, TaxonomicOrder
 from jizz.quiz_mistake_stats import normalize_country_filter
 from jizz.services.checklist import CHECKLIST_COUNTRY_SPECIES_STATUSES
 
@@ -34,8 +35,20 @@ FAMILY_SORT_FIELDS = {
     "count_endemic": "count_endemic",
 }
 
+GROUP_SORT_FIELDS = {
+    "sort_order": "sort_order",
+    "name_en": "name_en",
+    "name_nl": "name_nl",
+    "slug": "slug",
+    "species_count": "species_count",
+    "count_native": "count_native",
+    "count_rare": "count_rare",
+    "count_endemic": "count_endemic",
+}
+
 BASE_SORT_COLUMNS = ("name_latin", "name_en", "species_count")
 FAMILY_BASE_SORT_COLUMNS = ("name_latin", "order", "name_en", "species_count")
+GROUP_BASE_SORT_COLUMNS = ("sort_order", "name_en", "name_nl", "slug", "species_count")
 
 
 def _country_context(request):
@@ -58,30 +71,46 @@ def _parse_sort(request, allowed_columns, default="name_latin"):
     return sort, direction
 
 
-def _apply_sort(queryset, sort_fields, sort_col, sort_dir):
+def _apply_sort(queryset, sort_fields, sort_col, sort_dir, secondary="name_latin"):
     field = sort_fields[sort_col]
     prefix = "-" if sort_dir == "desc" else ""
     ordering = [f"{prefix}{field}"]
-    if sort_col != "name_latin":
-        ordering.append("name_latin")
+    if sort_col != secondary:
+        ordering.append(secondary)
     return queryset.order_by(*ordering)
 
 
 def _taxon_list_context(request, *, page):
     ctx = _country_context(request)
-    sort_fields = ORDER_SORT_FIELDS if page == "orders" else FAMILY_SORT_FIELDS
-    allowed = list(FAMILY_BASE_SORT_COLUMNS if page == "families" else BASE_SORT_COLUMNS)
+    if page == "orders":
+        sort_fields = ORDER_SORT_FIELDS
+        allowed = list(BASE_SORT_COLUMNS)
+        sort_url_name = "data-taxon-orders"
+        default = "name_latin"
+        secondary = "name_latin"
+    elif page == "families":
+        sort_fields = FAMILY_SORT_FIELDS
+        allowed = list(FAMILY_BASE_SORT_COLUMNS)
+        sort_url_name = "data-taxon-families"
+        default = "name_latin"
+        secondary = "name_latin"
+    else:
+        sort_fields = GROUP_SORT_FIELDS
+        allowed = list(GROUP_BASE_SORT_COLUMNS)
+        sort_url_name = "data-taxon-groups"
+        default = "sort_order"
+        secondary = "name_en"
     if ctx["country_filter_active"]:
         allowed.extend(("count_native", "count_rare", "count_endemic"))
-    sort_col, sort_dir = _parse_sort(request, allowed)
+    sort_col, sort_dir = _parse_sort(request, allowed, default=default)
     ctx.update(
         {
             "sort_col": sort_col,
             "sort_dir": sort_dir,
-            "sort_url_name": "data-taxon-orders" if page == "orders" else "data-taxon-families",
+            "sort_url_name": sort_url_name,
         }
     )
-    return ctx, sort_fields, sort_col, sort_dir
+    return ctx, sort_fields, sort_col, sort_dir, secondary
 
 
 def _country_status_filter(country_code: str) -> Q:
@@ -91,7 +120,9 @@ def _country_status_filter(country_code: str) -> Q:
     )
 
 
-def _annotate_species_counts(queryset, country_code: str | None, sort_fields, sort_col, sort_dir):
+def _annotate_species_counts(
+    queryset, country_code: str | None, sort_fields, sort_col, sort_dir, secondary="name_latin"
+):
     if country_code:
         status_filter = _country_status_filter(country_code)
         queryset = (
@@ -120,7 +151,7 @@ def _annotate_species_counts(queryset, country_code: str | None, sort_fields, so
             species_count__gt=0
         )
 
-    return _apply_sort(queryset, sort_fields, sort_col, sort_dir)
+    return _apply_sort(queryset, sort_fields, sort_col, sort_dir, secondary)
 
 
 def data_index_view(request):
@@ -135,7 +166,7 @@ def data_index_view(request):
 
 
 def data_taxon_orders_view(request):
-    ctx, sort_fields, sort_col, sort_dir = _taxon_list_context(request, page="orders")
+    ctx, sort_fields, sort_col, sort_dir, secondary = _taxon_list_context(request, page="orders")
     ctx.update(
         {
             "active_section": "taxons",
@@ -146,6 +177,7 @@ def data_taxon_orders_view(request):
                 sort_fields,
                 sort_col,
                 sort_dir,
+                secondary,
             ),
         }
     )
@@ -153,7 +185,7 @@ def data_taxon_orders_view(request):
 
 
 def data_taxon_families_view(request):
-    ctx, sort_fields, sort_col, sort_dir = _taxon_list_context(request, page="families")
+    ctx, sort_fields, sort_col, sort_dir, secondary = _taxon_list_context(request, page="families")
     ctx.update(
         {
             "active_section": "taxons",
@@ -164,10 +196,30 @@ def data_taxon_families_view(request):
                 sort_fields,
                 sort_col,
                 sort_dir,
+                secondary,
             ),
         }
     )
     return render(request, "jizz/data_taxon_families.html", ctx)
+
+
+def data_taxon_groups_view(request):
+    ctx, sort_fields, sort_col, sort_dir, secondary = _taxon_list_context(request, page="groups")
+    ctx.update(
+        {
+            "active_section": "taxons",
+            "active_tab": "groups",
+            "rows": _annotate_species_counts(
+                SpeciesGroup.objects.all(),
+                ctx["country_code"],
+                sort_fields,
+                sort_col,
+                sort_dir,
+                secondary,
+            ),
+        }
+    )
+    return render(request, "jizz/data_taxon_groups.html", ctx)
 
 
 def _games_played_query_params(request):
@@ -213,6 +265,28 @@ def data_country_challenge_leaderboard_view(request):
             "active_section": "country-challenge-leaderboard",
             "leaderboard": leaderboard,
             "country_code": country_code or "",
+        },
+    )
+
+
+def data_most_games_view(request):
+    return render(
+        request,
+        "jizz/data_most_games.html",
+        {
+            "active_section": "most-games",
+            "rows": games_per_user_rows(),
+        },
+    )
+
+
+def data_most_reviews_view(request):
+    return render(
+        request,
+        "jizz/data_most_reviews.html",
+        {
+            "active_section": "most-reviews",
+            "rows": media_reviews_per_user_rows(),
         },
     )
 

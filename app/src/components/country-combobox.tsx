@@ -1,13 +1,19 @@
 import React, { useMemo } from "react";
-import ReactSelect, { StylesConfig } from "react-select";
+import ReactSelect, { StylesConfig, GroupBase } from "react-select";
 import { Box } from "@chakra-ui/react";
 import { useIntl } from "react-intl";
 import { useContext } from "react";
 import AppContext from "../core/app-context";
 import { getCountryDisplayName } from "../data/country-names-nl";
 import { checklistSelectStyles } from "./checklist/checklist-select-styles";
+import {
+  filterPickerCountries,
+  groupCountriesForPicker,
+  isStatePickerRegion,
+  type RegionCountry,
+} from "../data/country-groups";
 
-type Country = { code: string; name: string };
+type Country = RegionCountry;
 
 interface OptionType {
   label: string;
@@ -16,6 +22,8 @@ interface OptionType {
   /** Extra searchable text (English API name + code). */
   searchText: string;
 }
+
+type GroupedOption = GroupBase<OptionType>;
 
 interface CountryComboboxProps {
   countries: Country[];
@@ -27,11 +35,16 @@ interface CountryComboboxProps {
   emptyLabel?: string;
   /** Taller control + primary.500 selected option (checklist sidebar). */
   size?: 'default' | 'large';
-  /** Filter out regional codes like NL-NH (default false to preserve existing call sites). */
+  /** Filter out specialty regions like NL-NH (default false to preserve existing call sites). */
   excludeRegionCodes?: boolean;
+  /**
+   * Hide US/CA/AU/MX states in the closed menu so the list stays short.
+   * Search still matches “Massachusetts” / “US-MA”. Default true.
+   */
+  hideNestedStatesUntilSearch?: boolean;
 }
 
-const defaultStyles: StylesConfig<OptionType, false> = {
+const defaultStyles: StylesConfig<OptionType, false, GroupedOption> = {
   control: (provided, state) => ({
     ...provided,
     minHeight: "40px",
@@ -44,9 +57,24 @@ const defaultStyles: StylesConfig<OptionType, false> = {
   menuPortal: (provided) => ({ ...provided, zIndex: 9999 }),
 };
 
+function toOption(country: Country, locale: string): OptionType {
+  const label = getCountryDisplayName(country, locale);
+  return {
+    label,
+    value: country.code,
+    original: country,
+    searchText: `${label} ${country.name} ${country.code}`.toLowerCase(),
+  };
+}
+
+function flattenOptions(groups: GroupedOption[]): OptionType[] {
+  return groups.flatMap((group) => group.options);
+}
+
 /**
  * Searchable country combobox used across the web app.
  * Search matches localized display name, English API name, and country code.
+ * Subnational regions are grouped under their parent country.
  */
 export const CountryCombobox = ({
   countries,
@@ -57,40 +85,72 @@ export const CountryCombobox = ({
   emptyLabel,
   size = 'default',
   excludeRegionCodes = false,
+  hideNestedStatesUntilSearch = true,
 }: CountryComboboxProps) => {
   const intl = useIntl();
   const { appLanguage } = useContext(AppContext);
   const locale = appLanguage || "en";
 
-  const options = useMemo(() => {
-    const source = excludeRegionCodes
-      ? countries.filter((c) => !c.code.includes("NL-NH"))
-      : countries;
-    const withLabels = source.map((c) => {
-      const label = getCountryDisplayName(c, locale);
-      return {
-        label,
-        value: c.code,
-        original: c,
-        searchText: `${label} ${c.name} ${c.code}`.toLowerCase(),
-      };
-    });
-    withLabels.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+  const groupedOptions = useMemo(() => {
+    const source = filterPickerCountries(countries, excludeRegionCodes);
+    const { groups, standalone } = groupCountriesForPicker(source);
+    const collator = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" });
+
+    const groupBlocks: GroupedOption[] = groups
+      .map((group) => {
+        const parentOption = toOption(group.parent, locale);
+        const childOptions = group.children
+          .map((child) => toOption(child, locale))
+          .sort((a, b) => collator(a.label, b.label));
+        return {
+          label: parentOption.label,
+          options: [parentOption, ...childOptions],
+        };
+      })
+      .sort((a, b) => collator(a.label, b.label));
+
+    const standaloneOptions = standalone
+      .map((country) => toOption(country, locale))
+      .sort((a, b) => collator(a.label, b.label));
+
+    const worldFirst = standaloneOptions.filter((o) => o.value.toLowerCase() === "world");
+    const restStandalone = standaloneOptions.filter((o) => o.value.toLowerCase() !== "world");
+
+    const blocks: GroupedOption[] = [];
     if (allowEmpty) {
-      const emptyOption: OptionType = {
-        label: emptyLabel ?? intl.formatMessage({ id: "all countries", defaultMessage: "All countries" }),
-        value: "",
-        original: { code: "", name: "" },
-        searchText: (emptyLabel ?? "all countries").toLowerCase(),
-      };
-      return [emptyOption, ...withLabels];
+      blocks.push({
+        label: "",
+        options: [
+          {
+            label: emptyLabel ?? intl.formatMessage({ id: "all countries", defaultMessage: "All countries" }),
+            value: "",
+            original: { code: "", name: "" },
+            searchText: (emptyLabel ?? "all countries").toLowerCase(),
+          },
+        ],
+      });
     }
-    return withLabels;
+    if (worldFirst.length) {
+      blocks.push({ label: "", options: worldFirst });
+    }
+    const mixed: Array<{ sortLabel: string; block: GroupedOption }> = [
+      ...groupBlocks.map((block) => ({ sortLabel: block.label ?? "", block })),
+      ...restStandalone.map((option) => ({
+        sortLabel: option.label,
+        block: { label: "", options: [option] },
+      })),
+    ];
+    mixed.sort((a, b) => collator(a.sortLabel, b.sortLabel));
+    for (const item of mixed) {
+      blocks.push(item.block);
+    }
+    return blocks;
   }, [countries, locale, allowEmpty, emptyLabel, intl, excludeRegionCodes]);
 
   const selectedOption = useMemo(
-    () => options.find((o) => o.value === (value?.code ?? "")) ?? null,
-    [options, value?.code]
+    () => flattenOptions(groupedOptions).find((o) => o.value === (value?.code ?? "")) ?? null,
+    [groupedOptions, value?.code]
   );
 
   const handleChange = (option: OptionType | null) => {
@@ -103,7 +163,12 @@ export const CountryCombobox = ({
 
   const filterOption = (option: { data: OptionType }, rawInput: string) => {
     const q = rawInput.trim().toLowerCase();
-    if (!q) return true;
+    if (!q) {
+      if (hideNestedStatesUntilSearch && isStatePickerRegion(option.data.original)) {
+        return false;
+      }
+      return true;
+    }
     return option.data.searchText.includes(q);
   };
 
@@ -114,8 +179,8 @@ export const CountryCombobox = ({
 
   return (
     <Box>
-      <ReactSelect<OptionType>
-        options={options}
+      <ReactSelect<OptionType, false, GroupedOption>
+        options={groupedOptions}
         value={selectedOption}
         onChange={handleChange}
         filterOption={filterOption}

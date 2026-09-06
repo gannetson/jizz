@@ -86,13 +86,16 @@ def _query_option_species_ids(game: Game) -> list[int]:
     media_type = media_type_for_game(game)
     statuses = country_statuses_for_game(game)
 
+    from jizz.services.seasonal_frequency import filter_country_species_ids_for_game
+
     country_species = CountrySpecies.objects.filter(
         country_id=game.country_id,
         status__in=statuses,
-    ).filter(Game.country_species_rarity_q(effective_rarity(game)))
+    )
+    species_ids = filter_country_species_ids_for_game(game, country_species)
 
     species_qs = Species.objects.filter(
-        id__in=country_species.values('species_id'),
+        id__in=species_ids,
     ).filter(
         Exists(
             Media.objects.filter(
@@ -106,6 +109,8 @@ def _query_option_species_ids(game: Game) -> list[int]:
         species_qs = species_qs.filter(taxonomic_family__name_latin=game.tax_family)
     elif game.tax_order:
         species_qs = species_qs.filter(taxonomic_order__name_latin=game.tax_order)
+    elif game.species_group:
+        species_qs = species_qs.filter(species_group__slug=game.species_group)
 
     return list(species_qs.values_list('id', flat=True))
 
@@ -240,7 +245,9 @@ def build_extreme_target_weights(
     game: Game,
     candidate_ids: Sequence[int],
 ) -> dict[int, float]:
-    freq_map = _species_frequency_map(game.country_id, candidate_ids)
+    from jizz.services.seasonal_frequency import frequency_map_for_game
+
+    freq_map = frequency_map_for_game(game, candidate_ids)
     weights = {
         sid: EXTREME_FREQUENCY_WEIGHTS.get(freq_map.get(sid), EXTREME_FREQUENCY_WEIGHTS[None])
         for sid in candidate_ids

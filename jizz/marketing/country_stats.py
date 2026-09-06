@@ -26,6 +26,8 @@ def _hiscore_qs(country):
         PlayerScore.objects.filter(game__country=country)
         .filter(Q(game__tax_order='') | Q(game__tax_order__isnull=True))
         .filter(Q(game__tax_family='') | Q(game__tax_family__isnull=True))
+        .filter(Q(game__species_group='') | Q(game__species_group__isnull=True))
+        .filter(Q(game__season='') | Q(game__season__isnull=True))
         .exclude(
             game__game_type__in=[
                 Game.GAME_TYPE_PAIR_PRACTICE,

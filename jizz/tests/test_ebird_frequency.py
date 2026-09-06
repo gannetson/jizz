@@ -3,7 +3,7 @@ from django.test import TestCase
 from jizz.models import Country, CountrySpecies, CountrySpeciesFrequency, Species
 from jizz.services.ebird_frequency.classify import classify_frequency, detect_vagrant_like
 from jizz.services.ebird_frequency.persist import upsert_country_species_frequency
-from jizz.services.ebird_frequency.types import MonthlyFrequencyRow
+from jizz.services.ebird_frequency.year_round import apply_year_round_from_monthly
 
 
 class ClassifyFrequencyTests(TestCase):
@@ -96,3 +96,61 @@ class PersistFrequencyTests(TestCase):
             country_species=self.cs, month=3, reference_year=2024
         )
         self.assertEqual(fr.frequency_pct, 1.0)
+
+
+class YearRoundFromMonthlyTests(TestCase):
+    def setUp(self):
+        self.country = Country.objects.get_or_create(
+            code="AU", defaults={"name": "Australia"}
+        )[0]
+        self.apostle = Species.objects.create(
+            name="Apostlebird", name_latin="Struthidea cinerea", code="apostl1"
+        )
+        self.st_scored = Species.objects.create(
+            name="Modeled Bird", name_latin="Modeled m", code="modbrd1"
+        )
+        self.cs_gap = CountrySpecies.objects.create(
+            country=self.country,
+            species=self.apostle,
+            status="native",
+            frequency="rare",
+        )
+        self.cs_st = CountrySpecies.objects.create(
+            country=self.country,
+            species=self.st_scored,
+            status="native",
+            frequency="common",
+            frequency_pct=12.0,
+        )
+
+    def test_fills_species_without_st_from_peak_month(self):
+        CountrySpeciesFrequency.objects.create(
+            country_species=self.cs_gap,
+            month=1,
+            reference_year=2024,
+            frequency="uncommon",
+            frequency_pct=8.0,
+        )
+        CountrySpeciesFrequency.objects.create(
+            country_species=self.cs_gap,
+            month=6,
+            reference_year=2024,
+            frequency="common",
+            frequency_pct=30.0,
+        )
+        CountrySpeciesFrequency.objects.create(
+            country_species=self.cs_st,
+            month=6,
+            reference_year=2024,
+            frequency="abundant",
+            frequency_pct=80.0,
+        )
+        n = apply_year_round_from_monthly("AU")
+        self.assertEqual(n, 1)
+        self.cs_gap.refresh_from_db()
+        self.cs_st.refresh_from_db()
+        self.assertEqual(self.cs_gap.frequency, "common")
+        self.assertEqual(self.cs_gap.frequency_pct, 30.0)
+        self.assertEqual(self.cs_st.frequency, "common")
+        self.assertEqual(self.cs_st.frequency_pct, 12.0)
+

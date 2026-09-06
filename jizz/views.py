@@ -42,6 +42,7 @@ from .serializers import (
     GameLanguageSerializer,
     FamilyListSerializer,
     OrderListSerializer,
+    SpeciesGroupListSerializer,
     LanguageSerializer,
     PageSerializer,
     PageListSerializer,
@@ -61,6 +62,8 @@ from jizz.models import (
     Species,
     TaxonomicOrder,
     TaxonomicFamily,
+    SpeciesGroup,
+    MIN_TAX_FILTER_SPECIES,
     Update,
     Reaction,
     UserProfile,
@@ -257,7 +260,7 @@ class FamilyListView(ListAPIView):
 
         return (
             queryset.annotate(count=Count('species', distinct=True))
-            .filter(count__gt=0)
+            .filter(count__gte=MIN_TAX_FILTER_SPECIES)
             .order_by('name_latin')
         )
 
@@ -275,8 +278,27 @@ class OrderListView(ListAPIView):
             )
         return (
             queryset.annotate(count=Count('species', distinct=True))
-            .filter(count__gt=0)
+            .filter(count__gte=MIN_TAX_FILTER_SPECIES)
             .order_by('name_latin')
+        )
+
+
+class SpeciesGroupListView(ListAPIView):
+    serializer_class = SpeciesGroupListSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        country_id = self.request.query_params.get("country", None)
+        queryset = SpeciesGroup.objects.all()
+        if country_id:
+            queryset = queryset.filter(
+                species__countryspecies__country_id=country_id,
+                species__countryspecies__status__in=["native", "endemic", "rare"],
+            )
+        return (
+            queryset.annotate(count=Count('species', distinct=True))
+            .filter(count__gte=MIN_TAX_FILTER_SPECIES)
+            .order_by('sort_order', 'name_en')
         )
 
 
@@ -860,6 +882,7 @@ class PlayerScoreListView(ListAPIView):
             PlayerScore.objects
             .filter(Q(game__tax_order='') | Q(game__tax_order__isnull=True))
             .filter(Q(game__tax_family='') | Q(game__tax_family__isnull=True))
+            .filter(Q(game__species_group='') | Q(game__species_group__isnull=True))
             .exclude(game__game_type__in=[
                 Game.GAME_TYPE_PAIR_PRACTICE,
                 Game.GAME_TYPE_SPECIES_PRACTICE,

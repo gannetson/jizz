@@ -1,0 +1,47 @@
+{% extends "jizz/data_base.html" %}
+
+{% block title %}Most reviews · Birdr data{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .count-approved { color: var(--success-500); font-weight: 600; }
+        .count-rejected { color: var(--error-500); font-weight: 600; }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h1>Most media reviews</h1>
+    <p class="muted">
+        Media reviews per user, ordered by total reviews.
+        Linked accounts count as one user. Not sure is listed separately from rejected.
+    </p>
+
+    <table class="data-table" id="most-reviews">
+        <thead>
+            <tr>
+                <th class="num">#</th>
+                <th>User</th>
+                <th class="num">Reviews</th>
+                <th class="num">Approved</th>
+                <th class="num">Rejected</th>
+                <th class="num">Not sure</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td class="num">{{ forloop.counter }}</td>
+                    <td>{{ row.name }}</td>
+                    <td class="num">{{ row.total }}</td>
+                    <td class="num count-approved">{{ row.approved }}</td>
+                    <td class="num count-rejected">{{ row.rejected }}</td>
+                    <td class="num">{{ row.not_sure }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6">No media reviews yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

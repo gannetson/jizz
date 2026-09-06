@@ -31,9 +31,12 @@ import { matchCountry, resolveDefaultCountry } from '../lib/countryPreference';
 import {
   loadTaxOrders,
   loadTaxFamilies,
+  loadSpeciesGroups,
   type TaxOrderRow,
   type TaxFamilyRow,
+  type SpeciesGroupRow,
 } from '../api/taxonomy';
+import { speciesGroupDisplayName, speciesGroupSearchHaystack } from '../lib/speciesGroupName';
 import type { PlayLevel } from '../game/playLevel';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
@@ -78,6 +81,10 @@ export function StartScreen() {
     setTaxOrder,
     taxFamily,
     setTaxFamily,
+    speciesGroup,
+    setSpeciesGroup,
+    season,
+    setSeason,
     player,
     loading,
     createGame,
@@ -95,16 +102,20 @@ export function StartScreen() {
   const [languageSearch, setLanguageSearch] = useState('');
   const [taxOrders, setTaxOrders] = useState<TaxOrderRow[]>([]);
   const [taxFamilies, setTaxFamilies] = useState<TaxFamilyRow[]>([]);
+  const [speciesGroups, setSpeciesGroups] = useState<SpeciesGroupRow[]>([]);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [familyModalVisible, setFamilyModalVisible] = useState(false);
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [familySearch, setFamilySearch] = useState('');
+  const [groupSearch, setGroupSearch] = useState('');
   const [saveToProfile, setSaveToProfile] = useState(false);
 
   useEffect(() => {
     if (!country?.code) {
       setTaxOrders([]);
       setTaxFamilies([]);
+      setSpeciesGroups([]);
       return;
     }
     let cancelled = false;
@@ -113,6 +124,9 @@ export function StartScreen() {
     });
     loadTaxFamilies(country.code).then((rows) => {
       if (!cancelled) setTaxFamilies(rows);
+    });
+    loadSpeciesGroups(country.code).then((rows) => {
+      if (!cancelled) setSpeciesGroups(rows);
     });
     return () => {
       cancelled = true;
@@ -183,6 +197,22 @@ export function StartScreen() {
         row.tax_family.toLowerCase().includes(q)
     );
   }, [taxFamilies, familySearch]);
+
+  const groupLabel = useCallback(
+    (row: SpeciesGroupRow) => {
+      const name = speciesGroupDisplayName(row, locale);
+      return `${name} (${row.count})`;
+    },
+    [locale]
+  );
+
+  const filteredSpeciesGroups = React.useMemo(() => {
+    if (!groupSearch.trim()) return speciesGroups;
+    const q = groupSearch.trim().toLowerCase();
+    return speciesGroups.filter(
+      (row) => speciesGroupSearchHaystack(row).includes(q)
+    );
+  }, [speciesGroups, groupSearch]);
 
   const differsFromProfile = useMemo(() => {
     if (!isAuthenticated || !profile) return false;
@@ -300,10 +330,36 @@ export function StartScreen() {
           if (c) setCountry(c);
         }}
         countries={countries}
-        excludeRegionCodes={false}
+        showStatePicker
         style={styles.countrySelect}
         testID="start.selectCountry"
       />
+
+      <Text style={styles.label}>{t('season')}</Text>
+      <View style={styles.pickerRow}>
+        {[
+          { value: '', labelKey: 'season_all_year' },
+          { value: 'spring', labelKey: 'season_spring' },
+          { value: 'summer', labelKey: 'season_summer' },
+          { value: 'autumn', labelKey: 'season_autumn' },
+          { value: 'winter', labelKey: 'season_winter' },
+        ].map((opt) => (
+          <TouchableOpacity
+            key={opt.value || 'all'}
+            style={[styles.chip, (season || '') === opt.value && styles.chipSelected]}
+            onPress={() => setSeason(opt.value)}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                (season || '') === opt.value && styles.chipTextSelected,
+              ]}
+            >
+              {t(opt.labelKey)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <Text style={styles.label}>{t('language_species_names')}</Text>
       <TouchableOpacity
@@ -444,6 +500,7 @@ export function StartScreen() {
                 onPress={() => {
                   setTaxOrder(item);
                   setTaxFamily(undefined);
+                  setSpeciesGroup(undefined);
                   setOrderModalVisible(false);
                   setOrderSearch('');
                 }}
@@ -512,6 +569,7 @@ export function StartScreen() {
                 onPress={() => {
                   setTaxFamily(item);
                   setTaxOrder(undefined);
+                  setSpeciesGroup(undefined);
                   setFamilyModalVisible(false);
                   setFamilySearch('');
                 }}
@@ -536,6 +594,76 @@ export function StartScreen() {
           onPress={() => {
             setFamilyModalVisible(false);
             setFamilySearch('');
+          }}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
+        >
+          <Text style={styles.modalCloseText} accessible={false}>
+            {t('close')}
+          </Text>
+        </TouchableOpacity>
+      </AccessibleSheetModal>
+
+      <AccessibleSheetModal
+        visible={groupModalVisible}
+        onClose={() => {
+          setGroupModalVisible(false);
+          setGroupSearch('');
+        }}
+        backdropStyle={styles.modalBackdrop}
+        contentStyle={styles.modalContent}
+      >
+        <Text style={styles.modalTitle} accessibilityRole="header">
+          {t('species_group')}
+        </Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('search')}
+          placeholderTextColor={colors.primary[400]}
+          value={groupSearch}
+          onChangeText={setGroupSearch}
+          accessibilityLabel={t('search')}
+          accessibilityRole="search"
+        />
+        <FlatList
+          data={filteredSpeciesGroups}
+          keyExtractor={(item) => item.species_group}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const selected = speciesGroup?.species_group === item.species_group;
+            const label = groupLabel(item);
+            return (
+              <TouchableOpacity
+                style={[styles.modalItem, selected && styles.modalItemSelected]}
+                onPress={() => {
+                  setSpeciesGroup(item);
+                  setTaxOrder(undefined);
+                  setTaxFamily(undefined);
+                  setGroupModalVisible(false);
+                  setGroupSearch('');
+                }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={selected ? `${label}, ${t('picker_item_selected')}` : label}
+              >
+                <Text
+                  style={[styles.modalItemText, selected && styles.modalItemTextSelected]}
+                  numberOfLines={2}
+                  accessible={false}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+        <TouchableOpacity
+          style={styles.modalClose}
+          onPress={() => {
+            setGroupModalVisible(false);
+            setGroupSearch('');
           }}
           accessible
           accessibilityRole="button"
@@ -672,6 +800,29 @@ export function StartScreen() {
       {taxFamily != null && (
         <TouchableOpacity
           onPress={() => setTaxFamily(undefined)}
+          style={styles.clearTaxLink}
+          accessibilityLabel={t('clear_tax_filter')}
+        >
+          <Text style={styles.clearTaxLinkText}>{t('clear_tax_filter')}</Text>
+        </TouchableOpacity>
+      )}
+
+      <Text style={styles.label}>{t('species_group')}</Text>
+      <TouchableOpacity
+        style={styles.selectButton}
+        onPress={() => {
+          setGroupSearch('');
+          setGroupModalVisible(true);
+        }}
+        accessibilityLabel={t('species_group')}
+      >
+        <Text style={styles.selectButtonText} numberOfLines={2}>
+          {speciesGroup ? groupLabel(speciesGroup) : t('select_species_group')}
+        </Text>
+      </TouchableOpacity>
+      {speciesGroup != null && (
+        <TouchableOpacity
+          onPress={() => setSpeciesGroup(undefined)}
           style={styles.clearTaxLink}
           accessibilityLabel={t('clear_tax_filter')}
         >

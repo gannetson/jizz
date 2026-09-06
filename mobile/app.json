@@ -32,6 +32,7 @@
       ]
     },
     "android": {
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F8EEDC"
@@ -107,6 +108,7 @@
     "plugins": [
       "./plugins/withFullBleedAdaptiveIcon.js",
       "./plugins/withAndroid16Kb.js",
+      "./plugins/withAndroidR8.js",
       "expo-dev-client",
       "expo-asset",
       [
@@ -132,7 +134,8 @@
           "color": "#2D5A3D",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "./plugins/withAndroidEdgeToEdge.js"
     ],
     "extra": {
       "eas": {

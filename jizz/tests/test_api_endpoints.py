@@ -58,6 +58,9 @@ class ApiCountriesTestCase(TestCase):
         response = self.client.get(f'/api/countries/{self.country.code}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['code'], self.country.code)
+        self.assertIn('parent', response.data)
+        self.assertIn('kind', response.data)
+        self.assertIn('hemisphere', response.data)
 
 
 class ApiGeoCountryTestCase(TestCase):
@@ -237,17 +240,15 @@ class ApiFamiliesOrdersTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, list)
 
-    def test_families_list_with_country_filter(self):
+    def test_families_list_omits_families_with_fewer_than_four_species(self):
         response = self.client.get('/api/families/', {'country': self.country.code})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, list)
-        if response.data:
-            self.assertIn(response.data[0].get('tax_family'), ('Family1', None))
+        self.assertEqual(response.data, [])
 
-    def test_orders_list_with_country_filter(self):
+    def test_orders_list_omits_orders_with_fewer_than_four_species(self):
         response = self.client.get('/api/orders/', {'country': self.country.code})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, list)
+        self.assertEqual(response.data, [])
 
 
 class ApiGamesTestCase(TestCase):

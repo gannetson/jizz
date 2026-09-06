@@ -23,6 +23,7 @@ export type Game = {
   country: Country;
   language: string;
   rarity?: Rarity;
+  season?: string | null;
   created?: string;
   host?: { id: number; name: string; token?: string };
   ended?: boolean;
@@ -56,6 +57,8 @@ type CreateGameBody = {
   include_escapes?: boolean;
   tax_order?: string;
   tax_family?: string;
+  species_group?: string;
+  season?: string;
 };
 
 const GAME_REQUEST_TIMEOUT_MS = 30000;

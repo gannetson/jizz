@@ -15,6 +15,8 @@ import {UseCountries} from "../user/use-countries"
 import {playLevelFromSettings, type PlayLevel} from "../core/play-level"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
+import SelectSpeciesGroup from "./select-species-group"
+import SelectSeason from "./select-season"
 import {authService} from "../api/services/auth.service"
 import {profileService, type UserProfile} from "../api/services/profile.service"
 
@@ -165,7 +167,8 @@ export const CreateGame = ({
           id={'game info'}/>
         <SetName/>
         <SelectLanguage/>
-        {!pickCountry &&  <SelectCountry/>}
+        {!pickCountry && <SelectCountry/>}
+        <SelectSeason/>
 
         {differsFromProfile ? (
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>
@@ -206,6 +209,7 @@ export const CreateGame = ({
         {!pickMediaType && <SelectMediaType/>}
         <SelectTaxOrder/>
         <SelectTaxFamily/>
+        <SelectSpeciesGroup/>
         <Button
           disabled={startDisabled}
           loading={loading}

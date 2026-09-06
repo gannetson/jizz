@@ -1,5 +1,5 @@
 """
-Import per-month CountrySpeciesFrequency from eBird API or (stub) ST/Basic CSV.
+Import per-month CountrySpeciesFrequency from eBird API, bar chart, or ST CSV.
 
 Examples:
   python manage.py import_ebird_country_frequencies --country NL --year 2024
@@ -7,6 +7,8 @@ Examples:
   python manage.py import_ebird_country_frequencies --country NL --source st_csv
   python manage.py import_ebird_country_frequencies --country NL --source st_csv --csv-path ./data/eurrob1_regional_stats.csv
   python manage.py import_ebird_country_frequencies --country NL --source st_csv --data-dir ./jizz/ebird_st_csv
+  python manage.py import_ebird_country_frequencies --country US-MA --source barchart
+  python manage.py import_ebird_country_frequencies --country US-MA --source barchart --tsv-path ./data/US-MA.tsv
 """
 
 from __future__ import annotations
@@ -21,13 +23,15 @@ from django.core.management.base import BaseCommand
 from jizz.models import Country
 from jizz.services.ebird_frequency.persist import upsert_country_species_frequency
 from jizz.services.ebird_frequency.sources.api import fetch_monthly_metrics_ebird_api
+from jizz.services.ebird_frequency.sources.barchart import fetch_monthly_metrics_barchart
 from jizz.services.ebird_frequency.sources.st_csv import fetch_monthly_metrics_st_csv
+from jizz.services.ebird_frequency.year_round import apply_year_round_from_monthly
 
 
 class Command(BaseCommand):
     help = (
-        'Fill CountrySpeciesFrequency from eBird (API freqlist per species, or CSV stub). '
-        'Requires EBIRD_API_TOKEN for --source api. Region code = ISO country code (e.g. NL).'
+        'Fill CountrySpeciesFrequency from eBird (API freqlist, bar chart, or ST CSV). '
+        'Requires EBIRD_API_TOKEN for --source api. Region code = ISO or eBird subnational (US-MA).'
     )
 
     def add_arguments(self, parser):
@@ -47,11 +51,16 @@ class Command(BaseCommand):
         parser.add_argument(
             '--source',
             type=str,
-            choices=('api', 'st_csv', 'auto'),
+            choices=('api', 'st_csv', 'barchart', 'auto'),
             default='auto',
             help='auto: st_csv if --csv-path/--data-dir set, else api',
         )
-        parser.add_argument('--csv-path', type=str, default=None, help='For st_csv / auto with file')
+        parser.add_argument(
+            '--tsv-path',
+            type=str,
+            default=None,
+            help='For barchart: local TSV/histogram file instead of downloading',
+        )
         parser.add_argument(
             '--data-dir',
             type=str,
@@ -73,6 +82,14 @@ class Command(BaseCommand):
             type=int,
             default=None,
             help='Max CountrySpecies rows to query (API only; for testing)',
+        )
+        parser.add_argument(
+            '--skip-year-round',
+            action='store_true',
+            help=(
+                'Do not copy peak monthly frequency onto CountrySpecies.frequency. '
+                'By default, fills rows that Status & Trends never scored.'
+            ),
         )
 
     def handle(self, *args, **options):
@@ -98,7 +115,9 @@ class Command(BaseCommand):
         source = options['source']
         csv_path = options.get('csv_path')
         if source == 'auto':
-            source = 'st_csv' if (csv_path or options.get('data_dir')) else 'api'
+            source = 'st_csv' if (csv_path or options.get('data_dir')) else (
+                'barchart' if options.get('tsv_path') else 'api'
+            )
 
         def _infer_st_region_code_from_csv(path: str) -> str | None:
             try:
@@ -165,6 +184,25 @@ class Command(BaseCommand):
                 )
             )
             self.stdout.write(f'CSV collected {len(rows)} rows')
+        elif source == 'barchart':
+            tsv_text = None
+            tsv_path = options.get('tsv_path')
+            if tsv_path:
+                try:
+                    with open(tsv_path, encoding='utf-8', errors='replace') as handle:
+                        tsv_text = handle.read()
+                except OSError as exc:
+                    self.stderr.write(self.style.ERROR(f'Could not read {tsv_path}: {exc}'))
+                    return
+            rows = list(
+                fetch_monthly_metrics_barchart(
+                    cc,
+                    year,
+                    months,
+                    tsv_text=tsv_text,
+                )
+            )
+            self.stdout.write(f'Bar chart collected {len(rows)} month/species rows')
 
         if not rows:
             self.stdout.write(self.style.WARNING('Nothing to import'))
@@ -177,7 +215,18 @@ class Command(BaseCommand):
         )
         if options['dry_run']:
             self.stdout.write(self.style.SUCCESS(f'Dry-run: would process {n_ok} rows'))
-        else:
-            self.stdout.write(
-                self.style.SUCCESS(f'Wrote {n_ok} rows, skipped {n_skip} (use --force to overwrite)')
-            )
+            return
+
+        self.stdout.write(
+            self.style.SUCCESS(f'Wrote {n_ok} rows, skipped {n_skip} (use --force to overwrite)')
+        )
+
+        if not options.get('skip_year_round'):
+            n_year = apply_year_round_from_monthly(cc, only_without_st=True)
+            if n_year:
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Set year-round frequency from monthly peak on {n_year} '
+                        f'CountrySpecies row(s) that had no Status & Trends score'
+                    )
+                )

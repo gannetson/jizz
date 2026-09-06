@@ -834,6 +834,39 @@ class MarketingPagesTests(TestCase):
         self.assertIn('#club-newsletter', community_nl)
         self.assertIn('Facebookgroep', community_nl)
         self.assertIn('ticket in op GitHub', community_nl)
+        self.assertIn('Wil je tussen excursies door scherper worden in herkenning', community_nl)
+        self.assertIn('Maak een account als je je voortgang wilt bewaren.', community_nl)
+        self.assertNotIn(
+            'If you want to get sharper at identification between outings',
+            community_nl,
+        )
+
+    def test_help_template_strings_are_in_catalogs(self):
+        import ast
+        import re
+        from pathlib import Path
+
+        from jizz.marketing.catalogs import CATALOGS
+
+        html = (
+            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_help.html'
+        ).read_text()
+        pattern = re.compile(
+            r'\{%\s*mt\s+("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')',
+            re.S,
+        )
+        messages = []
+        for raw in pattern.findall(html):
+            msgid = ast.literal_eval(raw)
+            if msgid not in messages:
+                messages.append(msgid)
+        self.assertGreater(len(messages), 20)
+        missing = [
+            msgid
+            for msgid in messages
+            if any(msgid not in catalog for catalog in CATALOGS.values())
+        ]
+        self.assertEqual(missing, [])
 
         ja = self.client.get('/ja/site/faq/')
         self.assertEqual(ja.status_code, 200)

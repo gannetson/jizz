@@ -4,6 +4,7 @@ import { toaster } from "@/components/ui/toaster";
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
 import {TaxOrder} from "../user/use-tax-order"
 import {TaxFamily} from "../user/use-tax-family"
+import { type SpeciesGroup } from "../user/use-species-group"
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios-config';
 import { apiUrl } from '../api/baseUrl';
@@ -73,6 +74,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
   });
   const [taxOrder, setTaxOrder] = useState<TaxOrder | undefined>();
   const [taxFamily, setTaxFamily] = useState<TaxFamily | undefined>();
+  const [speciesGroup, setSpeciesGroup] = useState<SpeciesGroup | undefined>();
+  const [season, setSeason] = useState<string>('');
   const [loading, setLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
@@ -151,7 +154,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
         .then((p) => {
           if (cancelled) return;
           setProfile(p);
-          if (p.country_code && !p.country_code.includes('-')) {
+          if (p.country_code) {
             setCountry({
               code: p.country_code,
               name: p.country_name || p.country_code,
@@ -435,6 +438,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
           media: mediaType,
           tax_order: mediaType === 'audio' ? (soundsScope === 'passerines' ? 'Passeriformes' : undefined) : taxOrder?.tax_order,
           tax_family: taxFamily?.tax_family,
+          species_group: mediaType === 'audio' && soundsScope === 'passerines' ? undefined : speciesGroup?.species_group,
+          season: season || undefined,
           rarity,
           include_escapes: includeEscapes
         })
@@ -481,6 +486,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
           media: oldGame.media,
           tax_order: oldGame.tax_order,
           tax_family: oldGame.tax_family,
+          species_group: oldGame.species_group,
+          season: oldGame.season || undefined,
           rarity: oldGame.rarity,
           include_escapes: oldGame.include_escapes
         })
@@ -547,6 +554,10 @@ const AppContextProvider: FC<Props> = ({children}) => {
       setTaxOrder,
       taxFamily,
       setTaxFamily,
+      speciesGroup,
+      setSpeciesGroup,
+      season,
+      setSeason,
       length,
       setLength,
       country,

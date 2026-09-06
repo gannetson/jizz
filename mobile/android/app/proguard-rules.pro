@@ -7,8 +7,16 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# react-native-reanimated
+# react-native-reanimated / worklets
 -keep class com.swmansion.reanimated.** { *; }
+-keep class com.swmansion.worklets.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
+
+# react-native-svg (QR codes)
+-keep public class com.horcrux.svg.** { *; }
+
+# Hermes
+-keep class com.facebook.hermes.** { *; }
+-keep class com.facebook.jni.** { *; }
 
 # Add any project specific keep options here:

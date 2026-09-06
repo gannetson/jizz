@@ -33,7 +33,7 @@ from jizz.views import CountryDetailView, CountryViewSet, SpeciesListView, Speci
     PlayerScoreListView, \
     PlayerStatsView, FeedbackListView, QuestionView, \
     ReactionView, \
-    FamilyListView, OrderListView, LanguageListView, RegisterView, ProfileView, \
+    FamilyListView, OrderListView, SpeciesGroupListView, LanguageListView, RegisterView, ProfileView, \
     PasswordResetRequestView, PasswordResetConfirmView, OAuthCompleteView, UserGamesView, UserGameDetailView, \
     MediaListView, MediaReviewSpeciesListView, ReviewMediaView, FirstAssertionReviewView, FlagMediaView, SpeciesReviewStatsView, GoogleLoginView, AppleLoginView, \
     PageListView, PageDetailView
@@ -43,8 +43,11 @@ from jizz.data_views import (
     data_games_played_api_view,
     data_games_played_view,
     data_index_view,
+    data_most_games_view,
+    data_most_reviews_view,
     data_taxon_families_view,
     data_taxon_orders_view,
+    data_taxon_groups_view,
 )
 from jizz.update_views import (
     UpdateDetailView,
@@ -340,8 +343,11 @@ urlpatterns = [
     path('data/quiz-mistakes/pairs/', quiz_mistake_pairs_view, name='data-quiz-mistake-pairs'),
     path('data/taxons/orders/', data_taxon_orders_view, name='data-taxon-orders'),
     path('data/taxons/families/', data_taxon_families_view, name='data-taxon-families'),
+    path('data/taxons/groups/', data_taxon_groups_view, name='data-taxon-groups'),
     path('data/games-played/', data_games_played_view, name='data-games-played'),
     path('data/games-played/api/', data_games_played_api_view, name='data-games-played-api'),
+    path('data/most-games/', data_most_games_view, name='data-most-games'),
+    path('data/most-reviews/', data_most_reviews_view, name='data-most-reviews'),
     path(
         'data/country-challenge-leaderboard/',
         data_country_challenge_leaderboard_view,
@@ -408,6 +414,7 @@ urlpatterns = [
 
     re_path(r"^api/families/$", FamilyListView.as_view(), name="family-list"),
     re_path(r"^api/orders/$", OrderListView.as_view(), name="order-list"),
+    re_path(r"^api/groups/$", SpeciesGroupListView.as_view(), name="species-group-list"),
 
     re_path(r"^api/games/(?P<token>[\w-]+)/question$", QuestionView.as_view(), name="game-question-detail"),
     re_path(r"^api/answer/$", AnswerView.as_view(), name="answer-create"),

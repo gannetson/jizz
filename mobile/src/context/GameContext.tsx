@@ -5,7 +5,7 @@ import type { Language } from '../api/languages';
 import type { Player } from '../api/player';
 import type { Game, Rarity } from '../api/games';
 import { settingsFromPlayLevel, type PlayLevel } from '../game/playLevel';
-import type { TaxOrderRow, TaxFamilyRow } from '../api/taxonomy';
+import type { TaxOrderRow, TaxFamilyRow, SpeciesGroupRow } from '../api/taxonomy';
 import * as playerApi from '../api/player';
 import * as gamesApi from '../api/games';
 import * as authApi from '../api/auth';
@@ -39,6 +39,10 @@ type GameContextType = {
   setTaxOrder: (v: TaxOrderRow | undefined) => void;
   taxFamily: TaxFamilyRow | undefined;
   setTaxFamily: (v: TaxFamilyRow | undefined) => void;
+  speciesGroup: SpeciesGroupRow | undefined;
+  setSpeciesGroup: (v: SpeciesGroupRow | undefined) => void;
+  season: string;
+  setSeason: (v: string) => void;
   player: Player | null;
   game: Game | null;
   loading: boolean;
@@ -80,6 +84,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   const [taxOrder, setTaxOrder] = useState<TaxOrderRow | undefined>(undefined);
   const [taxFamily, setTaxFamily] = useState<TaxFamilyRow | undefined>(undefined);
+  const [speciesGroup, setSpeciesGroup] = useState<SpeciesGroupRow | undefined>(undefined);
+  const [season, setSeason] = useState('');
   const [player, setPlayer] = useState<Player | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
@@ -281,6 +287,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
               : undefined
             : taxOrder?.tax_order,
         tax_family: taxFamily?.tax_family,
+        species_group:
+          mediaType === 'audio' && soundsScope === 'passerines'
+            ? undefined
+            : speciesGroup?.species_group,
+        season: season || undefined,
       });
       if (g) {
         await AsyncStorage.setItem(GAME_TOKEN_KEY, g.token);
@@ -291,7 +302,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
     return null;
-  }, [player, playerName, country, language, level, length, mediaType, soundsScope, rarity, taxOrder, taxFamily, createPlayer]);
+  }, [player, playerName, country, language, level, length, mediaType, soundsScope, rarity, taxOrder, taxFamily, speciesGroup, season, createPlayer]);
 
   const clearGame = useCallback(async () => {
     await AsyncStorage.removeItem(GAME_TOKEN_KEY);
@@ -335,6 +346,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setTaxOrder,
         taxFamily,
         setTaxFamily,
+        speciesGroup,
+        setSpeciesGroup,
+        season,
+        setSeason,
         player,
         game,
         loading,

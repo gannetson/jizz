@@ -23,6 +23,7 @@ from jizz.country_region_codes import (
     expand_region_codes,
     resolve_app_country_for_st_region,
 )
+from jizz.playable_regions import AGGREGATE_MEMBERS, scoring_region_codes
 
 ST_DOWNLOAD_BASE = "https://st-download.ebird.org/v1"
 SCIENCE_ST_DOWNLOADS_BASE = "https://science.ebird.org"
@@ -438,7 +439,12 @@ def countries_in_regional_stats(
 
     out: List[str] = []
     seen: set = set()
-    for raw_rc in sub["region_code"].astype(str).str.strip().str.upper().unique():
+    present_st = {
+        str(raw).strip().upper()
+        for raw in sub["region_code"].astype(str).str.strip().str.upper().unique()
+        if str(raw).strip()
+    }
+    for raw_rc in present_st:
         app_cc = app_country_for_st_region(raw_rc)
         if not app_cc or app_cc in seen:
             continue
@@ -446,6 +452,15 @@ def countries_in_regional_stats(
             continue
         seen.add(app_cc)
         out.append(app_cc)
+
+    for agg_code, members in AGGREGATE_MEMBERS.items():
+        if agg_code in seen:
+            continue
+        if selected is not None and agg_code not in selected:
+            continue
+        if any(member in present_st for member in members):
+            seen.add(agg_code)
+            out.append(agg_code)
     return sorted(out)
 
 
@@ -722,7 +737,7 @@ def parse_species_commonness(
     if df is None or df.empty:
         return None
 
-    codes = expand_region_codes(country_code)
+    codes = scoring_region_codes(country_code)
     rc = df["region_code"].astype(str).str.strip().str.upper()
     mask = rc.isin([c.upper() for c in codes])
     if "region_type" in df.columns:

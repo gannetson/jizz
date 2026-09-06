@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from jizz.models import Country, CountrySpecies, Species, Game, Question, Answer, Player, QuestionOption, PlayerScore, QuestionMediaReady, FlagQuestion, \
     Feedback, Update, Reaction, Language, Page, SpeciesName, UserProfile, BirdrJourney, BirdrJourneyGame, \
-    JourneyLevel, JourneyStep, TaxonomicOrder, TaxonomicFamily, \
+    JourneyLevel, JourneyStep, TaxonomicOrder, TaxonomicFamily, SpeciesGroup, \
     Friendship, DailyChallenge, DailyChallengeParticipant, DailyChallengeInvite, DailyChallengeRound, DeviceToken
 from media.models import Media, MediaReview, FlagMedia
 from media.display_urls import media_display_url
@@ -26,13 +26,14 @@ def _species_name_for_language(species, language: str | None) -> str:
 
 
 class CountrySerializer(serializers.ModelSerializer):
+    parent = serializers.CharField(source='parent_id', read_only=True, allow_null=True)
 
     def to_internal_value(self, data):
         return Country.objects.get(code=data)
 
     class Meta:
         model = Country
-        fields = ('code', 'name', 'count')
+        fields = ('code', 'name', 'count', 'parent', 'kind', 'hemisphere')
 
 
 
@@ -214,6 +215,26 @@ class OrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaxonomicOrder
         fields = ('tax_order', 'count')
+
+
+class SpeciesGroupListSerializer(serializers.ModelSerializer):
+    species_group = serializers.CharField(source='slug', read_only=True)
+    count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = SpeciesGroup
+        fields = (
+            'species_group',
+            'name_en',
+            'name_nl',
+            'name_es',
+            'name_fr',
+            'name_de',
+            'name_it',
+            'name_pt_br',
+            'name_ja',
+            'count',
+        )
 
 
 class SpeciesCoverSerializer(serializers.ModelSerializer):
@@ -1193,6 +1214,8 @@ class GameSerializer(serializers.ModelSerializer):
             'current_highscore',
             'tax_order',
             'tax_family',
+            'species_group',
+            'season',
             'rarity',
             'include_escapes',
             'dificult_species',
@@ -1267,6 +1290,8 @@ class UserGameSerializer(serializers.ModelSerializer):
             'host', 'ended',
             'tax_order',
             'tax_family',
+            'species_group',
+            'season',
             'rarity',
             'include_escapes',
             'dificult_species',
@@ -1494,6 +1519,8 @@ class GameDetailWithAnswersSerializer(serializers.ModelSerializer):
             'ended',
             'tax_order',
             'tax_family',
+            'species_group',
+            'season',
             'rarity',
             'include_escapes',
             'dificult_species',

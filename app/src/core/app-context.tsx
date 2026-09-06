@@ -2,12 +2,16 @@ import {createContext, Dispatch, SetStateAction} from 'react';
 import { useState } from 'react';
 import { TaxOrder } from '../user/use-tax-order';
 import {TaxFamily} from "../user/use-tax-family"
+import { type SpeciesGroup } from "../user/use-species-group"
 
 
 export type Country = {
   code: string
   name: string
   count?: number
+  parent?: string | null
+  kind?: string
+  hemisphere?: string
 }
 
 export type Language = {
@@ -30,6 +34,8 @@ export type Game = {
   host?: Player
   tax_order?: string
   tax_family?: string
+  species_group?: string
+  season?: string | null
   current_highscore?: Player
   rarity: 'familiar' | 'regular' | 'exceptional'
   include_escapes: boolean
@@ -212,6 +218,10 @@ type SharedState = {
   setTaxOrder?: Dispatch<SetStateAction<TaxOrder | undefined>>
   taxFamily?: TaxFamily
   setTaxFamily?: Dispatch<SetStateAction<TaxFamily | undefined>>
+  speciesGroup?: SpeciesGroup
+  setSpeciesGroup?: Dispatch<SetStateAction<SpeciesGroup | undefined>>
+  season: string
+  setSeason: Dispatch<SetStateAction<string>>
   length: string
   setLength: Dispatch<SetStateAction<string>>
   country: Country | undefined
@@ -263,6 +273,10 @@ const AppContext = createContext<SharedState>({
   setTaxOrder: () => {},
   taxFamily: undefined,
   setTaxFamily: () => {},
+  speciesGroup: undefined,
+  setSpeciesGroup: () => {},
+  season: '',
+  setSeason: () => {},
   length: '20',
   setLength: () => {},
   country: { code: '', name: '' },

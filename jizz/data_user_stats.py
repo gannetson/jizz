@@ -35,6 +35,35 @@ def _first_player_by_user(user_ids) -> dict[int, Player]:
     return by_user
 
 
+def _merge_rows_by_name(
+    rows: list[dict],
+    *,
+    count_key: str,
+    date_key: str | None = None,
+    sum_keys: tuple[str, ...] = (),
+) -> list[dict]:
+    """Collapse rows that share a player name (case-insensitive)."""
+    merged: dict[str, dict] = {}
+    for row in rows:
+        name = sanitize_player_name(row.get('name') or '')
+        key = name.casefold()
+        current = merged.get(key)
+        if current is None:
+            merged[key] = {**row, 'name': name}
+            continue
+        if row[count_key] > current[count_key]:
+            current['name'] = name
+        current[count_key] += row[count_key]
+        for extra in sum_keys:
+            current[extra] += row[extra]
+        if date_key:
+            other = row.get(date_key)
+            mine = current.get(date_key)
+            if other is not None and (mine is None or other < mine):
+                current[date_key] = other
+    return sorted(merged.values(), key=lambda row: (-row[count_key], row['name'].lower()))
+
+
 def games_per_user_rows() -> list[dict]:
     """Distinct scored games per user (linked players merged) or anonymous player."""
     auth_counts = {
@@ -85,7 +114,7 @@ def games_per_user_rows() -> list[dict]:
         )
 
     rows.sort(key=lambda row: (-row['games'], row['name'].lower()))
-    return rows
+    return _merge_rows_by_name(rows, count_key='games', date_key='first_played')
 
 
 def media_reviews_per_user_rows() -> list[dict]:

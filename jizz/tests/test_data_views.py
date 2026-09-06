@@ -226,6 +226,17 @@ class MostGamesViewsTests(TestCase):
         self.assertEqual(ada["games"], 3)
         self.assertEqual(ada["first_played"], date(2024, 3, 12))
 
+    def test_same_player_name_is_grouped(self):
+        guest_two = Player.objects.create(name="guest bird", language="en")
+        self._play(self.guest, 2, when=date(2025, 6, 1))
+        self._play(guest_two, 3, when=date(2024, 1, 9))
+        rows = games_per_user_rows()
+        grouped = [row for row in rows if row["name"].casefold() == "guest bird"]
+        self.assertEqual(len(grouped), 1)
+        self.assertEqual(grouped[0]["games"], 5)
+        self.assertEqual(grouped[0]["first_played"], date(2024, 1, 9))
+        self.assertEqual(grouped[0]["name"], "guest bird")
+
 
 class MostReviewsViewsTests(TestCase):
     def setUp(self):

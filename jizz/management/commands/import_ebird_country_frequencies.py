@@ -1,14 +1,13 @@
 """
-Import per-month CountrySpeciesFrequency from eBird API, bar chart, or ST CSV.
+Import per-month CountrySpeciesFrequency from eBird bar chart, ST CSV, or API.
+
+eBird has no public frequency product (`/v2/product/freqlist` 404s). Histogram TSV
+from a logged-in browser is the working source.
 
 Examples:
-  python manage.py import_ebird_country_frequencies --country NL --year 2024
-  python manage.py import_ebird_country_frequencies --country NL --year 2024 --months 3,4,5 --dry-run
-  python manage.py import_ebird_country_frequencies --country NL --source st_csv
-  python manage.py import_ebird_country_frequencies --country NL --source st_csv --csv-path ./data/eurrob1_regional_stats.csv
+  python manage.py import_ebird_country_frequencies --country NL --source barchart --tsv-path ./nl.txt
   python manage.py import_ebird_country_frequencies --country NL --source st_csv --data-dir ./jizz/ebird_st_csv
-  python manage.py import_ebird_country_frequencies --country US-MA --source barchart
-  python manage.py import_ebird_country_frequencies --country US-MA --source barchart --tsv-path ./data/US-MA.tsv
+  python manage.py import_ebird_country_frequencies --country NL --source st_csv --csv-path ./data/eurrob1_regional_stats.csv
 """
 
 from __future__ import annotations
@@ -18,20 +17,38 @@ import os
 from datetime import date
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from jizz.models import Country
+from jizz.services.ebird_frequency.errors import (
+    BarchartLoginRequired,
+    EbirdFreqlistUnavailable,
+    EbirdFrequencySourceError,
+)
 from jizz.services.ebird_frequency.persist import upsert_country_species_frequency
 from jizz.services.ebird_frequency.sources.api import fetch_monthly_metrics_ebird_api
-from jizz.services.ebird_frequency.sources.barchart import fetch_monthly_metrics_barchart
+from jizz.services.ebird_frequency.sources.barchart import (
+    barchart_page_url,
+    fetch_monthly_metrics_barchart,
+)
 from jizz.services.ebird_frequency.sources.st_csv import fetch_monthly_metrics_st_csv
 from jizz.services.ebird_frequency.year_round import apply_year_round_from_monthly
 
 
+def _histogram_howto(country_code: str, year: int) -> str:
+    page = barchart_page_url(country_code, year)
+    return (
+        f"While logged into eBird, open:\n  {page}\n"
+        "Click “Download Histogram Data”, save the file, then:\n"
+        f"  ./manage.py import_ebird_country_frequencies --country {country_code} "
+        f"--source barchart --tsv-path /path/to/histogram.txt"
+    )
+
+
 class Command(BaseCommand):
     help = (
-        'Fill CountrySpeciesFrequency from eBird (API freqlist, bar chart, or ST CSV). '
-        'Requires EBIRD_API_TOKEN for --source api. Region code = ISO or eBird subnational (US-MA).'
+        'Fill CountrySpeciesFrequency from eBird histogram TSV or Status & Trends CSV. '
+        'Region code = ISO or eBird subnational (US-MA). --source api is not supported by eBird.'
     )
 
     def add_arguments(self, parser):
@@ -53,13 +70,19 @@ class Command(BaseCommand):
             type=str,
             choices=('api', 'st_csv', 'barchart', 'auto'),
             default='auto',
-            help='auto: st_csv if --csv-path/--data-dir set, else api',
+            help='auto: st_csv if --csv-path/--data-dir set, else barchart (not the missing freqlist API)',
         )
         parser.add_argument(
             '--tsv-path',
             type=str,
             default=None,
             help='For barchart: local TSV/histogram file instead of downloading',
+        )
+        parser.add_argument(
+            '--csv-path',
+            type=str,
+            default=None,
+            help='For st_csv: a single *_regional_stats.csv file',
         )
         parser.add_argument(
             '--data-dir',
@@ -98,12 +121,10 @@ class Command(BaseCommand):
         months = [int(x.strip()) for x in options['months'].split(',') if x.strip()]
         for m in months:
             if m < 1 or m > 12:
-                self.stderr.write(self.style.ERROR(f'Invalid month: {m}'))
-                return
+                raise CommandError(f'Invalid month: {m}')
 
         if not Country.objects.filter(pk=cc).exists():
-            self.stderr.write(self.style.ERROR(f'Country {cc} not in database'))
-            return
+            raise CommandError(f'Country {cc} not in database')
         country = Country.objects.get(pk=cc)
         extra_codes = set()
         if country.codes:
@@ -115,9 +136,7 @@ class Command(BaseCommand):
         source = options['source']
         csv_path = options.get('csv_path')
         if source == 'auto':
-            source = 'st_csv' if (csv_path or options.get('data_dir')) else (
-                'barchart' if options.get('tsv_path') else 'api'
-            )
+            source = 'st_csv' if (csv_path or options.get('data_dir')) else 'barchart'
 
         def _infer_st_region_code_from_csv(path: str) -> str | None:
             try:
@@ -162,51 +181,66 @@ class Command(BaseCommand):
                 self.stdout.write(f"Inferred ST region_code(s) for {cc}: {sorted(extra_codes)} (set Country.codes to persist)")
 
         rows = []
-        if source == 'api':
-            rows = list(
-                fetch_monthly_metrics_ebird_api(
-                    cc,
-                    year,
-                    months,
-                    limit_species=options.get('limit_species'),
+        try:
+            if source == 'api':
+                rows = list(
+                    fetch_monthly_metrics_ebird_api(
+                        cc,
+                        year,
+                        months,
+                        limit_species=options.get('limit_species'),
+                    )
                 )
-            )
-            self.stdout.write(f'API collected {len(rows)} month/species rows')
-        elif source == 'st_csv':
-            rows = list(
-                fetch_monthly_metrics_st_csv(
-                    cc,
-                    year,
-                    months,
-                    csv_path=csv_path,
-                    data_dir=options.get('data_dir'),
-                    region_codes=extra_codes,
+                self.stdout.write(f'API collected {len(rows)} month/species rows')
+            elif source == 'st_csv':
+                rows = list(
+                    fetch_monthly_metrics_st_csv(
+                        cc,
+                        year,
+                        months,
+                        csv_path=csv_path,
+                        data_dir=options.get('data_dir'),
+                        region_codes=extra_codes,
+                    )
                 )
-            )
-            self.stdout.write(f'CSV collected {len(rows)} rows')
-        elif source == 'barchart':
-            tsv_text = None
-            tsv_path = options.get('tsv_path')
-            if tsv_path:
-                try:
-                    with open(tsv_path, encoding='utf-8', errors='replace') as handle:
-                        tsv_text = handle.read()
-                except OSError as exc:
-                    self.stderr.write(self.style.ERROR(f'Could not read {tsv_path}: {exc}'))
-                    return
-            rows = list(
-                fetch_monthly_metrics_barchart(
-                    cc,
-                    year,
-                    months,
-                    tsv_text=tsv_text,
+                self.stdout.write(f'CSV collected {len(rows)} rows')
+            elif source == 'barchart':
+                tsv_text = None
+                tsv_path = options.get('tsv_path')
+                if tsv_path:
+                    try:
+                        with open(tsv_path, encoding='utf-8', errors='replace') as handle:
+                            tsv_text = handle.read()
+                    except OSError as exc:
+                        raise CommandError(f'Could not read {tsv_path}: {exc}') from exc
+                rows = list(
+                    fetch_monthly_metrics_barchart(
+                        cc,
+                        year,
+                        months,
+                        tsv_text=tsv_text,
+                    )
                 )
-            )
-            self.stdout.write(f'Bar chart collected {len(rows)} month/species rows')
+                self.stdout.write(f'Bar chart collected {len(rows)} month/species rows')
+        except EbirdFreqlistUnavailable as exc:
+            raise CommandError(
+                "eBird has no public frequency API (/v2/product/freqlist does not exist), "
+                "so --source api cannot collect rows.\n"
+                f"{_histogram_howto(cc, year)}"
+            ) from exc
+        except BarchartLoginRequired as exc:
+            raise CommandError(
+                "eBird bar-chart downloads require a logged-in browser; the API token is not enough.\n"
+                f"{_histogram_howto(cc, year)}"
+            ) from exc
+        except EbirdFrequencySourceError as exc:
+            raise CommandError(str(exc)) from exc
 
         if not rows:
-            self.stdout.write(self.style.WARNING('Nothing to import'))
-            return
+            extra = ""
+            if source == "barchart" and not options.get("tsv_path"):
+                extra = "\n" + _histogram_howto(cc, year)
+            raise CommandError(f"Nothing to import from {source} for {cc}.{extra}")
 
         n_ok, n_skip = upsert_country_species_frequency(
             rows,

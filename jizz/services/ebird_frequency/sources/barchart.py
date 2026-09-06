@@ -13,18 +13,49 @@ import io
 import logging
 from collections import defaultdict
 from typing import Iterable
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
 
 from jizz.models import CountrySpecies, Species
 from jizz.services.ebird_frequency.constants import SOURCE_BARCHART
+from jizz.services.ebird_frequency.errors import BarchartLoginRequired
 from jizz.services.ebird_frequency.types import MonthlyFrequencyRow
 
 logger = logging.getLogger(__name__)
 
 BARCHART_URL = "https://ebird.org/barchartData"
+BARCHART_PAGE_URL = "https://ebird.org/barchart"
 DEFAULT_BYR_SPAN = 10
+
+
+def barchart_query_params(region_code: str, year: int, *, include_fmt: bool = True) -> dict[str, int | str]:
+    params: dict[str, int | str] = {
+        "r": region_code.strip().upper(),
+        "bmo": 1,
+        "emo": 12,
+        "byr": max(1900, year - DEFAULT_BYR_SPAN + 1),
+        "eyr": year,
+    }
+    if include_fmt:
+        params["fmt"] = "tsv"
+    return params
+
+
+def barchart_page_url(region_code: str, year: int) -> str:
+    return f"{BARCHART_PAGE_URL}?{urlencode(barchart_query_params(region_code, year, include_fmt=False))}"
+
+
+def barchart_data_url(region_code: str, year: int) -> str:
+    return f"{BARCHART_URL}?{urlencode(barchart_query_params(region_code, year))}"
+
+
+def looks_like_login_html(text: str) -> bool:
+    head = (text or "")[:8000].lstrip().lower()
+    if not (head.startswith("<!doctype") or head.startswith("<html") or "<html" in head[:200]):
+        return False
+    return any(token in head for token in ("cassso", "login", "sign in", "password"))
 
 
 def week_index_to_month(week: int) -> int:
@@ -130,15 +161,8 @@ def fetch_barchart_tsv(
     year: int,
     session: requests.Session | None = None,
 ) -> str:
+    cc = region_code.strip().upper()
     sess = session or requests.Session()
-    params = {
-        "r": region_code.strip().upper(),
-        "bmo": 1,
-        "emo": 12,
-        "byr": max(1900, year - DEFAULT_BYR_SPAN + 1),
-        "eyr": year,
-        "fmt": "tsv",
-    }
     headers = {
         "User-Agent": "birdr-jizz/1.0 (eBird bar-chart frequency import)",
         "Accept": "text/tab-separated-values, text/plain, */*",
@@ -146,8 +170,21 @@ def fetch_barchart_tsv(
     token = (getattr(settings, "EBIRD_API_TOKEN", None) or "").strip()
     if token:
         headers["X-eBirdApiToken"] = token
-    response = sess.get(BARCHART_URL, params=params, headers=headers, timeout=120)
+    response = sess.get(
+        BARCHART_URL,
+        params=barchart_query_params(cc, year),
+        headers=headers,
+        timeout=120,
+        allow_redirects=True,
+    )
     response.raise_for_status()
+    if looks_like_login_html(response.text):
+        raise BarchartLoginRequired(
+            cc,
+            year,
+            page_url=barchart_page_url(cc, year),
+            data_url=barchart_data_url(cc, year),
+        )
     return response.text
 
 
@@ -170,7 +207,14 @@ def fetch_monthly_metrics_barchart(
             text = fetch_barchart_tsv(cc, year=year)
         except requests.RequestException as exc:
             logger.warning("barchart fetch failed for %s: %s", cc, exc)
-            return
+            raise
+    if looks_like_login_html(text or ""):
+        raise BarchartLoginRequired(
+            cc,
+            year,
+            page_url=barchart_page_url(cc, year),
+            data_url=barchart_data_url(cc, year),
+        )
     parsed = parse_barchart_tsv(text)
     if not parsed:
         logger.warning("barchart: no species rows parsed for %s", cc)

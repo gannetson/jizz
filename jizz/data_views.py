@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from django.db.models import Count, Q
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from jizz.country_challenge_leaderboard import country_challenge_leaderboard
-from jizz.data_user_stats import games_per_user_rows, media_reviews_per_user_rows
+from jizz.data_review_stats import media_review_stats_payload
+from jizz.data_user_stats import MOST_GAMES_PAGE_SIZE, games_per_user_rows
 from jizz.games_played_stats import (
     default_date_range,
     games_played_payload,
@@ -233,6 +235,7 @@ def _games_played_query_params(request):
 def data_games_played_view(request):
     start, end, granularity = _games_played_query_params(request)
     payload = games_played_payload(start, end, granularity=granularity)
+    most_games = games_per_user_rows()
     return render(
         request,
         "jizz/data_games_played.html",
@@ -242,6 +245,10 @@ def data_games_played_view(request):
             "end": payload["end"],
             "granularity": payload["granularity"],
             "chart_json": payload,
+            "most_games_rows": most_games[:MOST_GAMES_PAGE_SIZE],
+            "most_games_rest": most_games[MOST_GAMES_PAGE_SIZE:],
+            "most_games_total": len(most_games),
+            "most_games_page_size": MOST_GAMES_PAGE_SIZE,
         },
     )
 
@@ -270,14 +277,7 @@ def data_country_challenge_leaderboard_view(request):
 
 
 def data_most_games_view(request):
-    return render(
-        request,
-        "jizz/data_most_games.html",
-        {
-            "active_section": "most-games",
-            "rows": games_per_user_rows(),
-        },
-    )
+    return redirect(reverse("data-games-played") + "#most-games")
 
 
 def data_most_reviews_view(request):
@@ -286,7 +286,7 @@ def data_most_reviews_view(request):
         "jizz/data_most_reviews.html",
         {
             "active_section": "most-reviews",
-            "rows": media_reviews_per_user_rows(),
+            **media_review_stats_payload(),
         },
     )
 

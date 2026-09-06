@@ -11,6 +11,8 @@ from media.models import MediaReview
 
 User = get_user_model()
 
+MOST_GAMES_PAGE_SIZE = 20
+
 
 def _display_name_for_user(user, player: Player | None) -> str:
     if player and (player.name or '').strip():
@@ -173,4 +175,8 @@ def media_reviews_per_user_rows() -> list[dict]:
         )
 
     rows.sort(key=lambda row: (-row['total'], row['name'].lower()))
-    return rows
+    return _merge_rows_by_name(
+        rows,
+        count_key='total',
+        sum_keys=('approved', 'rejected', 'not_sure'),
+    )

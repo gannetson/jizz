@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { playVideoFallbackUrl, playVideoUrl } from '../utils/playVideoUrl';
+import { playVideoFallbackUrl, playVideoStillUrl, playVideoUrl } from '../utils/playVideoUrl';
 
 type PlayableVideoProps = {
   uri: string;
@@ -11,6 +12,8 @@ type PlayableVideoProps = {
   onReady?: () => void;
 };
 
+const IOS_STILL_FALLBACK_MS = 5000;
+
 export function PlayableVideo({
   uri,
   style,
@@ -18,47 +21,99 @@ export function PlayableVideo({
   nativeControls = true,
   onReady,
 }: PlayableVideoProps) {
+  const stillUri = playVideoStillUrl(uri);
   const [currentUri, setCurrentUri] = React.useState(() => playVideoUrl(uri, Platform.OS));
+  const [showStill, setShowStill] = React.useState(false);
   const triedRef = React.useRef<Set<string>>(new Set([playVideoUrl(uri, Platform.OS)]));
+  const skipReplaceRef = React.useRef(true);
+  const readyRef = React.useRef(false);
+  const onReadyRef = React.useRef(onReady);
+  onReadyRef.current = onReady;
 
   React.useEffect(() => {
     const next = playVideoUrl(uri, Platform.OS);
     triedRef.current = new Set([next]);
+    readyRef.current = false;
+    skipReplaceRef.current = true;
+    setShowStill(false);
     setCurrentUri(next);
   }, [uri]);
 
-  const skipReplaceRef = React.useRef(true);
-
-  const player = useVideoPlayer(currentUri, (p) => {
+  const player = useVideoPlayer(showStill ? null : currentUri, (p) => {
     if (autoPlay) p.play();
   });
 
+  const failOver = React.useCallback(
+    (failedUrl: string) => {
+      if (readyRef.current || showStill) return;
+      const next = playVideoFallbackUrl(uri, failedUrl, Platform.OS);
+      if (next && !triedRef.current.has(next)) {
+        triedRef.current.add(next);
+        setCurrentUri(next);
+        return;
+      }
+      if (stillUri) {
+        setShowStill(true);
+        return;
+      }
+      onReadyRef.current?.();
+    },
+    [uri, stillUri, showStill],
+  );
+
   React.useEffect(() => {
+    if (showStill) return;
     if (skipReplaceRef.current) {
       skipReplaceRef.current = false;
       return;
     }
-    player.replace(currentUri);
-    if (autoPlay) player.play();
-  }, [currentUri, player, autoPlay]);
+    let cancelled = false;
+    (async () => {
+      try {
+        await player.replaceAsync(currentUri);
+        if (!cancelled && autoPlay) player.play();
+      } catch {
+        if (!cancelled) failOver(currentUri);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUri, player, autoPlay, showStill, failOver]);
 
   React.useEffect(() => {
+    if (showStill) return;
     const sub = player.addListener('statusChange', ({ status }: { status: string }) => {
       if (status === 'readyToPlay') {
-        onReady?.();
+        readyRef.current = true;
+        onReadyRef.current?.();
         return;
       }
       if (status !== 'error') return;
-      const fallback = playVideoFallbackUrl(uri, currentUri, Platform.OS);
-      if (fallback && !triedRef.current.has(fallback)) {
-        triedRef.current.add(fallback);
-        setCurrentUri(fallback);
-        return;
-      }
-      onReady?.();
+      failOver(currentUri);
     });
     return () => sub.remove();
-  }, [player, uri, currentUri, onReady]);
+  }, [player, currentUri, showStill, failOver]);
+
+  React.useEffect(() => {
+    if (showStill || Platform.OS !== 'ios' || !stillUri) return;
+    const timer = setTimeout(() => {
+      if (!readyRef.current) failOver(currentUri);
+    }, IOS_STILL_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, [currentUri, showStill, stillUri, failOver]);
+
+  if (showStill && stillUri) {
+    return (
+      <Image
+        source={{ uri: stillUri }}
+        style={style ?? styles.video}
+        contentFit="contain"
+        onLoad={() => onReadyRef.current?.()}
+        onError={() => onReadyRef.current?.()}
+      />
+    );
+  }
 
   return (
     <VideoView

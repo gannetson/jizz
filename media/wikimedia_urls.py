@@ -90,8 +90,9 @@ def wikimedia_display_url(url: str | None, width_px: int | None = None) -> str |
 
 
 # Commons TimedMediaHandler derivatives (no MP4/H.264 on Wikimedia).
+# iOS: 144p MJPEG QuickTime is the profile that usually succeeds; 360p MPEG-4 often errors.
 WIKIMEDIA_VIDEO_WEBM_PROFILE = '480p.vp9.webm'
-WIKIMEDIA_VIDEO_IOS_PROFILE = '360p.mpeg4.mov'
+WIKIMEDIA_VIDEO_IOS_PROFILE = '144p.mjpeg.mov'
 _VIDEO_EXT_RE = r'webm|ogv|ogg|mpg|mpeg|avi|mov|mp4'
 _COMMONS_VIDEO_DIRECT_RE = re.compile(
     rf'^(/wikipedia/commons/)([0-9a-f])/([0-9a-f]{{2}})/([^/]+\.(?:{_VIDEO_EXT_RE}))$',

@@ -77,7 +77,7 @@ class WikimediaVideoUrlTests(SimpleTestCase):
         mov = (
             'https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e0/'
             'Pinicola_enucleator_CT2.ogv/'
-            'Pinicola_enucleator_CT2.ogv.360p.mpeg4.mov'
+            'Pinicola_enucleator_CT2.ogv.144p.mjpeg.mov'
         )
         self.assertEqual(wikimedia_video_ios_url(self.OGV), mov)
         self.assertEqual(

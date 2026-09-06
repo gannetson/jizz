@@ -9,6 +9,7 @@ describe('wikimedia video playback URLs', () => {
     const v = wikimediaVideoVariants(original);
     expect(v?.webm480).toContain('.480p.vp9.webm');
     expect(v?.mov360).toContain('.360p.mpeg4.mov');
+    expect(v?.mov144).toContain('.144p.mjpeg.mov');
     expect(v?.original).toBe(original);
   });
 
@@ -21,12 +22,22 @@ describe('wikimedia video playback URLs', () => {
   });
 
   it('puts mov first when preferMov, webm first otherwise', () => {
-    const safari = playVideoSources(ogv, true);
-    const chrome = playVideoSources(ogv, false);
-    expect(safari[0].src).toContain('.360p.mpeg4.mov');
+    const safari = playVideoSources(ogv, true, false);
+    const chrome = playVideoSources(ogv, false, false);
+    expect(safari[0].src).toContain('.144p.mjpeg.mov');
     expect(safari[0].type).toBe('video/quicktime');
+    expect(safari.map((s) => s.src).some((src) => src.includes('.360p.mpeg4.mov'))).toBe(true);
+    expect(safari.map((s) => s.src).some((src) => src.includes('.webm'))).toBe(true);
     expect(chrome[0].src).toContain('.480p.vp9.webm');
     expect(chrome[0].type).toBe('video/webm');
+  });
+
+  it('omits WebM on Apple touch devices and exposes a still', () => {
+    const ios = playVideoSources(ogv, true, true);
+    expect(ios).toHaveLength(2);
+    expect(ios[0].src).toContain('.144p.mjpeg.mov');
+    expect(ios[1].src).toContain('.360p.mpeg4.mov');
+    expect(wikimediaVideoVariants(original)?.still).toContain('960px--');
   });
 
   it('leaves youtube unchanged', () => {

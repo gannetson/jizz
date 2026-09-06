@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactPlayer from 'react-player';
-import { isWikimediaVideoUrl, playVideoSources } from '../utils/play-video-url';
+import { isWikimediaVideoUrl, playVideoSources, playVideoStillUrl } from '../utils/play-video-url';
 
 type PlayableVideoProps = {
   url: string;
@@ -25,12 +25,14 @@ export function PlayableVideo({
 }: PlayableVideoProps) {
   if (isWikimediaVideoUrl(url)) {
     const sources = playVideoSources(url);
+    const poster = playVideoStillUrl(url) ?? undefined;
     return (
       <video
         controls={controls}
         autoPlay={playing}
         playsInline
         preload="metadata"
+        poster={poster}
         width="100%"
         style={{
           width: typeof width === 'number' ? `${width}px` : width,

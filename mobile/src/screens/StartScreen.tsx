@@ -50,7 +50,7 @@ const LENGTHS = ['10', '20', '50', '100'];
 const MEDIA = [
   { value: 'images', labelKey: 'pictures' },
   { value: 'audio', labelKey: 'sounds' },
-  // { value: 'video', labelKey: 'videos' },
+  { value: 'video', labelKey: 'videos', beta: true },
 ];
 
 export function StartScreen() {
@@ -602,6 +602,11 @@ export function StartScreen() {
             }}
           >
             <Text style={[styles.chipText, mediaType === m.value && styles.chipTextSelected]}>{t(m.labelKey)}</Text>
+            {m.beta ? (
+              <Text style={[styles.betaBadge, mediaType === m.value && styles.betaBadgeSelected]}>
+                {t('beta')}
+              </Text>
+            ) : null}
           </TouchableOpacity>
         ))}
       </View>
@@ -699,6 +704,9 @@ const styles = StyleSheet.create({
   mediaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
@@ -709,6 +717,22 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.primary[100], borderColor: colors.primary[800] },
   chipText: { fontSize: 14, color: colors.primary[800] },
   chipTextSelected: { color: colors.primary[800],fontWeight: '600',  },
+  betaBadge: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.primary[600],
+    backgroundColor: colors.primary[50],
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  betaBadgeSelected: {
+    color: colors.primary[800],
+    backgroundColor: '#fff',
+  },
   levelRow: {
     padding: 12,
     borderRadius: 8,

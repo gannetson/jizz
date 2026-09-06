@@ -16,6 +16,8 @@ export type WikimediaVideoVariants = {
   original: string;
   webm480: string;
   mov360: string;
+  mov144: string;
+  still: string;
 };
 
 function commonsVideoParts(url: string): { h1: string; h2: string; filename: string } | null {
@@ -45,6 +47,8 @@ export function wikimediaVideoVariants(url: string): WikimediaVideoVariants | nu
     original: `${ORIGIN}/wikipedia/commons/${h1}/${h2}/${filename}`,
     webm480: transcodeUrl(parts, '480p.vp9.webm'),
     mov360: transcodeUrl(parts, '360p.mpeg4.mov'),
+    mov144: transcodeUrl(parts, '144p.mjpeg.mov'),
+    still: `${ORIGIN}/wikipedia/commons/thumb/${h1}/${h2}/${filename}/960px--${filename}.jpg`,
   };
 }
 
@@ -63,16 +67,36 @@ export function prefersMovVideo(): boolean {
   return /Safari/i.test(ua) && !/Chrome|Chromium|Android|Edg/i.test(ua);
 }
 
+/** iPhone / iPad (including iPadOS desktop-class UA). VP9 WebM will not play. */
+export function isAppleTouchDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  return /Macintosh/i.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+}
+
+export function playVideoStillUrl(url: string): string | null {
+  return wikimediaVideoVariants(url)?.still ?? null;
+}
+
 export function playVideoSources(
   url: string,
   preferMov = prefersMovVideo(),
+  appleTouch = isAppleTouchDevice(),
 ): { src: string; type?: string }[] {
   const variants = wikimediaVideoVariants(url);
   if (!variants) return [{ src: url }];
   const webm = { src: variants.webm480, type: 'video/webm' as const };
-  const mov = { src: variants.mov360, type: 'video/quicktime' as const };
+  const mjpeg = { src: variants.mov144, type: 'video/quicktime' as const };
+  const mpeg4 = { src: variants.mov360, type: 'video/quicktime' as const };
   const original = { src: variants.original };
-  const ordered = preferMov ? [mov, webm, original] : [webm, mov, original];
+  // iOS cannot decode VP9. 144p MJPEG is the Commons iOS transcode that usually
+  // exists; 360p MPEG-4 is higher-quality but often missing.
+  const ordered = appleTouch
+    ? [mjpeg, mpeg4]
+    : preferMov
+      ? [mjpeg, mpeg4, webm, original]
+      : [webm, mpeg4, original];
   const seen = new Set<string>();
   return ordered.filter((item) => {
     if (seen.has(item.src)) return false;

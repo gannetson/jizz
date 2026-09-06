@@ -289,6 +289,7 @@
   "username": "Nome de usuário",
   "videos": "Vídeos",
   "beta": "Beta",
+  "video_still_fallback": "Este vídeo não pôde ser reproduzido. Mostrando uma imagem parada.",
   "view on eBird": "Ver no eBird",
   "view_comparison": "Comparação",
   "comparison_ai_disclaimer": "Este texto foi gerado por IA a partir de várias fontes. Pode conter erros.",

@@ -397,6 +397,7 @@
   "sounds": "音声",
   "videos": "動画",
   "beta": "ベータ",
+  "video_still_fallback": "この動画は再生できません。静止画を表示しています。",
   "data_ebird": "データ：eBird",
   "media_credits": "メディア：iNaturalist、Wikimedia、GBIF、EOL、Observation.org、Xeno-Canto",
   "developed_by": "開発：GoedLoek",

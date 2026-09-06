@@ -289,6 +289,7 @@
   "username": "Benutzername",
   "videos": "Videos",
   "beta": "Beta",
+  "video_still_fallback": "Dieses Video konnte nicht abgespielt werden. Stattdessen ein Standbild.",
   "view on eBird": "Auf eBird ansehen",
   "view_comparison": "Vergleich",
   "comparison_ai_disclaimer": "Dieser Text wurde von KI aus mehreren Quellen erzeugt. Er kann Fehler enthalten.",

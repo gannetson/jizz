@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useTranslation } from '../i18n/TranslationContext';
 import { playVideoFallbackUrl, playVideoStillUrl, playVideoUrl } from '../utils/playVideoUrl';
 
 type PlayableVideoProps = {
@@ -21,6 +22,7 @@ export function PlayableVideo({
   nativeControls = true,
   onReady,
 }: PlayableVideoProps) {
+  const { t } = useTranslation();
   const stillUri = playVideoStillUrl(uri);
   const [currentUri, setCurrentUri] = React.useState(() => playVideoUrl(uri, Platform.OS));
   const [showStill, setShowStill] = React.useState(false);
@@ -105,13 +107,18 @@ export function PlayableVideo({
 
   if (showStill && stillUri) {
     return (
-      <Image
-        source={{ uri: stillUri }}
-        style={style ?? styles.video}
-        contentFit="contain"
-        onLoad={() => onReadyRef.current?.()}
-        onError={() => onReadyRef.current?.()}
-      />
+      <View style={[style ?? styles.video, styles.stillFrame]}>
+        <Image
+          source={{ uri: stillUri }}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          onLoad={() => onReadyRef.current?.()}
+          onError={() => onReadyRef.current?.()}
+        />
+        <View style={styles.disclaimerBar} pointerEvents="none">
+          <Text style={styles.disclaimerText}>{t('video_still_fallback')}</Text>
+        </View>
+      </View>
     );
   }
 
@@ -127,4 +134,20 @@ export function PlayableVideo({
 
 const styles = StyleSheet.create({
   video: { width: '100%', height: '100%' },
+  stillFrame: { overflow: 'hidden' },
+  disclaimerBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+  },
+  disclaimerText: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
 });

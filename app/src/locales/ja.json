@@ -289,6 +289,7 @@
   "username": "ユーザー名",
   "videos": "動画",
   "beta": "ベータ",
+  "video_still_fallback": "この動画は再生できません。静止画を表示しています。",
   "view on eBird": "eBirdで見る",
   "view_comparison": "比較",
   "comparison_ai_disclaimer": "このテキストは複数の情報源からAIが生成したものです。誤りがある場合があります。",

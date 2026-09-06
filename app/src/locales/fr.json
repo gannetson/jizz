@@ -289,6 +289,7 @@
   "username": "Nom d’utilisateur",
   "videos": "Vidéos",
   "beta": "Bêta",
+  "video_still_fallback": "Cette vidéo n'a pas pu être lue. Voici une image fixe.",
   "view on eBird": "Voir sur eBird",
   "view_comparison": "Comparaison",
   "comparison_ai_disclaimer": "Ce texte a été généré par l’IA à partir de plusieurs sources. Il peut contenir des erreurs.",

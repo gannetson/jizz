@@ -397,6 +397,7 @@
   "sounds": "Töne",
   "videos": "Videos",
   "beta": "Beta",
+  "video_still_fallback": "Dieses Video konnte nicht abgespielt werden. Stattdessen ein Standbild.",
   "data_ebird": "Daten: eBird",
   "media_credits": "Medien: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto",
   "developed_by": "Entwickelt von GoedLoek",

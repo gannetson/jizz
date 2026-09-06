@@ -397,6 +397,7 @@
   "sounds": "Sonidos",
   "videos": "Vídeos",
   "beta": "Beta",
+  "video_still_fallback": "Este vídeo no se pudo reproducir. Mostramos una imagen fija.",
   "data_ebird": "Datos: eBird",
   "media_credits": "Medios: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto",
   "developed_by": "Desarrollado por GoedLoek",

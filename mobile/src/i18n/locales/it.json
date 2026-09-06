@@ -397,6 +397,7 @@
   "sounds": "Suoni",
   "videos": "Video",
   "beta": "Beta",
+  "video_still_fallback": "Questo video non può essere riprodotto. Mostriamo un fermoimmagine.",
   "data_ebird": "Dati: eBird",
   "media_credits": "Contenuti: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto",
   "developed_by": "Sviluppato da GoedLoek",

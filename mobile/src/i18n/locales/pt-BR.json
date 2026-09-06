@@ -397,6 +397,7 @@
   "sounds": "Sons",
   "videos": "Vídeos",
   "beta": "Beta",
+  "video_still_fallback": "Este vídeo não pôde ser reproduzido. Mostrando uma imagem parada.",
   "data_ebird": "Dados: eBird",
   "media_credits": "Mídia: iNaturalist, Wikimedia, GBIF, EOL, Observation.org, Xeno-Canto",
   "developed_by": "Desenvolvido por GoedLoek",

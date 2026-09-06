@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from django.db.models import Count, Exists, F, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 from jizz.data_user_stats import media_reviews_per_user_rows
 from jizz.games_played_stats import default_date_range, iter_periods
 from jizz.marketing.pages import MEDIA_REVIEWED_APPROVED_COUNT
-from jizz.models import CountrySpecies, Species
+from jizz.models import CountrySpecies
 from jizz.services.checklist import CHECKLIST_COUNTRY_SPECIES_STATUSES
 from media.models import IMAGE_SOURCES, MEDIA_TYPES, Media, MediaReview
 
@@ -31,13 +31,37 @@ def _label_from_choices(choices, value: str, empty: str = 'Unknown') -> str:
     return dict(choices).get(raw, raw)
 
 
-def review_overview() -> dict:
+def _visible_images():
+    return Media.objects.filter(hide=False, type='image')
+
+
+def _has_review(review_type: str | None = None):
+    qs = MediaReview.objects.filter(media_id=OuterRef('pk'))
+    if review_type:
+        qs = qs.filter(review_type=review_type)
+    return Exists(qs)
+
+
+def _count_by(qs, field: str) -> dict:
+    return dict(qs.values(field).annotate(n=Count('id')).values_list(field, 'n'))
+
+
+def visible_photo_counts_by_species() -> tuple[dict[int, int], dict[int, int], dict[int, int]]:
+    """Per-species visible image counts: total, with any review, with an approved review."""
+    visible = _visible_images()
+    return (
+        _count_by(visible, 'species_id'),
+        _count_by(visible.filter(_has_review()), 'species_id'),
+        _count_by(visible.filter(_has_review(MediaReview.APPROVED)), 'species_id'),
+    )
+
+
+def review_overview(photo_stats: tuple[dict[int, int], dict[int, int], dict[int, int]] | None = None) -> dict:
     now = timezone.now()
     month_ago = now - timedelta(days=30)
-    image_qs = Media.objects.filter(hide=False, type='image')
-    has_review = MediaReview.objects.filter(media_id=OuterRef('pk'))
+    image_qs = _visible_images()
     photos = image_qs.count()
-    photos_reviewed = image_qs.filter(Exists(has_review)).count()
+    photos_reviewed = image_qs.filter(_has_review()).count()
     type_counts = {
         row['review_type']: row['n']
         for row in MediaReview.objects.values('review_type').annotate(n=Count('id'))
@@ -47,29 +71,14 @@ def review_overview() -> dict:
     not_sure = type_counts.get(MediaReview.NOT_SURE, 0)
     total = approved + rejected + not_sure
     decided = approved + rejected
-    visible_images = Q(media__hide=False, media__type='image')
-    species_with_photos_qs = (
-        Species.objects.filter(visible_images)
-        .annotate(
-            total_photos=Count('media', filter=visible_images, distinct=True),
-            photos_with_review=Count(
-                'media',
-                filter=visible_images & Q(media__reviews__id__isnull=False),
-                distinct=True,
-            ),
-            approved_photos=Count(
-                'media',
-                filter=visible_images & Q(media__reviews__review_type=MediaReview.APPROVED),
-                distinct=True,
-            ),
-        )
-        .filter(total_photos__gt=0)
+    photos_by, reviewed_by, approved_by = photo_stats or visible_photo_counts_by_species()
+    species_with_photos = len(photos_by)
+    species_ready = sum(
+        1
+        for species_id, total_photos in photos_by.items()
+        if approved_by.get(species_id, 0) >= MEDIA_REVIEWED_APPROVED_COUNT
+        or reviewed_by.get(species_id, 0) >= total_photos
     )
-    species_with_photos = species_with_photos_qs.count()
-    species_ready = species_with_photos_qs.filter(
-        Q(approved_photos__gte=MEDIA_REVIEWED_APPROVED_COUNT)
-        | Q(photos_with_review__gte=F('total_photos'))
-    ).count()
     return {
         'total_reviews': total,
         'approved': approved,
@@ -87,63 +96,48 @@ def review_overview() -> dict:
     }
 
 
-def country_review_coverage_rows() -> list[dict]:
+def country_review_coverage_rows(
+    photo_stats: tuple[dict[int, int], dict[int, int], dict[int, int]] | None = None,
+) -> list[dict]:
     """Visible images of checklist species, and how many have at least one review."""
-    checklist = CountrySpecies.objects.filter(
-        status__in=CHECKLIST_COUNTRY_SPECIES_STATUSES,
-        country__code__regex=_ISO2_COUNTRY,
-    )
-    photo_rows = (
-        checklist.filter(species__media__hide=False, species__media__type='image')
-        .values('country_id', 'country__name')
-        .annotate(
-            photos=Count('species__media__id', distinct=True),
-            reviewed=Count(
-                'species__media__id',
-                filter=Q(species__media__reviews__id__isnull=False),
-                distinct=True,
-            ),
+    photos_by, reviewed_by, _approved_by = photo_stats or visible_photo_counts_by_species()
+    pairs = (
+        CountrySpecies.objects.filter(
+            status__in=CHECKLIST_COUNTRY_SPECIES_STATUSES,
+            country__code__regex=_ISO2_COUNTRY,
         )
+        .values_list('country_id', 'country__name', 'species_id')
+        .iterator(chunk_size=5000)
     )
-    visible_images = Media.objects.filter(hide=False, type='image')
-    species_with_photos = dict(
-        checklist.filter(Exists(visible_images.filter(species_id=OuterRef('species_id'))))
-        .values('country_id')
-        .annotate(n=Count('species_id', distinct=True))
-        .values_list('country_id', 'n')
-    )
-    species_with_review = dict(
-        checklist.filter(
-            Exists(
-                MediaReview.objects.filter(
-                    media__species_id=OuterRef('species_id'),
-                    media__hide=False,
-                    media__type='image',
-                )
-            )
-        )
-        .values('country_id')
-        .annotate(n=Count('species_id', distinct=True))
-        .values_list('country_id', 'n')
-    )
+    by_country: dict[str, dict] = {}
+    for country_id, country_name, species_id in pairs:
+        n_photos = photos_by.get(species_id) or 0
+        if n_photos <= 0:
+            continue
+        bucket = by_country.get(country_id)
+        if bucket is None:
+            bucket = {
+                'code': country_id,
+                'name': country_name or country_id,
+                'photos': 0,
+                'reviewed': 0,
+                'species_with_photos': 0,
+                'species_with_review': 0,
+            }
+            by_country[country_id] = bucket
+        bucket['photos'] += n_photos
+        bucket['reviewed'] += reviewed_by.get(species_id) or 0
+        bucket['species_with_photos'] += 1
+        if reviewed_by.get(species_id):
+            bucket['species_with_review'] += 1
 
-    out: list[dict] = []
-    for row in photo_rows:
-        code = row['country_id']
-        photos = row['photos'] or 0
-        reviewed = row['reviewed'] or 0
-        species_photos = species_with_photos.get(code) or 0
-        species_reviewed = species_with_review.get(code) or 0
+    out = []
+    for bucket in by_country.values():
         out.append(
             {
-                'code': code,
-                'name': row['country__name'] or code,
-                'photos': photos,
-                'reviewed': reviewed,
-                'pct': _pct(reviewed, photos),
-                'species_with_photos': species_photos,
-                'species_with_review': species_reviewed,
-                'species_pct': _pct(species_reviewed, species_photos),
+                **bucket,
+                'pct': _pct(bucket['reviewed'], bucket['photos']),
+                'species_pct': _pct(bucket['species_with_review'], bucket['species_with_photos']),
             }
         )
     out.sort(
@@ -153,22 +147,15 @@ def country_review_coverage_rows() -> list[dict]:
 
 
 def reviews_by_source_rows() -> list[dict]:
-    has_review = Q(reviews__id__isnull=False)
-    rows = (
-        Media.objects.filter(hide=False, type='image')
-        .values('source')
-        .annotate(
-            photos=Count('id', distinct=True),
-            reviewed=Count('id', filter=has_review, distinct=True),
-        )
-    )
+    visible = _visible_images()
+    photos_by = _count_by(visible, 'source')
+    reviewed_by = _count_by(visible.filter(_has_review()), 'source')
     out = []
-    for row in rows:
-        photos = row['photos'] or 0
-        reviewed = row['reviewed'] or 0
+    for source, photos in photos_by.items():
+        reviewed = reviewed_by.get(source) or 0
         out.append(
             {
-                'source': _label_from_choices(IMAGE_SOURCES, row['source']),
+                'source': _label_from_choices(IMAGE_SOURCES, source),
                 'photos': photos,
                 'reviewed': reviewed,
                 'pct': _pct(reviewed, photos),
@@ -179,22 +166,15 @@ def reviews_by_source_rows() -> list[dict]:
 
 
 def reviews_by_media_type_rows() -> list[dict]:
-    has_review = Q(reviews__id__isnull=False)
-    rows = (
-        Media.objects.filter(hide=False)
-        .values('type')
-        .annotate(
-            items=Count('id', distinct=True),
-            reviewed=Count('id', filter=has_review, distinct=True),
-        )
-    )
+    visible = Media.objects.filter(hide=False)
+    items_by = _count_by(visible, 'type')
+    reviewed_by = _count_by(visible.filter(_has_review()), 'type')
     out = []
-    for row in rows:
-        items = row['items'] or 0
-        reviewed = row['reviewed'] or 0
+    for media_type, items in items_by.items():
+        reviewed = reviewed_by.get(media_type) or 0
         out.append(
             {
-                'type': _label_from_choices(MEDIA_TYPES, row['type'] or 'image'),
+                'type': _label_from_choices(MEDIA_TYPES, media_type or 'image'),
                 'items': items,
                 'reviewed': reviewed,
                 'pct': _pct(reviewed, items),
@@ -231,13 +211,14 @@ def reviews_by_month_rows() -> list[dict]:
 
 
 def media_review_stats_payload() -> dict:
+    photo_stats = visible_photo_counts_by_species()
     reviewers = media_reviews_per_user_rows()
-    overview = review_overview()
+    overview = review_overview(photo_stats)
     overview['reviewers'] = len(reviewers)
     return {
         'overview': overview,
         'reviewers': reviewers,
-        'countries': country_review_coverage_rows(),
+        'countries': country_review_coverage_rows(photo_stats),
         'sources': reviews_by_source_rows(),
         'media_types': reviews_by_media_type_rows(),
         'by_month': reviews_by_month_rows(),

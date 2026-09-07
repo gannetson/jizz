@@ -16,7 +16,6 @@ import {playLevelFromSettings, type PlayLevel} from "../core/play-level"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
 import SelectSpeciesGroup from "./select-species-group"
-import SelectSeason from "./select-season"
 import {authService} from "../api/services/auth.service"
 import {profileService, type UserProfile} from "../api/services/profile.service"
 
@@ -168,7 +167,6 @@ export const CreateGame = ({
         <SetName/>
         <SelectLanguage/>
         {!pickCountry && <SelectCountry/>}
-        <SelectSeason/>
 
         {differsFromProfile ? (
           <Box as="label" cursor="pointer" display="flex" alignItems="center" gap={2}>

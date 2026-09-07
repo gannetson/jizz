@@ -83,8 +83,6 @@ export function StartScreen() {
     setTaxFamily,
     speciesGroup,
     setSpeciesGroup,
-    season,
-    setSeason,
     player,
     loading,
     createGame,
@@ -334,32 +332,6 @@ export function StartScreen() {
         style={styles.countrySelect}
         testID="start.selectCountry"
       />
-
-      <Text style={styles.label}>{t('season')}</Text>
-      <View style={styles.pickerRow}>
-        {[
-          { value: '', labelKey: 'season_all_year' },
-          { value: 'spring', labelKey: 'season_spring' },
-          { value: 'summer', labelKey: 'season_summer' },
-          { value: 'autumn', labelKey: 'season_autumn' },
-          { value: 'winter', labelKey: 'season_winter' },
-        ].map((opt) => (
-          <TouchableOpacity
-            key={opt.value || 'all'}
-            style={[styles.chip, (season || '') === opt.value && styles.chipSelected]}
-            onPress={() => setSeason(opt.value)}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                (season || '') === opt.value && styles.chipTextSelected,
-              ]}
-            >
-              {t(opt.labelKey)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       <Text style={styles.label}>{t('language_species_names')}</Text>
       <TouchableOpacity

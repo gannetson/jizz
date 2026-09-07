@@ -19,4 +19,7 @@
 -keep class com.facebook.hermes.** { *; }
 -keep class com.facebook.jni.** { *; }
 
+# Keep rules must stay narrow. Do not add -dontobfuscate / -dontoptimize /
+# -dontshrink — Play Console requires >= 25% coverage of each.
+
 # Add any project specific keep options here:

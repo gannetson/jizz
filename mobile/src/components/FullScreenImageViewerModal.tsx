@@ -6,17 +6,15 @@ import {
   TouchableOpacity,
   Text,
   Dimensions,
-  Image,
   Platform,
   StatusBar,
 } from 'react-native';
 import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, clamp, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CachedRemoteImage } from './CachedRemoteImage';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-
-const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 type Props = {
   visible: boolean;
@@ -112,18 +110,18 @@ export function FullScreenImageViewerModal({ visible, imageUri, onClose, closeLa
             <Text style={styles.closeBtnText}>{closeLabel}</Text>
           </TouchableOpacity>
           <GestureDetector gesture={composed}>
-            <Animated.View style={styles.zoomBox}>
+            <Animated.View style={[styles.zoomBox, imageStyle]}>
               {visible ? (
-                <AnimatedImage
-                  style={[styles.fullImage, imageStyle]}
+                <CachedRemoteImage
+                  style={styles.fullImage}
                   source={{
                     uri: imageUri,
                     headers: {
                       'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
                     },
                   }}
-                  resizeMode="contain"
-                  accessibilityIgnoresInvertColors
+                  contentFit="contain"
+                  recyclingKey={imageUri}
                 />
               ) : null}
             </Animated.View>

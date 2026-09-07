@@ -401,6 +401,7 @@ export function ProfileScreen() {
                     source={option.source}
                     style={styles.styleChoiceImage}
                     resizeMode="contain"
+                    resizeMethod="resize"
                     accessibilityIgnoresInvertColors
                   />
                 </View>

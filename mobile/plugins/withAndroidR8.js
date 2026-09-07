@@ -9,6 +9,7 @@ const path = require('path');
 const GRADLE_PROPS = {
   'android.enableMinifyInReleaseBuilds': 'true',
   'android.enableShrinkResourcesInReleaseBuilds': 'true',
+  'android.enableR8.fullMode': 'true',
 };
 
 const SVG_KEEP = '-keep public class com.horcrux.svg.** { *; }';

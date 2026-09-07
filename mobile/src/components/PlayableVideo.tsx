@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { AppState, StyleSheet, Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTranslation } from '../i18n/TranslationContext';
@@ -105,6 +105,26 @@ export function PlayableVideo({
     return () => clearTimeout(timer);
   }, [currentUri, showStill, stillUri, failOver]);
 
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') {
+        try {
+          player.pause();
+        } catch {
+          // Player may already be released
+        }
+      }
+    });
+    return () => {
+      sub.remove();
+      try {
+        player.pause();
+      } catch {
+        // Player may already be released
+      }
+    };
+  }, [player]);
+
   if (showStill && stillUri) {
     return (
       <View style={[style ?? styles.video, styles.stillFrame]}>
@@ -112,6 +132,8 @@ export function PlayableVideo({
           source={{ uri: stillUri }}
           style={StyleSheet.absoluteFill}
           contentFit="contain"
+          cachePolicy="disk"
+          recyclingKey={stillUri}
           onLoad={() => onReadyRef.current?.()}
           onError={() => onReadyRef.current?.()}
         />

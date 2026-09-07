@@ -9,7 +9,7 @@ import {
   Image as RnImage,
   type ViewStyle,
 } from 'react-native';
-import { Image } from 'expo-image';
+import { CachedRemoteImage } from './CachedRemoteImage';
 import { setAudioModeAsync } from 'expo-audio';
 import { PlayableVideo } from './PlayableVideo';
 import { MediaCredits } from './MediaCredits';
@@ -229,8 +229,9 @@ export function QuestionMediaView({
                     imageHeight != null && { height: imageHeight },
                   ]}
                 >
-                  <Image
+                  <CachedRemoteImage
                     key={`${imageUri}-${imageReloadKey}`}
+                    recyclingKey={`${imageUri}-${imageReloadKey}`}
                     style={styles.image}
                     contentFit="contain"
                     source={{
@@ -285,6 +286,7 @@ export function QuestionMediaView({
                     source={getMoodImage('noimage', visualStyle)}
                     style={styles.placeholderImage}
                     resizeMode="contain"
+                    resizeMethod="resize"
                     accessibilityIgnoresInvertColors
                   />
                 ) : null}
@@ -384,6 +386,7 @@ export function QuestionMediaView({
                 source={getMoodImage('stressed', visualStyle)}
                 style={styles.placeholderImage}
                 resizeMode="contain"
+                resizeMethod="resize"
                 accessibilityIgnoresInvertColors
               />
             ) : null}

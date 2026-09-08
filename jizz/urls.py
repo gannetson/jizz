@@ -263,6 +263,7 @@ urlpatterns = [
     path('site/birding-app/', intent_page, {'slug': 'birding-app'}, name='marketing-birding-app'),
     path('site/flocks/', intent_page, {'slug': 'flocks'}, name='marketing-flocks'),
     path('site/community/', intent_page, {'slug': 'community'}, name='marketing-community'),
+    path('site/newsletter/', intent_page, {'slug': 'newsletter'}, name='marketing-newsletter'),
     path('site/faq/', intent_page, {'slug': 'faq'}, name='marketing-faq'),
     path('site/my-tricky-birds/', intent_page, {'slug': 'my-tricky-birds'}, name='marketing-my-tricky-birds'),
     path('site/my-edits/', my_edits, name='marketing-my-edits'),
@@ -293,6 +294,7 @@ urlpatterns = [
     path('birding-app/', RedirectView.as_view(url='/site/birding-app/', permanent=True)),
     path('flocks/', RedirectView.as_view(url='/site/flocks/', permanent=True)),
     path('community/', RedirectView.as_view(url='/site/community/', permanent=True)),
+    path('newsletter/', RedirectView.as_view(url='/site/newsletter/', permanent=True)),
     path('faq/', RedirectView.as_view(url='/site/faq/', permanent=True)),
     path('my-tricky-birds/', RedirectView.as_view(url='/site/my-tricky-birds/', permanent=True)),
     path(

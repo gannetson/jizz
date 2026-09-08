@@ -31,6 +31,7 @@ _ENTRIES: list[tuple[str, tuple[str, ...]]] = [
     ('The app', ('De app', 'La app', 'L’app', 'Die App', 'L’app', 'O app', 'アプリ')),
     ('Flocks', ('Flocks', 'Flocks', 'Flocks', 'Flocks', 'Flocks', 'Flocks', 'Flocks')),
     ('FAQ', ('FAQ', 'FAQ', 'FAQ', 'FAQ', 'FAQ', 'FAQ', 'FAQ')),
+    ('Newsletter example', ('Nieuwsbriefvoorbeeld', 'Ejemplo de boletín', 'Exemple de bulletin', 'Newsletter-Beispiel', 'Esempio di notiziario', 'Exemplo de boletim', '会報の例')),
     ('All pages', ('Alle pagina’s', 'Todas las páginas', 'Toutes les pages', 'Alle Seiten', 'Tutte le pagine', 'Todas as páginas', 'すべてのページ')),
     ('Contact', ('Contact', 'Contacto', 'Contact', 'Kontakt', 'Contatti', 'Contato', 'お問い合わせ')),
     ('Facebook group', ('Facebookgroep', 'Grupo de Facebook', 'Groupe Facebook', 'Facebook-Gruppe', 'Gruppo Facebook', 'Grupo do Facebook', 'Facebookグループ')),

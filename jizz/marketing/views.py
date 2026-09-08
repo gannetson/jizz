@@ -296,12 +296,19 @@ def intent_page(request, slug: str):
             show_pairs=bool(pairs),
             pairs_href='/data/quiz-mistakes/pairs/',
         )
+    crumbs = [('Home', SITE_HOME), (page['heading'], path)]
+    if slug == 'newsletter':
+        crumbs = [
+            ('Home', SITE_HOME),
+            ('Community', site_path('community')),
+            (page['heading'], path),
+        ]
     context = base_context(
         request,
         title=page['title'],
         description=page['description'],
         path=path,
-        breadcrumbs=[('Home', SITE_HOME), (page['heading'], path)],
+        breadcrumbs=crumbs,
         extra_json_ld=[faq_json_ld()] if slug in ('faq', 'birding-app', 'learn-bird-identification') else None,
         heading=page['heading'],
         lead=page['lead'],
@@ -314,6 +321,7 @@ def intent_page(request, slug: str):
     template = {
         'community': 'marketing/community.html',
         'faq': 'marketing/faq.html',
+        'newsletter': 'marketing/newsletter.html',
     }.get(slug, 'marketing/intent.html')
     return render(request, template, context)
 

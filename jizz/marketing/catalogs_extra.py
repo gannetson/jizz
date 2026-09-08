@@ -528,6 +528,19 @@ EXTRA_ENTRIES: list[tuple[str, tuple[str, ...]]] = [
             'Birdrは小さなプロジェクトです。フィードバック、写真確認、比較説明、他のバーダーへの紹介、どれも助かります。',
         ),
     ),
+    ('Bird club newsletter example | Birdr', ('Voorbeeld clubnieuwsbrief | Birdr', 'Ejemplo de boletín de club | Birdr', 'Exemple de bulletin de club | Birdr', 'Club-Newsletter-Beispiel | Birdr', 'Esempio di notiziario del club | Birdr', 'Exemplo de boletim de clube | Birdr', 'クラブ会報の例 | Birdr')),
+    (
+        'A ready-to-copy item for your bird club newsletter or magazine, with screenshots. Share Birdr with other birders.',
+        (
+            'Een kant-en-klaar stukje voor de clubnieuwsbrief of het blad, met screenshots. Deel Birdr met andere vogelaars.',
+            'Un texto listo para copiar para el boletín o la revista del club, con capturas. Comparte Birdr con otros observadores.',
+            'Un texte prêt à copier pour le bulletin ou le magazine du club, avec captures. Partage Birdr avec d’autres ornithos.',
+            'Ein fertiger Text für den Club-Newsletter oder die Zeitschrift, mit Screenshots. Teile Birdr mit anderen Birding-Leuten.',
+            'Un testo pronto da copiare per il notiziario o la rivista del club, con screenshot. Condividi Birdr con altri birdwatcher.',
+            'Um texto pronto para copiar para o boletim ou a revista do clube, com capturas. Divulgue o Birdr para outros observadores.',
+            'クラブ会報や雑誌向けのコピー用原稿。スクリーンショット付き。Birdrをほかのバーダーにシェアできます。',
+        ),
+    ),
     ('Birdr FAQ – Free Bird Identification Quiz', ('Birdr FAQ – gratis quiz voor vogelherkenning', 'FAQ de Birdr – quiz gratis de identificación', 'FAQ Birdr – quiz gratuit d’identification', 'Birdr-FAQ – kostenloses Bestimmungsquiz', 'FAQ Birdr – quiz gratis di identificazione', 'FAQ do Birdr – quiz grátis de identificação', 'Birdr FAQ – 無料の鳥類識別クイズ')),
     (
         'Answers about Birdr: is it free, does it identify birds from a photo, and where you can play photo quizzes and country challenges.',

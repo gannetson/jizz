@@ -372,6 +372,27 @@ INTENT_PAGES = {
         ],
         'show_countries': True,
     },
+    'newsletter': {
+        'title': 'Bird club newsletter example | Birdr',
+        'description': (
+            'A ready-to-copy item for your bird club newsletter or magazine, '
+            'with screenshots. Share Birdr with other birders.'
+        ),
+        'heading': 'Add it to your bird club newsletter',
+        'lead': (
+            'A short note in a club email or magazine reaches people who already '
+            'care about identification. You are welcome to reuse the item below, '
+            'including the screenshots. Change the wording if it fits your club better.'
+        ),
+        'cta_href': '/play',
+        'cta_label': 'Play a quiz',
+        'body': [],
+        'links': [
+            ('/site/community/', 'Community'),
+            ('/site/flocks/', 'Flocks'),
+            ('/play', 'Start a quiz'),
+        ],
+    },
     'faq': {
         'title': 'Birdr FAQ – Free Bird Identification Quiz',
         'description': (
@@ -564,7 +585,7 @@ def nav_section_for_path(path: str) -> str:
         return 'species'
     if current.startswith('/site/bird-quiz-by-country/') or current.startswith('/site/countries/'):
         return 'countries'
-    if current.startswith('/site/community/'):
+    if current.startswith('/site/community/') or current.startswith('/site/newsletter/'):
         return 'community'
     return ''
 

@@ -85,6 +85,7 @@ class MarketingPagesTests(TestCase):
         self.assertNotIn('FAQPage', html)
         self.assertIn('href="/site/community/"', html)
         self.assertIn('href="/site/faq/"', html)
+        self.assertIn('href="/site/newsletter/"', html)
         self.assertIn('How you can help', html)
         self.assertIn('Read the FAQ', html)
         self.assertIn('Kudos to the developer!', html)
@@ -180,6 +181,7 @@ class MarketingPagesTests(TestCase):
             '/site/my-tricky-birds/',
             '/site/flocks/',
             '/site/community/',
+            '/site/newsletter/',
             '/site/faq/',
         ]
         for path in paths:
@@ -245,28 +247,35 @@ class MarketingPagesTests(TestCase):
         self.assertIn('href="/site/birds/"', community)
         self.assertRegex(community, r'href="/site/community/"[^>]*aria-current="page"')
         self.assertIn('Spread the word', community)
-        self.assertIn('Spread Birdr', community)
-        self.assertIn('Add it to your bird club newsletter', community)
-        self.assertIn('Example newsletter item', community)
-        self.assertIn('data-newsletter-copy', community)
-        self.assertIn('newsletter-copy-body', community)
-        self.assertIn('A free way to practise bird ID between field trips', community)
-        self.assertIn('Study the birds of your own country, or switch to another list to prepare for a trip abroad.', community)
-        self.assertIn('Playing is easy and intuitive', community)
-        self.assertIn('The game is available in multiple languages, including the bird names.', community)
-        self.assertIn('After each answer you can open the bird', community)
-        self.assertIn('nobody has made it to the end yet', community)
-        self.assertIn('App Store:', community)
-        self.assertIn('Google Play:', community)
-        self.assertIn('apps.apple.com/us/app/birdr', community)
-        self.assertIn('play.google.com/store/apps/details?id=pro.birdr.app', community)
-        self.assertIn('/images/birdr-new-game.png', community)
-        self.assertIn('/images/birdr-photo-quiz.png', community)
-        self.assertIn('/images/birdr-species-review.png', community)
-        self.assertIn('/images/birdr-country-challenge.png', community)
-        self.assertIn('/images/birdr-tricky-birds.png', community)
-        self.assertIn('/images/birdr-tricky-practice.png', community)
-        self.assertIn('/images/birdr-tricky-results.png', community)
+        self.assertIn('href="/site/newsletter/"', community)
+        self.assertIn('See a newsletter example', community)
+        self.assertNotIn('Example newsletter item', community)
+        self.assertNotIn('data-newsletter-copy', community)
+
+        newsletter = self.client.get('/site/newsletter/').content.decode()
+        self.assertIn('Add it to your bird club newsletter', newsletter)
+        self.assertIn('Example newsletter item', newsletter)
+        self.assertIn('data-newsletter-copy', newsletter)
+        self.assertIn('newsletter-copy-body', newsletter)
+        self.assertIn('A free way to practise bird ID between field trips', newsletter)
+        self.assertIn('Study the birds of your own country, or switch to another list to prepare for a trip abroad.', newsletter)
+        self.assertIn('Playing is easy and intuitive', newsletter)
+        self.assertIn('The game is available in multiple languages, including the bird names.', newsletter)
+        self.assertIn('After each answer you can open the bird', newsletter)
+        self.assertIn('nobody has made it to the end yet', newsletter)
+        self.assertIn('App Store:', newsletter)
+        self.assertIn('Google Play:', newsletter)
+        self.assertIn('apps.apple.com/us/app/birdr', newsletter)
+        self.assertIn('play.google.com/store/apps/details?id=pro.birdr.app', newsletter)
+        self.assertIn('/images/birdr-new-game.png', newsletter)
+        self.assertIn('/images/birdr-photo-quiz.png', newsletter)
+        self.assertIn('/images/birdr-species-review.png', newsletter)
+        self.assertIn('/images/birdr-country-challenge.png', newsletter)
+        self.assertIn('/images/birdr-tricky-birds.png', newsletter)
+        self.assertIn('/images/birdr-tricky-practice.png', newsletter)
+        self.assertIn('/images/birdr-tricky-results.png', newsletter)
+        self.assertRegex(newsletter, r'href="/site/community/"[^>]*aria-current="page"')
+        self.assertIn('href="/site/newsletter/"', newsletter)
         for path in (
             '/images/birdr-new-game.png',
             '/images/birdr-photo-quiz.png',
@@ -289,6 +298,7 @@ class MarketingPagesTests(TestCase):
             ('/site/bird-identification-quiz/', '/play'),
             ('/flocks/', '/site/flocks/'),
             ('/community/', '/site/community/'),
+            ('/newsletter/', '/site/newsletter/'),
             ('/faq/', '/site/faq/'),
             ('/countries/netherlands/', '/site/countries/netherlands/'),
         ]
@@ -312,7 +322,7 @@ class MarketingPagesTests(TestCase):
         self.assertIn('/media-review/NL', html)
         self.assertIn('Review Netherlands photos', html)
         self.assertIn('Spread the word', html)
-        self.assertIn('/site/community/#club-newsletter', html)
+        self.assertIn('/site/newsletter/', html)
         self.assertNotIn('Example newsletter item', html)
         self.assertNotIn('How people play', html)
         self.assertNotIn('High scores', html)
@@ -785,6 +795,7 @@ class MarketingPagesTests(TestCase):
         self.assertNotIn('https://birdr.pro/site/bird-identification-quiz/', body)
         self.assertIn('https://birdr.pro/site/flocks/', body)
         self.assertIn('https://birdr.pro/site/community/', body)
+        self.assertIn('https://birdr.pro/site/newsletter/', body)
         self.assertIn('https://birdr.pro/site/faq/', body)
         self.assertNotIn('/site/my-edits/', body)
 
@@ -821,6 +832,7 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Hoe het werkt', dutch)
         self.assertIn('href="/nl/site/how-it-works/"', dutch)
         self.assertIn('href="/nl/site/community/"', dutch)
+        self.assertIn('href="/nl/site/newsletter/"', dutch)
         self.assertIn('https://birdr.pro/nl/site/', dutch)
         self.assertNotIn('https://birdr.pro/nl/nl/site/', dutch)
         self.assertEqual(nl['Content-Language'], 'nl')
@@ -831,14 +843,17 @@ class MarketingPagesTests(TestCase):
 
         community_nl = self.client.get('/nl/site/community/').content.decode()
         self.assertIn('Vertel het verder', community_nl)
-        self.assertIn('#club-newsletter', community_nl)
+        self.assertIn('href="/nl/site/newsletter/"', community_nl)
         self.assertIn('Facebookgroep', community_nl)
         self.assertIn('ticket in op GitHub', community_nl)
-        self.assertIn('Wil je tussen excursies door scherper worden in herkenning', community_nl)
-        self.assertIn('Maak een account als je je voortgang wilt bewaren.', community_nl)
+
+        newsletter_nl = self.client.get('/nl/site/newsletter/').content.decode()
+        self.assertIn('Zet het in de clubnieuwsbrief', newsletter_nl)
+        self.assertIn('Wil je tussen excursies door scherper worden in herkenning', newsletter_nl)
+        self.assertIn('Maak een account als je je voortgang wilt bewaren.', newsletter_nl)
         self.assertNotIn(
             'If you want to get sharper at identification between outings',
-            community_nl,
+            newsletter_nl,
         )
 
     def test_help_template_strings_are_in_catalogs(self):
@@ -848,18 +863,22 @@ class MarketingPagesTests(TestCase):
 
         from jizz.marketing.catalogs import CATALOGS
 
-        html = (
-            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_help.html'
-        ).read_text()
+        html_files = [
+            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_help.html',
+            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_newsletter_example.html',
+            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / 'newsletter.html',
+        ]
         pattern = re.compile(
             r'\{%\s*mt\s+("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')',
             re.S,
         )
         messages = []
-        for raw in pattern.findall(html):
-            msgid = ast.literal_eval(raw)
-            if msgid not in messages:
-                messages.append(msgid)
+        for html_path in html_files:
+            html = html_path.read_text()
+            for raw in pattern.findall(html):
+                msgid = ast.literal_eval(raw)
+                if msgid not in messages:
+                    messages.append(msgid)
         self.assertGreater(len(messages), 20)
         missing = [
             msgid

@@ -1,6 +1,6 @@
 <div id="club-newsletter" class="club-newsletter">
   <p>
-    {% mt "Use Copy to put this example on the clipboard, including the screenshots. Images stay on birdr.pro, so they show when you paste into email or Word. If your club starts a Flock, include the invite so members can join in one tap." %}
+    {% mt "Use Copy for a club note and screenshots. Images stay on birdr.pro, so they show when you paste into email or Word." %}
   </p>
   <article class="newsletter-example" aria-label="{% mt "Example club newsletter item" %}">
     <div class="newsletter-example-head">
@@ -16,70 +16,80 @@
       >{% mt "Copy" %}</button>
     </div>
     <div id="newsletter-copy-body">
-    <h4>{% mt "A free way to practise bird ID between field trips" %}</h4>
+    <h4>{% mt "A free bird ID quiz you can try yourself" %}</h4>
     <p>
-      {% mt "If you want to get sharper at identification between outings, try <a href=\"https://birdr.pro/\">Birdr</a>. It is a free quiz app: you see a real photograph (or hear a recording), choose the species, and learn from the ones you miss. Study the birds of your own country, or switch to another list to prepare for a trip abroad." %}
+      {% mt "Want to get sharper at bird identification between outings? Try <a href=\"https://birdr.pro/\">Birdr</a>. You see a real photograph, pick the species, and learn from the ones you miss." %}
     </p>
-    <p>
-      {% mt "It is not an auto-ID camera. The point is to learn the field marks yourself. Playing is easy and intuitive: pick a country, choose a level, and start. The game is available in multiple languages, including the bird names." %}
-    </p>
-    <p>
-      {% mt "After each answer you can open the bird and look at more photographs, videos and sounds. When you finish the game, you can go back through every question." %}
-    </p>
-    <div class="screenshot-row newsletter-shots" aria-label="{% mt "Birdr screenshots" %}">
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-new-game.png" width="456" height="1024" alt="{% mt "New game: pick a country, a language for species names, and a difficulty" %}">
-        <figcaption>{% mt "Pick a country and start" %}</figcaption>
-      </figure>
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-photo-quiz.png" width="456" height="993" alt="{% mt "Birdr photo quiz: a gull on water and six species to choose from" %}">
-        <figcaption>{% mt "Identify the bird from a photo" %}</figcaption>
-      </figure>
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-species-review.png" width="456" height="1024" alt="{% mt "Species page: Gull-billed Tern with photos, videos and sounds to review after an answer" %}">
-        <figcaption>{% mt "Review more pictures" %}</figcaption>
-      </figure>
-    </div>
-    <p>
-      {% mt "Wrong answers are not wasted. My Tricky Birds keeps the lookalikes you mix up, pipits, treecreepers, black-backed gulls, and lets you practise that pair until it sticks. When a pair is fixed, you see it." %}
-    </p>
-    <div class="screenshot-row newsletter-shots" aria-label="{% mt "My Tricky Birds screenshots" %}">
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-tricky-birds.png" width="456" height="1024" alt="{% mt "My Tricky Birds: a list of confusing pairs for the Netherlands, with Practice buttons and FIXED badges" %}">
-        <figcaption>{% mt "Your personal mix-ups" %}</figcaption>
-      </figure>
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-tricky-practice.png" width="456" height="1024" alt="{% mt "Pair practice: Eurasian Treecreeper versus Short-toed Treecreeper, with the correct species marked" %}">
-        <figcaption>{% mt "Practise a confusing pair" %}</figcaption>
-      </figure>
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-tricky-results.png" width="456" height="1024" alt="{% mt "Pair practice results: 18 of 20 correct, and the two treecreepers no longer seem confusing" %}">
-        <figcaption>{% mt "See when a pair is fixed" %}</figcaption>
-      </figure>
-    </div>
-    <p>
-      {% mt "Clubs can start a Flock: Every week the same 25-question quiz for the group, with a private leaderboard. Members have the entire week to play the game." %}
-    </p>
-    <p>
-      {% mt "A Country Challenge takes you through levels on one country’s list. It starts easy, but it ends tough, nobody has made it to the end yet." %}
-    </p>
-    <div class="screenshot-row newsletter-shots newsletter-shots-single" aria-label="{% mt "Country challenge screenshot" %}">
-      <figure class="hero-art hero-phone">
-        <img src="/images/birdr-country-challenge.png" width="456" height="993" alt="{% mt "Country challenge: United States Eastern, question 2 of 10, identify a Yellow-rumped Warbler" %}">
-        <figcaption>{% mt "Country Challenge" %}</figcaption>
-      </figure>
-    </div>
+    <table class="newsletter-shot" role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="newsletter-shot-img" valign="top" style="padding:0 20px 16px 0;">
+          <img src="/images/birdr-photo-quiz.png" width="220" alt="{% mt "Birdr photo quiz: a gull on water and six species to choose from" %}">
+        </td>
+        <td class="newsletter-shot-copy" valign="middle" style="padding:0 0 16px 0;">
+          <p>
+            {% mt "There are quizzes for every level. Beginners start with distinctive species. If you already know your local birds, pick a harder quiz and work through the lookalikes." %}
+          </p>
+        </td>
+      </tr>
+    </table>
+    <table class="newsletter-shot" role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="newsletter-shot-img" valign="top" style="padding:0 20px 16px 0;">
+          <img src="/images/birdr-new-game.png" width="220" alt="{% mt "New game: pick a country, a language for species names, and a difficulty" %}">
+        </td>
+        <td class="newsletter-shot-copy" valign="middle" style="padding:0 0 16px 0;">
+          <p>
+            {% mt "Choose your country (or another list for a trip), pick a level, and start. Birdr is free, open source, and has no ads. It is not an auto-ID camera: you practise the field marks yourself." %}
+          </p>
+        </td>
+      </tr>
+    </table>
+    <table class="newsletter-shot" role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="newsletter-shot-img" valign="top" style="padding:0 20px 16px 0;">
+          <img src="/images/birdr-species-review.png" width="220" alt="{% mt "Species page: Gull-billed Tern with photos, videos and sounds to review after an answer" %}">
+        </td>
+        <td class="newsletter-shot-copy" valign="middle" style="padding:0 0 16px 0;">
+          <p>
+            {% mt "After each answer you can open the bird and look at more photos, videos and sounds. Review the species you missed and the pairs you confused. That is how you finally get those warblers right." %}
+          </p>
+        </td>
+      </tr>
+    </table>
     <p>
       {% mt "Birdr is free on iPhone, Android and at <a href=\"https://birdr.pro/\">https://birdr.pro</a>. Sign up if you want to keep your progress." %}
     </p>
-    {% include "marketing/_store_badges.html" %}
     <p>
       {% mt "App Store: <a href=\"{apple}\">{apple}</a>." apple=app_store_url %}
-        <br/>
+      <br>
       {% mt "Google Play: <a href=\"{play}\">{play}</a>." play=play_store_url %}
     </p>
     </div>
   </article>
+  <section class="newsletter-more-media" aria-labelledby="newsletter-more-heading">
+    <h3 id="newsletter-more-heading">{% mt "More media" %}</h3>
+    <p>
+      {% mt "Extra screenshots if you want to show more of the app. They are not included when you press Copy." %}
+    </p>
+    <div class="newsletter-more-grid">
+    <div class="newsletter-more-item">
+      <img src="/images/birdr-tricky-birds.png" width="220" alt="{% mt "My Tricky Birds: a list of confusing pairs for the Netherlands, with Practice buttons and FIXED badges" %}">
+      <p>{% mt "My Tricky Birds keeps the lookalikes you mix up, so you can practise that pair until it sticks." %}</p>
+    </div>
+    <div class="newsletter-more-item">
+      <img src="/images/birdr-tricky-practice.png" width="220" alt="{% mt "Pair practice: Eurasian Treecreeper versus Short-toed Treecreeper, with the correct species marked" %}">
+      <p>{% mt "Practise a confusing pair until the difference sticks." %}</p>
+    </div>
+    <div class="newsletter-more-item">
+      <img src="/images/birdr-tricky-results.png" width="220" alt="{% mt "Pair practice results: 18 of 20 correct, and the two treecreepers no longer seem confusing" %}">
+      <p>{% mt "See when a confusing pair is fixed." %}</p>
+    </div>
+    <div class="newsletter-more-item">
+      <img src="/images/birdr-country-challenge.png" width="220" alt="{% mt "Country challenge: United States Eastern, question 2 of 10, identify a Yellow-rumped Warbler" %}">
+      <p>{% mt "A Country Challenge takes you through levels on one country’s list, from easy to hard." %}</p>
+    </div>
+    </div>
+  </section>
   <script>
   (function () {
     var btn = document.querySelector('[data-newsletter-copy]');

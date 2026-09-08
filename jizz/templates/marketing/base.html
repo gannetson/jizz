@@ -346,6 +346,17 @@
       color: var(--birdr-800);
       border: 2px solid var(--birdr-200);
     }
+    .btn-support {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-currency-icon {
+      display: block;
+      flex-shrink: 0;
+      width: 1.45em;
+      height: 0.88em;
+    }
     .web-link {
       font-size: 0.95rem;
       font-weight: 600;
@@ -463,15 +474,88 @@
       padding: 6px 14px;
       font-size: 0.9rem;
     }
-    .newsletter-example .newsletter-shots {
-      margin: 18px 0 22px;
+    .newsletter-example img {
+      max-width: min(220px, 100%);
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--birdr-200);
     }
-    .newsletter-shots-single {
-      grid-template-columns: minmax(0, 220px);
-      justify-content: start;
+    .newsletter-shot {
+      width: 100%;
+      max-width: 44rem;
+      border-collapse: collapse;
+      margin: 0 0 8px;
+    }
+    .newsletter-shot .newsletter-shot-img {
+      width: 240px;
+    }
+    .newsletter-shot .newsletter-shot-copy {
+      width: auto;
+      vertical-align: middle;
+    }
+    .newsletter-shot .newsletter-shot-copy p {
+      margin: 0;
+    }
+    .newsletter-more-media {
+      margin: 36px 0 0;
+    }
+    .newsletter-more-media h3 {
+      font-family: var(--font);
+      font-size: 1.45rem;
+      margin: 0 0 12px;
+    }
+    .newsletter-more-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px 24px;
+      margin: 20px 0 0;
+      align-items: start;
+    }
+    @media (min-width: 901px) {
+      .newsletter-more-item:last-child {
+        grid-column: 2;
+      }
+    }
+    .newsletter-more-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      text-align: center;
+    }
+    .newsletter-more-item img {
+      width: min(220px, 100%);
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--birdr-200);
+    }
+    .newsletter-more-item p {
+      margin: 0;
+      max-width: 16rem;
+    }
+    @media (max-width: 900px) {
+      .newsletter-more-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
     @media (max-width: 800px) {
       .newsletter-example { padding: 20px 16px 12px; }
+      .newsletter-shot,
+      .newsletter-shot tbody,
+      .newsletter-shot tr,
+      .newsletter-shot td {
+        display: block;
+        width: 100%;
+      }
+      .newsletter-shot .newsletter-shot-img {
+        padding: 0 0 10px !important;
+      }
+    }
+    @media (max-width: 560px) {
+      .newsletter-more-grid {
+        grid-template-columns: 1fr;
+      }
     }
     .species-hero { padding-bottom: 12px; }
     .species-title-row {
@@ -678,6 +762,15 @@
     }
     .card h3 { font-family: var(--font); margin: 0 0 8px; font-size: 1.25rem; }
     .card p { margin: 0 0 10px; }
+    .card p:last-child { margin-bottom: 0; }
+    .support-home {
+      max-width: 40rem;
+    }
+    .support-home h2 {
+      font-family: var(--font);
+      font-size: 1.7rem;
+      margin: 0 0 12px;
+    }
     .card-alt { background: #f0e2c4; }
     .stat-figure {
       font-family: var(--font);
@@ -1347,6 +1440,7 @@
           <li><a href="{{ '/site/community/'|mpath }}">{% mt "Community" %}</a></li>
           <li><a href="{{ '/site/newsletter/'|mpath }}">{% mt "Newsletter example" %}</a></li>
           <li><a href="https://www.facebook.com/groups/birdrcommunity" target="_blank" rel="noopener noreferrer">{% mt "Facebook group" %}</a></li>
+          <li><a href="https://github.com/sponsors/birdr-app" target="_blank" rel="noopener noreferrer">{% mt "Support Birdr" %}</a></li>
           <li><a href="https://github.com/birdr-app/birdr/issues" target="_blank" rel="noopener noreferrer">{% mt "GitHub issues" %}</a></li>
           {% for page in cms_nav_pages %}
           <li><a href="{{ page.get_absolute_url|mpath }}">{{ page.nav_text }}</a></li>

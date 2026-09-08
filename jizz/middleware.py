@@ -17,9 +17,9 @@ from jizz.marketing.i18n import (
     reset_locale,
     set_locale,
 )
-from jizz.usage_analytics import record_usage_event
+from jizz.usage_analytics import is_crawler_user_agent, record_usage_event
 
-_SERVER_RENDERED_PREFIXES = ('/data/', '/country/', '/staff/')
+_SERVER_RENDERED_PREFIXES = ('/data/', '/country/', '/staff/', '/site/')
 
 
 class MarketingLocaleMiddleware:
@@ -105,6 +105,8 @@ class UsageAnalyticsMiddleware(MiddlewareMixin):
         if any(path.startswith(prefix) for prefix in self.SKIP_PREFIXES):
             return response
         if not any(path.startswith(prefix) for prefix in _SERVER_RENDERED_PREFIXES):
+            return response
+        if path.startswith('/site/') and is_crawler_user_agent(request.META.get('HTTP_USER_AGENT')):
             return response
 
         try:

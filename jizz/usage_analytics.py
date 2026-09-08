@@ -15,6 +15,12 @@ _PLATFORM_CHOICES = {'web', 'ios', 'android'}
 _DEVICE_CHOICES = {'desktop', 'mobile', 'tablet', 'unknown'}
 _EVENT_TYPE_CHOICES = {'page_view', 'feature', 'api', 'websocket'}
 _COUNTRY_RE = re.compile(r'^[A-Za-z]{2}$')
+_CRAWLER_UA_RE = re.compile(
+    r'googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|'
+    r'twitterbot|linkedinbot|applebot|semrush|ahrefs|mj12bot|dotbot|petalbot|'
+    r'bytespider|gptbot|claudebot|ccbot|amazonbot|ia_archiver|pingdom|uptimerobot',
+    re.I,
+)
 
 
 def get_client_ip(request) -> str | None:
@@ -56,6 +62,11 @@ def resolve_country_code(request, client_country: str | None = None) -> str:
             pass
 
     return ''
+
+
+def is_crawler_user_agent(user_agent: str | None) -> bool:
+    """True for common search/preview crawlers we should not count as visitors."""
+    return bool(user_agent) and bool(_CRAWLER_UA_RE.search(user_agent))
 
 
 def parse_device_type(user_agent: str) -> str:

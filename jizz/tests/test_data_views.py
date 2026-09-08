@@ -77,6 +77,7 @@ class DataViewsTests(TestCase):
         self.assertContains(res, "Birdr data")
         self.assertContains(res, reverse("data-taxon-orders"))
         self.assertContains(res, reverse("data-games-played"))
+        self.assertContains(res, reverse("data-marketing-website"))
         self.assertContains(res, reverse("data-most-reviews"))
         self.assertContains(res, "favicon-32x32.png")
         self.assertContains(res, "/images/birdr-icon.png")

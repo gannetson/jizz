@@ -13,6 +13,7 @@
       <p class="lead">{{ supporting }}</p>
       <div id="get-the-app" class="cta-row">
         {% include "marketing/_store_badges.html" %}
+        {% include "marketing/_support_btn.html" %}
       </div>
       <p><a class="web-link" href="/play">{% mt "Or play a quiz in the browser" %}</a></p>
     </div>
@@ -128,6 +129,16 @@
       <p><a href="{{ '/site/faq/'|mpath }}">{% mt "Read the FAQ" %}</a></p>
     </article>
   </div>
+</section>
+
+<section id="support-birdr">
+  <article class="card support-home">
+    <h2>{% mt "Support Birdr" %}</h2>
+    <p>{% mt "Birdr is free, open source, and built in spare time. There is no funding behind it right now. A GitHub sponsorship helps cover hosting and AI credits so the quiz can stay free." %}</p>
+    <p>{% mt "Donating is one way. If you have another idea for how to fund Birdr—a partnership, a grant, a club, a company—write to <a href=\"mailto:info@birdr.pro\">info@birdr.pro</a>. I would like to talk." %}</p>
+    <p>{% include "marketing/_support_btn.html" %}</p>
+    <p><a href="mailto:info@birdr.pro">{% mt "Write about funding or a partnership" %}</a></p>
+  </article>
 </section>
 
 <section class="band" id="download">

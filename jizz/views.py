@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Case, When, Value, Prefetch, F, Q
 from django.db.models.aggregates import Count
@@ -164,14 +165,39 @@ class CountryViewSet(viewsets.ModelViewSet):
     )
 
 
+SPECIES_LIST_CACHE_TTL = 3600
+
+
 class SpeciesListView(ListAPIView):
     serializer_class = SpeciesListSerializer
-    queryset = Species.objects.all()
+    queryset = Species.objects.select_related('taxonomic_order', 'taxonomic_family')
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["countryspecies__country"]
     permission_classes = [AllowAny]
     authentication_classes = []  # No authentication required for public species data
     pagination_class = None  # Disable pagination - we need all species for the combobox
+
+    def list(self, request, *args, **kwargs):
+        country = (request.query_params.get("countryspecies__country") or "").strip()
+        if not country:
+            return Response(
+                {"detail": "countryspecies__country is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        language = (request.query_params.get("language") or "").strip()
+        cache_key = f"jizz:species_list:{country}:{language}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            response = Response(cached)
+            response["Cache-Control"] = "public, max-age=3600"
+            return response
+        queryset = self.filter_queryset(self.get_queryset()).distinct()
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        cache.set(cache_key, data, SPECIES_LIST_CACHE_TTL)
+        response = Response(data)
+        response["Cache-Control"] = "public, max-age=3600"
+        return response
 
 
 class SpeciesDetailView(RetrieveAPIView):

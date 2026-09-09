@@ -67,13 +67,15 @@ function speciesDisplayName(s: Species, lang?: string, extras?: Species[]): stri
 function GamePlayAudio({
   soundUri,
   questionId,
+  onCanPlay,
   children,
 }: {
   soundUri: string | null;
   questionId?: number;
+  onCanPlay?: () => void;
   children: (args: { playSound: () => void; soundPlaying: boolean; pulsatingStyle: ReturnType<typeof usePulsatingAnimation> }) => React.ReactNode;
 }) {
-  const { toggleSound, soundPlaying, pulsatingStyle } = useQuestionSoundPlayback(soundUri, questionId);
+  const { toggleSound, soundPlaying, pulsatingStyle } = useQuestionSoundPlayback(soundUri, questionId, onCanPlay);
   return <>{children({ playSound: toggleSound, soundPlaying, pulsatingStyle })}</>;
 }
 
@@ -138,6 +140,20 @@ export function GamePlayScreen() {
     if (!questionIdRef.current) {
       void refreshGameState({ force: true });
     }
+    const retryMs = [800, 2500, 8000];
+    const timers = retryMs.map((ms) =>
+      setTimeout(() => {
+        if (questionIdRef.current) return;
+        const gameNow = gameRefForPoll.current;
+        const playerNow = playerRefForPoll.current;
+        if (!gameNow?.token || !playerNow?.token) return;
+        if (!connectedRef.current) {
+          joinGame(gameNow, playerNow, setGame, { force: true });
+          return;
+        }
+        void refreshGameState({ force: true });
+      }, ms)
+    );
     const interval = setInterval(() => {
       const gameNow = gameRefForPoll.current;
       const playerNow = playerRefForPoll.current;
@@ -147,10 +163,13 @@ export function GamePlayScreen() {
         return;
       }
       if (!questionIdRef.current) {
-        void refreshGameState({ resyncWs: true, force: true });
+        void refreshGameState({ force: true });
       }
-    }, 8000);
-    return () => clearInterval(interval);
+    }, 15000);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearInterval(interval);
+    };
   }, [game?.token, player?.token, joinGame, setGame, refreshGameState]);
 
   useLayoutEffect(() => {
@@ -311,13 +330,6 @@ export function GamePlayScreen() {
   useEffect(() => {
     setMediaReady(false);
   }, [question?.id, mediaIndex, mediaType]);
-
-  useEffect(() => {
-    if (mediaType !== 'audio' || !question?.id) return;
-    setMediaReady(true);
-    const tok = (player as { token?: string })?.token;
-    if (tok) postQuestionMediaReady(question.id, tok).catch(() => {});
-  }, [mediaType, question?.id, player]);
 
   const image = mediaType === 'images' ? question?.images?.[currentIndex] : undefined;
   const video = mediaType === 'video' ? question?.videos?.[currentIndex] : undefined;
@@ -548,7 +560,17 @@ export function GamePlayScreen() {
   }
 
   return (
-    <GamePlayAudio soundUri={soundUri} questionId={question.id}>
+    <GamePlayAudio
+      soundUri={soundUri}
+      questionId={question.id}
+      onCanPlay={() => {
+        setMediaReady(true);
+        const tok = (player as { token?: string })?.token;
+        if (question?.id && tok) {
+          postQuestionMediaReady(question.id, tok).catch(() => {});
+        }
+      }}
+    >
       {({ playSound, soundPlaying, pulsatingStyle }) => (
     <View style={styles.playRoot}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="gamePlay.screen">

@@ -1,6 +1,7 @@
 import * as React from "react"
 import {useEffect} from "react"
 import {AppContextProvider} from "./core/app-context-provider";
+import {AuthProfileProvider} from "./core/auth-profile-context";
 import {WebsocketContextProvider} from "./core/websocket-context-provider"
 import {MainContent} from "./main-content"
 import {registerServiceWorker} from "./core/register-service-worker"
@@ -19,9 +20,11 @@ export const App = () => {
     <ChakraProvider value={system}>
       <Toaster />
       <AppContextProvider>
-        <WebsocketContextProvider>
-          <MainContent/>
-        </WebsocketContextProvider>
+        <AuthProfileProvider>
+          <WebsocketContextProvider>
+            <MainContent/>
+          </WebsocketContextProvider>
+        </AuthProfileProvider>
       </AppContextProvider>
     </ChakraProvider>
   )

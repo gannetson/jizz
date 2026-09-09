@@ -561,7 +561,7 @@ _public = settings.BASE_DIR.parent / 'app' / 'public'
 urlpatterns += [
     re_path(
         r'^(?P<path>(?:favicon\.ico|favicon-16x16\.png|favicon-32x32\.png|'
-        r'apple-touch-icon\.png|logo192\.png|logo512\.png|images/(?:stylish/)?birdr-[\w.-]+\.(?:png|gif)))$',
+        r'apple-touch-icon\.png|logo192\.png|logo512\.png|images/(?:stylish/)?birdr-[\w.-]+\.(?:png|gif|svg)))$',
         serve_static,
         {'document_root': str(_public)},
     ),

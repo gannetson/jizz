@@ -14,6 +14,7 @@ import type { Question, Answer, MultiPlayer } from '../types/game';
 import { getWebSocketUrl } from '../api/config';
 import { isStalePlayQuestion } from '../game/applyIncomingQuestion';
 import { useGame } from './GameContext';
+import { prefetchQuestionPlayMedia } from '../utils/prefetchPlayMedia';
 
 type GameWebSocketContextType = {
   players: MultiPlayer[];
@@ -52,12 +53,13 @@ function tokensEqual(a: string | undefined | null, b: string | undefined | null)
 }
 
 function questionBelongsToSocketGame(
-  question: { game?: { token?: string } } | undefined,
+  question: { id?: number; game?: { token?: string } } | undefined,
   socketGameToken: string
 ): boolean {
   if (!question?.id) return false;
   const qt = question.game?.token;
-  if (qt == null || String(qt).trim() === '') return false;
+  // Lean payloads sometimes omit game.token; this socket is already scoped to one game.
+  if (qt == null || String(qt).trim() === '') return true;
   return tokensEqual(qt, socketGameToken);
 }
 
@@ -137,6 +139,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
     if (next.id !== currentQuestionIdRef.current) {
       setAnswer(undefined);
     }
+    prefetchQuestionPlayMedia(next, next.media ?? next.game?.media);
     setQuestion(next);
     currentQuestionIdRef.current = next.id;
     currentQuestionSeqRef.current = next.sequence;
@@ -149,15 +152,14 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchCurrentQuestion = useCallback(
-    async (gameToken: string, ws: WebSocket | undefined, connectionGameToken: string) => {
-      if (ws && currentSocketRef.current !== ws) return;
-      fetchAbortRef.current?.abort();
-      const controller = new AbortController();
-      fetchAbortRef.current = controller;
+    async (gameToken: string, _ws: WebSocket | undefined, connectionGameToken: string) => {
+      if (!tokensEqual(gameToken, connectionGameToken)) return;
+      if (gameTokenRef.current && !tokensEqual(gameToken, gameTokenRef.current)) return;
       const generation = ++fetchGenerationRef.current;
       try {
-        const q = await getCurrentQuestion(gameToken, { signal: controller.signal });
+        const q = await getCurrentQuestion(gameToken);
         if (generation !== fetchGenerationRef.current) return;
+        if (gameTokenRef.current && !tokensEqual(gameToken, gameTokenRef.current)) return;
         applyQuestion(q, connectionGameToken);
       } catch {
         // ignore abort / network — UI keeps existing state

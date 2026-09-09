@@ -187,10 +187,6 @@ export function QuestionMediaView({
   }, [mediaType, displayVideoUri]);
 
   React.useEffect(() => {
-    if (mediaType === 'audio' && soundUri) fireMediaReady();
-  }, [mediaType, soundUri, fireMediaReady]);
-
-  React.useEffect(() => {
     if (mediaType === 'images' && !imageUri) fireMediaReady();
   }, [mediaType, imageUri, fireMediaReady]);
 

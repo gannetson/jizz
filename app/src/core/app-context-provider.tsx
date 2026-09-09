@@ -77,6 +77,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const [speciesGroup, setSpeciesGroup] = useState<SpeciesGroup | undefined>();
   const [season, setSeason] = useState<string>('');
   const [loading, setLoading] = useState(false)
+  const [speciesLoading, setSpeciesLoading] = useState(false)
   const [length, setLength] = useState<string>('10');
   const [player, setPlayer] = useState<Player | undefined>()
   const [playerName, setPlayerName] = useState<string | undefined>()
@@ -305,34 +306,41 @@ const AppContextProvider: FC<Props> = ({children}) => {
   const speciesLanguage = game?.language ?? profile?.language ?? language ?? 'en';
 
   useEffect(() => {
-    if (country?.code) {
-      setLoading(true)
-      fetch(apiUrl(`/api/species/?countryspecies__country=${country.code}&language=${speciesLanguage}`), {
-        cache: 'no-cache',
-        method: 'GET',
-        headers: {
-          ...noCacheHeaders,
-        },
-      })
+    if (!country?.code) {
+      setSpecies([])
+      setSpeciesLoading(false)
+      return
+    }
+    let cancelled = false
+    setSpeciesLoading(true)
+    fetch(apiUrl(`/api/species/?countryspecies__country=${country.code}&language=${speciesLanguage}`), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
       .then(response => {
+        if (cancelled) return
         if (response.status === 200) {
-          response.json().then(data => {
-            // Ensure data is always an array (handle paginated responses or other formats)
+          return response.json().then(data => {
+            if (cancelled) return
             const speciesArray = Array.isArray(data) ? data : (data?.results || data?.data || [])
             setSpecies(speciesArray)
           })
-        } else {
-          console.log('Could not load country species.')
-          setSpecies([]) // Ensure it's always an array even on error
         }
-        setLoading(false)
+        console.log('Could not load country species.')
+        setSpecies([])
       })
       .catch(error => {
+        if (cancelled) return
         console.error('Error loading species:', error)
-        setSpecies([]) // Ensure it's always an array on error
-        setLoading(false)
+        setSpecies([])
       })
-
+      .finally(() => {
+        if (!cancelled) setSpeciesLoading(false)
+      })
+    return () => {
+      cancelled = true
     }
   }, [country?.code, speciesLanguage]);
 
@@ -589,6 +597,7 @@ const AppContextProvider: FC<Props> = ({children}) => {
       playerName,
       setPlayerName,
       species,
+      speciesLoading,
       loading,
       setLoading
     }}>

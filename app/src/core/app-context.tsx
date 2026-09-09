@@ -248,6 +248,7 @@ type SharedState = {
   soundsScope: 'all' | 'passerines'
   setSoundsScope: Dispatch<SetStateAction<'all' | 'passerines'>>
   species?: Species[]
+  speciesLoading?: boolean
   loading?: boolean
 };
 
@@ -255,6 +256,8 @@ const AppContext = createContext<SharedState>({
   createPlayer: async () => undefined,
   createGame: async () => undefined,
   createRematchGame: async () => undefined,
+  species: [],
+  speciesLoading: false,
   loading: false,
   setLoading: () => false,
   loadGame: async () => undefined,

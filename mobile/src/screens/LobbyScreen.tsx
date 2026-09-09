@@ -133,9 +133,14 @@ export function LobbyScreen() {
   }, [isFocused, game?.token, connected, loadGameFromApi, question?.id, refreshGameState, markGameStarted]);
 
   useEffect(() => {
+    if (!isFocused || !gameStarted || question?.id || !game?.token) return;
+    void refreshGameState({ force: true });
+  }, [isFocused, gameStarted, question?.id, game?.token, refreshGameState]);
+
+  useEffect(() => {
     if (!isFocused || !question?.id || !game?.token || !gameStarted) return;
     const qt = question.game?.token;
-    if (!qt || String(qt).trim() !== String(game.token).trim()) return;
+    if (qt && String(qt).trim() !== String(game.token).trim()) return;
     (navigation as any).navigate('GamePlay');
   }, [isFocused, question, game?.token, gameStarted, navigation]);
 

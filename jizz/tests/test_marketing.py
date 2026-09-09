@@ -125,12 +125,12 @@ class MarketingPagesTests(TestCase):
     def test_header_uses_birdr_icon_and_favicon(self):
         html = self.client.get('/site/').content.decode()
         self.assertIn('favicon-32x32.png', html)
-        self.assertIn('/images/birdr-anime.gif', html)
+        self.assertIn('/images/birdr-new.svg', html)
         self.assertIn('class="brand-icon"', html)
         self.assertIn('padding: 8px 20px 0', html)
-        icon = self.client.get('/images/birdr-anime.gif')
+        icon = self.client.get('/images/birdr-new.svg')
         self.assertEqual(icon.status_code, 200)
-        self.assertEqual(icon['Content-Type'], 'image/gif')
+        self.assertIn('image/svg', icon['Content-Type'])
         favicon = self.client.get('/favicon-32x32.png')
         self.assertEqual(favicon.status_code, 200)
 

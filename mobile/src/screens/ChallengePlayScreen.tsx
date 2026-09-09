@@ -27,6 +27,7 @@ import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
 import { answersEnabledForMedia } from '../game/mediaAnswerGate';
 import { resolvePlayMediaType } from '../utils/questionMediaIndex';
+import { prefetchQuestionPlayMedia } from '../utils/prefetchPlayMedia';
 import { playPreviewSrc } from '../utils/playImageUrl';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
 import { SpeciesViewButton } from '../components/SpeciesViewButton';
@@ -70,13 +71,15 @@ function speciesDisplayName(s: QuestionOption | Species, lang?: string): string 
 function ChallengePlayAudio({
   soundUri,
   questionId,
+  onCanPlay,
   children,
 }: {
   soundUri: string | null;
   questionId?: number;
+  onCanPlay?: () => void;
   children: (args: { playSound: () => void; soundPlaying: boolean; pulsatingStyle: ReturnType<typeof usePulsatingAnimation> }) => React.ReactNode;
 }) {
-  const { toggleSound, soundPlaying, pulsatingStyle } = useQuestionSoundPlayback(soundUri, questionId);
+  const { toggleSound, soundPlaying, pulsatingStyle } = useQuestionSoundPlayback(soundUri, questionId, onCanPlay);
   return <>{children({ playSound: toggleSound, soundPlaying, pulsatingStyle })}</>;
 }
 
@@ -162,6 +165,7 @@ export function ChallengePlayScreen() {
       const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
       if (generation !== questionFetchGenRef.current) return;
       if (q && isStalePlayQuestion(questionRef.current, q)) return;
+      prefetchQuestionPlayMedia(q, q?.media ?? gameMedia);
       setQuestion(q);
     } catch (e) {
       if (generation !== questionFetchGenRef.current) return;
@@ -170,7 +174,7 @@ export function ChallengePlayScreen() {
     } finally {
       if (generation === questionFetchGenRef.current) setLoading(false);
     }
-  }, [gameToken, getPlayPlayerToken, t]);
+  }, [gameToken, gameMedia, getPlayPlayerToken, t]);
 
   const prevSpeciesLangRef = useRef(lang);
   useEffect(() => {
@@ -183,6 +187,7 @@ export function ChallengePlayScreen() {
         const token = await getPlayPlayerToken();
         const q = await getChallengeQuestion(gameToken, token ?? undefined, { cacheBust: true });
         if (cancelled || !q || isStalePlayQuestion(questionRef.current, q)) return;
+        prefetchQuestionPlayMedia(q, q?.media ?? gameMedia);
         setQuestion(q);
       } catch {
         /* keep current question if names fail to refresh */
@@ -236,6 +241,7 @@ export function ChallengePlayScreen() {
       setLevelEnded(false);
       setFeedback(null);
       setShowFeedback(false);
+      prefetchQuestionPlayMedia(q, q?.media ?? gameMedia);
       setQuestion(q);
       await loadJourneyGame();
     } catch (e) {
@@ -306,16 +312,6 @@ export function ChallengePlayScreen() {
   const answersEnabled = answersEnabledForMedia(mediaType, mediaReady);
   const mediaStageHeight = questionMediaStageHeight(mediaType as 'images' | 'video' | 'audio');
   const mediaBlockHeight = questionMediaBlockHeight(mediaType as 'images' | 'video' | 'audio');
-
-  useEffect(() => {
-    if (mediaType !== 'audio' || !question?.id) return;
-    setMediaReady(true);
-    const run = async () => {
-      const token = challengePlayerToken ?? (await getPlayPlayerToken());
-      if (token) postQuestionMediaReady(question.id, token).catch(() => {});
-    };
-    void run();
-  }, [mediaType, question?.id, challengePlayerToken, getPlayPlayerToken]);
 
   const currentMediaIdx = question != null ? (mediaIndex ?? question.number ?? 0) : 0;
   const image = question?.images?.[currentMediaIdx];
@@ -577,7 +573,21 @@ export function ChallengePlayScreen() {
   const optionsLocked = submitting || feedback !== null || timerExpired || !answersEnabled;
 
   return (
-    <ChallengePlayAudio soundUri={soundUri} questionId={question?.id}>
+    <ChallengePlayAudio
+      soundUri={soundUri}
+      questionId={question?.id}
+      onCanPlay={() => {
+        setMediaReady(true);
+        if (!question?.id) return;
+        const run = async () => {
+          const token = challengePlayerToken ?? (await getPlayPlayerToken());
+          if (token) {
+            postQuestionMediaReady(question.id, token).catch(() => {});
+          }
+        };
+        void run();
+      }}
+    >
       {({ playSound, soundPlaying, pulsatingStyle }) => (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="challengePlay.screen">
       <View style={styles.row}>

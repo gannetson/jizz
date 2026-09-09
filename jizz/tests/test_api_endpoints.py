@@ -189,14 +189,33 @@ class ApiSpeciesTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.country = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})[0]
         self.species = Species.objects.create(
             name='Test Bird', name_latin='Testus', code='TB01',
         )
+        CountrySpecies.objects.get_or_create(
+            country=self.country, species=self.species, defaults={'status': 'native'}
+        )
+
+    def test_species_list_requires_country(self):
+        response = self.client.get('/api/species/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_species_list_returns_200(self):
-        response = self.client.get('/api/species/')
+        response = self.client.get('/api/species/', {'countryspecies__country': 'NL'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, list)
+        self.assertEqual(response['Cache-Control'], 'public, max-age=3600')
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], 'Test Bird')
+
+    def test_species_list_is_cached(self):
+        first = self.client.get('/api/species/', {'countryspecies__country': 'NL'})
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        Species.objects.create(name='Other Bird', name_latin='Otherus', code='TB02')
+        second = self.client.get('/api/species/', {'countryspecies__country': 'NL'})
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data, second.data)
 
     def test_species_detail_returns_200(self):
         response = self.client.get(f'/api/species/{self.species.id}/')

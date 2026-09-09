@@ -171,10 +171,17 @@ class QuizConsumer(AsyncWebsocketConsumer):
             game = Game.objects.get(token=self.game_token)
             player = Player.objects.get(token=player_token)
             PlayerScore.objects.get_or_create(player=player, game=game)
-            return player.name, game.ended
+            current = game.question
+            return (
+                player.name,
+                bool(game.ended),
+                current.id if current else None,
+            )
 
         try:
-            player_name, game_ended = await database_sync_to_async(do_join)()
+            player_name, game_ended, current_question_id = await database_sync_to_async(
+                do_join
+            )()
         except ObjectDoesNotExist:
             await self.send(
                 text_data=json.dumps(
@@ -190,14 +197,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
         )
         await self._broadcast_players_update()
         await self._send_game_update_to_self()
-        if not game_ended:
-            def has_started():
-                g = Game.objects.get(token=self.game_token)
-                return g.progress > 0
-
-            if await database_sync_to_async(has_started)():
-                await self._send_current_question_to_self()
-                await self._send_current_answer_to_self()
+        # Reconnecting clients (Android Lobby → GamePlay) missed the original
+        # game_started / new_question on the dead lobby socket. Always resync
+        # the active round to this connection.
+        if not game_ended and current_question_id:
+            await self.send(text_data=json.dumps({"action": "game_started"}))
+            await self._send_question_to_self(current_question_id)
+            await self._send_current_answer_to_self()
         await self._log_websocket_action("join_game")
 
     async def _handle_start_game(self, data):
@@ -425,7 +431,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
         return await database_sync_to_async(get_id)()
 
     async def _send_current_question_to_self(self):
-        q = await self._serialize_current_question_for_send()
+        question_id = await self._current_question_id()
+        await self._send_question_to_self(question_id)
+
+    async def _send_question_to_self(self, question_id: Optional[int]):
+        if not question_id:
+            return
+        q = await self._serialize_question_for_send(question_id)
         if not q:
             return
         await self.send(

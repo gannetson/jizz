@@ -5,6 +5,7 @@ import { toaster } from "@/components/ui/toaster"
 import { validateQuestionForGame } from './game-token-validator'
 import { apiUrl, getWebSocketUrl } from '../api/baseUrl'
 import { isStalePlayQuestion } from './apply-incoming-question'
+import { prefetchQuestionPlayMedia } from './prefetch-play-media'
 
 type Props = {
   children: ReactNode;
@@ -105,6 +106,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
         ) {
           return
         }
+        prefetchQuestionPlayMedia(data, data?.game?.media ?? data?.media)
         setQuestion(data)
       })
       .catch(() => {})
@@ -223,6 +225,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
           if (incomingQuestion?.id !== currentQuestionIdRef.current) {
             setAnswer(undefined)
           }
+          prefetchQuestionPlayMedia(incomingQuestion, incomingQuestion?.game?.media ?? incomingQuestion?.media)
           setQuestion(incomingQuestion)
           currentQuestionIdRef.current = incomingQuestion?.id
           currentQuestionSeqRef.current = incomingQuestion?.sequence

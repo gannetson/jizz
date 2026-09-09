@@ -341,6 +341,22 @@ class ProfileViewTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_profile_resizes_avatar_on_upload(self):
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buf = BytesIO()
+        Image.new('RGB', (800, 600), (12, 80, 20)).save(buf, format='JPEG')
+        uploaded = SimpleUploadedFile('huge.jpg', buf.getvalue(), content_type='image/jpeg')
+        response = self.client.put('/api/profile/', {'avatar': uploaded}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.profile.refresh_from_db()
+        self.assertTrue(self.user.profile.avatar)
+        with Image.open(self.user.profile.avatar.path) as saved:
+            self.assertLessEqual(max(saved.size), 256)
+
 
 class UserGamesViewTestCase(TestCase):
     """Tests for GET /api/my-games/ and GET /api/my-games/<token>/."""

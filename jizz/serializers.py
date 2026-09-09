@@ -345,9 +345,8 @@ class QuestionOptionPlaySerializer(serializers.ModelSerializer):
 
 class QuestionPlaySerializer(serializers.ModelSerializer):
     """
-    Live play payload: all eligible media for the active type, rotated so index 0 is
-    the current item (``question.number`` in DB). Serialized ``number`` is always 0.
-    Option species omit embedded media lists.
+    Live play payload: the current media item only (index 0). Serialized ``number``
+    is always 0. Option species omit embedded media lists. Flagging uses next-media.
 
     ``media`` is the effective type for *this* question (``images`` / ``video`` / ``audio``).
     Prefer it over ``game.media`` for mixed-media games (e.g. flock Club Mix).
@@ -382,7 +381,7 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
         if not items:
             return []
         rotated = rotate_media_list_for_play(items, obj.number or 0)
-        return QuestionMediaSerializer(rotated, many=True).data
+        return QuestionMediaSerializer(rotated[:1], many=True).data
 
     def get_number(self, obj):
         # Active media is always at array index 0 after rotation.
@@ -831,6 +830,19 @@ class UserProfileUpdateSerializer(serializers.Serializer):
                 Country.objects.get(code=value)
             except Country.DoesNotExist:
                 raise serializers.ValidationError("Invalid country code.")
+        return value
+
+    def validate_avatar(self, value):
+        if value:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            from jizz.avatar import resize_avatar_upload
+
+            try:
+                return resize_avatar_upload(value)
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError(
+                    exc.messages[0] if getattr(exc, 'messages', None) else str(exc)
+                )
         return value
 
     def update(self, instance, validated_data):

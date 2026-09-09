@@ -110,8 +110,55 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             assert 'player_joined' in actions_received, f"Expected player_joined, got {actions_received}"
             assert 'update_players' in actions_received, f"Expected update_players, got {actions_received}"
             assert 'game_updated' in actions_received, f"Expected game_updated, got {actions_received}"
+            assert 'game_started' not in actions_received, f"Lobby join before start must not send game_started, got {actions_received}"
+            assert 'new_question' not in actions_received, f"Lobby join before start must not send new_question, got {actions_received}"
 
             # Clean up
+            await communicator.disconnect()
+
+        _run_async(async_test())
+
+    def test_join_game_after_start_resyncs_current_question(self):
+        """Reconnect after start must get game_started + the active question (Android Lobby→Play)."""
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+        )
+        PlayerScore.objects.get_or_create(player=self.player1, game=game)
+        question = game.add_question()
+        transaction.commit()
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({
+                'action': 'join_game',
+                'player_token': str(self.player1.token),
+            })
+            actions = []
+            question_msg = None
+            try:
+                while True:
+                    msg = await communicator.receive_json_from(timeout=5.0)
+                    actions.append(msg.get('action'))
+                    if msg.get('action') == 'new_question':
+                        question_msg = msg
+            except (asyncio.CancelledError, asyncio.TimeoutError, TimeoutError, Exception):
+                pass
+            self.assertIn('game_updated', actions, f'got {actions}')
+            self.assertIn('game_started', actions, f'got {actions}')
+            self.assertIn('new_question', actions, f'got {actions}')
+            self.assertIsNotNone(question_msg)
+            self.assertEqual(question_msg['question']['id'], question.id)
+            self.assertEqual(
+                str(question_msg['question']['game']['token']),
+                str(game.token),
+            )
             await communicator.disconnect()
 
         _run_async(async_test())

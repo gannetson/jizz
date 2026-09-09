@@ -1,10 +1,11 @@
 import { Flex, Link, Button, VStack, Text, Separator, Avatar, Box } from "@chakra-ui/react";
-import { useState, useEffect, useContext } from "react";
+import { useContext } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../../api/services/auth.service";
-import { profileService, UserProfile, getAvatarUrl } from "../../../api/services/profile.service";
+import { getAvatarUrl } from "../../../api/services/profile.service";
 import AppContext from "../../../core/app-context";
+import { useAuthProfile } from "../../../core/auth-profile-context";
 import { AppLanguageSelect } from "../../../components/app-language-select";
 import type { AppLocale } from "../../../i18n/app-locales";
 
@@ -15,56 +16,11 @@ type UserMenuProps = {
 export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
   const navigate = useNavigate();
   const { appLanguage, setAppLanguage } = useContext(AppContext);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  const checkAuth = async () => {
-    const token = authService.getAccessToken();
-    if (!token) {
-      setIsAuthenticated(false);
-      setUserEmail(null);
-      setProfile(null);
-      return;
-    }
-    const ok = await authService.ensureValidAccessToken();
-    const access = authService.getAccessToken();
-    if (!ok || !access) {
-      setIsAuthenticated(false);
-      setUserEmail(null);
-      setProfile(null);
-      return;
-    }
-    setIsAuthenticated(true);
-    try {
-      const payload = JSON.parse(atob(access.split('.')[1]));
-      setUserEmail(payload.email || payload.username || null);
-      try {
-        const profileData = await profileService.getProfile();
-        setProfile(profileData);
-      } catch {
-        setProfile(null);
-      }
-    } catch {
-      setUserEmail(null);
-      setProfile(null);
-    }
-  };
-
-  useEffect(() => {
-    checkAuth();
-    // Check auth state periodically (every 5 seconds) to catch logout from other tabs
-    const interval = setInterval(checkAuth, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const { isAuthenticated, profile, userEmail } = useAuthProfile();
 
   const handleLogout = () => {
     authService.clearTokens();
-    setIsAuthenticated(false);
-    setUserEmail(null);
-    setProfile(null);
     navigate("/");
-    // Refresh the page to clear any cached state
     window.location.reload();
   };
 
@@ -193,4 +149,3 @@ export const UserMenu = ({ onOpenLoginModal }: UserMenuProps) => {
 };
 
 export default UserMenu;
-

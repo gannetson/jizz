@@ -22,7 +22,11 @@ from jizz.services.ebird_frequency.sources.barchart import (
     week_index_to_month,
     weekly_to_monthly,
 )
-from jizz.services.playable_regions import score_aggregate_from_members, upsert_playable_country
+from jizz.services.playable_regions import (
+    inherit_species_attrs_from_parent,
+    score_aggregate_from_members,
+    upsert_playable_country,
+)
 from jizz.services.seasonal_frequency import filter_country_species_ids_for_game
 from media.models import Media
 import pandas as pd
@@ -51,6 +55,7 @@ class PlayableRegionInferenceTests(SimpleTestCase):
     def test_scoring_codes_for_aggregate_are_members(self):
         codes = scoring_region_codes("US-EAST")
         self.assertIn("US-MA", codes)
+        self.assertIn("USA-MA", codes)
         self.assertNotIn("US-EAST", codes)
 
 
@@ -80,6 +85,54 @@ class AggregateScoringTests(TestCase):
         cs = CountrySpecies.objects.get(country=east, species=bird)
         self.assertEqual(cs.frequency, "abundant")
         self.assertEqual(cs.frequency_pct, 40)
+
+
+class InheritParentAttrsTests(TestCase):
+    def test_unknown_status_and_blank_frequency_come_from_parent(self):
+        us, _ = Country.objects.get_or_create(code="US", defaults={"name": "United States"})
+        ma, _ = upsert_playable_country(code="US-MA", name="Massachusetts", parent_code="US")
+        robin = Species.objects.create(name="Robin", name_latin="Turdus migratorius", code="amerob")
+        starling = Species.objects.create(
+            name="Starling", name_latin="Sturnus vulgaris", code="eursta"
+        )
+        only_ma = Species.objects.create(name="Local", name_latin="Localis ma", code="locama")
+        CountrySpecies.objects.create(
+            country=us, species=robin, status="native", frequency="common", frequency_pct=12
+        )
+        CountrySpecies.objects.create(
+            country=us, species=starling, status="introduced", frequency="abundant"
+        )
+        CountrySpecies.objects.create(country=ma, species=robin, status="unknown")
+        CountrySpecies.objects.create(country=ma, species=starling, status="unknown")
+        CountrySpecies.objects.create(country=ma, species=only_ma, status="unknown")
+
+        updated = inherit_species_attrs_from_parent(ma)
+        self.assertEqual(updated, 3)
+        robin_cs = CountrySpecies.objects.get(country=ma, species=robin)
+        self.assertEqual(robin_cs.status, "native")
+        self.assertEqual(robin_cs.frequency, "common")
+        self.assertEqual(robin_cs.frequency_pct, 12)
+        self.assertEqual(
+            CountrySpecies.objects.get(country=ma, species=starling).status, "introduced"
+        )
+        self.assertEqual(
+            CountrySpecies.objects.get(country=ma, species=only_ma).status, "native"
+        )
+
+    def test_does_not_overwrite_classified_rows(self):
+        Country.objects.get_or_create(code="US", defaults={"name": "United States"})
+        ma, _ = upsert_playable_country(code="US-MA", name="Massachusetts", parent_code="US")
+        bird = Species.objects.create(name="Robin", name_latin="Turdus migratorius", code="amerob")
+        CountrySpecies.objects.create(
+            country_id="US", species=bird, status="rare", frequency="rare"
+        )
+        CountrySpecies.objects.create(
+            country=ma, species=bird, status="native", frequency="common"
+        )
+        self.assertEqual(inherit_species_attrs_from_parent(ma), 0)
+        cs = CountrySpecies.objects.get(country=ma, species=bird)
+        self.assertEqual(cs.status, "native")
+        self.assertEqual(cs.frequency, "common")
 
 
 class SeasonalQuestionSelectionTests(TestCase):
@@ -188,6 +241,70 @@ class StAggregateParseTests(SimpleTestCase):
         self.assertIsNotNone(parsed)
         assert parsed is not None
         self.assertAlmostEqual(parsed["abundance_mean_max"], 1.8)
+
+    def test_parse_usa_alpha3_and_state_type(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "region_code": "USA-MA",
+                    "region_type": "state",
+                    "region_name": "Massachusetts",
+                    "season": "breeding",
+                    "abundance_mean": 0.9,
+                }
+            ]
+        )
+        parsed = parse_species_commonness(df, "US-MA")
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertAlmostEqual(parsed["abundance_mean_max"], 0.9)
+
+    def test_parse_china_numeric_admin_id(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "region_code": "CHN-1178",
+                    "region_type": "state",
+                    "region_name": "Fujian",
+                    "season": "postbreeding_migration",
+                    "abundance_mean": 0.0025,
+                }
+            ]
+        )
+        parsed = parse_species_commonness(df, "CN-SOUTH")
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertAlmostEqual(parsed["abundance_mean_max"], 0.0025)
+
+    def test_parse_australia_and_argentina_numeric_ids(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "region_code": "AUS-006",
+                    "region_type": "state",
+                    "region_name": "New South Wales",
+                    "season": "breeding",
+                    "abundance_mean": 1.1,
+                },
+                {
+                    "region_code": "ARG-1295",
+                    "region_type": "state",
+                    "region_name": "Buenos Aires",
+                    "season": "breeding",
+                    "abundance_mean": 2.2,
+                },
+                {
+                    "region_code": "CAN-ON",
+                    "region_type": "state",
+                    "region_name": "Ontario",
+                    "season": "breeding",
+                    "abundance_mean": 3.3,
+                },
+            ]
+        )
+        self.assertAlmostEqual(parse_species_commonness(df, "AU-NSW")["abundance_mean_max"], 1.1)
+        self.assertAlmostEqual(parse_species_commonness(df, "AR-PAMPAS")["abundance_mean_max"], 2.2)
+        self.assertAlmostEqual(parse_species_commonness(df, "CA-ON")["abundance_mean_max"], 3.3)
 
     def test_countries_in_file_include_aggregate_when_selected(self):
         df = pd.DataFrame(

@@ -6,6 +6,7 @@ Examples::
     python manage.py provision_playable_regions --parent US --dry-run
     python manage.py provision_playable_regions --parent US,CA,AU,MX
     python manage.py provision_playable_regions --aggregates
+    python manage.py provision_playable_regions --inherit-attrs
 """
 
 from __future__ import annotations
@@ -13,7 +14,11 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand
 
 from jizz.playable_regions import AGGREGATE_MEMBERS, PROVISION_PARENTS
-from jizz.services.playable_regions import provision_aggregates, provision_subnational_parent
+from jizz.services.playable_regions import (
+    inherit_species_attrs_for_children,
+    provision_aggregates,
+    provision_subnational_parent,
+)
 
 
 class Command(BaseCommand):
@@ -52,10 +57,26 @@ class Command(BaseCommand):
             action="store_true",
             help="List regions that would be created; do not write.",
         )
+        parser.add_argument(
+            "--inherit-attrs",
+            action="store_true",
+            help=(
+                "Copy status/frequency from the parent country onto child regions "
+                "(fills unknown/blank only). Use alone to fix already-provisioned regions "
+                "without calling eBird."
+            ),
+        )
 
     def handle(self, *args, **options):
         parents = [p.strip().upper() for p in options["parent"].split(",") if p.strip()]
         do_aggregates = bool(options["aggregates"] or options["aggregate_codes"])
+        if options["inherit_attrs"]:
+            if parents:
+                for parent in parents:
+                    self._write_inherit_results(inherit_species_attrs_for_children(parent))
+            else:
+                self._write_inherit_results(inherit_species_attrs_for_children())
+            return
         if not parents and not do_aggregates:
             parents = list(PROVISION_PARENTS)
             do_aggregates = True
@@ -102,3 +123,13 @@ class Command(BaseCommand):
                 if not dry_run:
                     extra = f"  species={country.countryspecies.count()}"
                 self.stdout.write(f"  {country.code}  {country.name}  members={members}{extra}")
+
+    def _write_inherit_results(self, rows) -> None:
+        if not rows:
+            self.stdout.write("No child CountrySpecies rows needed status/frequency backfill.")
+            return
+        self.stdout.write(f"Copied parent status/frequency onto {len(rows)} regions:")
+        for country, updated in rows[:20]:
+            self.stdout.write(f"  {country.code}  {country.name}  updated={updated}")
+        if len(rows) > 20:
+            self.stdout.write(f"  … {len(rows) - 20} more")

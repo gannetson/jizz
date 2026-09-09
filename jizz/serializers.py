@@ -517,6 +517,11 @@ class AnswerSerializer(serializers.ModelSerializer):
             answer = Species.objects.get(id=validated_data.pop('answer_id'))
             correct = answer == question.species
         player_score, _created = PlayerScore.objects.get_or_create(player=player, game=question.game)
+        request = self.context.get('request')
+        if request is not None:
+            from jizz.client_info import client_info_from_request, apply_player_score_client
+
+            apply_player_score_client(player_score, *client_info_from_request(request))
         if Answer.objects.filter(player_score=player_score, question=question).exists():
             existing = Answer.objects.filter(player_score=player_score, question=question).first()
             existing.checklist_added = False
@@ -524,7 +529,6 @@ class AnswerSerializer(serializers.ModelSerializer):
             return existing
         from jizz.services.checklist import compute_checklist_added, compute_checklist_missed
 
-        request = self.context.get('request')
         checklist_added = compute_checklist_added(
             player, question, correct, request=request
         )

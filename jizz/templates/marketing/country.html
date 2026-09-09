@@ -53,15 +53,17 @@
         <tbody>
           {% for row in challenge_rows %}
           <tr>
-            <td>{{ forloop.counter }}</td>
+            <td>{% ifchanged row.rank %}{{ row.rank }}{% endifchanged %}</td>
             <td>{{ row.player_name }}</td>
             <td>
+              {% ifchanged row.rank %}
               <div class="level-cell">
                 {% if row.level_icon_url %}
                 <img class="level-icon" src="{{ row.level_icon_url }}" alt="" width="32" height="32" loading="lazy">
                 {% endif %}
                 <span>{{ row.level_title }}{% if row.step_label %} <span class="latin">{{ row.step_label }}{% if row.step_total %} / {{ row.step_total }}{% endif %}</span>{% endif %}</span>
               </div>
+              {% endifchanged %}
             </td>
           </tr>
           {% endfor %}

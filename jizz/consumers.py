@@ -156,7 +156,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
     async def _handle_join_game(self, data):
         from django.core.exceptions import ObjectDoesNotExist
 
-        from jizz.models import PlayerScore, Game, Player
+        from jizz.models import Game, Player
 
         player_token = (data.get("player_token") or "").strip()
         if not player_token:
@@ -170,7 +170,10 @@ class QuizConsumer(AsyncWebsocketConsumer):
         def do_join():
             game = Game.objects.get(token=self.game_token)
             player = Player.objects.get(token=player_token)
-            PlayerScore.objects.get_or_create(player=player, game=game)
+            from jizz.client_info import client_info_from_mapping, record_player_score_client
+
+            app_version, device_type = client_info_from_mapping(data)
+            record_player_score_client(player, game, app_version, device_type)
             current = game.question
             return (
                 player.name,

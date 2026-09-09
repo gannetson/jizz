@@ -301,6 +301,43 @@ class ApiGamesTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('token', response.data)
         self.assertEqual(response.data['level'], 'beginner')
+        score = PlayerScore.objects.get(player=self.player, game__token=response.data['token'])
+        self.assertEqual(score.app_version, '')
+        self.assertEqual(score.device_type, '')
+
+    def test_games_create_stores_optional_app_version_and_device_type(self):
+        _player_auth(self.client, self.player)
+        response = self.client.post(
+            '/api/games/',
+            {
+                'country': 'NL',
+                'level': 'beginner',
+                'length': 5,
+                'media': 'images',
+                'rarity': 'regular',
+                'app_version': '1.4.2',
+                'device_type': 'ios',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        score = PlayerScore.objects.get(player=self.player, game__token=response.data['token'])
+        self.assertEqual(score.app_version, '1.4.2')
+        self.assertEqual(score.device_type, 'ios')
+
+    def test_games_create_reads_client_info_from_headers(self):
+        _player_auth(self.client, self.player)
+        response = self.client.post(
+            '/api/games/',
+            {'country': 'NL', 'level': 'beginner', 'length': 5, 'media': 'images', 'rarity': 'regular'},
+            format='json',
+            HTTP_X_BIRDR_APP_VERSION='1.103.0',
+            HTTP_X_BIRDR_DEVICE_TYPE='web',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        score = PlayerScore.objects.get(player=self.player, game__token=response.data['token'])
+        self.assertEqual(score.app_version, '1.103.0')
+        self.assertEqual(score.device_type, 'web')
 
     def test_games_create_requires_auth(self):
         response = self.client.post(

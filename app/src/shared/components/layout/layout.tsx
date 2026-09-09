@@ -69,7 +69,8 @@ const Layout = () => {
         <DrawerContent height="100vh" maxHeight="100vh" display="flex" flexDirection="column" position="fixed" top={0} right={0} left="auto" bottom={0} bg="white">
           <DrawerCloseTrigger/>
           <DrawerBody flex="1" overflowY="auto" minHeight={0} bg="white" p={6}>
-            <UserMenu 
+            <UserMenu
+              isOpen={isUserMenuOpen}
               onOpenLoginModal={(mode) => {
                 setLoginModalMode(mode);
                 onLoginModalOpen();

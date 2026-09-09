@@ -67,18 +67,20 @@ export function FeedbackForm() {
         numberOfLines={4}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      <TouchableOpacity
-        style={[styles.submitBtn, (!comment.trim() || submitting) && styles.submitBtnDisabled]}
-        onPress={submit}
-        disabled={!comment.trim() || submitting}
-        testID="home.feedbackSubmit"
-      >
-        {submitting ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text style={styles.submitText}>{t('submit')}</Text>
-        )}
-      </TouchableOpacity>
+      {(comment.trim() || submitting) ? (
+        <TouchableOpacity
+          style={[styles.submitBtn, (!comment.trim() || submitting) && styles.submitBtnDisabled]}
+          onPress={submit}
+          disabled={!comment.trim() || submitting}
+          testID="home.feedbackSubmit"
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.submitText}>{t('submit')}</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }

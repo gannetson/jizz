@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,10 @@ export type CountrySelectProps = {
   showStatePicker?: boolean;
 };
 
+type ListRow =
+  | { type: 'header'; key: string; label: string }
+  | { type: 'item'; key: string; country: Country; indented?: boolean };
+
 /**
  * Searchable country combobox used across the app.
  * Opens a bottom sheet with search by localized country name.
@@ -69,6 +73,7 @@ export function CountrySelect({
   const [loading, setLoading] = useState(!countriesProp);
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
+  const listRef = useRef<FlatList<ListRow>>(null);
 
   useEffect(() => {
     if (countriesProp) {
@@ -97,9 +102,12 @@ export function CountrySelect({
     return filterPickerCountries(source, excludeRegionCodes);
   }, [countriesProp, loadedCountries, excludeRegionCodes]);
 
-  type ListRow =
-    | { type: 'header'; key: string; label: string }
-    | { type: 'item'; key: string; country: Country; indented?: boolean };
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [search]);
 
   const listData = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -247,9 +255,22 @@ export function CountrySelect({
       )}
 
       <AccessibleSheetModal visible={modalVisible} onClose={closeModal}>
-        <Text style={styles.modalTitle} accessibilityRole="header">
-          {title ?? t('select_country')}
-        </Text>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle} accessibilityRole="header">
+            {title ?? t('select_country')}
+          </Text>
+          <TouchableOpacity
+            onPress={closeModal}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
+          >
+            <Text style={styles.modalCloseText} accessible={false}>
+              {t('close')}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <TextInput
           style={styles.searchInput}
           placeholder={t('search')}
@@ -258,6 +279,8 @@ export function CountrySelect({
           onChangeText={setSearch}
           autoCapitalize="none"
           autoCorrect={false}
+          returnKeyType="search"
+          blurOnSubmit={false}
           clearButtonMode="while-editing"
           accessibilityLabel={t('search')}
           accessibilityRole="search"
@@ -266,9 +289,13 @@ export function CountrySelect({
           <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loader} />
         ) : (
           <FlatList
+            ref={listRef}
+            style={styles.list}
             data={listData}
             keyExtractor={(item) => item.key}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled
             renderItem={({ item }) => {
               if (item.type === 'header') {
                 return (
@@ -315,17 +342,6 @@ export function CountrySelect({
             }
           />
         )}
-        <TouchableOpacity
-          style={styles.modalClose}
-          onPress={closeModal}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={t('close')}
-        >
-          <Text style={styles.modalCloseText} accessible={false}>
-            {t('close')}
-          </Text>
-        </TouchableOpacity>
       </AccessibleSheetModal>
       {showStatePicker && regionCountries.length > 0 && regionParent ? (
         <View style={styles.regionBlock}>
@@ -365,11 +381,22 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: colors.primary[500],
   },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+    flexShrink: 0,
+  },
   modalTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.primary[800],
-    marginBottom: 12,
+  },
+  list: {
+    flex: 1,
   },
   searchInput: {
     borderWidth: 1,
@@ -380,6 +407,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 16,
     color: colors.primary[800],
+    flexShrink: 0,
   },
   loader: {
     marginVertical: 24,
@@ -426,10 +454,6 @@ const styles = StyleSheet.create({
     color: colors.primary[600],
     textAlign: 'center',
     paddingVertical: 24,
-  },
-  modalClose: {
-    paddingVertical: 16,
-    alignItems: 'center',
   },
   modalCloseText: {
     fontSize: 16,

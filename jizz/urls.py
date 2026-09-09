@@ -121,6 +121,7 @@ from jizz.flock_views import (
     flock_result_page,
     flock_result_og_image,
     flock_challenge_share_page,
+    flock_challenge_history_page,
     flock_challenge_og_image,
 )
 from jizz.game_share_views import (
@@ -323,6 +324,11 @@ urlpatterns = [
         'flocks/results/<str:result_token>/og.png',
         flock_result_og_image,
         name='flock-result-og',
+    ),
+    path(
+        'flocks/c/<str:public_token>/history/',
+        flock_challenge_history_page,
+        name='flock-challenge-history',
     ),
     path(
         'flocks/c/<str:public_token>/',

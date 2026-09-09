@@ -12,6 +12,7 @@ import { getCurrentQuestion, type Game } from '../api/games';
 import type { Player } from '../api/player';
 import type { Question, Answer, MultiPlayer } from '../types/game';
 import { getWebSocketUrl } from '../api/config';
+import { clientInfoPayload } from '../api/clientInfo';
 import { isStalePlayQuestion } from '../game/applyIncomingQuestion';
 import { useGame } from './GameContext';
 import { prefetchQuestionPlayMedia } from '../utils/prefetchPlayMedia';
@@ -221,6 +222,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
             action: 'join_game',
             player_token: player.token,
             language_code: languageCodeRef.current,
+            ...clientInfoPayload(),
           })
         );
         flushPendingActions(ws);
@@ -420,6 +422,7 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
               action: 'join_game',
               player_token: playerToken,
               language_code: languageCodeRef.current,
+              ...clientInfoPayload(),
             })
           );
         } else {

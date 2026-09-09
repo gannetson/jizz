@@ -316,6 +316,7 @@
   "country_challenge_champion": "Champion",
   "country_challenge_in_progress": "En cours",
   "country_challenge_active": "Actif sur l’accueil",
+  "country_leaderboard": "Classement pays",
   "country_challenge_leaderboard": "Classement du défi pays",
   "country_challenge_leaderboard_hint": "Plus haut niveau atteint par joueur et pays du quiz. Un joueur peut apparaître plusieurs fois pour différents pays.",
   "country_challenge_leaderboard_empty": "Pas encore de progression au défi pays.",

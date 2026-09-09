@@ -117,6 +117,42 @@ class WebSocketConsumerTestCase(TransactionTestCase):
             await communicator.disconnect()
 
         _run_async(async_test())
+        score = PlayerScore.objects.get(player=player1, game=game)
+        self.assertEqual(score.app_version, '')
+        self.assertEqual(score.device_type, '')
+
+    def test_join_game_stores_optional_app_version_and_device_type(self):
+        game = Game.objects.create(
+            country=self.country,
+            level='beginner',
+            length=5,
+            media='images',
+            host=self.player1,
+            multiplayer=True,
+        )
+        player1 = self.player1
+
+        async def async_test():
+            communicator = WebsocketCommunicator(application, f"/mpg/{game.token}")
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({
+                'action': 'join_game',
+                'player_token': str(player1.token),
+                'app_version': '2.0.1',
+                'device_type': 'android',
+            })
+            try:
+                while True:
+                    await communicator.receive_json_from(timeout=1.0)
+            except Exception:
+                pass
+            await communicator.disconnect()
+
+        _run_async(async_test())
+        score = PlayerScore.objects.get(player=player1, game=game)
+        self.assertEqual(score.app_version, '2.0.1')
+        self.assertEqual(score.device_type, 'android')
 
     def test_join_game_after_start_resyncs_current_question(self):
         """Reconnect after start must get game_started + the active question (Android Lobby→Play)."""

@@ -324,7 +324,16 @@ def scoring_region_codes(country_code: str) -> list[str]:
     cc = normalize_code(country_code)
     members = AGGREGATE_MEMBERS.get(cc)
     if members:
-        return list(members)
+        from jizz.country_region_codes import st_region_codes_for_app_country
+
+        out: list[str] = []
+        seen: set[str] = set()
+        for member in members:
+            for token in st_region_codes_for_app_country(member):
+                if token not in seen:
+                    seen.add(token)
+                    out.append(token)
+        return out
     from jizz.country_region_codes import expand_region_codes
 
     return expand_region_codes(cc)

@@ -81,16 +81,18 @@ export const Feedback = () => {
               onChange={(val) => setComment(val.target.value)}
               placeholder={intl.formatMessage({ id: 'your feedback placeholder', defaultMessage: 'Your feedback...' })}
             />
-            <Box>
-              <Button
-                onClick={submit}
-                disabled={!comment.trim() || submitting}
-                loading={submitting}
-                colorPalette="primary"
-              >
-                <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
-              </Button>
-            </Box>
+            {(comment.trim() || submitting) && (
+              <Box>
+                <Button
+                  onClick={submit}
+                  disabled={!comment.trim() || submitting}
+                  loading={submitting}
+                  colorPalette="primary"
+                >
+                  <FormattedMessage id={'submit'} defaultMessage={'Submit'}/>
+                </Button>
+              </Box>
+            )}
           </>
         )}
       </Flex>

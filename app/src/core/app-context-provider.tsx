@@ -8,6 +8,7 @@ import { type SpeciesGroup } from "../user/use-species-group"
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios-config';
 import { apiUrl } from '../api/baseUrl';
+import { clientInfoHeaders, clientInfoPayload } from '../api/clientInfo';
 import { authService } from '../api/services/auth.service';
 import { profileService } from '../api/services/profile.service';
 import { useAuthProfile } from './auth-profile-context';
@@ -116,7 +117,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
-    'Expires': '0'
+    'Expires': '0',
+    ...clientInfoHeaders(),
   }), [])
 
   const createPlayer = async () => {
@@ -429,7 +431,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
           species_group: mediaType === 'audio' && soundsScope === 'passerines' ? undefined : speciesGroup?.species_group,
           season: season || undefined,
           rarity,
-          include_escapes: includeEscapes
+          include_escapes: includeEscapes,
+          ...clientInfoPayload(),
         })
       })
       const data = await response.json();
@@ -477,7 +480,8 @@ const AppContextProvider: FC<Props> = ({children}) => {
           species_group: oldGame.species_group,
           season: oldGame.season || undefined,
           rarity: oldGame.rarity,
-          include_escapes: oldGame.include_escapes
+          include_escapes: oldGame.include_escapes,
+          ...clientInfoPayload(),
         })
       })
       const data = await response.json();

@@ -1,4 +1,4 @@
-import { Button, Flex, Heading, Image, Link, Spinner, Text } from '@chakra-ui/react';
+import { Button, Flex, Image, Link, Spinner, Text } from '@chakra-ui/react';
 import { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
@@ -120,10 +120,6 @@ const HomePage = () => {
     : '';
   const flag = countryCodeToFlag(countryCode);
   const currentLevelTitle = levelTitle(activeJourney?.current_level, locale);
-  const flockCountryFlag = countryCodeToFlag(mainFlock?.default_country.code ?? '');
-  const flockCountryLabel = mainFlock
-    ? getCountryDisplayName(mainFlock.default_country, locale)
-    : '';
   const flockChallenge = mainFlock?.active_challenge;
 
   const needsCountdown =
@@ -180,9 +176,7 @@ const HomePage = () => {
   return (
     <Page>
       <Page.Header>
-        <Heading color="gray.800" size="lg" m={0}>
-          {player ? player.name : <FormattedMessage id="welcome" defaultMessage="Welcome" />}
-        </Heading>
+        <></>
       </Page.Header>
       <Page.Body>
         {loading ? (
@@ -225,167 +219,169 @@ const HomePage = () => {
               </Flex>
             </Button>
 
-            {journeyLoading ? (
-              <Flex justify="center" py={6}>
-                <Spinner size="sm" color="primary.500" />
-              </Flex>
-            ) : activeJourney ? (
-              <Button
-                onClick={goJourneyProgress}
-                colorPalette="primary"
-                height="auto"
-                py={4}
-                px={4}
-                bg="primary.800"
-                borderWidth="2px"
-                borderColor="primary.400"
-                borderRadius="full"
-              >
-                <Flex align="center" gap={4} width="full" textAlign="left">
-                  <BirdrLevelImage
-                    iconUrl={activeJourney.current_level?.icon_url}
-                    sequence={activeJourney.current_level?.sequence}
-                    variant="current"
-                    size={88}
-                    framed={false}
-                  />
-                  <Flex direction="column" flex={1} minW={0}>
-                    <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
-                      {currentLevelTitle || (
-                        <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
-                      )}
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="primary.100" truncate>
-                      {flag ? `${flag} ` : ''}{countryLabel}
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="primary.300">
-                      <FormattedMessage id="continue" defaultMessage="Continue" />
-                    </Text>
-                  </Flex>
+            <Flex direction="column" gap={3} w="full">
+              {journeyLoading ? (
+                <Flex w="full" justify="center" align="center" py={6}>
+                  <Spinner size="sm" color="primary.500" />
                 </Flex>
-              </Button>
-            ) : (
-              <Button
-                onClick={() => navigate('/journey/intro')}
-                colorPalette="primary"
-                height="auto"
-                py={4}
-                px={4}
-                bg="primary.800"
-                borderWidth="2px"
-                borderColor="primary.400"
-                borderRadius="full"
-              >
-                <Flex align="center" gap={4} width="full" textAlign="left">
-                  <BirdrArtImage
-                    filename="birdr-success.png"
-                    alt=""
-                    width="88px"
-                    height="88px"
-                    objectFit="contain"
-                    bg="transparent"
-                    overflow="visible"
-                    flexShrink={0}
-                  />
-                  <Flex direction="column" flex={1} minW={0}>
-                    <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
-                      <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="primary.300">
-                      <FormattedMessage id="country_challenge_new_improved" defaultMessage="Multiple levels, from easy to hard" />
-                    </Text>
+              ) : activeJourney ? (
+                <Button
+                  onClick={goJourneyProgress}
+                  colorPalette="primary"
+                  height="auto"
+                  py={3}
+                  px={4}
+                  w="full"
+                  bg="primary.800"
+                  borderWidth="2px"
+                  borderColor="primary.400"
+                  borderRadius="xl"
+                  whiteSpace="normal"
+                >
+                  <Flex align="center" gap={3} width="full" textAlign="left">
+                    <BirdrLevelImage
+                      iconUrl={activeJourney.current_level?.icon_url}
+                      sequence={activeJourney.current_level?.sequence}
+                      variant="current"
+                      size={56}
+                      framed={false}
+                    />
+                    <Flex direction="column" flex={1} minW={0}>
+                      <Text fontSize="lg" fontWeight="700" color="primary.50" lineClamp={2}>
+                        {currentLevelTitle || (
+                          <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
+                        )}
+                      </Text>
+                      <Text fontSize="sm" fontWeight="600" color="primary.100" truncate>
+                        {flag ? `${flag} ` : ''}{countryLabel}
+                      </Text>
+                    </Flex>
                   </Flex>
-                </Flex>
-              </Button>
-            )}
-
-            {flocksLoading && !flocksReady ? (
-              <Flex justify="center" py={6}>
-                <Spinner size="sm" color="primary.500" />
-              </Flex>
-            ) : mainFlock ? (
-              <Button
-                onClick={goFlocks}
-                colorPalette="primary"
-                height="auto"
-                py={4}
-                px={4}
-                bg="primary.600"
-                borderWidth="2px"
-                borderColor="primary.400"
-                borderRadius="full"
-              >
-                <Flex align="center" gap={4} width="full" textAlign="left">
-                  {mainFlock.logo_url ? (
-                    <Image
-                      src={mainFlock.logo_url}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => navigate('/journey/intro')}
+                  colorPalette="primary"
+                  height="auto"
+                  py={3}
+                  px={4}
+                  w="full"
+                  bg="primary.800"
+                  borderWidth="2px"
+                  borderColor="primary.400"
+                  borderRadius="xl"
+                  whiteSpace="normal"
+                >
+                  <Flex align="center" gap={3} width="full" textAlign="left">
+                    <BirdrArtImage
+                      filename="birdr-success.png"
                       alt=""
-                      width="96px"
-                      height="64px"
-                      objectFit="cover"
-                      borderRadius="md"
+                      width="56px"
+                      height="56px"
+                      objectFit="contain"
+                      bg="transparent"
+                      overflow="visible"
                       flexShrink={0}
                     />
-                  ) : (
+                    <Flex direction="column" flex={1} minW={0}>
+                      <Text fontSize="lg" fontWeight="700" color="primary.50" lineClamp={2}>
+                        <FormattedMessage id="country_challenge" defaultMessage="Country challenge" />
+                      </Text>
+                      <Text fontSize="sm" fontWeight="600" color="primary.300">
+                        <FormattedMessage id="country_challenge_new_improved" defaultMessage="Multiple levels, from easy to hard" />
+                      </Text>
+                    </Flex>
+                  </Flex>
+                </Button>
+              )}
+
+              {flocksLoading && !flocksReady ? (
+                <Flex w="full" justify="center" align="center" py={6}>
+                  <Spinner size="sm" color="primary.500" />
+                </Flex>
+              ) : mainFlock ? (
+                <Button
+                  onClick={goFlocks}
+                  colorPalette="primary"
+                  height="auto"
+                  py={3}
+                  px={4}
+                  w="full"
+                  bg="primary.600"
+                  borderWidth="2px"
+                  borderColor="primary.400"
+                  borderRadius="xl"
+                  whiteSpace="normal"
+                >
+                  <Flex align="center" gap={3} width="full" textAlign="left">
+                    {mainFlock.logo_url ? (
+                      <Image
+                        src={mainFlock.logo_url}
+                        alt=""
+                        width="56px"
+                        height="56px"
+                        objectFit="cover"
+                        borderRadius="md"
+                        flexShrink={0}
+                      />
+                    ) : (
+                      <BirdrArtImage
+                        filename="birdr-leaderboard.png"
+                        alt=""
+                        width="56px"
+                        height="56px"
+                        objectFit="contain"
+                        flexShrink={0}
+                      />
+                    )}
+                    <Flex direction="column" flex={1} minW={0}>
+                      <Text fontSize="lg" fontWeight="700" color="primary.50" lineClamp={2}>
+                        {mainFlock.name}
+                      </Text>
+                      <Text fontSize="sm" fontWeight="600" color="primary.300" truncate>
+                        {flockStatusLine}
+                      </Text>
+                    </Flex>
+                  </Flex>
+                </Button>
+              ) : (
+                <Button
+                  onClick={goFlocks}
+                  colorPalette="primary"
+                  height="auto"
+                  py={3}
+                  px={4}
+                  w="full"
+                  bg="primary.600"
+                  borderWidth="2px"
+                  borderColor="primary.400"
+                  borderRadius="xl"
+                  whiteSpace="normal"
+                >
+                  <Flex align="center" gap={3} width="full" textAlign="left">
                     <BirdrArtImage
-                      filename="birdr-leaderboard.png"
+                      filename="birdr-flock-invite.png"
                       alt=""
-                      width="96px"
-                      height="64px"
+                      width="56px"
+                      height="56px"
                       objectFit="contain"
                       flexShrink={0}
                     />
-                  )}
-                  <Flex direction="column" flex={1} minW={0}>
-                    <Text fontSize="xl" fontWeight="700" color="primary.50" lineClamp={2}>
-                      {mainFlock.name}
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="primary.100" truncate>
-                      {flockCountryFlag ? `${flockCountryFlag} ` : ''}
-                      {flockCountryLabel}
-                      {flockChallenge ? ` · ${flockChallenge.title}` : ''}
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="primary.300">
-                      {flockStatusLine}
-                    </Text>
+                    <Flex direction="column" flex={1} minW={0}>
+                      <Text fontSize="lg" fontWeight="700" color="primary.50">
+                        <FormattedMessage id="flocks_start" defaultMessage="Start flock" />
+                      </Text>
+                      <Text fontSize="sm" fontWeight="600" color="primary.200">
+                        <FormattedMessage
+                          id="flocks_home_start_cta"
+                          defaultMessage="Start a club and compete with friends"
+                        />
+                      </Text>
+                    </Flex>
                   </Flex>
-                </Flex>
-              </Button>
-            ) : (
-              <Button
-                onClick={goFlocks}
-                colorPalette="primary"
-                height="auto"
-                py={4}
-                px={4}
-                bg="primary.600"
-                borderWidth="2px"
-                borderColor="primary.400"
-                borderRadius="full"
-              >
-                <Flex align="center" gap={4} width="full" textAlign="left">
-                  <BirdrArtImage
-                    filename="birdr-flock-invite.png"
-                    alt=""
-                    width="96px"
-                    height="64px"
-                    objectFit="contain"
-                    flexShrink={0}
-                  />
-                  <Flex direction="column" flex={1} minW={0}>
-                    <Text fontSize="xl" fontWeight="700" color="primary.50">
-                      <FormattedMessage id="flocks_start" defaultMessage="Start flock" />
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="primary.200">
-                      <FormattedMessage
-                        id="flocks_home_start_cta"
-                        defaultMessage="Start a club and compete with friends"
-                      />
-                    </Text>
-                  </Flex>
-                </Flex>
-              </Button>
-            )}
+                </Button>
+              )}
+            </Flex>
 
             <Button variant="ghost" colorPalette="primary" onClick={() => navigate('/scores')}>
               <FormattedMessage id="high scores" defaultMessage="High scores" />

@@ -341,6 +341,11 @@ class StartSpeciesPracticeSerializer(serializers.Serializer):
             language=_profile_language(user),
         )
         PlayerScore.objects.get_or_create(player=host, game=game, defaults={'score': 0})
+        request = self.context.get('request')
+        if request is not None:
+            from jizz.client_info import record_player_score_client_from_request
+
+            record_player_score_client_from_request(host, game, request)
         game.add_question()
         return {'game': game, 'player': host}
 
@@ -390,5 +395,10 @@ class StartConfusionPairPracticeSerializer(serializers.Serializer):
             language=_profile_language(user),
         )
         PlayerScore.objects.get_or_create(player=host, game=game, defaults={'score': 0})
+        request = self.context.get('request')
+        if request is not None:
+            from jizz.client_info import record_player_score_client_from_request
+
+            record_player_score_client_from_request(host, game, request)
         game.add_question()
         return {'game': game, 'player': host}

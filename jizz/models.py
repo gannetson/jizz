@@ -909,9 +909,25 @@ class UserProfile(models.Model):
 
 
 class PlayerScore(models.Model):
+    DEVICE_IOS = 'ios'
+    DEVICE_ANDROID = 'android'
+    DEVICE_WEB = 'web'
+    DEVICE_TYPE_CHOICES = [
+        (DEVICE_IOS, 'iOS'),
+        (DEVICE_ANDROID, 'Android'),
+        (DEVICE_WEB, 'Web'),
+    ]
+
     player = models.ForeignKey(Player, related_name='scores', on_delete=models.CASCADE)
     game = models.ForeignKey(Game, related_name='scores', blank=True, null=True, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
+    app_version = models.CharField(max_length=32, blank=True, default='')
+    device_type = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        choices=DEVICE_TYPE_CHOICES,
+    )
 
     @property
     def play_time(self):

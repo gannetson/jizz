@@ -97,10 +97,73 @@ def fetch_subnational1_regions(parent_code: str, *, session=None) -> list[dict]:
     return out
 
 
+def inherit_species_attrs_from_parent(country: Country) -> int:
+    """Fill unknown status and blank frequency from the parent country.
+
+    eBird ``spplist`` only says a species occurs here. Games ignore
+    ``status=unknown``, so provisioned regions stay unplayable until this runs.
+    Remaining unknowns become native. Existing classified values are left alone.
+    """
+    qs = list(CountrySpecies.objects.filter(country=country))
+    if not qs:
+        return 0
+
+    parent_attrs: dict[int, tuple[str | None, str | None, float | None]] = {}
+    if country.parent_id:
+        parent_attrs = {
+            species_id: (status, frequency, frequency_pct)
+            for species_id, status, frequency, frequency_pct in CountrySpecies.objects.filter(
+                country_id=country.parent_id,
+            ).values_list("species_id", "status", "frequency", "frequency_pct")
+        }
+
+    updates: list[CountrySpecies] = []
+    for cs in qs:
+        parent_row = parent_attrs.get(cs.species_id)
+        parent_status = parent_row[0] if parent_row else None
+        parent_frequency = parent_row[1] if parent_row else None
+        parent_frequency_pct = parent_row[2] if parent_row else None
+        changed = False
+        if not cs.status or cs.status == "unknown":
+            inherited = (
+                parent_status
+                if parent_status and parent_status != "unknown"
+                else "native"
+            )
+            if cs.status != inherited:
+                cs.status = inherited
+                changed = True
+        if not cs.frequency and parent_frequency:
+            cs.frequency = parent_frequency
+            if parent_frequency_pct is not None:
+                cs.frequency_pct = parent_frequency_pct
+            changed = True
+        if changed:
+            updates.append(cs)
+    if updates:
+        CountrySpecies.objects.bulk_update(
+            updates, ["status", "frequency", "frequency_pct"]
+        )
+    return len(updates)
+
+
+def inherit_species_attrs_for_children(parent_code: str | None = None) -> list[tuple[Country, int]]:
+    qs = Country.objects.filter(parent_id__isnull=False).order_by("code")
+    if parent_code:
+        qs = qs.filter(parent_id=parent_code.strip().upper())
+    out: list[tuple[Country, int]] = []
+    for country in qs:
+        updated = inherit_species_attrs_from_parent(country)
+        if updated:
+            out.append((country, updated))
+    return out
+
+
 def sync_species_for_region_codes(country: Country, region_codes: list[str]) -> int:
     before = country.countryspecies.count()
     for region_code in region_codes:
         sync_regions(country, region_code)
+    inherit_species_attrs_from_parent(country)
     return country.countryspecies.count() - before
 
 

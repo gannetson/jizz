@@ -1,10 +1,6 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
-import {
-  isCountryChallengeRoute,
-} from '../api/birdrJourney';
 import { colors } from '../theme';
 import { getAppVersionDisplay } from '../utils/appVersion';
 
@@ -12,7 +8,7 @@ const MENU_ITEMS: { route: string; label: string }[] = [
   { route: 'Home', label: 'Home' },
   { route: 'Start', label: 'New game' },
   { route: 'Scores', label: 'High scores' },
-  { route: 'BirdrJourneyList', label: 'Country challenges' },
+  { route: 'CountryChallengeLeaderboard', label: 'Country leaderboard' },
   { route: 'Updates', label: 'Updates' },
   { route: 'Help', label: 'Help' },
   { route: 'Privacy', label: 'Privacy' },
@@ -27,11 +23,6 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
     return codename ? `${base} · ${codename}` : base;
   })();
 
-  const openCountryChallenge = useCallback(() => {
-    navigation.navigate('BirdrJourneyList');
-    navigation.closeDrawer();
-  }, [navigation]);
-
   return (
     <View style={styles.container}>
       <View style={styles.menuHeader}>
@@ -45,9 +36,7 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
             currentRoute === 'HelpDetail' &&
             (state.routes[state.index].params as { slug?: string } | undefined)?.slug;
           const focused =
-            (item.route === 'BirdrJourneyList'
-              ? isCountryChallengeRoute(currentRoute)
-              : currentRoute === item.route) ||
+            currentRoute === item.route ||
             (item.route === 'Privacy' && isHelpDetail === 'privacy') ||
             (item.route === 'About' && isHelpDetail === 'about');
           return (
@@ -55,10 +44,6 @@ export function LeftDrawerContent(props: DrawerContentComponentProps) {
               key={item.route}
               style={[styles.item, focused && styles.itemFocused]}
               onPress={() => {
-                if (item.route === 'BirdrJourneyList') {
-                  openCountryChallenge();
-                  return;
-                }
                 if (item.route === 'Privacy') {
                   navigation.navigate('HelpDetail', { slug: 'privacy' });
                 } else if (item.route === 'About') {

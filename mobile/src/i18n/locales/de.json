@@ -316,6 +316,7 @@
   "country_challenge_champion": "Champion",
   "country_challenge_in_progress": "In Arbeit",
   "country_challenge_active": "Aktiv auf Start",
+  "country_leaderboard": "Länder-Rangliste",
   "country_challenge_leaderboard": "Länder-Challenge-Rangliste",
   "country_challenge_leaderboard_hint": "Höchstes erreichtes Level je Spieler und Quizland. Ein Spieler kann für verschiedene Länder mehrfach erscheinen.",
   "country_challenge_leaderboard_empty": "Noch kein Fortschritt in der Länder-Challenge.",

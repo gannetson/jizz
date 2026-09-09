@@ -2,6 +2,7 @@ import { apiUrl } from './config';
 import type { Country } from './countries';
 import type { Player } from './player';
 import type { Question } from '../types/game';
+import { clientInfoHeaders, clientInfoPayload } from './clientInfo';
 
 export type GameScore = {
   id?: number;
@@ -77,8 +78,9 @@ export async function createGame(
         Accept: 'application/json',
         'Content-Type': 'application/json',
         Authorization: `Bearer ${playerToken}`,
+        ...clientInfoHeaders(),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, ...clientInfoPayload() }),
     });
     clearTimeout(timeoutId);
     if (!response.ok) return null;

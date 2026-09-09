@@ -316,6 +316,7 @@
   "country_challenge_champion": "チャンピオン",
   "country_challenge_in_progress": "進行中",
   "country_challenge_active": "ホームで表示中",
+  "country_leaderboard": "国別ランキング",
   "country_challenge_leaderboard": "国別チャレンジ ランキング",
   "country_challenge_leaderboard_hint": "プレイヤーとクイズの国ごとの最高レベル。同じ人が複数の国で表示されることがあります。",
   "country_challenge_leaderboard_empty": "まだ国別チャレンジの進捗がありません。",

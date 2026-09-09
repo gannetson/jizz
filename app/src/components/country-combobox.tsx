@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ReactSelect, { StylesConfig, GroupBase } from "react-select";
 import { Box } from "@chakra-ui/react";
 import { useIntl } from "react-intl";
@@ -71,6 +71,31 @@ function flattenOptions(groups: GroupedOption[]): OptionType[] {
   return groups.flatMap((group) => group.options);
 }
 
+/** Keep the dropdown within the visible viewport so the keyboard does not cover results. */
+function useVisibleMenuMaxHeight(defaultHeight = 300) {
+  const [maxHeight, setMaxHeight] = useState(defaultHeight);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const update = () => {
+      const visible = window.visualViewport?.height ?? window.innerHeight;
+      setMaxHeight(Math.max(140, Math.min(defaultHeight, Math.round(visible * 0.4))));
+    };
+    update();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [defaultHeight]);
+
+  return maxHeight;
+}
+
 /**
  * Searchable country combobox used across the web app.
  * Search matches localized display name, English API name, and country code.
@@ -90,6 +115,7 @@ export const CountryCombobox = ({
   const intl = useIntl();
   const { appLanguage } = useContext(AppContext);
   const locale = appLanguage || "en";
+  const menuMaxHeight = useVisibleMenuMaxHeight();
 
   const groupedOptions = useMemo(() => {
     const source = filterPickerCountries(countries, excludeRegionCodes);
@@ -186,6 +212,8 @@ export const CountryCombobox = ({
         filterOption={filterOption}
         isSearchable
         isClearable={allowEmpty}
+        menuPlacement="auto"
+        maxMenuHeight={menuMaxHeight}
         menuPortalTarget={typeof document !== "undefined" ? document.body : null}
         menuPosition="fixed"
         placeholder={

@@ -694,7 +694,10 @@ class GameListView(ListCreateAPIView, GetPlayerMixin):
 
     def perform_create(self, serializer):
         player = self.get_player_from_request(self.request)
-        serializer.save(host=player)
+        game = serializer.save(host=player)
+        from jizz.client_info import record_player_score_client_from_request
+
+        record_player_score_client_from_request(player, game, self.request)
 
 
 class GameDetailView(RetrieveUpdateAPIView):

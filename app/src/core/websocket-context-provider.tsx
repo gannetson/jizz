@@ -4,6 +4,7 @@ import WebsocketContext from "./websocket-context"
 import { toaster } from "@/components/ui/toaster"
 import { validateQuestionForGame } from './game-token-validator'
 import { apiUrl, getWebSocketUrl } from '../api/baseUrl'
+import { clientInfoPayload } from '../api/clientInfo'
 import { isStalePlayQuestion } from './apply-incoming-question'
 import { prefetchQuestionPlayMedia } from './prefetch-play-media'
 
@@ -169,7 +170,8 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       ws.send(JSON.stringify({
         action: 'join_game', 
         player_token: activePlayer.token,
-        language_code: language
+        language_code: language,
+        ...clientInfoPayload(),
       }))
 
       // Flush any pending actions that were queued while socket was closed.

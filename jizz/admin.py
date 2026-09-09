@@ -804,8 +804,8 @@ class PlayerInline(admin.TabularInline):
 class PlayerScoreInline(admin.TabularInline):
     model = PlayerScore
     can_delete = False
-    readonly_fields = ['game', 'score', 'playtime']
-    fields = ['game', 'score', 'playtime', 'player']
+    readonly_fields = ['game', 'score', 'playtime', 'app_version', 'device_type']
+    fields = ['game', 'score', 'playtime', 'player', 'app_version', 'device_type']
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -871,10 +871,10 @@ class PlayerAdmin(admin.ModelAdmin):
 @register(PlayerScore)
 class PlayerScoreAdmin(admin.ModelAdmin):
     raw_id_fields = ['player', 'game']
-    list_display = ['player', 'game', 'progress', 'length', 'score']
-    list_filter = ['game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
+    list_display = ['player', 'game', 'progress', 'length', 'score', 'device_type', 'app_version']
+    list_filter = ['device_type', 'game__level', 'game__length', 'game__media', ('game__country', admin.RelatedOnlyFieldListFilter)]
     readonly_fields = ['playtime', 'order_score']
-    fields = ['player', 'game', 'score', 'playtime', 'order_score']
+    fields = ['player', 'game', 'score', 'app_version', 'device_type', 'playtime', 'order_score']
 
     def order_score(self, obj):
         results = obj.answers.values(

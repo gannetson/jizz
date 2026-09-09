@@ -371,9 +371,11 @@ export function StartScreen() {
           accessibilityRole="search"
         />
         <FlatList
+          style={styles.modalList}
           data={filteredLanguages}
           keyExtractor={(l) => l.code}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           renderItem={({ item }) => {
             const selected = language === item.code;
             const label = getLanguageDisplayName(item, locale);
@@ -460,9 +462,11 @@ export function StartScreen() {
           accessibilityRole="search"
         />
         <FlatList
+          style={styles.modalList}
           data={filteredTaxOrders}
           keyExtractor={(item) => item.tax_order}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           renderItem={({ item }) => {
             const selected = taxOrder?.tax_order === item.tax_order;
             const label = `${item.tax_order} (${item.count})`;
@@ -529,9 +533,11 @@ export function StartScreen() {
           accessibilityRole="search"
         />
         <FlatList
+          style={styles.modalList}
           data={filteredTaxFamilies}
           keyExtractor={(item) => item.tax_family}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           renderItem={({ item }) => {
             const selected = taxFamily?.tax_family === item.tax_family;
             const label = `${item.tax_family} - ${item.tax_family_en} (${item.count})`;
@@ -599,9 +605,11 @@ export function StartScreen() {
           accessibilityRole="search"
         />
         <FlatList
+          style={styles.modalList}
           data={filteredSpeciesGroups}
           keyExtractor={(item) => item.species_group}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           renderItem={({ item }) => {
             const selected = speciesGroup?.species_group === item.species_group;
             const label = groupLabel(item);
@@ -932,12 +940,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.primary[800],
     marginBottom: 8,
+    flexShrink: 0,
+  },
+  modalList: {
+    flex: 1,
   },
   modalItem: { paddingVertical: 14, paddingHorizontal: 8 },
   modalItemSelected: { backgroundColor: colors.primary[100] },
   modalItemText: { fontSize: 16, color: colors.primary[800] },
   modalItemTextSelected: { fontWeight: '600', color: colors.primary[700] },
-  modalClose: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
+  modalClose: { marginTop: 12, paddingVertical: 12, alignItems: 'center', flexShrink: 0 },
   modalCloseText: { fontSize: 16, color: colors.primary[500], fontWeight: '600' },
   clearTaxLink: { alignSelf: 'flex-start', marginTop: 4, marginBottom: 4 },
   clearTaxLinkText: { fontSize: 14, color: colors.primary[500], fontWeight: '600' },

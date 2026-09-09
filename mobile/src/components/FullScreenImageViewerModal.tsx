@@ -12,7 +12,7 @@ import {
 import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, clamp, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CachedRemoteImage } from './CachedRemoteImage';
+import { CachedRemoteImage, remotePlayImageSource } from './CachedRemoteImage';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -114,12 +114,7 @@ export function FullScreenImageViewerModal({ visible, imageUri, onClose, closeLa
               {visible ? (
                 <CachedRemoteImage
                   style={styles.fullImage}
-                  source={{
-                    uri: imageUri,
-                    headers: {
-                      'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
-                    },
-                  }}
+                  source={remotePlayImageSource(imageUri)}
                   contentFit="contain"
                   recyclingKey={imageUri}
                 />

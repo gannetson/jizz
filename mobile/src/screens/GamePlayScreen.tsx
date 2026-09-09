@@ -39,7 +39,11 @@ import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
 import { answersEnabledForMedia } from '../game/mediaAnswerGate';
-import { resolvePlayMediaType } from '../utils/questionMediaIndex';
+import {
+  mediaArrayLengthForQuestion,
+  mediaSlotIndexFromQuestion,
+  resolvePlayMediaType,
+} from '../utils/questionMediaIndex';
 import { playPreviewSrc } from '../utils/playImageUrl';
 import {
   countWrongAnswers,
@@ -193,7 +197,8 @@ export function GamePlayScreen() {
   }, [navigation, handleRefreshQuestion, refreshingQuestion, t]);
 
   const mediaType = resolvePlayMediaType(question, game?.media);
-  const currentIndex = mediaIndex;
+  const mediaLength = question ? mediaArrayLengthForQuestion(question, mediaType) : 0;
+  const currentIndex = mediaSlotIndexFromQuestion({ number: mediaIndex }, mediaLength);
   const lang = game?.language || (player as any)?.language;
 
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -260,7 +265,15 @@ export function GamePlayScreen() {
 
   const prevQuestionIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
-    if (question) setMediaIndex(question.number ?? 0);
+    if (question) {
+      const kind = resolvePlayMediaType(question, game?.media);
+      setMediaIndex(
+        mediaSlotIndexFromQuestion(
+          question,
+          mediaArrayLengthForQuestion(question, kind),
+        ),
+      );
+    }
     if (
       prevQuestionIdRef.current !== undefined &&
       question?.id !== prevQuestionIdRef.current

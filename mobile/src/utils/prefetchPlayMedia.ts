@@ -4,6 +4,7 @@ import {
   resolvePlayMediaType,
   type PlayMediaQuestion,
 } from './questionMediaIndex';
+import { playPreviewSrc } from './playImageUrl';
 
 type PrefetchMediaKind = 'images' | 'video' | 'audio';
 type MediaUrlItem = { url?: string | null };
@@ -33,7 +34,7 @@ export function prefetchPlayMedia(url?: string | null, kind?: PrefetchMediaKind)
   if (prefetched.has(url)) return;
   prefetched.add(url);
   if (kind === 'images') {
-    Image.prefetch(url).catch(() => {});
+    Image.prefetch(playPreviewSrc(url)).catch(() => {});
     return;
   }
   fetch(url).catch(() => {});

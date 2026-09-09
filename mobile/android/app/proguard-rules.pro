@@ -12,6 +12,17 @@
 -keep class com.swmansion.worklets.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
+# expo-image / Glide (release minify). Missing keeps can swallow load callbacks
+# so the quiz feather never ends.
+-keep class expo.modules.image.** { *; }
+-keep class com.bumptech.glide.** { *; }
+-keep public class * implements com.bumptech.glide.module.GlideModule
+-keep class * extends com.bumptech.glide.module.AppGlideModule
+-keep public enum com.bumptech.glide.load.ImageHeaderParser$** {
+  **[] $VALUES;
+  public *;
+}
+
 # react-native-svg (QR codes)
 -keep public class com.horcrux.svg.** { *; }
 

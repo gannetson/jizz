@@ -26,7 +26,11 @@ import { colors } from '../theme';
 import { usePulsatingAnimation } from '../hooks/usePulsatingAnimation';
 import { useQuestionSoundPlayback } from '../hooks/useQuestionSoundPlayback';
 import { answersEnabledForMedia } from '../game/mediaAnswerGate';
-import { resolvePlayMediaType } from '../utils/questionMediaIndex';
+import {
+  mediaArrayLengthForQuestion,
+  mediaSlotIndexFromQuestion,
+  resolvePlayMediaType,
+} from '../utils/questionMediaIndex';
 import { prefetchQuestionPlayMedia } from '../utils/prefetchPlayMedia';
 import { playPreviewSrc } from '../utils/playImageUrl';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
@@ -262,7 +266,13 @@ export function ChallengePlayScreen() {
 
   useEffect(() => {
     if (question) {
-      setMediaIndex(question.number ?? 0);
+      const kind = resolvePlayMediaType(question as any, gameMedia);
+      setMediaIndex(
+        mediaSlotIndexFromQuestion(
+          question,
+          mediaArrayLengthForQuestion(question, kind),
+        ),
+      );
       setLoadingNextQuestion(false);
     }
     setJourneyStepFailed(false);
@@ -313,7 +323,14 @@ export function ChallengePlayScreen() {
   const mediaStageHeight = questionMediaStageHeight(mediaType as 'images' | 'video' | 'audio');
   const mediaBlockHeight = questionMediaBlockHeight(mediaType as 'images' | 'video' | 'audio');
 
-  const currentMediaIdx = question != null ? (mediaIndex ?? question.number ?? 0) : 0;
+  const mediaLength = question ? mediaArrayLengthForQuestion(question, mediaType) : 0;
+  const currentMediaIdx =
+    question != null
+      ? mediaSlotIndexFromQuestion(
+          { number: mediaIndex ?? question.number ?? 0 },
+          mediaLength,
+        )
+      : 0;
   const image = question?.images?.[currentMediaIdx];
   const video = question?.videos?.[currentMediaIdx];
   const soundForAudio = question?.sounds?.[currentMediaIdx];

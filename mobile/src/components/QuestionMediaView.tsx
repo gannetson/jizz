@@ -9,7 +9,7 @@ import {
   Image as RnImage,
   type ViewStyle,
 } from 'react-native';
-import { CachedRemoteImage } from './CachedRemoteImage';
+import { CachedRemoteImage, remotePlayImageSource } from './CachedRemoteImage';
 import { setAudioModeAsync } from 'expo-audio';
 import { PlayableVideo } from './PlayableVideo';
 import { MediaCredits } from './MediaCredits';
@@ -80,6 +80,16 @@ export type QuestionMediaViewProps = {
   /** Centered over the image/video/audio area (not credits row). */
   feedbackOverlay?: React.ReactNode;
 };
+
+function imageHostLabel(uri: string): string {
+  try {
+    return new URL(uri).hostname;
+  } catch {
+    return uri.slice(0, 60);
+  }
+}
+
+const IMAGE_LOAD_TIMEOUT_MS = 12000;
 
 function MediaStage({
   children,
@@ -154,6 +164,24 @@ export function QuestionMediaView({
     setImageProgress(null);
     setVideoReady(false);
   }, [imageUri, videoUri, soundUri, mediaType, displayVideoUri, imageReloadKey]);
+
+  React.useEffect(() => {
+    if (mediaType !== 'images' || !imageUri || imageError || imageLoaded) return;
+    const timeoutId = setTimeout(() => {
+      onImageError?.(`Timed out loading ${imageHostLabel(imageUri)}`);
+      setImageLoaded(true);
+      fireMediaReady();
+    }, IMAGE_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+  }, [
+    mediaType,
+    imageUri,
+    imageError,
+    imageLoaded,
+    imageReloadKey,
+    onImageError,
+    fireMediaReady,
+  ]);
 
   const handleImageRetry = React.useCallback(() => {
     mediaReadyOnce.current = false;
@@ -230,12 +258,7 @@ export function QuestionMediaView({
                     recyclingKey={`${imageUri}-${imageReloadKey}`}
                     style={styles.image}
                     contentFit="contain"
-                    source={{
-                      uri: imageUri,
-                      headers: {
-                        'User-Agent': 'BirdrApp/1.0 (https://birdr.pro)',
-                      },
-                    }}
+                    source={remotePlayImageSource(imageUri)}
                     onLoadStart={() => {
                       setImageLoaded(false);
                       setImageProgress(null);
@@ -287,6 +310,11 @@ export function QuestionMediaView({
                   />
                 ) : null}
                 <Text style={styles.placeholderSubtext}>{imageFailedLabel}</Text>
+                {imageError ? (
+                  <Text style={styles.errorDetail} testID="questionMedia.errorDetail">
+                    {imageError}
+                  </Text>
+                ) : null}
                 <View style={styles.errorActions}>
                   <TouchableOpacity
                     style={styles.retryButton}
@@ -459,6 +487,13 @@ const styles = StyleSheet.create({
   },
   placeholderImage: { width: 160, height: 160, marginBottom: 8 },
   placeholderSubtext: { fontSize: 14, color: colors.primary[600], textAlign: 'center', paddingHorizontal: 16 },
+  errorDetail: {
+    fontSize: 12,
+    color: colors.primary[500],
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
   errorActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -27,8 +27,13 @@ export function BirdrJourneyCountryPage() {
     if (!countries?.length) return;
     const filtered = countries.filter((c) => !c.code.includes('NL-NH'));
     const profileCode = isAuthenticated ? profile?.country_code ?? null : null;
-    const match = resolveDefaultCountry(filtered, profileCode);
-    if (match) setCountry(match);
+    let cancelled = false;
+    resolveDefaultCountry(filtered, profileCode).then((match) => {
+      if (!cancelled && match) setCountry(match);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [countries, isAuthenticated, profile?.country_code]);
 
   const ensureAuth = async (): Promise<boolean> => {

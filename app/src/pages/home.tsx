@@ -17,14 +17,13 @@ import {
   setStoredMainFlockSlug,
   type Flock,
 } from '../api/flocks';
-import { authService } from '../api/services/auth.service';
-import { profileService, type UserProfile } from '../api/services/profile.service';
 import { BirdrArtImage } from '../components/birdr-art-image';
 import { BirdrLevelImage } from '../components/birdr-level-image';
 import { Feedback } from '../components/feedback';
 import { UpdateListItemCard } from '../components/updates/update-list-item';
 import { Loading } from '../components/loading';
 import AppContext from '../core/app-context';
+import { useAuthProfile } from '../core/auth-profile-context';
 import {
   formatChallengeCountdown,
   getChallengeTimeRemaining,
@@ -40,6 +39,7 @@ const PLAY_STORE_BADGE = '/images/google-play.png';
 
 const HomePage = () => {
   const { player, loading, appLanguage } = useContext(AppContext);
+  const { isAuthenticated, profile, ready: profileReady } = useAuthProfile();
   const locale = appLanguage || 'en';
   const navigate = useNavigate();
   const [updates, setUpdates] = useState<UpdateListItem[]>([]);
@@ -48,19 +48,6 @@ const HomePage = () => {
   const [mainFlock, setMainFlock] = useState<Flock | null>(null);
   const [flocksLoading, setFlocksLoading] = useState(false);
   const [flocksReady, setFlocksReady] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!authService.getAccessToken());
-
-  useEffect(() => {
-    const syncAuth = () => setIsAuthenticated(!!authService.getAccessToken());
-    syncAuth();
-    window.addEventListener('focus', syncAuth);
-    const interval = setInterval(syncAuth, 3000);
-    return () => {
-      window.removeEventListener('focus', syncAuth);
-      clearInterval(interval);
-    };
-  }, []);
 
   const loadActiveJourney = useCallback(async () => {
     setJourneyLoading(true);
@@ -101,14 +88,7 @@ const HomePage = () => {
   }, [player?.token, locale]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setProfile(null);
-      return;
-    }
-    profileService.getProfile().then(setProfile).catch(() => setProfile(null));
-  }, [isAuthenticated]);
-
-  useEffect(() => {
+    if (!profileReady) return;
     if (!isAuthenticated) {
       setActiveJourney(null);
       setMainFlock(null);
@@ -118,7 +98,7 @@ const HomePage = () => {
     }
     loadActiveJourney();
     loadFlockSummary();
-  }, [loadActiveJourney, loadFlockSummary, profile?.country_code, isAuthenticated]);
+  }, [loadActiveJourney, loadFlockSummary, profile?.country_code, isAuthenticated, profileReady]);
 
   const goJourneyProgress = () => {
     if (!activeJourney?.country?.code) return;

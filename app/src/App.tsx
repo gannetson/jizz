@@ -19,13 +19,13 @@ export const App = () => {
   return (
     <ChakraProvider value={system}>
       <Toaster />
-      <AppContextProvider>
-        <AuthProfileProvider>
+      <AuthProfileProvider>
+        <AppContextProvider>
           <WebsocketContextProvider>
             <MainContent/>
           </WebsocketContextProvider>
-        </AuthProfileProvider>
-      </AppContextProvider>
+        </AppContextProvider>
+      </AuthProfileProvider>
     </ChakraProvider>
   )
 }

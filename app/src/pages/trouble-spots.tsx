@@ -16,8 +16,7 @@ import { Page } from '../shared/components/layout';
 import { SpeciesCoverThumb } from '../components/species-cover-thumb';
 import { SpeciesName } from '../components/species-name';
 import CountryCombobox from '../components/country-combobox';
-import { authService } from '../api/services/auth.service';
-import { profileService, type UserProfile } from '../api/services/profile.service';
+import { useAuthProfile } from '../core/auth-profile-context';
 import { UseCountries } from '../user/use-countries';
 import {
   fetchTroubleSpots,
@@ -84,9 +83,8 @@ export default function TroubleSpotsPage() {
   const intl = useIntl();
   const { loadGame, loadPlayer, setGame, speciesLanguage, species: allSpecies } =
     useContext(AppContext);
+  const { isAuthenticated: authenticated, profile } = useAuthProfile();
   const [activeTab, setActiveTab] = useState<TabKey>(() => tabFromSearch(searchParams.get('tab')));
-  const [authenticated, setAuthenticated] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [species, setSpecies] = useState<TroubleSpotSpecies[]>([]);
   const [pairs, setPairs] = useState<TroubleSpotPair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,20 +107,6 @@ export default function TroubleSpotsPage() {
     [pairs, includeFixed],
   );
 
-  const checkAuth = useCallback(async () => {
-    const ok = await authService.ensureValidAccessToken();
-    setAuthenticated(!!ok && !!authService.getAccessToken());
-    if (ok && authService.getAccessToken()) {
-      try {
-        setProfile(await profileService.getProfile());
-      } catch {
-        setProfile(null);
-      }
-    } else {
-      setProfile(null);
-    }
-  }, []);
-
   const load = useCallback(async () => {
     if (!authenticated) {
       setLoading(false);
@@ -142,10 +126,6 @@ export default function TroubleSpotsPage() {
       setLoading(false);
     }
   }, [authenticated, effectiveCountryCode, speciesLanguage]);
-
-  useEffect(() => {
-    void checkAuth();
-  }, [checkAuth]);
 
   useEffect(() => {
     void load();

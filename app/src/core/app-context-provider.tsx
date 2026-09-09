@@ -1,4 +1,4 @@
-import React, {FC, ReactNode, SetStateAction, useEffect, useState, useCallback} from 'react';
+import React, {FC, ReactNode, SetStateAction, useEffect, useState, useCallback, useRef} from 'react';
 import AppContext, {Answer, Country, Game, Player, Species} from "./app-context";
 import { toaster } from "@/components/ui/toaster";
 import { assignUniqueKeysToParts } from 'react-intl/src/utils';
@@ -9,8 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios-config';
 import { apiUrl } from '../api/baseUrl';
 import { authService } from '../api/services/auth.service';
-import { linkStoredPlayerToAccount } from '../api/player';
-import { profileService, UserProfile } from '../api/services/profile.service';
+import { profileService } from '../api/services/profile.service';
+import { useAuthProfile } from './auth-profile-context';
 import {
   playLevelFromSettings,
   settingsFromPlayLevel,
@@ -41,12 +41,18 @@ type Props = {
 };
 
 const AppContextProvider: FC<Props> = ({children}) => {
+  const {
+    profile,
+    ready: profileReady,
+    isAuthenticated,
+    applyProfile,
+  } = useAuthProfile();
+  const appliedUserRef = useRef<string | null>(null);
   const [level, setLevel] = useState<string>('advanced');
   const [country, setCountryState] = useState<Country>(() => {
     const code = readStoredCountryCode();
     return code ? {code, name: code} : {code: '', name: ''};
   });
-  const [profileReady, setProfileReady] = useState(false);
   const setCountry = useCallback((update: SetStateAction<Country>) => {
     setCountryState((prev) => {
       const next = typeof update === 'function' ? update(prev) : update;
@@ -95,7 +101,6 @@ const AppContextProvider: FC<Props> = ({children}) => {
     setRarity(preset.rarity);
   }, []);
   const [includeEscapes, setIncludeEscapes] = useState<boolean>(false)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [visualStyle, setVisualStyleState] = useState<VisualStyle>(() => readStoredVisualStyle())
   const setVisualStyle = useCallback((style: VisualStyle) => {
     const next = parseVisualStyle(style);
@@ -132,76 +137,51 @@ const AppContextProvider: FC<Props> = ({children}) => {
     }
   }
 
-  // Load profile when authenticated (for species language preference)
+  // Apply profile prefs once per login (not on every visibility refresh).
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!authService.getAccessToken()) {
-        setProfile(null);
-        setProfileReady(true);
-        return;
+    if (!profileReady) return;
+    const userKey = isAuthenticated
+      ? (profile?.email || profile?.username || 'user')
+      : 'guest';
+    if (appliedUserRef.current === userKey) return;
+    appliedUserRef.current = userKey;
+    if (!profile) return;
+    if (profile.country_code) {
+      setCountry({
+        code: profile.country_code,
+        name: profile.country_name || profile.country_code,
+      });
+    }
+    try {
+      if (profile.language && !localStorage.getItem('birdr-language')) {
+        setLanguage(profile.language);
+        localStorage.setItem('birdr-language', profile.language);
       }
-      const ok = await authService.ensureValidAccessToken();
-      if (cancelled) return;
-      if (!ok || !authService.getAccessToken()) {
-        setProfile(null);
-        setProfileReady(true);
-        return;
-      }
-      await linkStoredPlayerToAccount();
-      if (cancelled) return;
-      profileService
-        .getProfile()
-        .then((p) => {
-          if (cancelled) return;
-          setProfile(p);
-          if (p.country_code) {
-            setCountry({
-              code: p.country_code,
-              name: p.country_name || p.country_code,
-            });
-          }
-          try {
-            if (p.language && !localStorage.getItem('birdr-language')) {
-              setLanguage(p.language);
-              localStorage.setItem('birdr-language', p.language);
-            }
-          } catch {
-            /* ignore */
-          }
-          const nextApp = resolveAppLocale({
-            profileAppLanguage: p.app_language,
-            stored: (() => {
-              try {
-                return localStorage.getItem(APP_LOCALE_STORAGE_KEY);
-              } catch {
-                return null;
-              }
-            })(),
-          });
-          setAppLanguageState(nextApp);
-          try {
-            localStorage.setItem(APP_LOCALE_STORAGE_KEY, nextApp);
-          } catch {
-            /* ignore */
-          }
-          if (p.visual_style) {
-            const nextStyle = parseVisualStyle(p.visual_style);
-            setVisualStyleState(nextStyle);
-            writeStoredVisualStyle(nextStyle);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setProfile(null);
-        })
-        .finally(() => {
-          if (!cancelled) setProfileReady(true);
-        });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setCountry]);
+    } catch {
+      /* ignore */
+    }
+    const nextApp = resolveAppLocale({
+      profileAppLanguage: profile.app_language,
+      stored: (() => {
+        try {
+          return localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+        } catch {
+          return null;
+        }
+      })(),
+    });
+    setAppLanguageState(nextApp);
+    try {
+      localStorage.setItem(APP_LOCALE_STORAGE_KEY, nextApp);
+    } catch {
+      /* ignore */
+    }
+    if (profile.visual_style) {
+      const nextStyle = parseVisualStyle(profile.visual_style);
+      setVisualStyleState(nextStyle);
+      writeStoredVisualStyle(nextStyle);
+    }
+  }, [profileReady, isAuthenticated, profile, setCountry]);
 
   useEffect(() => {
     if (!profileReady || country.code) return;
@@ -296,12 +276,12 @@ const AppContextProvider: FC<Props> = ({children}) => {
         ? { app_language: next, language: speciesLang }
         : { app_language: next };
       profileService.updateProfile(payload)
-        .then((updated) => setProfile(updated))
+        .then((updated) => applyProfile(updated))
         .catch(() => {});
-    } else if (syncSpecies) {
-      setProfile((p) => (p ? { ...p, app_language: next, language: speciesLang } : p));
+    } else if (syncSpecies && profile) {
+      applyProfile({ ...profile, app_language: next, language: speciesLang });
     }
-  }, [applySpeciesLanguage, noCacheHeaders]);
+  }, [applySpeciesLanguage, applyProfile, profile]);
 
   const speciesLanguage = game?.language ?? profile?.language ?? language ?? 'en';
 

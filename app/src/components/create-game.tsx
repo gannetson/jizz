@@ -16,8 +16,8 @@ import {playLevelFromSettings, type PlayLevel} from "../core/play-level"
 import SelectTaxOrder from "./select-order"
 import SelectTaxFamily from "./select-family"
 import SelectSpeciesGroup from "./select-species-group"
-import {authService} from "../api/services/auth.service"
-import {profileService, type UserProfile} from "../api/services/profile.service"
+import {profileService} from "../api/services/profile.service"
+import {useAuthProfile} from "../core/auth-profile-context"
 
 
 type GameProps = {
@@ -52,8 +52,8 @@ export const CreateGame = ({
     language,
   } = useContext(AppContext);
   const {joinGame} = useContext(WebsocketContext)
+  const {profile, applyProfile} = useAuthProfile()
   const [loading, setLoading] = useState(false)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [saveToProfile, setSaveToProfile] = useState(false)
   const navigate = useNavigate()
   const {countries} = UseCountries()
@@ -83,27 +83,6 @@ export const CreateGame = ({
     setPlayLevel, setMediaType, setLength, setCountry
   ]);
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const ok = await authService.ensureValidAccessToken()
-      if (cancelled) return
-      if (!ok || !authService.getAccessToken()) {
-        setProfile(null)
-        return
-      }
-      try {
-        const p = await profileService.getProfile()
-        if (!cancelled) setProfile(p)
-      } catch {
-        if (!cancelled) setProfile(null)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   const differsFromProfile = useMemo(() => {
     if (!profile) return false
     const profileCountry = profile.country_code?.trim()?.toUpperCase() || ''
@@ -126,7 +105,7 @@ export const CreateGame = ({
           country_code: country.code,
           language: language || undefined,
         })
-        setProfile(updated)
+        applyProfile(updated)
       }
       let myPlayer: Player | undefined = player
       if (!myPlayer) {

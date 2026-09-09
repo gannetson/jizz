@@ -31,12 +31,14 @@ import { AppLanguageSelect } from "../components/app-language-select";
 import type { AppLocale } from "../i18n/app-locales";
 import { speciesLanguageFromAppLocale } from "../i18n/app-locales";
 import AppContext from "../core/app-context";
+import { useAuthProfile } from "../core/auth-profile-context";
 import { parseVisualStyle, type VisualStyle } from "../user/visual-style";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const intl = useIntl();
   const { setAppLanguage: persistAppLanguage, applySpeciesLanguage, visualStyle: contextVisualStyle, setVisualStyle } = useContext(AppContext);
+  const { applyProfile } = useAuthProfile();
   const { countries } = UseCountries();
   const { languages } = UseLanguages();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -164,6 +166,7 @@ export const ProfilePage = () => {
 
       const updatedProfile = await profileService.updateProfile(updateData);
       setProfile(updatedProfile);
+      applyProfile(updatedProfile);
       if (updateData.app_language) {
         persistAppLanguage?.(updatedProfile.app_language || appLanguage, {
           syncSpeciesLanguage: false,

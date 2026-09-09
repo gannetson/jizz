@@ -19,8 +19,7 @@ import { SpeciesModal } from '../components/species-modal';
 import { SpeciesCoverThumb } from '../components/species-cover-thumb';
 import { SpeciesName } from '../components/species-name';
 import { ComparisonContent } from '../components/comparison-content';
-import { authService } from '../api/services/auth.service';
-import { profileService, type UserProfile } from '../api/services/profile.service';
+import { useAuthProfile } from '../core/auth-profile-context';
 import { fetchSpeciesDetail } from '../api/fetch-species-detail';
 import {
   startConfusionPairPractice,
@@ -185,8 +184,8 @@ export default function TroubleSpotPairPage() {
 
   const pairFromState = (location.state as LocationState | null)?.pair;
   const countryFromQuery = searchParams.get('country')?.trim()?.toUpperCase() || undefined;
+  const { profile } = useAuthProfile();
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [low, setLow] = useState<Species | undefined>(() =>
     idsValid
       ? mergeSpecies(lowId, undefined, pairToSpecies(pairFromState, 'low', undefined))
@@ -203,22 +202,6 @@ export default function TroubleSpotPairPage() {
   const [error, setError] = useState<string | null>(null);
 
   const effectiveCountryCode = countryFromQuery ?? profile?.country_code?.trim()?.toUpperCase();
-
-  useEffect(() => {
-    let cancelled = false;
-    authService.ensureValidAccessToken().then(async (ok) => {
-      if (!ok || !authService.getAccessToken()) return;
-      try {
-        const next = await profileService.getProfile();
-        if (!cancelled) setProfile(next);
-      } catch {
-        if (!cancelled) setProfile(null);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!idsValid) {

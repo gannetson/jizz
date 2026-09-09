@@ -18,8 +18,7 @@ import { Page } from '../shared/components/layout';
 import { SpeciesModal } from '../components/species-modal';
 import { SpeciesCoverThumb } from '../components/species-cover-thumb';
 import { SpeciesName } from '../components/species-name';
-import { authService } from '../api/services/auth.service';
-import { profileService, type UserProfile } from '../api/services/profile.service';
+import { useAuthProfile } from '../core/auth-profile-context';
 import { fetchSpeciesDetail } from '../api/fetch-species-detail';
 import {
   fetchTroubleSpots,
@@ -109,8 +108,8 @@ export default function TroubleSpotSpeciesPage() {
   const idValid = Number.isFinite(speciesId) && speciesId > 0;
   const rowFromState = (location.state as LocationState | null)?.species;
   const countryFromQuery = searchParams.get('country')?.trim()?.toUpperCase() || undefined;
+  const { profile } = useAuthProfile();
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [row, setRow] = useState<TroubleSpotSpecies | undefined>(rowFromState);
   const [species, setSpecies] = useState<Species | undefined>(() =>
     idValid ? mergeSpecies(speciesId, undefined, rowToSpecies(rowFromState)) : undefined,
@@ -127,22 +126,6 @@ export default function TroubleSpotSpeciesPage() {
   const countryQuery = effectiveCountryCode
     ? `?country=${encodeURIComponent(effectiveCountryCode)}`
     : '';
-
-  useEffect(() => {
-    let cancelled = false;
-    authService.ensureValidAccessToken().then(async (ok) => {
-      if (!ok || !authService.getAccessToken()) return;
-      try {
-        const next = await profileService.getProfile();
-        if (!cancelled) setProfile(next);
-      } catch {
-        if (!cancelled) setProfile(null);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!idValid) {

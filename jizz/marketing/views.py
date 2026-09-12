@@ -73,6 +73,7 @@ from jizz.marketing.species_index import (
 from jizz.models import Country, Feedback, MarketingPage, Species
 from jizz.quiz_mistake_stats import get_confused_partners_for_species
 from jizz.services.species_cover import species_cover_url
+from jizz.store_ratings import store_review_context
 from media.display_urls import media_display_url
 
 logger = logging.getLogger(__name__)
@@ -282,6 +283,7 @@ def intent_page(request, slug: str):
         extra['screenshots'] = page['screenshots']
     if slug == 'community':
         extra['countries'] = _countries_for_request(request, 12)
+        extra.update(store_review_context())
     elif page.get('show_countries'):
         extra['countries'] = _countries_for_request(request)
     if slug == 'my-tricky-birds':
@@ -363,6 +365,7 @@ def country_page(request, slug: str):
         quiz_href='/start/',
         challenge_href='/journey/intro',
         **stats,
+        **store_review_context(),
     )
     return render(request, 'marketing/country.html', context)
 

@@ -1537,18 +1537,42 @@ class UsageEventAdmin(admin.ModelAdmin):
         'path',
         'platform',
         'device_type',
+        'app_version',
+        'app_build',
+        'os_version',
         'country_code',
         'ip_address',
         'user',
     ]
-    list_filter = ['event_type', 'platform', 'device_type', 'country_code', 'created_at']
-    search_fields = ['path', 'session_key', 'ip_address', 'user__username', 'user_agent']
+    list_filter = [
+        'event_type',
+        'platform',
+        'device_type',
+        'app_version',
+        'app_build',
+        'os_version',
+        'country_code',
+        'created_at',
+    ]
+    search_fields = [
+        'path',
+        'session_key',
+        'ip_address',
+        'user__username',
+        'user_agent',
+        'app_version',
+        'app_build',
+        'os_version',
+    ]
     readonly_fields = [
         'created_at',
         'event_type',
         'path',
         'platform',
         'device_type',
+        'app_version',
+        'app_build',
+        'os_version',
         'country_code',
         'ip_address',
         'user',

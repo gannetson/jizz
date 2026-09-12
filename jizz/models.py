@@ -1884,6 +1884,9 @@ class UsageEvent(models.Model):
     )
     session_key = models.CharField(max_length=64, blank=True, default='')
     user_agent = models.TextField(blank=True, default='')
+    app_version = models.CharField(max_length=32, blank=True, default='')
+    app_build = models.CharField(max_length=32, blank=True, default='')
+    os_version = models.CharField(max_length=64, blank=True, default='')
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
@@ -1893,6 +1896,8 @@ class UsageEvent(models.Model):
             models.Index(fields=['path', 'created_at']),
             models.Index(fields=['platform', 'created_at']),
             models.Index(fields=['country_code', 'created_at']),
+            models.Index(fields=['app_version', 'created_at'], name='jizz_usagee_app_ver_idx'),
+            models.Index(fields=['app_build', 'created_at'], name='jizz_usagee_app_bui_idx'),
         ]
 
     def __str__(self):

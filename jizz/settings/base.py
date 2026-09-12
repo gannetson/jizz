@@ -105,6 +105,10 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_SAMESITE = 'Lax'
 
 MIDDLEWARE = [
+    # Outermost so JSON 2xx (including 201 Created) is gzipped. nginx gzip only
+    # compresses 200/403/404, so POST /api/games/ would otherwise leave the
+    # full payload on the wire; nginx passes an existing Content-Encoding through.
+    'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

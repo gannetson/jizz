@@ -785,6 +785,11 @@ class AnswerView(CreateAPIView):
     # Logged-in clients send a JWT; PlayerToken misses, then JWT authenticates for checklist_added.
     authentication_classes = [PlayerTokenAuthentication, JWTAuthentication]
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['include_media_link'] = True
+        return ctx
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -813,6 +818,11 @@ class AnswerView(CreateAPIView):
 class AnswerDetail(RetrieveAPIView):
     serializer_class = AnswerSerializer
     queryset = Answer.objects.all()
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['include_media_link'] = True
+        return ctx
 
     def get_object(self):
         return self.queryset.filter(

@@ -122,6 +122,9 @@ export const translations: Record<string, Record<string, string>> = {
     media_details: 'Media Details',
     contributor: 'Contributor',
     source: 'Source',
+    author: 'Author',
+    media_attribution: 'Photo credits',
+    view_source: 'View source',
     okay: 'Okay!',
     not_sure: 'Not Sure',
     bad: 'Bad!',
@@ -165,7 +168,7 @@ export const translations: Record<string, Record<string, string>> = {
     library_permission: 'Photo library access is needed to choose a photo.',
     failed_to_update_photo: 'Failed to update photo',
     // Game sharing / lobby
-    share_game: 'Share game',
+    invite_players: 'Invite players',
     game_link: 'Game link',
     copy_link: 'Copy link',
     copied: 'Copied!',
@@ -178,6 +181,53 @@ export const translations: Record<string, Record<string, string>> = {
     about_birdr: 'About Birdr',
     privacy: 'Privacy',
     help: 'Help',
+    community: 'Community',
+    community_menu: 'Community & help',
+    community_lead:
+      'Birdr is a small project. Feedback, photo review, comparison descriptions, and spreading the word to other birders all help.',
+    community_facebook: 'The Facebook group is the place to have discussions with other birders.',
+    community_facebook_cta: 'Join the Facebook group',
+    community_store_prompt:
+      'A short review on the App Store or Google Play helps other birders find Birdr.',
+    community_github: 'To report a bug or request a feature, submit a ticket on GitHub.',
+    community_github_cta: 'Submit a ticket',
+    community_sponsor:
+      'You can also sponsor Birdr on GitHub, or write to info@birdr.pro about funding or a partnership.',
+    how_can_i_help: 'How can I help?',
+    community_help_intro:
+      'Birdr is a small project. Honest feedback, spotting the wrong bird, writing comparison descriptions for lookalike species, and telling other birders all help. You can also donate, or get in touch if you have ideas for how to fund Birdr or want to discuss a partnership.',
+    community_flag:
+      'During a quiz, tap Flag if the photo, video or sound is not the species shown—or is otherwise unusable. That skips the clip in your game and reports it so we can take it out of the set.',
+    community_photos_intro:
+      'A large part of the picture library is still waiting for review. If you know a country’s birds, you can approve or reject images a few at a time.',
+    community_comparisons_intro:
+      'Comparison pages still rely on AI text until someone who knows the birds writes a better one. Open a lookalike pair from My tricky birds, then use Write a better description.',
+    community_send_feedback: 'Send feedback',
+    community_review_photos: 'Review photos',
+    community_review_photos_body:
+      'Quizzes are only as good as the pictures, and many still have not been checked. Help by approving good photos and rejecting the wrong bird—start with any country, or the birds you know best.',
+    community_write_comparisons: 'Write comparisons',
+    community_write_comparisons_body:
+      'If you know lookalike species, you can replace the AI text with a description that actually helps others tell them apart. You need to be signed in.',
+    community_find_lookalikes: 'Find lookalikes',
+    community_spread_word: 'Spread the word',
+    community_spread_word_body:
+      'Birdr grows when birders tell other birders. Mention it in a club newsletter, a WhatsApp group, or after a field trip. Clubs can also start a Flock and play the same quiz.',
+    community_newsletter_cta: 'See a newsletter example',
+    community_store_review: 'Leave a store review',
+    community_store_review_body:
+      'If you use the iPhone or Android app, a rating is one of the simplest ways to help. It tells other birders the quiz is worth trying.',
+    community_review_app_store: 'Review on the App Store',
+    community_review_play: 'Review on Google Play',
+    community_support: 'Support Birdr',
+    community_support_body:
+      'Birdr is free, open source, and built in spare time. There is no funding behind it right now. A GitHub sponsorship helps cover hosting and AI credits so the quiz can stay free.',
+    community_support_donate:
+      'Donating is one way. If you have another idea for how to fund Birdr—a partnership, a grant, a club, a company—write to info@birdr.pro. I would like to talk.',
+    community_sponsor_cta: 'Sponsor on GitHub',
+    community_partnership: 'Email about partnership',
+    community_more_pages: 'More pages',
+    back_to_community: 'Back to Community',
     updates: 'Updates',
     receive_updates: 'Receive Birdr updates by email',
     receive_updates_hint: 'News and product updates from Birdr.',
@@ -405,7 +455,7 @@ export const translations: Record<string, Record<string, string>> = {
     welcome: 'Welcome',
     thanks: 'Thanks!',
     thanks_feedback_message: 'Thank you for your feedback!',
-    feedback: 'Feedback',
+    feedback: 'Feedback & contact',
     feedback_invite: 'Found a bug or want to share something positive? We would love to hear from you.',
     rate_or_review_app: 'Rate us or leave a review',
     do_you_like_app: 'Do you like this app?',
@@ -620,6 +670,18 @@ export const translations: Record<string, Record<string, string>> = {
     flock_rotate_invite_failed: 'Could not rotate invite.',
     flock_start_failed: 'Could not start challenge.',
     flock_leaderboard: 'Leaderboard',
+    flocks_weekly_progress: 'Weekly progress',
+    flocks_weekly_score: 'Weekly score',
+    flocks_weekly_correct: 'Correct answers',
+    flocks_weekly_rank: 'Rank',
+    flocks_weekly_cumulative: 'Cumulative correct answers',
+    flocks_weekly_challenge: 'Challenge',
+    flocks_weekly_progress_lede:
+      'Scores, rank, and cumulative correct answers across weekly challenges.',
+    flocks_weekly_progress_empty:
+      'Weekly progress appears after this flock has run more than one challenge.',
+    flocks_weekly_progress_hint: 'Each line is a player. Missed weeks keep the running total.',
+    flocks_weekly_did_not_play: 'did not play',
     flock_share_leaderboard: 'Share leaderboard',
     flock_leaderboard_share_message:
       'Check the {name} leaderboard for {title} on Birdr. Can you climb the ranks? {link}',
@@ -758,6 +820,9 @@ export const translations: Record<string, Record<string, string>> = {
     media_details: 'Mediagegevens',
     contributor: 'Bijdrager',
     source: 'Bron',
+    author: 'Auteur',
+    media_attribution: 'Fotocredit',
+    view_source: 'Bekijk bron',
     okay: 'Oké!',
     not_sure: 'Weet ik niet',
     bad: 'Slecht!',
@@ -798,7 +863,7 @@ export const translations: Record<string, Record<string, string>> = {
     camera_permission: 'Cameratoegang is nodig om een foto te maken.',
     library_permission: 'Toegang tot de fotobibliotheek is nodig om een foto te kiezen.',
     failed_to_update_photo: 'Foto bijwerken mislukt',
-    share_game: 'Spel delen',
+    invite_players: 'Spelers uitnodigen',
     game_link: 'Spellink',
     copy_link: 'Link kopiëren',
     copied: 'Gekopieerd!',
@@ -810,6 +875,53 @@ export const translations: Record<string, Record<string, string>> = {
     about_birdr: 'Over Birdr',
     privacy: 'Privacy',
     help: 'Help',
+    community: 'Community',
+    community_menu: 'Community & help',
+    community_lead:
+      'Birdr is een klein project. Feedback, fotobeoordeling, vergelijkingsbeschrijvingen, en het doorvertellen aan andere vogelaars: alles helpt.',
+    community_facebook: 'De Facebookgroep is de plek voor gesprekken met andere vogelaars.',
+    community_facebook_cta: 'Word lid van de Facebookgroep',
+    community_store_prompt:
+      'Een korte review in de App Store of op Google Play helpt andere vogelaars Birdr te vinden.',
+    community_github: 'Om een bug te melden of een functie te vragen, dien een ticket in op GitHub.',
+    community_github_cta: 'Ticket indienen',
+    community_sponsor:
+      'Je kunt Birdr ook sponsoren op GitHub, of schrijven naar info@birdr.pro over financiering of een partnership.',
+    how_can_i_help: 'Hoe kan ik helpen?',
+    community_help_intro:
+      'Birdr is een klein project. Eerlijke feedback, de verkeerde vogel herkennen, vergelijkingen schrijven voor lookalikes, en het doorvertellen aan andere vogelaars: alles helpt. Je kunt ook doneren, of contact opnemen als je ideeën hebt om Birdr te financieren of een partnership wilt bespreken.',
+    community_flag:
+      'Tijdens een quiz tik je op Flag als de foto, video of het geluid niet de getoonde soort is—of anders onbruikbaar. Dat slaat het fragment over in jouw spel en meldt het zodat we het uit de set kunnen halen.',
+    community_photos_intro:
+      'Een groot deel van de fotobibliotheek wacht nog op beoordeling. Als je de vogels van een land kent, kun je beelden een paar tegelijk goed- of afkeuren.',
+    community_comparisons_intro:
+      'Vergelijkingspagina’s steunen nog op AI-tekst tot iemand die de vogels kent een betere schrijft. Open een lookalike-paar via Mijn lastige vogels, en gebruik Schrijf een betere beschrijving.',
+    community_send_feedback: 'Stuur feedback',
+    community_review_photos: 'Beoordeel foto’s',
+    community_review_photos_body:
+      'Quizzen zijn zo goed als de foto’s, en veel zijn nog niet nagekeken. Help door goede foto’s goed te keuren en de verkeerde vogel af te wijzen—begin met een land, of de vogels die je het best kent.',
+    community_write_comparisons: 'Schrijf vergelijkingen',
+    community_write_comparisons_body:
+      'Als je lookalikes kent, kun je de AI-tekst vervangen door een beschrijving die anderen écht helpt ze uit elkaar te houden. Je moet ingelogd zijn.',
+    community_find_lookalikes: 'Zoek lookalikes',
+    community_spread_word: 'Vertel het verder',
+    community_spread_word_body:
+      'Birdr groeit als vogelaars het aan andere vogelaars vertellen. Noem het in een clubnieuwsbrief, een WhatsAppgroep, of na een excursie. Clubs kunnen ook een Flock starten en dezelfde quiz spelen.',
+    community_newsletter_cta: 'Bekijk een nieuwsbriefvoorbeeld',
+    community_store_review: 'Zet een store-review',
+    community_store_review_body:
+      'Als je de iPhone- of Android-app gebruikt, is een beoordeling een van de eenvoudigste manieren om te helpen. Andere vogelaars zien dan dat de quiz de moeite waard is.',
+    community_review_app_store: 'Review in de App Store',
+    community_review_play: 'Review op Google Play',
+    community_support: 'Steun Birdr',
+    community_support_body:
+      'Birdr is gratis, open source, en gemaakt in vrije tijd. Er is nu geen financiering. Een GitHub-sponsorship helpt hosting en AI-credits te betalen, zodat de quiz gratis kan blijven.',
+    community_support_donate:
+      'Doneren is één manier. Heb je een ander idee om Birdr te financieren—een partnership, een grant, een club, een bedrijf—schrijf dan naar info@birdr.pro. Ik praat er graag over.',
+    community_sponsor_cta: 'Sponsor op GitHub',
+    community_partnership: 'Mail over een partnership',
+    community_more_pages: 'Meer pagina’s',
+    back_to_community: 'Terug naar Community',
     updates: 'Updates',
     receive_updates: 'Receive Birdr updates by email',
     receive_updates_hint: 'News and product updates from Birdr.',
@@ -1034,7 +1146,7 @@ export const translations: Record<string, Record<string, string>> = {
     welcome: 'Welkom',
     thanks: 'Bedankt!',
     thanks_feedback_message: 'Bedankt voor je feedback!',
-    feedback: 'Feedback',
+    feedback: 'Feedback & contact',
     feedback_invite: 'Bug gevonden of positieve feedback? Laat het ons weten.',
     rate_or_review_app: 'Beoordeel ons of laat een review achter',
     do_you_like_app: 'Vind je deze app leuk?',
@@ -1249,6 +1361,18 @@ export const translations: Record<string, Record<string, string>> = {
     flock_rotate_invite_failed: 'Uitnodiging vernieuwen mislukt.',
     flock_start_failed: 'Uitdaging starten mislukt.',
     flock_leaderboard: 'Ranglijst',
+    flocks_weekly_progress: 'Wekelijkse voortgang',
+    flocks_weekly_score: 'Wekelijkse score',
+    flocks_weekly_correct: 'Goede antwoorden',
+    flocks_weekly_rank: 'Rang',
+    flocks_weekly_cumulative: 'Cumulatieve goede antwoorden',
+    flocks_weekly_challenge: 'Uitdaging',
+    flocks_weekly_progress_lede:
+      'Scores, rang en cumulatieve goede antwoorden over wekelijkse uitdagingen.',
+    flocks_weekly_progress_empty:
+      'Wekelijkse voortgang verschijnt zodra deze flock meer dan één uitdaging heeft gespeeld.',
+    flocks_weekly_progress_hint: 'Elke lijn is een speler. Gemiste weken houden het lopende totaal.',
+    flocks_weekly_did_not_play: 'niet gespeeld',
     flock_share_leaderboard: 'Deel ranglijst',
     flock_leaderboard_share_message:
       'Bekijk het {name}-leaderboard voor {title} op Birdr. Kun jij hoger komen? {link}',

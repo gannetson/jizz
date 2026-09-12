@@ -371,6 +371,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
     setQuestion(undefined)
     setAnswer(undefined)
     setGameStarted(false)
+    pendingActionsRef.current = []
     currentQuestionIdRef.current = undefined
     currentQuestionSeqRef.current = undefined
     
@@ -430,6 +431,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setAnswer(undefined)
       setPlayers([])
       setGameStarted(false)
+      pendingActionsRef.current = []
       currentQuestionIdRef.current = undefined
       currentQuestionSeqRef.current = undefined
       isConnectingRef.current = false
@@ -448,6 +450,7 @@ const WebsocketContextProvider: FC<Props> = ({children}) => {
       setAnswer(undefined)
       setPlayers([])
       setGameStarted(false)
+      pendingActionsRef.current = []
       currentQuestionIdRef.current = undefined
       currentQuestionSeqRef.current = undefined
       isConnectingRef.current = false

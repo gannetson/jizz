@@ -1013,6 +1013,21 @@ class FlockApiTests(TestCase):
         self.assertContains(page, '"rank": [1, 1]')
         self.assertContains(page, '"rank": [2, 2]')
 
+        _auth(self.client, self.admin)
+        api = self.client.get(f'/api/flocks/{slug}/progress/')
+        self.assertEqual(api.status_code, 200)
+        self.assertEqual(api.data['challenge_count'], 2)
+        self.assertEqual(api.data['flock_name'], 'Amsterdam Birders')
+        names = {row['display_name'] for row in api.data['players']}
+        self.assertEqual(names, {'Ada', 'Ben'})
+        ada = next(row for row in api.data['players'] if row['display_name'] == 'Ada')
+        self.assertEqual(ada['correct'], [20, 22])
+        self.assertEqual(ada['cumulative'], [20, 42])
+
+        _auth(self.client, self.outsider)
+        denied = self.client.get(f'/api/flocks/{slug}/progress/')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_flock_challenge_24h_reminder_skips_completed_members(self):
         from django.core.management import call_command
 

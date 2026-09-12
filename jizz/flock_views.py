@@ -490,6 +490,26 @@ class FlockDetailView(APIView):
         return Response(_serialize_flock(flock, request, include_invite=True))
 
 
+class FlockProgressView(APIView):
+    """Weekly score/rank/cumulative series for flock members."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, slug):
+        flock = get_object_or_404(
+            Flock.objects.select_related('default_country'), slug=slug
+        )
+        _require_member(flock, request.user)
+        chart = _flock_progress_payload(flock)
+        return Response({
+            'flock_name': flock.name,
+            'flock_slug': flock.slug,
+            'logo_url': _logo_url(flock, request),
+            **chart,
+        })
+
+
 class FlockMembersView(APIView):
     """List flock members (display names + roles). Members only."""
 

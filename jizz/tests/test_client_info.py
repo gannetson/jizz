@@ -50,6 +50,17 @@ class ClientInfoRequestTests(SimpleTestCase):
         request.user = AnonymousUser()
         self.assertEqual(client_info_from_request(request), ('9.9.9', 'web'))
 
+    def test_x_app_version_and_x_platform_headers(self):
+        request = self.factory.post(
+            '/api/games/',
+            content_type='application/json',
+            HTTP_X_APP_VERSION='1.8.2',
+            HTTP_X_PLATFORM='android',
+        )
+        request.data = {}
+        request.user = AnonymousUser()
+        self.assertEqual(client_info_from_request(request), ('1.8.2', 'android'))
+
     def test_body_overrides_headers(self):
         request = self.factory.post('/api/games/')
         request.data = {'app_version': '1.2.0', 'device_type': 'android'}

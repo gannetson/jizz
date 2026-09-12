@@ -96,6 +96,17 @@
         <a class="btn" href="{{ '/site/newsletter/'|mpath }}">{% mt "See a newsletter example" %}</a>
       </p>
     </article>
+    <article class="card" id="store-review">
+      <h3>{% mt "Leave a store review" %}</h3>
+      <p>
+        {% mt "If you use the iPhone or Android app, a rating is one of the simplest ways to help. It tells other birders the quiz is worth trying." %}
+      </p>
+      {% include "marketing/_store_scores.html" %}
+      <p class="cta-row">
+        <a class="btn" href="{{ app_store_review_url }}" target="_blank" rel="noopener noreferrer">{% mt "Review on the App Store" %}</a>
+        <a class="btn secondary" href="{{ play_store_url }}" target="_blank" rel="noopener noreferrer">{% mt "Review on Google Play" %}</a>
+      </p>
+    </article>
     <article class="card" id="support-birdr">
       <h3>{% mt "Support Birdr" %}</h3>
       <p>

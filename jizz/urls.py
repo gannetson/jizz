@@ -106,6 +106,7 @@ from jizz.mobile_push.views import PushRegisterView
 from jizz.flock_views import (
     FlockListCreateView,
     FlockDetailView,
+    FlockProgressView,
     FlockMembersView,
     FlockLeaveView,
     FlockMemberDetailView,
@@ -520,6 +521,7 @@ urlpatterns = [
     path('api/flocks/invite/<str:token>/', FlockInvitePreviewView.as_view(), name='flock-invite-preview'),
     path('api/flocks/results/<str:result_token>/', FlockPublicResultView.as_view(), name='flock-public-result'),
     path('api/flocks/<slug:slug>/', FlockDetailView.as_view(), name='flock-detail'),
+    path('api/flocks/<slug:slug>/progress/', FlockProgressView.as_view(), name='flock-progress'),
     path('api/flocks/<slug:slug>/members/', FlockMembersView.as_view(), name='flock-members'),
     path(
         'api/flocks/<slug:slug>/members/<int:user_id>/',

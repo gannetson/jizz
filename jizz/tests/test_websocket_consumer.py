@@ -7,7 +7,7 @@ from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
 from asgiref.sync import async_to_sync
 from unittest.mock import AsyncMock, patch
-from jizz.models import Game, Player, Answer, Species, Country, CountrySpecies, PlayerScore
+from jizz.models import Game, Player, Answer, Species, Country, CountrySpecies, PlayerScore, UsageEvent
 from media.models import Media
 from jizz.asgi import application
 from jizz.consumers import QuizConsumer
@@ -153,6 +153,10 @@ class WebSocketConsumerTestCase(TransactionTestCase):
         score = PlayerScore.objects.get(player=player1, game=game)
         self.assertEqual(score.app_version, '2.0.1')
         self.assertEqual(score.device_type, 'android')
+        event = UsageEvent.objects.filter(event_type='websocket', path='Joined game lobby').latest('created_at')
+        self.assertEqual(event.app_version, '2.0.1')
+        self.assertEqual(event.platform, 'android')
+        self.assertEqual(event.device_type, 'mobile')
 
     def test_join_game_after_start_resyncs_current_question(self):
         """Reconnect after start must get game_started + the active question (Android Lobby→Play)."""

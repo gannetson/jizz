@@ -27,6 +27,7 @@ from jizz.marketing.i18n import (
 from jizz.marketing.slugs import country_is_indexable
 from jizz.marketing.testimonials import FAQ, TESTIMONIALS
 from jizz.models import Country, MarketingPage, Species
+from jizz.store_ratings import write_review_url
 
 SITE_NAME = 'Birdr'
 SITE_HOME = '/site/'
@@ -639,6 +640,7 @@ def base_context(request, *, title: str, description: str, path: str, breadcrumb
         'og_locale': og_locale(locale),
         'app_store_url': app_store_url,
         'play_store_url': play_store_url,
+        'app_store_review_url': write_review_url(app_store_url),
         'apple_badge_src': apple_badge,
         'play_badge_src': play_badge,
         'json_ld': dumps_json_ld(json_ld),

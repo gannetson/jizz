@@ -46,10 +46,14 @@ def client_info_from_request(request) -> tuple[str, str]:
         version, device = client_info_from_mapping(data)
     meta = getattr(request, 'META', None) or {}
     if not version:
-        version = normalize_app_version(meta.get('HTTP_X_BIRDR_APP_VERSION'))
+        version = normalize_app_version(
+            meta.get('HTTP_X_APP_VERSION') or meta.get('HTTP_X_BIRDR_APP_VERSION')
+        )
     if not device:
         device = normalize_device_type(
-            meta.get('HTTP_X_BIRDR_DEVICE_TYPE') or meta.get('HTTP_X_BIRDR_PLATFORM')
+            meta.get('HTTP_X_PLATFORM')
+            or meta.get('HTTP_X_BIRDR_DEVICE_TYPE')
+            or meta.get('HTTP_X_BIRDR_PLATFORM')
         )
     return version, device
 

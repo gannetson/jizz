@@ -272,7 +272,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     try {
       await AsyncStorage.removeItem(GAME_TOKEN_KEY);
       const g = await gamesApi.createGame(p.token, {
-        multiplayer: false,
+        // Lobby games must be multiplayer so GET /question does not auto-create Q1.
+        multiplayer: true,
         country: country.code,
         language,
         level,

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
@@ -33,6 +34,8 @@ export function LobbyScreen() {
   const [starting, setStarting] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareOpenOverride, setShareOpenOverride] = useState<boolean | null>(null);
+  const [hostRequestedStart, setHostRequestedStart] = useState(false);
   const lobbyGameTokenRef = useRef<string | undefined>(undefined);
   const [topScores, setTopScores] = useState<Score[]>([]);
   const [refreshedGameScores, setRefreshedGameScores] = useState<MultiPlayer[]>([]);
@@ -187,6 +190,13 @@ export function LobbyScreen() {
   const displayPlayers = useMemo(() => {
     return refreshedGameScores.length > players.length ? refreshedGameScores : players;
   }, [players, refreshedGameScores]);
+  const shareOpen = shareOpenOverride ?? displayPlayers.length > 1;
+  const isHost = !!(
+    game &&
+    player &&
+    (player.name === (game.host as any)?.name || player.id === (game.host as any)?.id)
+  );
+  const gameAlreadyInPlay = (game?.progress ?? 0) > 0;
 
   if (!game || !player) {
     return (
@@ -251,57 +261,75 @@ export function LobbyScreen() {
         )}
       </View>
 
-      {/* Share section */}
-      <Text style={styles.sectionTitle}>{t('share_game')}</Text>
-      <View style={styles.shareCard}>
-        <Text style={styles.shareLabel}>{t('game_link')}</Text>
-        <View style={styles.linkBox}>
-          <Text style={styles.linkText} selectable numberOfLines={1}>{gameLink}</Text>
-        </View>
-
-        <View style={styles.shareButtons}>
-          <TouchableOpacity style={styles.copyButton} onPress={copyLink}>
-            <Text style={styles.copyButtonText}>{copied ? t('copied') : t('copy_link')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.whatsappButton} onPress={inviteWhatsApp}>
-            <Text style={styles.whatsappButtonText}>{t('invite_whatsapp')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.qrContainer}>
-          <View style={styles.qrBox}>
-            <QRCode
-              value={gameLink}
-              size={180}
-              backgroundColor="#fff"
-              color={colors.primary[800]}
-            />
-          </View>
-          <Text style={styles.qrHint}>{t('scan_to_join')}</Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>{t('players')} ({displayPlayers.length})</Text>
-      {displayPlayers.length === 0 ? (
-        <Text style={styles.muted}>{t('no_other_players_yet')}</Text>
-      ) : (
-        displayPlayers.map((p, i) => (
-          <View key={i} style={styles.playerCard}>
-            <View style={styles.playerLeft}>
-              <View style={styles.playerAvatar}>
-                <Text style={styles.playerAvatarText}>
-                  {(p.name || '?').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <Text style={styles.playerName}>{p.name}</Text>
-              {p.is_host && <Text style={styles.crown}>👑</Text>}
+      <TouchableOpacity
+        onPress={() => setShareOpenOverride(!shareOpen)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: shareOpen }}
+        accessibilityLabel={t('invite_players')}
+        testID="lobby.shareToggle"
+        style={styles.shareToggle}
+      >
+        <FontAwesome5
+          name={shareOpen ? 'chevron-down' : 'chevron-right'}
+          size={12}
+          color={colors.primary[800]}
+        />
+        <Text style={styles.shareToggleTitle}>{t('invite_players')}</Text>
+        <Text style={styles.shareCount}>({displayPlayers.length})</Text>
+      </TouchableOpacity>
+      {shareOpen ? (
+        <>
+          <View style={styles.shareCard}>
+            <Text style={styles.shareLabel}>{t('game_link')}</Text>
+            <View style={styles.linkBox}>
+              <Text style={styles.linkText} selectable numberOfLines={1}>{gameLink}</Text>
             </View>
-            {p.score != null && p.score > 0 && (
-              <Text style={styles.playerScore}>{p.score}</Text>
-            )}
+
+            <View style={styles.shareButtons}>
+              <TouchableOpacity style={styles.copyButton} onPress={copyLink}>
+                <Text style={styles.copyButtonText}>{copied ? t('copied') : t('copy_link')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.whatsappButton} onPress={inviteWhatsApp}>
+                <Text style={styles.whatsappButtonText}>{t('invite_whatsapp')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.qrContainer}>
+              <View style={styles.qrBox}>
+                <QRCode
+                  value={gameLink}
+                  size={180}
+                  backgroundColor="#fff"
+                  color={colors.primary[800]}
+                />
+              </View>
+              <Text style={styles.qrHint}>{t('scan_to_join')}</Text>
+            </View>
           </View>
-        ))
-      )}
+
+          <Text style={styles.sectionTitle}>{t('players')} ({displayPlayers.length})</Text>
+          {displayPlayers.length === 0 ? (
+            <Text style={styles.muted}>{t('no_other_players_yet')}</Text>
+          ) : (
+            displayPlayers.map((p, i) => (
+              <View key={i} style={styles.playerCard}>
+                <View style={styles.playerLeft}>
+                  <View style={styles.playerAvatar}>
+                    <Text style={styles.playerAvatarText}>
+                      {(p.name || '?').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={styles.playerName}>{p.name}</Text>
+                  {p.is_host && <Text style={styles.crown}>👑</Text>}
+                </View>
+                {p.score != null && p.score > 0 && (
+                  <Text style={styles.playerScore}>{p.score}</Text>
+                )}
+              </View>
+            ))
+          )}
+        </>
+      ) : null}
 
       {topScores.length > 0 && (
         <>
@@ -331,6 +359,15 @@ const styles = StyleSheet.create({
   connecting: { fontSize: 14, color: colors.primary[600] },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.primary[800], marginTop: 24, marginBottom: 10 },
+  shareToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  shareToggleTitle: { fontSize: 18, fontWeight: '600', color: colors.primary[800], flex: 1 },
+  shareCount: { fontSize: 16, fontWeight: '600', color: colors.primary[600] },
   playerCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',

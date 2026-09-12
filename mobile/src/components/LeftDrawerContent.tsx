@@ -10,7 +10,7 @@ const MENU_ITEMS: { route: string; label: string }[] = [
   { route: 'Scores', label: 'High scores' },
   { route: 'CountryChallengeLeaderboard', label: 'Country leaderboard' },
   { route: 'Updates', label: 'Updates' },
-  { route: 'Help', label: 'Help' },
+  { route: 'Help', label: 'Community & help' },
   { route: 'Privacy', label: 'Privacy' },
   { route: 'About', label: 'About Birdr' },
 ];

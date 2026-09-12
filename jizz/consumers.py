@@ -51,11 +51,13 @@ class QuizConsumer(AsyncWebsocketConsumer):
         self.game_group_name = f"quiz_{self.game_token}"
         # Player token from the last join_game on this connection (for send_current_answer)
         self._player_token: Optional[str] = None
+        self._app_identity: dict = {}
         await self.channel_layer.group_add(self.game_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
         self._player_token = None
+        self._app_identity = {}
         await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
 
     async def receive(self, text_data):
@@ -92,10 +94,15 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
     async def _log_websocket_action(self, action: str):
         try:
+            identity = getattr(self, '_app_identity', None) or {}
             await database_sync_to_async(record_websocket_usage_event)(
                 self.scope,
                 action=action,
                 metadata={'game_token': self.game_token},
+                app_version=identity.get('app_version', ''),
+                app_build=identity.get('app_build', ''),
+                os_version=identity.get('os_version', ''),
+                platform=identity.get('platform', ''),
             )
         except Exception:
             logger.exception("Failed to record websocket usage for %s", action)
@@ -171,7 +178,9 @@ class QuizConsumer(AsyncWebsocketConsumer):
             game = Game.objects.get(token=self.game_token)
             player = Player.objects.get(token=player_token)
             from jizz.client_info import client_info_from_mapping, record_player_score_client
+            from jizz.usage_analytics import app_identity_from_mapping
 
+            self._app_identity = app_identity_from_mapping(data)
             app_version, device_type = client_info_from_mapping(data)
             record_player_score_client(player, game, app_version, device_type)
             current = game.question
@@ -313,7 +322,9 @@ class QuizConsumer(AsyncWebsocketConsumer):
                     player, question, correct, user=checklist_user
                 )
 
-            serializer = AnswerSerializer(row, context={"game": game})
+            serializer = AnswerSerializer(
+                row, context={"game": game, "include_media_link": True}
+            )
             return serializer.data
 
         try:
@@ -505,7 +516,9 @@ class QuizConsumer(AsyncWebsocketConsumer):
             ).first()
             if not answer:
                 return None
-            serializer = AnswerSerializer(answer, context={"game": game})
+            serializer = AnswerSerializer(
+                answer, context={"game": game, "include_media_link": True}
+            )
             return serializer.data
 
         data = await database_sync_to_async(load_answer_payload)()

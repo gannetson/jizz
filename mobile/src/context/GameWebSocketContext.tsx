@@ -12,7 +12,7 @@ import { getCurrentQuestion, type Game } from '../api/games';
 import type { Player } from '../api/player';
 import type { Question, Answer, MultiPlayer } from '../types/game';
 import { getWebSocketUrl } from '../api/config';
-import { clientInfoPayload } from '../api/clientInfo';
+import { clientInfoHeaders, clientInfoPayload } from '../api/clientInfo';
 import { isStalePlayQuestion } from '../game/applyIncomingQuestion';
 import { useGame } from './GameContext';
 import { prefetchQuestionPlayMedia } from '../utils/prefetchPlayMedia';
@@ -208,7 +208,18 @@ export function GameWebSocketProvider({ children }: { children: ReactNode }) {
       languageCodeRef.current = player.language || 'en';
 
       const connectionGameToken = game.token;
-      const ws = new WebSocket(getWebSocketUrl(`/mpg/${game.token}`)) as TaggedSocket;
+      const NativeWebSocket = WebSocket as unknown as {
+        new (
+          url: string,
+          protocols?: string | string[] | null,
+          options?: { headers?: Record<string, string> }
+        ): WebSocket;
+      };
+      const ws = new NativeWebSocket(
+        getWebSocketUrl(`/mpg/${game.token}`),
+        [],
+        { headers: clientInfoHeaders() }
+      ) as TaggedSocket;
       ws.gameToken = connectionGameToken;
       currentSocketRef.current = ws;
       isConnectingRef.current = true;

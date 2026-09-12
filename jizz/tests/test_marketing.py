@@ -20,10 +20,21 @@ from jizz.models import (
 )
 from media.models import Media, MediaReview
 
+_SAMPLE_STORE_RATINGS = {
+    'ios': {'score': 4.8, 'count': 12, 'score_label': '4.8', 'star_percent': 96},
+    'android': {'score': 4.6, 'count': 9, 'score_label': '4.6', 'star_percent': 92},
+}
+
 
 class MarketingPagesTests(TestCase):
     def setUp(self):
         cache.clear()
+        self.ratings_patcher = patch(
+            'jizz.store_ratings.get_store_ratings',
+            return_value=_SAMPLE_STORE_RATINGS,
+        )
+        self.ratings_patcher.start()
+        self.addCleanup(self.ratings_patcher.stop)
         self.nl, _ = Country.objects.get_or_create(code='NL', defaults={'name': 'Netherlands'})
         if self.nl.name != 'Netherlands':
             self.nl.name = 'Netherlands'
@@ -256,6 +267,16 @@ class MarketingPagesTests(TestCase):
         self.assertIn('Spread the word', community)
         self.assertIn('href="/site/newsletter/"', community)
         self.assertIn('See a newsletter example', community)
+        self.assertIn('Leave a store review', community)
+        self.assertIn('helps other birders find Birdr', community)
+        self.assertIn('Review on the App Store', community)
+        self.assertIn('Review on Google Play', community)
+        self.assertIn('action=write-review', community)
+        self.assertIn('class="store-score"', community)
+        self.assertIn('>4.8<', community)
+        self.assertIn('>4.6<', community)
+        self.assertIn('12 ratings', community)
+        self.assertIn('9 ratings', community)
         self.assertIn('Support Birdr', community)
         self.assertIn('https://github.com/sponsors/birdr-app', community)
         self.assertIn('btn-support', community)
@@ -317,6 +338,17 @@ class MarketingPagesTests(TestCase):
         self.assertIn('FAQPage', faq)
         self.assertIn('Is Birdr free?', faq)
         self.assertIn('What are Flocks?', faq)
+
+    def test_community_hides_store_scores_when_unavailable(self):
+        with patch(
+            'jizz.store_ratings.get_store_ratings',
+            return_value={'ios': None, 'android': None},
+        ):
+            html = self.client.get('/site/community/').content.decode()
+        self.assertIn('Leave a store review', html)
+        self.assertIn('Review on the App Store', html)
+        self.assertNotIn('class="store-score"', html)
+        self.assertNotIn('class="store-score-row"', html)
 
     def test_legacy_marketing_paths_redirect(self):
         pairs = [
@@ -875,6 +907,9 @@ class MarketingPagesTests(TestCase):
         self.assertIn('ticket in op GitHub', community_nl)
         self.assertIn('Steun Birdr', community_nl)
         self.assertIn('sponsoren op GitHub', community_nl)
+        self.assertIn('Zet een store-review', community_nl)
+        self.assertIn('Review in de App Store', community_nl)
+        self.assertIn('12 beoordelingen', community_nl)
 
         newsletter_nl = self.client.get('/nl/site/newsletter/').content.decode()
         self.assertIn('Zet het in de clubnieuwsbrief', newsletter_nl)
@@ -895,6 +930,8 @@ class MarketingPagesTests(TestCase):
 
         html_files = [
             Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_help.html',
+            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_store_scores.html',
+            Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / 'community.html',
             Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / '_newsletter_example.html',
             Path(__file__).resolve().parents[1] / 'templates' / 'marketing' / 'newsletter.html',
         ]
@@ -1248,6 +1285,14 @@ def _started_token(seconds_ago=3):
 
 
 class MarketingFeedbackFormTests(TestCase):
+    def setUp(self):
+        self.ratings_patcher = patch(
+            'jizz.store_ratings.get_store_ratings',
+            return_value={'ios': None, 'android': None},
+        )
+        self.ratings_patcher.start()
+        self.addCleanup(self.ratings_patcher.stop)
+
     def test_community_shows_form(self):
         html = self.client.get('/site/community/').content.decode()
         self.assertIn('name="comment"', html)

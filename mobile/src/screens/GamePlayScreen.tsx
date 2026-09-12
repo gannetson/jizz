@@ -11,22 +11,20 @@ import {
   useWindowDimensions,
   Animated,
 } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { AutocompleteDropdown } from 'react-native-autocomplete-dropdown';
 import type { IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
 import { useGame } from '../context/GameContext';
 import { useGameWebSocket } from '../context/GameWebSocketContext';
 import { useTranslation } from '../i18n/TranslationContext';
 import { AnswerFeedback, normalizeSpeciesFrequency, normalizeChecklistAdded, normalizeChecklistMissed } from '../components/AnswerFeedback';
-import { MediaCredits } from '../components/MediaCredits';
-import { FlagMediaModal, type FlagMediaInfo } from '../components/FlagMediaModal';
+import { FlagMediaModal, FlagMediaLink, type FlagMediaInfo } from '../components/FlagMediaModal';
 import { QuestionMediaView } from '../components/QuestionMediaView';
 import { QuestionLoadingFeather } from '../components/QuestionLoadingFeather';
 import { useDelayedFlag } from '../hooks/useDelayedFlag';
 import {
   questionMediaBlockHeight,
   questionMediaStageHeight,
-  QUESTION_MEDIA_CREDITS_HEIGHT,
 } from '../constants/questionMediaLayout';
 import { SpeciesMediaModal, type SpeciesMediaData } from '../components/SpeciesMediaModal';
 import { PracticeSpeciesLinks } from '../components/PracticeSpeciesLinks';
@@ -87,6 +85,7 @@ export function GamePlayScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
+  const isFocused = useIsFocused();
   const dailyChallengeId = (route.params as { dailyChallengeId?: number })?.dailyChallengeId;
   const flockSlug = (route.params as { flockSlug?: string })?.flockSlug;
   const flockChallengeId = (route.params as { flockChallengeId?: number })?.flockChallengeId;
@@ -140,7 +139,7 @@ export function GamePlayScreen() {
   playerRefForPoll.current = player;
 
   useEffect(() => {
-    if (!game?.token || !player?.token) return;
+    if (!isFocused || !game?.token || !player?.token) return;
     if (!questionIdRef.current) {
       void refreshGameState({ force: true });
     }
@@ -174,7 +173,7 @@ export function GamePlayScreen() {
       timers.forEach(clearTimeout);
       clearInterval(interval);
     };
-  }, [game?.token, player?.token, joinGame, setGame, refreshGameState]);
+  }, [isFocused, game?.token, player?.token, joinGame, setGame, refreshGameState]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -347,6 +346,25 @@ export function GamePlayScreen() {
   const image = mediaType === 'images' ? question?.images?.[currentIndex] : undefined;
   const video = mediaType === 'video' ? question?.videos?.[currentIndex] : undefined;
   const sound = mediaType === 'audio' ? question?.sounds?.[currentIndex] : undefined;
+  const answeredSourceLink = typeof answer?.media_link === 'string' ? answer.media_link : null;
+  const imageMedia =
+    image && typeof image === 'object'
+      ? answeredSourceLink
+        ? { ...image, link: answeredSourceLink }
+        : image
+      : undefined;
+  const videoMedia =
+    video && typeof video === 'object'
+      ? answeredSourceLink
+        ? { ...video, link: answeredSourceLink }
+        : video
+      : undefined;
+  const soundMedia =
+    sound && typeof sound === 'object'
+      ? answeredSourceLink
+        ? { ...sound, link: answeredSourceLink }
+        : sound
+      : undefined;
   const soundUri = sound?.url ? (sound.url.startsWith('http') ? sound.url : apiUrl(sound.url)) : null;
 
   const langForDisplay = game?.language || (player as any)?.language;
@@ -626,7 +644,6 @@ export function GamePlayScreen() {
             height={mediaStageHeight}
             testID="gamePlay.advancingLoader"
           />
-          {mediaType !== 'audio' ? <View style={styles.mediaCreditsSpacer} /> : null}
         </>
       ) : (
       <QuestionMediaView
@@ -653,11 +670,11 @@ export function GamePlayScreen() {
         reloadImageLabel={t('retry')}
         nextImageLabel={t('next_image')}
         showNextImageButton={(question?.images?.length ?? 0) > 1}
-        imageMedia={image && typeof image === 'object' ? image : undefined}
+        imageMedia={imageMedia}
         videoUri={videoUri}
-        videoMedia={video && typeof video === 'object' ? video : undefined}
+        videoMedia={videoMedia}
         soundUri={soundUri}
-        soundMedia={sound && typeof sound === 'object' ? sound : undefined}
+        soundMedia={soundMedia}
         onPlaySound={playSound}
         soundPlaying={soundPlaying}
         pulsatingStyle={pulsatingStyle}
@@ -673,6 +690,50 @@ export function GamePlayScreen() {
         containerStyle={styles.mediaInner}
         imageHeight={mediaHeight}
         videoHeight={videoHeight}
+        actionOverlay={
+          done && resultsReadyForCurrentQuestion ? (
+            <TouchableOpacity
+              style={styles.overlayActionButton}
+              onPress={handleEndGame}
+              testID="gamePlay.endGame"
+              accessibilityLabel="End game"
+            >
+              <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
+            </TouchableOpacity>
+          ) : isHost && resultsReadyForCurrentQuestion && !advancingQuestion ? (
+            <TouchableOpacity
+              style={styles.overlayActionButton}
+              onPress={handleNext}
+              testID="gamePlay.nextQuestion"
+              accessibilityLabel="Next question"
+            >
+              <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
+            </TouchableOpacity>
+          ) : waitingForHost ? (
+            <View style={styles.overlayWaitCard}>
+              <View style={styles.waitForHostRow}>
+                <Text style={styles.waitForHostText}>{t('waiting_for_host')}</Text>
+                <TouchableOpacity
+                  style={styles.waitForHostRefreshButton}
+                  onPress={() => void handleRefreshQuestion()}
+                  disabled={refreshingQuestion}
+                  testID="gamePlay.waitForHostRefresh"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('refresh')}
+                >
+                  {refreshingQuestion ? (
+                    <ActivityIndicator size="small" color={colors.primary[700]} />
+                  ) : (
+                    <FontAwesome5 name="sync" size={16} color={colors.primary[700]} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {showSlowHostWait ? (
+                <Text style={styles.refreshQuestionHint}>{t('loading_taking_long')}</Text>
+              ) : null}
+            </View>
+          ) : undefined
+        }
         onMediaReady={() => {
           setMediaReady(true);
           const tok = (player as { token?: string })?.token;
@@ -687,41 +748,6 @@ export function GamePlayScreen() {
           {t('loading_taking_long')}
         </Text>
       ) : null}
-      </View>
-
-      <View style={styles.nextSection}>
-        {done && resultsReadyForCurrentQuestion ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleEndGame} testID="gamePlay.endGame" accessibilityLabel="End game">
-            <Text style={styles.primaryButtonText}>{t('end_game')}</Text>
-          </TouchableOpacity>
-        ) : isHost && resultsReadyForCurrentQuestion && !advancingQuestion ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleNext} testID="gamePlay.nextQuestion" accessibilityLabel="Next question">
-            <Text style={styles.primaryButtonText}>{t('next_question')}</Text>
-          </TouchableOpacity>
-        ) : waitingForHost ? (
-          <View>
-            <View style={styles.waitForHostRow}>
-              <Text style={styles.waitForHostText}>{t('waiting_for_host')}</Text>
-              <TouchableOpacity
-                style={styles.waitForHostRefreshButton}
-                onPress={() => void handleRefreshQuestion()}
-                disabled={refreshingQuestion}
-                testID="gamePlay.waitForHostRefresh"
-                accessibilityRole="button"
-                accessibilityLabel={t('refresh')}
-              >
-                {refreshingQuestion ? (
-                  <ActivityIndicator size="small" color={colors.primary[700]} />
-                ) : (
-                  <FontAwesome5 name="sync" size={16} color={colors.primary[700]} />
-                )}
-              </TouchableOpacity>
-            </View>
-            {showSlowHostWait ? (
-              <Text style={styles.refreshQuestionHint}>{t('loading_taking_long')}</Text>
-            ) : null}
-          </View>
-        ) : null}
       </View>
 
       {hasOptions ? (
@@ -851,6 +877,10 @@ export function GamePlayScreen() {
         <Text style={styles.muted}>Free answer not implemented.</Text>
       )}
 
+      {!(flockSlug || game?.game_type === 'flock_challenge') ? (
+        <FlagMediaLink onPress={openFlagModal} label={t('this_seems_wrong')} />
+      ) : null}
+
 
       {isPracticeGame &&
       ((isSpeciesPractice && game.focus_species_id) ||
@@ -965,6 +995,26 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.error[500], marginTop: 12, textAlign: 'center' },
   link: { fontSize: 16, color: colors.primary[500], marginTop: 8 },
   nextSection: { marginBottom: 12 },
+  overlayActionButton: {
+    backgroundColor: colors.primary[500],
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  overlayWaitCard: {
+    backgroundColor: 'rgba(245, 237, 224, 0.94)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
   pairPracticeHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1033,7 +1083,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   mediaInner: { marginBottom: 0 },
-  mediaCreditsSpacer: { height: QUESTION_MEDIA_CREDITS_HEIGHT },
   creditsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

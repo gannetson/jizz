@@ -26,7 +26,7 @@ const MENU_ITEMS: { route: string; labelKey: string }[] = [
   { route: 'Scores', labelKey: 'high_scores' },
   { route: 'CountryChallengeLeaderboard', labelKey: 'country_leaderboard' },
   { route: 'Updates', labelKey: 'updates' },
-  { route: 'Help', labelKey: 'help' },
+  { route: 'Help', labelKey: 'community_menu' },
   { route: 'Privacy', labelKey: 'privacy' },
   { route: 'About', labelKey: 'about_birdr' },
 ];
@@ -91,7 +91,9 @@ export function LeftMenuModal() {
                 <Text style={styles.menuHeaderTitle}>Birdr</Text>
               </View>
               {MENU_ITEMS.map((item) => {
-                const isFocused = currentRoute === item.route;
+                const isFocused =
+                  currentRoute === item.route ||
+                  (item.route === 'Help' && currentRoute === 'HelpDetail');
                 const label = t(item.labelKey);
                 return (
                   <TouchableOpacity

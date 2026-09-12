@@ -381,6 +381,62 @@
     .store-badges .play-badge img {
       height: 58px;
     }
+    .store-score-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+    .store-score {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px 8px;
+      background: #fff;
+      border: 1px solid rgba(212, 184, 138, 0.7);
+      border-radius: 14px;
+      padding: 10px 14px;
+      text-decoration: none;
+      color: inherit;
+      min-width: 11rem;
+    }
+    .store-score:hover { border-color: var(--birdr-600); }
+    .store-score-kicker {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--birdr-500);
+      width: 100%;
+    }
+    .store-score-value {
+      font-family: var(--font);
+      font-size: 1.45rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--birdr-800);
+    }
+    .store-score-stars {
+      position: relative;
+      display: inline-block;
+      color: #d4b88a;
+      letter-spacing: 0.04em;
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    .store-score-stars::after {
+      content: "★★★★★";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--pct, 0%);
+      overflow: hidden;
+      color: #c47b12;
+      white-space: nowrap;
+    }
+    .store-score-count { color: var(--birdr-600); font-size: 0.9rem; }
+    .card .store-score-row { margin: 4px 0 12px; }
+    .card .cta-row { margin: 4px 0 0; }
     .hero-art {
       background: #fff;
       border: 1px solid var(--birdr-200);

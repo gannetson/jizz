@@ -45,6 +45,10 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
         return media_display_url(obj.url)
 
     def get_link(self, obj):
+        # Full source URLs can identify the species (e.g. iNaturalist observations).
+        # Live play omits them; they are attached to the answer payload after guessing.
+        if self.context.get('play_mode'):
+            return None
         if not obj.link:
             return None
         try:
@@ -381,7 +385,9 @@ class QuestionPlaySerializer(serializers.ModelSerializer):
         if not items:
             return []
         rotated = rotate_media_list_for_play(items, obj.number or 0)
-        return QuestionMediaSerializer(rotated[:1], many=True).data
+        return QuestionMediaSerializer(
+            rotated[:1], many=True, context=self.context
+        ).data
 
     def get_number(self, obj):
         # Active media is always at array index 0 after rotation.
@@ -454,6 +460,27 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ('id', 'done', 'options', 'images', 'videos', 'sounds', 'number', 'sequence', 'game')
 
 
+def current_question_media(question):
+    """Media item currently shown for this question in play."""
+    locked = getattr(question, 'media', None)
+    if locked is not None:
+        return locked
+    from jizz.question_play import (
+        active_play_media,
+        fetch_eligible_media_for_species,
+    )
+
+    game = getattr(question, 'game', None)
+    media_type = 'image'
+    if game is not None:
+        media_type = {'images': 'image', 'video': 'video', 'audio': 'audio'}.get(
+            game.media, 'image'
+        )
+    items = fetch_eligible_media_for_species(question.species_id, media_type)
+    active = active_play_media(items, question.number or 0)
+    return active[0] if active else None
+
+
 class AnswerSerializer(serializers.ModelSerializer):
     player_token = serializers.CharField(write_only=True)
     correct = serializers.BooleanField(read_only=True)
@@ -461,6 +488,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     species_frequency = serializers.SerializerMethodField()
     checklist_added = serializers.SerializerMethodField()
     checklist_missed = serializers.SerializerMethodField()
+    media_link = serializers.SerializerMethodField()
     answer = SpeciesDetailSerializer(read_only=True)
     answer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     question_id = serializers.IntegerField(write_only=True)
@@ -484,6 +512,16 @@ class AnswerSerializer(serializers.ModelSerializer):
     def get_checklist_missed(self, obj):
         return bool(getattr(obj, 'checklist_missed', False))
 
+    def get_media_link(self, obj):
+        """Full source URL for the played media. Only on the answering player's payload."""
+        if not self.context.get('include_media_link'):
+            return None
+        question = getattr(obj, 'question', None)
+        if question is None:
+            return None
+        media = current_question_media(question)
+        return media.link if media and media.link else None
+
     def validate(self, attrs):
         timed_out = attrs.get('timed_out', False)
         if not timed_out and not attrs.get('answer_id'):
@@ -496,7 +534,7 @@ class AnswerSerializer(serializers.ModelSerializer):
         player = Player.objects.select_related('user').get(
             token=validated_data.pop('player_token')
         )
-        question = Question.objects.select_related('game__country').get(
+        question = Question.objects.select_related('game__country', 'media').get(
             id=validated_data.pop('question_id')
         )
         timed_out = validated_data.pop('timed_out', False)
@@ -547,6 +585,7 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'question_id', 'player_token',
             'answer', 'correct', 'species', 'species_frequency', 'checklist_added', 'checklist_missed',
+            'media_link',
             'answer_id', 'timed_out', 'number', 'score',
             'sequence',
         )
@@ -1551,6 +1590,23 @@ class LanguageSerializer(serializers.ModelSerializer):
         fields = ('code', 'name')
 
 
+_LEGACY_GITHUB_REPOS = (
+    'https://github.com/gannetson/birdr',
+    'http://github.com/gannetson/birdr',
+)
+_CURRENT_GITHUB_REPO = 'https://github.com/birdr-app/birdr'
+
+
+def _rewrite_legacy_github_repo(value):
+    """Point About/help CMS content at the public Birdr repo."""
+    if not isinstance(value, str) or not value:
+        return value
+    updated = value
+    for old in _LEGACY_GITHUB_REPOS:
+        updated = updated.replace(old, _CURRENT_GITHUB_REPO)
+    return updated
+
+
 class PageSerializer(serializers.ModelSerializer):
     content = serializers.SerializerMethodField()
 
@@ -1558,10 +1614,12 @@ class PageSerializer(serializers.ModelSerializer):
         """Return Quill content as JSON string (delta + html) for frontend."""
         val = obj.content
         if hasattr(val, 'json_string'):
-            return val.json_string
-        if isinstance(val, str):
-            return val
-        return val if val is not None else '{"delta":"","html":""}'
+            raw = val.json_string
+        elif isinstance(val, str):
+            raw = val
+        else:
+            raw = val if val is not None else '{"delta":"","html":""}'
+        return _rewrite_legacy_github_repo(raw)
 
     class Meta:
         model = Page

@@ -449,6 +449,51 @@ class ApiQuestionAnswerTestCase(TestCase):
         self.assertIn('id', response.data)
         self.assertEqual(response.data['id'], self.answer.id)
 
+    def test_play_question_omits_media_source_link_until_answer(self):
+        from jizz.question_play import load_question_for_play, serialize_question_for_play
+        from jizz.serializers import current_question_media
+
+        q = self.game.add_question()
+        loaded = load_question_for_play(q.id)
+        media = current_question_media(loaded)
+        self.assertIsNotNone(media)
+        source_url = 'https://commons.wikimedia.org/wiki/File:SecretSpecies.jpg'
+        media.link = source_url
+        media.contributor = 'Jane Doe'
+        media.source = 'wikimedia'
+        media.save(update_fields=['link', 'contributor', 'source'])
+
+        self.question.done = True
+        self.question.save(update_fields=['done'])
+
+        play = serialize_question_for_play(load_question_for_play(q.id))
+        item = play['images'][0]
+        self.assertIsNone(item['link'])
+        self.assertEqual(item['contributor'], 'Jane Doe')
+        self.assertEqual(item['source'], 'wikimedia')
+
+        response = self.client.get(f'/api/games/{self.game.token}/question')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['images'][0]['link'])
+
+        _player_auth(self.client, self.player)
+        answered = self.client.post(
+            '/api/answer/',
+            {
+                'player_token': self.player.token,
+                'question_id': q.id,
+                'answer_id': q.species_id,
+            },
+            format='json',
+        )
+        self.assertEqual(answered.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(answered.data['media_link'], source_url)
+
+        from jizz.serializers import AnswerSerializer
+
+        row = Answer.objects.get(id=answered.data['id'])
+        shared = AnswerSerializer(row, context={'game': self.game}).data
+        self.assertIsNone(shared['media_link'])
 
 class ApiQuestionDetailTestCase(TestCase):
     """GET/PUT /api/questions/<pk>/."""

@@ -7,15 +7,20 @@ import {
   StyleSheet,
   Animated,
   Image as RnImage,
+  Modal,
+  Linking,
+  TouchableWithoutFeedback,
   type ViewStyle,
 } from 'react-native';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { CachedRemoteImage, remotePlayImageSource } from './CachedRemoteImage';
 import { setAudioModeAsync } from 'expo-audio';
 import { PlayableVideo } from './PlayableVideo';
-import { MediaCredits } from './MediaCredits';
 import { FullScreenImageViewerModal } from './FullScreenImageViewerModal';
 import { QuestionMediaLoadingOverlay } from './QuestionMediaLoadingOverlay';
+import { useTranslation } from '../i18n/TranslationContext';
 import { colors } from '../theme';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   QUESTION_IMAGE_HEIGHT,
   QUESTION_VIDEO_HEIGHT,
@@ -77,9 +82,25 @@ export type QuestionMediaViewProps = {
   expandImageHint?: string;
   /** Label for the full-screen viewer close control */
   closeFullScreenLabel?: string;
-  /** Centered over the image/video/audio area (not credits row). */
+  /** Centered over the image/video/audio area. */
   feedbackOverlay?: React.ReactNode;
+  /** Bottom of the media stage (e.g. next question) so option buttons stay put. */
+  actionOverlay?: React.ReactNode;
 };
+
+const MEDIA_SOURCE_LABELS: Record<string, string> = {
+  inaturalist: 'iNaturalist',
+  wikimedia: 'Wikimedia',
+  gbif: 'GBIF',
+  flickr: 'Flickr CC',
+  observation: 'Observation.org',
+  xeno_canto: 'Xeno-Canto',
+};
+
+function sourceDisplayName(source?: string | null): string {
+  if (!source) return '';
+  return MEDIA_SOURCE_LABELS[source] || source;
+}
 
 function imageHostLabel(uri: string): string {
   try {
@@ -91,12 +112,44 @@ function imageHostLabel(uri: string): string {
 
 const IMAGE_LOAD_TIMEOUT_MS = 12000;
 
+function ActionScrim() {
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  return (
+    <View
+      style={styles.actionScrim}
+      pointerEvents="none"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        if (width !== size.width || height !== size.height) {
+          setSize({ width, height });
+        }
+      }}
+    >
+      {size.width > 0 && size.height > 0 ? (
+        <Svg width={size.width} height={size.height}>
+          <Defs>
+            <LinearGradient id="mediaActionScrim" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#000" stopOpacity="0" />
+              <Stop offset="1" stopColor="#000" stopOpacity="0.72" />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={size.width} height={size.height} fill="url(#mediaActionScrim)" />
+        </Svg>
+      ) : null}
+    </View>
+  );
+}
+
 function MediaStage({
   children,
   feedbackOverlay,
+  chromeOverlay,
+  actionOverlay,
 }: {
   children: React.ReactNode;
   feedbackOverlay?: React.ReactNode;
+  chromeOverlay?: React.ReactNode;
+  actionOverlay?: React.ReactNode;
 }) {
   return (
     <View style={styles.mediaStage}>
@@ -105,6 +158,15 @@ function MediaStage({
         <View style={styles.feedbackOverlay} pointerEvents="none">
           {feedbackOverlay}
         </View>
+      ) : null}
+      {chromeOverlay}
+      {actionOverlay ? (
+        <>
+          <ActionScrim />
+          <View style={styles.actionOverlay} pointerEvents="box-none">
+            {actionOverlay}
+          </View>
+        </>
       ) : null}
     </View>
   );
@@ -142,9 +204,12 @@ export function QuestionMediaView({
   expandImageHint = 'Opens full screen. Pinch to zoom.',
   closeFullScreenLabel = 'Close',
   feedbackOverlay,
+  actionOverlay,
 }: QuestionMediaViewProps) {
+  const { t } = useTranslation();
   const { visualStyle } = useVisualStyle();
   const [fullScreenImage, setFullScreenImage] = React.useState(false);
+  const [creditsOpen, setCreditsOpen] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
   const [imageProgress, setImageProgress] = React.useState<number | null>(null);
   const [videoReady, setVideoReady] = React.useState(false);
@@ -163,6 +228,7 @@ export function QuestionMediaView({
     setImageLoaded(false);
     setImageProgress(null);
     setVideoReady(false);
+    setCreditsOpen(false);
   }, [imageUri, videoUri, soundUri, mediaType, displayVideoUri, imageReloadKey]);
 
   React.useEffect(() => {
@@ -220,26 +286,89 @@ export function QuestionMediaView({
 
   const creditsMedia =
     mediaType === 'images' ? imageMedia : mediaType === 'video' ? videoMedia : soundMedia;
-  const showCreditsAndFlag = hasMedia;
+  const contributor = creditsMedia?.contributor?.trim() || '';
+  const sourceName = sourceDisplayName(creditsMedia?.source);
+  const sourceLink = creditsMedia?.link?.trim() || '';
+  const showCreditsButton = !!(contributor || sourceName || sourceLink);
+  const flagA11y = flagLabel || t('flag');
 
-  const renderCreditsRow = () =>
-    showCreditsAndFlag ? (
-      <View style={styles.creditsRow}>
-        <MediaCredits media={creditsMedia ?? undefined} />
-        {onFlagPress && flagLabel ? (
-          <TouchableOpacity onPress={onFlagPress}>
-            <Text style={styles.flagLinkText}>🚩 {flagLabel}</Text>
+  const chromeOverlay =
+    hasMedia && (showCreditsButton || onFlagPress) ? (
+      <View style={styles.chromeOverlay} pointerEvents="box-none">
+        {showCreditsButton ? (
+          <TouchableOpacity
+            style={[styles.overlayBtn, styles.ccBtn]}
+            onPress={() => setCreditsOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('media_attribution')}
+            testID="questionMedia.creditsButton"
+          >
+            <FontAwesome5 name="creative-commons" brand size={14} color="#fff" />
+          </TouchableOpacity>
+        ) : null}
+        {onFlagPress ? (
+          <TouchableOpacity
+            style={[styles.overlayBtn, styles.flagBtn]}
+            onPress={onFlagPress}
+            accessibilityRole="button"
+            accessibilityLabel={flagA11y}
+            testID="questionMedia.flagButton"
+          >
+            <FontAwesome5 name="flag" solid size={13} color="#fff" />
           </TouchableOpacity>
         ) : null}
       </View>
     ) : null;
+
+  const creditsModal = (
+    <Modal visible={creditsOpen} transparent animationType="fade" onRequestClose={() => setCreditsOpen(false)}>
+      <View style={styles.creditsBackdrop}>
+        <TouchableWithoutFeedback onPress={() => setCreditsOpen(false)}>
+          <View style={styles.creditsBackdropTouchable} />
+        </TouchableWithoutFeedback>
+        <View style={styles.creditsCard} accessibilityViewIsModal>
+          <Text style={styles.creditsTitle}>{t('media_attribution')}</Text>
+          {contributor ? (
+            <View style={styles.creditsRow}>
+              <Text style={styles.creditsLabel}>{t('author')}</Text>
+              <Text style={styles.creditsValue}>{contributor}</Text>
+            </View>
+          ) : null}
+          {sourceName || sourceLink ? (
+            <View style={styles.creditsRow}>
+              <Text style={styles.creditsLabel}>{t('source')}</Text>
+              {sourceLink ? (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(sourceLink).catch(() => {})}
+                  accessibilityRole="link"
+                  accessibilityLabel={sourceName || t('view_source')}
+                >
+                  <Text style={styles.creditsLink}>{sourceName || t('view_source')}</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.creditsValue}>{sourceName}</Text>
+              )}
+            </View>
+          ) : null}
+          <TouchableOpacity
+            style={styles.creditsClose}
+            onPress={() => setCreditsOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
+          >
+            <Text style={styles.creditsCloseText}>{t('close')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={[styles.mediaWrap, containerStyle]}>
       {mediaType === 'images' && (
         <>
           {imageUri && !imageError ? (
-            <MediaStage feedbackOverlay={feedbackOverlay}>
+            <MediaStage feedbackOverlay={feedbackOverlay} chromeOverlay={chromeOverlay} actionOverlay={actionOverlay}>
               <Pressable
                 onPress={() => imageLoaded && setFullScreenImage(true)}
                 accessibilityRole="button"
@@ -292,7 +421,7 @@ export function QuestionMediaView({
               />
             </MediaStage>
           ) : imageError ? (
-            <MediaStage feedbackOverlay={feedbackOverlay}>
+            <MediaStage feedbackOverlay={feedbackOverlay} chromeOverlay={chromeOverlay} actionOverlay={actionOverlay}>
               <View
                 style={[
                   styles.placeholder,
@@ -340,13 +469,12 @@ export function QuestionMediaView({
               </View>
             </MediaStage>
           ) : null}
-          {renderCreditsRow()}
         </>
       )}
 
       {mediaType === 'video' && displayVideoUri && (
         <>
-          <MediaStage feedbackOverlay={feedbackOverlay}>
+          <MediaStage feedbackOverlay={feedbackOverlay} chromeOverlay={chromeOverlay} actionOverlay={actionOverlay}>
             <View
               style={[
                 styles.videoFrame,
@@ -365,13 +493,12 @@ export function QuestionMediaView({
               {!videoReady ? <QuestionMediaLoadingOverlay /> : null}
             </View>
           </MediaStage>
-          {renderCreditsRow()}
         </>
       )}
 
       {mediaType === 'audio' && soundUri && (
         <>
-          <MediaStage feedbackOverlay={feedbackOverlay}>
+          <MediaStage feedbackOverlay={feedbackOverlay} chromeOverlay={chromeOverlay} actionOverlay={actionOverlay}>
             {pulsatingStyle ? (
               <Animated.View style={soundPlaying ? pulsatingStyle : undefined}>
                 <TouchableOpacity
@@ -398,9 +525,10 @@ export function QuestionMediaView({
               </TouchableOpacity>
             )}
           </MediaStage>
-          {renderCreditsRow()}
         </>
       )}
+
+      {creditsModal}
 
       {showLoadingPlaceholder && !hasMedia && (
         <MediaStage feedbackOverlay={feedbackOverlay}>
@@ -435,13 +563,94 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 20,
   },
-  creditsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  chromeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 25,
+  },
+  overlayBtn: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
-    marginTop: 6,
-    flexWrap: 'wrap',
-    gap: 6,
+    justifyContent: 'center',
+  },
+  ccBtn: {
+    top: 8,
+    left: 8,
+  },
+  flagBtn: {
+    top: 8,
+    right: 8,
+  },
+  actionScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 100,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    overflow: 'hidden',
+    zIndex: 24,
+  },
+  actionOverlay: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    bottom: 8,
+    zIndex: 26,
+  },
+  creditsBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  creditsBackdropTouchable: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  creditsCard: {
+    backgroundColor: colors.primary[50],
+    borderRadius: 12,
+    padding: 20,
+    zIndex: 1,
+  },
+  creditsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary[800],
+    marginBottom: 12,
+  },
+  creditsRow: {
+    marginBottom: 10,
+  },
+  creditsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary[500],
+    marginBottom: 2,
+  },
+  creditsValue: {
+    fontSize: 15,
+    color: colors.primary[800],
+  },
+  creditsLink: {
+    fontSize: 15,
+    color: colors.primary[700],
+    textDecorationLine: 'underline',
+  },
+  creditsClose: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  creditsCloseText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary[700],
   },
   image: {
     width: '100%',
@@ -528,5 +737,4 @@ const styles = StyleSheet.create({
   mediaLinkPlaying: { backgroundColor: colors.primary[500] },
   mediaLinkText: { fontSize: 16, color: colors.primary[700], fontWeight: '600' },
   mediaLinkTextPlaying: { color: colors.primary[50] },
-  flagLinkText: { fontSize: 13, color: colors.error[500] },
 });

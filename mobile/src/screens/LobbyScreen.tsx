@@ -35,7 +35,6 @@ export function LobbyScreen() {
   const [reconnecting, setReconnecting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareOpenOverride, setShareOpenOverride] = useState<boolean | null>(null);
-  const [hostRequestedStart, setHostRequestedStart] = useState(false);
   const lobbyGameTokenRef = useRef<string | undefined>(undefined);
   const [topScores, setTopScores] = useState<Score[]>([]);
   const [refreshedGameScores, setRefreshedGameScores] = useState<MultiPlayer[]>([]);
@@ -196,7 +195,6 @@ export function LobbyScreen() {
     player &&
     (player.name === (game.host as any)?.name || player.id === (game.host as any)?.id)
   );
-  const gameAlreadyInPlay = (game?.progress ?? 0) > 0;
 
   if (!game || !player) {
     return (
@@ -208,8 +206,6 @@ export function LobbyScreen() {
       </View>
     );
   }
-
-  const isHost = player.name === (game.host as any)?.name || player.id === (game.host as any)?.id;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

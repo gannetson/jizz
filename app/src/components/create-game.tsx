@@ -175,7 +175,7 @@ export const CreateGame = ({
           onClick={create}
           colorPalette="primary"
         >
-          <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
+          <FormattedMessage id={'create game'} defaultMessage={"Create game"}/>
         </Button>
 
         <Heading size={'lg'}><FormattedMessage id='more game settings' defaultMessage={'More game settings'}/></Heading>
@@ -194,7 +194,7 @@ export const CreateGame = ({
           onClick={create}
           colorPalette="primary"
         >
-          <FormattedMessage id={'start game'} defaultMessage={"Start a new game"}/>
+          <FormattedMessage id={'create game'} defaultMessage={"Create game"}/>
         </Button>
       </Flex>
   )

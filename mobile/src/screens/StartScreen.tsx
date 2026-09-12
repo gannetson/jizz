@@ -660,12 +660,12 @@ export function StartScreen() {
         onPress={handleStart}
         disabled={loading || !country || !playerName.trim()}
         testID="start.startGame"
-        accessibilityLabel={t('start_new_game')}
+        accessibilityLabel={t('create_game')}
       >
         {loading ? (
           <ActivityIndicator color={colors.primary[50]} />
         ) : (
-          <Text style={styles.startButtonText}>{t('start_new_game')}</Text>
+          <Text style={styles.startButtonText}>{t('create_game')}</Text>
         )}
       </TouchableOpacity>
 

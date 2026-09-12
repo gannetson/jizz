@@ -54,6 +54,7 @@ from jizz.models import (
     QuestionMediaReady,
     Country,
     CountrySpecies,
+    SpeciesName,
     Feedback,
     FlagQuestion,
     Game,
@@ -176,6 +177,20 @@ class SpeciesListView(ListAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []  # No authentication required for public species data
     pagination_class = None  # Disable pagination - we need all species for the combobox
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        language = (self.request.query_params.get('language') or '').strip()
+        lang = language.lower().split('-')[0].split('_')[0] if language else ''
+        if language and lang != 'la':
+            qs = qs.prefetch_related(
+                Prefetch(
+                    'speciesname_set',
+                    queryset=SpeciesName.objects.filter(language_id=language),
+                    to_attr='_translated_names',
+                )
+            )
+        return qs
 
     def list(self, request, *args, **kwargs):
         country = (request.query_params.get("countryspecies__country") or "").strip()

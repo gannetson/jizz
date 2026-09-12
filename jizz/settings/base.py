@@ -34,8 +34,9 @@ MEDIA_WIKIMEDIA_THUMB_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_THUMB_WIDTH
 # Width served to clients for Wikimedia images in game/API serializers (standard step).
 MEDIA_WIKIMEDIA_DISPLAY_WIDTH_PX = int(os.environ.get('MEDIA_WIKIMEDIA_DISPLAY_WIDTH_PX', '960'))
 # iNaturalist open-data size served to clients (original|large|medium|small).
-# `large` is typically 1024px — enough for quiz retina, much smaller than camera originals.
-MEDIA_INATURALIST_DISPLAY_SIZE = os.environ.get('MEDIA_INATURALIST_DISPLAY_SIZE', 'large')
+# `medium` is typically 500px — enough for quiz/list display; clients can still
+# request `large` (1024px) on zoom.
+MEDIA_INATURALIST_DISPLAY_SIZE = os.environ.get('MEDIA_INATURALIST_DISPLAY_SIZE', 'medium')
 
 # Optional YOLO bird detector (offline only; used by handcrafted_v2_yolo extractor).
 # Provide an ONNX file path (e.g. yolov5n.onnx exported with 640x640 input).

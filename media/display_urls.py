@@ -1,8 +1,8 @@
 """Rewrite stored media URLs to a display-sized derivative before serving clients.
 
 Wikimedia originals become a standard Commons thumb. iNaturalist `original`
-photos become `large` (typically 1024px) so quiz clients do not download
-multi-megapixel camera files.
+photos become `medium` (typically 500px) so quiz clients do not download
+1024px `large` or multi-megapixel camera files.
 """
 
 from __future__ import annotations
@@ -27,15 +27,15 @@ def _inaturalist_host(host: str) -> bool:
 
 
 def inaturalist_display_url(url: str | None, size: str | None = None) -> str | None:
-    """Rewrite iNaturalist photo URLs to `size` (default: large). Non-iNat URLs unchanged."""
+    """Rewrite iNaturalist photo URLs to `size` (default: medium). Non-iNat URLs unchanged."""
     if not url:
         return url
     if size is None:
-        size = (getattr(settings, 'MEDIA_INATURALIST_DISPLAY_SIZE', None) or 'large').lower()
+        size = (getattr(settings, 'MEDIA_INATURALIST_DISPLAY_SIZE', None) or 'medium').lower()
     else:
         size = size.lower()
     if size not in INATURALIST_SIZE_RANK:
-        size = 'large'
+        size = 'medium'
 
     parsed = urlparse(url)
     if not _inaturalist_host(parsed.netloc):
@@ -56,7 +56,7 @@ def inaturalist_display_url(url: str | None, size: str | None = None) -> str | N
 
 
 def media_display_url(url: str | None) -> str | None:
-    """Client URL for quiz/API/marketing (Wikimedia thumb, iNat large, Commons 480p video).
+    """Client URL for quiz/API/marketing (Wikimedia thumb, iNat medium, Commons 480p video).
 
     Xeno-Canto audio is not rewritten here: /download cannot be turned into an
     MP3 without the XC sono hash. Playback URLs are stored on Media.url

@@ -17,6 +17,9 @@ def _species_name_for_language(species, language: str | None) -> str:
     lang = (language or '').strip().lower().split('-')[0].split('_')[0]
     if lang == 'la':
         return species.name_latin or species.name
+    prefetched = getattr(species, '_translated_names', None)
+    if prefetched is not None:
+        return prefetched[0].name if prefetched else species.name
     if language:
         try:
             return SpeciesName.objects.get(species=species, language_id=language).name

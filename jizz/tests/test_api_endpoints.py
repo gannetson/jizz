@@ -4,7 +4,10 @@ Auth/profile/my-games/scores are covered in test_auth_and_profile and test_playe
 """
 from unittest.mock import patch
 
+from django.core.cache import cache
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -18,6 +21,7 @@ from jizz.models import (
     QuestionMediaReady,
     Answer,
     Species,
+    SpeciesName,
     CountrySpecies,
     Language,
     Feedback,
@@ -216,6 +220,42 @@ class ApiSpeciesTestCase(TestCase):
         second = self.client.get('/api/species/', {'countryspecies__country': 'NL'})
         self.assertEqual(second.status_code, status.HTTP_200_OK)
         self.assertEqual(first.data, second.data)
+
+    def test_species_list_translated_names_bounded_queries(self):
+        """Cache miss must prefetch SpeciesName so SELECT count does not grow with N."""
+        lang_nl, _ = Language.objects.get_or_create(code='nl', defaults={'name': 'Dutch'})
+        SpeciesName.objects.create(species=self.species, language=lang_nl, name='Testvogel')
+        extra = []
+        for i in range(12):
+            sp = Species.objects.create(
+                name=f'List Bird {i}',
+                name_latin=f'Listus {i}',
+                code=f'LB{i:02d}',
+            )
+            CountrySpecies.objects.create(
+                country=self.country, species=sp, status='native'
+            )
+            SpeciesName.objects.create(
+                species=sp, language=lang_nl, name=f'Lijstvogel {i}'
+            )
+            extra.append(sp)
+        cache.clear()
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(
+                '/api/species/',
+                {'countryspecies__country': 'NL', 'language': 'nl'},
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 13)
+        by_id = {row['id']: row for row in response.data}
+        self.assertEqual(by_id[self.species.id]['name_translated'], 'Testvogel')
+        self.assertEqual(by_id[extra[0].id]['name_translated'], 'Lijstvogel 0')
+        selects = [
+            q for q in ctx.captured_queries
+            if q['sql'].lstrip().upper().startswith('SELECT')
+        ]
+        # Species+taxonomy JOIN + SpeciesName prefetch (must not be 1+N).
+        self.assertLessEqual(len(selects), 4)
 
     def test_species_detail_returns_200(self):
         response = self.client.get(f'/api/species/{self.species.id}/')
